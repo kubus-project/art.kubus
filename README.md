@@ -1,16 +1,5 @@
 # art_kubus
 
-A new Flutter project.
+kubus is becoming a platform that will connect artists and artistic institutions. Its main interest is to contribute to society. This is also a continuation of the undergraduate project, which at that time brought modern web technologies into the hands of users, but due to the scope limitations of the thesis, did not achieve further development into a platform. However, during this time, it was being developed in the background and will take its true form through this project. A web interface has already been set up at https://platform.kubus.site, which is in the developmental 'alpha' phase and is a subject to change. The purpose of the thesis is to promote the digital development of art, as well as to offer artists of all kinds a space for expression and exhibitions, regardless of social or any other status. It also enables gaining visibility, promoting sales, and connecting with artistic institutions. The goal of the project is to establish a functioning platform, which will consist of blockchain and artificial intelligence technologies, set in the space of extended reality (XR). Access to the platform will be provided in two ways: either through a mobile phone or virtual reality glasses. Blockchain technology will enable broader community participation through digital management via its own cryptocurrency.
 
 ## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
