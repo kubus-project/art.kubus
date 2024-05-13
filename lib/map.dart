@@ -1,60 +1,72 @@
-import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:flutter/services.dart' show rootBundle;
-class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:location/location.dart';
+
+class MapHome extends StatefulWidget {
+  const MapHome({Key? key}) : super(key: key);
 
   @override
-  State<MapScreen> createState() => _MapScreenState();
+  State<MapHome> createState() => _MapHomeState();
 }
 
-class _MapScreenState extends State<MapScreen> {
-  late WebViewController _controller;
-  bool _webViewReady = false;  // This should not be final
+class _MapHomeState extends State<MapHome> {
+  late InAppWebViewController controller;
+  late Location location;
+  late bool _serviceEnabled;
+  late PermissionStatus _permissionGranted;
+  late LocationData _locationData;
 
   @override
   void initState() {
     super.initState();
-    // Don't call _prepareLocalHtml here, wait until WebView is ready
+    location = new Location();
+    initLocation();
   }
 
-  Future<void> _prepareLocalHtml() async {
-    final tempDir = await getTemporaryDirectory();
-    final filePath = '${tempDir.path}/map.html';
-
-    // Load the HTML file from assets
-    final htmlBytes = await rootBundle.load('assets/html/map.html');
-    final htmlString = String.fromCharCodes(htmlBytes.buffer.asUint8List());
-
-    // Write the file to the file system
-    final file = File(filePath);
-    await file.writeAsString(htmlString);
-
-    // Only try to load the file if the WebView is ready
-    if (_webViewReady) {
-      _controller.loadUrl('file://$filePath');  // Use loadUrl
+  Future<void> initLocation() async {
+    _serviceEnabled = await location.serviceEnabled();
+    if (!_serviceEnabled) {
+      _serviceEnabled = await location.requestService();
+      if (!_serviceEnabled) {
+        return;
+      }
     }
+
+    _permissionGranted = await location.hasPermission();
+    if (_permissionGranted == PermissionStatus.denied) {
+      _permissionGranted = await location.requestPermission();
+      if (_permissionGranted != PermissionStatus.granted) {
+        return;
+      }
+    }
+
+    _locationData = await location.getLocation();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Map View'),
-      ),
-      body: WebView(
-        initialUrl: 'about:blank',
-        javascriptMode: JavascriptMode.unrestricted,
-        onWebViewCreated: (WebViewController webViewController) {
-          _controller = webViewController;
-          _webViewReady = true;  // Set to true when WebView is created
-          _prepareLocalHtml();  // Now call to prepare and load HTML
+      appBar: AppBar(title: const Text('Map'),
+      backgroundColor: Colors.black,),
+      body: InAppWebView(
+        initialUrlRequest: URLRequest(url: WebUri('file:///android_asset/flutter_assets/assets/html/map.html')),
+        onWebViewCreated: (InAppWebViewController webViewController) {
+          controller = webViewController;
         },
-        onPageFinished: (url) {
-          // Use this if needed to handle additional logic once the page loads
+        onLoadStart: (controller, url) {
+          // Handle load start
+        },
+        onLoadStop: (controller, url) {
+          // Handle load stop
+        },
+        onLoadError: (controller, url, code, message) {
+          // Handle load error
+        },
+        onProgressChanged: (controller, progress) {
+          // Update loading bar.
+        },
+        androidOnPermissionRequest: (controller, origin, resources) async {
+          return PermissionRequestResponse(resources: resources, action: PermissionRequestResponseAction.GRANT);
         },
       ),
     );

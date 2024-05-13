@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'homenewusers.dart'; // Ensure this imports your HomeNewUsers screen correctly
+import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart'; // Import the provider package
+import 'homenewusers.dart';
 import 'profilemenu.dart';
 import 'map.dart';
-import 'package:permission_handler/permission_handler.dart';
-
+import 'connection_provider.dart'; // Import the ConnectionProvider class
 
 void main() => runApp(const ArtKubus());
 
@@ -18,69 +19,90 @@ class ArtKubus extends StatelessWidget {
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const MyHomePage(),
+      home: ChangeNotifierProvider( // Wrap your main widget with the provider
+        create: (context) => ConnectionProvider(), // Provide an instance of ConnectionProvider
+        child: const MyHomePage(),
+      ),
     );
   }
 }
 
 Future<void> requestPermissions() async {
   await Permission.storage.request();
+  await Permission.location.request();
 }
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key});
 
   @override
-   createState() => _MyHomePageState();
+  createState() => _MyHomePageState();
 }
 
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
-  // List of widgets to call on tap
-  final List<Widget> _widgetOptions = [
-    const HomeNewUsers(), // Your HomeNewUsers widget
-    const MapScreen(), // Placeholder for the map screen
-     const ProfileMenu(), // Placeholder for the profile screen
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final connectionProvider = Provider.of<ConnectionProvider>(context);
+
+    final List<Widget> widgetOptions = [
+      const HomeNewUsers(),
+      const MapHome(),
+      const ProfileMenu(), 
+    ];
+
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
+      body: SafeArea(
+        child: Stack(
+          children: [
+            widgetOptions.elementAt(_selectedIndex)
+          ],
+        ),
       ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.black,
         shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: <Widget>[
-            IconButton(
-              icon: const Icon(Icons.map),
-              onPressed: () => _onItemTapped(1),
-            ),
-            const Spacer(), // This will space out the logo to the center
-            IconButton(
-              icon: Image.asset('assets/images/logo.png'), // Logo as a button
-              onPressed: () => _onItemTapped(0), // You can modify this as needed
-            ),
-            const Spacer(), // Another spacer
-            IconButton(
-              icon: const Icon(Icons.person),
-              onPressed: () => _onItemTapped(2),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              IconButton(
+                icon: const Icon(Icons.map),
+                onPressed: () {
+                  if (!connectionProvider.isConnected) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('You need to connect to use the map.'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } else {
+                    _onItemTapped(1);
+                  }
+                },
+              ),
+              IconButton(
+                icon: Image.asset('assets/images/logo.png'), 
+                onPressed: () => _onItemTapped(0),
+              ),
+              IconButton(
+                icon: const Icon(Icons.person),
+                onPressed: () => _onItemTapped(2),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 }

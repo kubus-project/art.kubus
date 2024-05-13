@@ -1,17 +1,38 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple Map</title>
+    <title>Art Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"/>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 </head>
 <body>
     <div id="mapid" style="width: 100%; height: 100vh;"></div>
     <script>
-        var map = L.map('mapid').setView([51.505, -0.09], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        var map = L.map('mapid').setView([46.056, 14.505], 20); 
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { // Black and white map
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
+
+        // Custom marker
+        var marker = L.marker([46.056, 14.505]).addTo(map);
+        marker.bindPopup("<b>Hello world!</b><br>I am a popup.").openPopup();
+
+        // Function to add a new marker
+        function addMarker(lat, lon, message) {
+            var newMarker = L.marker([lat, lon]).addTo(map);
+            newMarker.bindPopup(message).openPopup();
+            return newMarker._leaflet_id; // Return the ID of the marker
+        }
+
+        // Example usage: addMarker(46.056, 14.506, "Another marker");
+
+        // Get current location
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            map.setView([lat, lon], 15);
+            addMarker(lat, lon, "You are here!");
+        });
     </script>
 </body>
 </html>
