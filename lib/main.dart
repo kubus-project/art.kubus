@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart'; // Import the provider package
+import 'pages/markers.dart';
+import 'pages/circle.dart';
 import 'homenewusers.dart';
 import 'profilemenu.dart';
 import 'map.dart';
@@ -14,6 +17,16 @@ class ArtKubus extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+
+      routes: {
+        '/pages/markers': (context) => MarkerPage(),
+        '/pages/circle':(context) => CirclePage(),
+      },
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => HomeNewUsers()
+        );
+      },
       title: 'art.kubus',
       theme: ThemeData(
         primarySwatch: Colors.blue,

@@ -9,51 +9,33 @@ import 'package:art_kubus/widgets/first_start_dialog.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:location/location.dart';
 
-class MapHome extends StatefulWidget {
+class HomePage extends StatefulWidget {
   static const String route = '/';
 
-  const MapHome({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
-  State<MapHome> createState() => _MapHomeState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _MapHomeState extends State<MapHome> {
-  LocationData? _currentLocation;
-  Location location = Location();
-
+class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _getLocation();
     showIntroDialogIfNeeded();
-  }
-
-  void _getLocation() async {
-    try {
-      var userLocation = await location.getLocation();
-      setState(() {
-        _currentLocation = userLocation;
-      });
-    } catch (e) {
-      print('Failed to get location: $e');
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const MenuDrawer(MapHome.route),
+      drawer: const MenuDrawer(HomePage.route),
       body: Stack(
         children: [
           FlutterMap(
             options: MapOptions(
-              initialCenter: _currentLocation != null
-                  ? LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
-                  : const LatLng(46.056, 14.505),
-              initialZoom: 12,
+              initialCenter: const LatLng(51.5, -0.09),
+              initialZoom: 5,
               cameraConstraint: CameraConstraint.contain(
                 bounds: LatLngBounds(
                   const LatLng(-90, -180),
@@ -64,7 +46,7 @@ class _MapHomeState extends State<MapHome> {
             children: [
               openStreetMapTileLayer,
               RichAttributionWidget(
-                popupInitialDisplayDuration: const Duration(seconds: 1),
+                popupInitialDisplayDuration: const Duration(seconds: 5),
                 animationConfig: const ScaleRAWA(),
                 showFlutterMapAttribution: false,
                 attributions: [
