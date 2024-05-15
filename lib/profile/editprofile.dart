@@ -3,14 +3,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-class YourProfile extends StatefulWidget {
-  const YourProfile({super.key});
+class EditProfile extends StatefulWidget {
+  const EditProfile({super.key});
 
   @override
-  _YourProfileState createState() => _YourProfileState();
+  State <EditProfile> createState() => _EditProfileState();
 }
 
-class _YourProfileState extends State<YourProfile> {
+class _EditProfileState extends State<EditProfile> {
   File? _imageFile;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
@@ -32,7 +32,12 @@ class _YourProfileState extends State<YourProfile> {
       if (pickedFile != null) {
         _imageFile = File(pickedFile.path);
       } else {
-        print('No image selected.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No image selected.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     });
   }
@@ -96,6 +101,10 @@ class _YourProfileState extends State<YourProfile> {
                             color: Colors.grey,
                           ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: _getImage,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
@@ -158,3 +167,17 @@ class _YourProfileState extends State<YourProfile> {
     );
   }
 }
+class Profile {
+  String name;
+  String bio;
+  String links;
+  File? imageFile;
+
+  Profile({
+    required this.name,
+    required this.bio,
+    required this.links,
+    this.imageFile,
+  });
+}
+

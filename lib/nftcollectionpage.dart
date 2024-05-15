@@ -5,7 +5,7 @@ class NFTCollectionPage extends StatefulWidget {
   const NFTCollectionPage({super.key,});
 
   @override
-  _NFTCollectionPageState createState() => _NFTCollectionPageState();
+  State<NFTCollectionPage> createState() => _NFTCollectionPageState();
 }
 
 class _NFTCollectionPageState extends State<NFTCollectionPage> {

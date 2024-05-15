@@ -33,7 +33,7 @@ import 'package:art_kubus/widgets/drawer/menu_item.dart';
 class MenuDrawer extends StatelessWidget {
   final String currentRoute;
 
-  const MenuDrawer(this.currentRoute, {Key? key}) : super(key: key);
+  const MenuDrawer(this.currentRoute, {super.key});
 
   @override
   Widget build(BuildContext context) {

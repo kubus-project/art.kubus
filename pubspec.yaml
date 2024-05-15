@@ -42,7 +42,6 @@ dependencies:
   image_picker: ^1.1.1
   provider: ^6.1.2
   walletconnect_flutter_v2: ^2.2.3
-  flutter_inappwebview: ^6.0.0
   location: ^6.0.2
   flutter_map: ^6.1.0
   latlong2: ^0.9.1
@@ -50,6 +49,8 @@ dependencies:
   flutter_map_geojson: ^1.0.8
   shared_preferences: ^2.2.3
 
+  proj4dart: any
+  flutter_web3: ^2.1.9
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -59,7 +60,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^3.0.0
+  flutter_lints: ^4.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

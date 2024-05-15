@@ -1,8 +1,8 @@
+import 'package:art_kubus/profile/userprofile.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'nftcollectionpage.dart';
-import 'yourprofile.dart';
 import 'connection_provider.dart';
 
 class ProfileMenu extends StatelessWidget {
@@ -53,7 +53,7 @@ class ProfileMenu extends StatelessWidget {
                     onPressed: connectionProvider.isConnected ? () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const YourProfile()),
+                        MaterialPageRoute(builder: (context) =>  UserProfile()),
                       );
                     } : null, // Disable if not connected
                     isEnabled: connectionProvider.isConnected,
@@ -143,15 +143,23 @@ Widget buildMenuItem(BuildContext context, {required String title, VoidCallback?
 
   
 
-  void launchEmail(BuildContext context, String email) async {
-    final Uri emailLaunchUri = Uri(
-      scheme: 'mailto',
-      path: email,
+ void launchEmail(BuildContext context, String email) async {
+  final Uri emailLaunchUri = Uri(
+    scheme: 'mailto',
+    path: email,
+  );
+
+  // Store the ScaffoldMessenger instance before the async gap
+  final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+  try {
+    await launchUrl(emailLaunchUri);
+  } catch (e) {
+    // Use the stored ScaffoldMessenger instance
+    scaffoldMessenger.showSnackBar(
+      const SnackBar(content: Text('Could not launch email.')),
     );
-    if (await canLaunch(emailLaunchUri.toString())) {
-      await launch(emailLaunchUri.toString());
-    } else {
-      showSnackbar(context, 'Could not launch email.');
-    }
   }
+}
+
 }
