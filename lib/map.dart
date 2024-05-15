@@ -14,7 +14,7 @@ import 'package:location/location.dart';
 class MapHome extends StatefulWidget {
   static const String route = '/';
 
-  const MapHome({Key? key}) : super(key: key);
+  const MapHome({super.key});
 
   @override
   State<MapHome> createState() => _MapHomeState();
@@ -38,7 +38,7 @@ class _MapHomeState extends State<MapHome> {
         _currentLocation = userLocation;
       });
     } catch (e) {
-      print('Failed to get location: $e');
+      // print('Failed to get location: $e');
     }
   }
 
