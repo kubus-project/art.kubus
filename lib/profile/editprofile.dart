@@ -2,6 +2,23 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:web3dart/web3dart.dart'; // Import the web3dart package
+
+class Profile {
+  String name;
+  String bio;
+  String links;
+  File? imageFile;
+  EthereumAddress? walletAddress; // Add a field for the wallet address
+
+  Profile({
+    required this.name,
+    required this.bio,
+    required this.links,
+    this.imageFile,
+    this.walletAddress, // Add a parameter for the wallet address
+  });
+}
 
 class EditProfile extends StatefulWidget {
   const EditProfile({super.key});
@@ -15,6 +32,7 @@ class _EditProfileState extends State<EditProfile> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _linksController = TextEditingController();
+  EthereumAddress? _walletAddress; // Add a field for the wallet address
 
   @override
   void dispose() {
@@ -42,16 +60,27 @@ class _EditProfileState extends State<EditProfile> {
     });
   }
 
-  Future<void> _saveProfile() async {
-    // Implement save functionality here
-    // For demonstration purposes, show a snackbar with a saved message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile saved'),
-        duration: Duration(seconds: 2),
-      ),
-    );
-  }
+Future<void> _saveProfile() async {
+  // Create a new Profile object with the entered data
+  Profile profile = Profile(
+    name: _nameController.text,
+    bio: _bioController.text,
+    links: _linksController.text,
+    imageFile: _imageFile,
+    walletAddress: _walletAddress, // Add the wallet address to the Profile object
+  );
+
+  // TODO: Use the profile object, for example, send it to your server
+  // sendProfileToServer(profile);
+
+  // For demonstration purposes, show a snackbar with a saved message
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text('Profile saved'),
+      duration: Duration(seconds: 2),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -63,8 +92,8 @@ class _EditProfileState extends State<EditProfile> {
         appBar: AppBar(
           backgroundColor: Colors.black,
           title: const Text(
-            'Your Profile',
-            style: TextStyle(fontFamily: 'Sofia Sans'),
+            'Edit',
+            style: TextStyle(fontFamily: 'Sofia Sans', color: Colors.white),
           ),
         ),
         body: Container(
@@ -167,17 +196,3 @@ class _EditProfileState extends State<EditProfile> {
     );
   }
 }
-class Profile {
-  String name;
-  String bio;
-  String links;
-  File? imageFile;
-
-  Profile({
-    required this.name,
-    required this.bio,
-    required this.links,
-    this.imageFile,
-  });
-}
-

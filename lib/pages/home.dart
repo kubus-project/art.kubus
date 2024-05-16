@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:art_kubus/misc/tile_providers.dart';
+import 'package:art_kubus/providers/tile_providers.dart';
 import 'package:art_kubus/widgets/drawer/floating_menu_button.dart';
 import 'package:art_kubus/widgets/drawer/menu_drawer.dart';
 import 'package:art_kubus/widgets/first_start_dialog.dart';

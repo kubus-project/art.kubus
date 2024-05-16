@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'profile/profile.dart';
+import '../profile/profile.dart';
 
 class ProfileProvider extends ChangeNotifier {
   Profile? _profile;
