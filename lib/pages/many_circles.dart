@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:art_kubus/misc/tile_providers.dart';
+import 'package:art_kubus/providers/tile_providers.dart';
 import 'package:art_kubus/widgets/drawer/menu_drawer.dart';
 import 'package:art_kubus/widgets/number_of_items_slider.dart';
 import 'package:art_kubus/widgets/show_no_web_perf_overlay_snackbar.dart';

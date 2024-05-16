@@ -6,38 +6,46 @@ import 'pages/circle.dart';
 import 'homenewusers.dart';
 import 'walletmenu.dart';
 import 'map.dart';
-import 'connection_provider.dart'; // Import the ConnectionProvider class
+import 'providers/connection_provider.dart';
+import 'providers/profile_provider.dart';
+import  'providers/web3provider.dart'; // Import the ConnectionProvider class
 
-void main() => runApp(const ArtKubus());
+void main() {
+  runApp(const ArtKubus());
+}
 
 class ArtKubus extends StatelessWidget {
   const ArtKubus({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-
-      routes: {
-        '/pages/markers': (context) => MarkerPage(),
-        '/pages/circle':(context) => CirclePage(),
-      },
-      onGenerateRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (context) => HomeNewUsers()
-        );
-      },
-      title: 'art.kubus',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: ChangeNotifierProvider( // Wrap your main widget with the provider
-        create: (context) => ConnectionProvider(), // Provide an instance of ConnectionProvider
-        child: const MyHomePage(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ConnectionProvider()),
+        ChangeNotifierProvider(create: (context) => ProfileProvider()),
+        ChangeNotifierProvider(create: (context) => Web3Provider()),// Add other providers here
+      ],
+      child: MaterialApp(
+        routes: {
+          '/pages/markers': (context) => const MarkerPage(),
+          '/pages/circle':(context) => const CirclePage(),
+        },
+        onGenerateRoute: (settings) {
+          return MaterialPageRoute(
+            builder: (context) => const HomeNewUsers()
+          );
+        },
+        title: 'art.kubus',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: const MyHomePage(),  // Now MyHomePage has access to ConnectionProvider
       ),
     );
   }
 }
+
 
 Future<void> requestPermissions() async {
   await Permission.storage.request();
@@ -102,7 +110,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: () => _onItemTapped(0),
               ),
               IconButton(
-                icon: const Icon(Icons.person),
+                icon: const Icon(Icons.wallet),
                 onPressed: () => _onItemTapped(2),
               ),
             ],

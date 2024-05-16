@@ -20,7 +20,7 @@ class _NFTCollectionPageState extends State<NFTCollectionPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.black,
-        title: const Text('Your Collection'),
+        title: const Text('Your Collection', style: TextStyle(fontFamily: 'Sofia Sans', color: Colors.white),), 
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {

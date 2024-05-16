@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'nftcollectionpage.dart';
-import 'connection_provider.dart';
+import 'providers/connection_provider.dart';
 
 class ProfileMenu extends StatelessWidget {
   const ProfileMenu({super.key});
@@ -53,7 +53,7 @@ class ProfileMenu extends StatelessWidget {
                     onPressed: connectionProvider.isConnected ? () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) =>  UserProfile()),
+                        MaterialPageRoute(builder: (context) =>  const UserProfile()),
                       );
                     } : null, // Disable if not connected
                     isEnabled: connectionProvider.isConnected,
