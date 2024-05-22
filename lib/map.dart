@@ -15,7 +15,7 @@ import 'widgets/pulsingmarker.dart';
 class MapHome extends StatefulWidget {
   static const String route = '/';
 
-  const MapHome({Key? key}) : super(key: key);
+  const MapHome({super.key});
 
   @override
   State<MapHome> createState() => _MapHomeState();
@@ -33,7 +33,7 @@ class _MapHomeState extends State<MapHome> {
     super.initState();
     _getLocation();
     showIntroDialogIfNeeded();
-    _timer = Timer.periodic(Duration(milliseconds: 500), (Timer t) => _getLocation());
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (Timer t) => _getLocation());
   }
 
   void _getLocation() async {
@@ -43,7 +43,7 @@ class _MapHomeState extends State<MapHome> {
         _currentLocation = userLocation;
       });
       if (_autoCenter) {
-        _mapController.move(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), 12);
+        _mapController.move(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), 16);
       }
     } catch (e) {
       // print('Failed to get location: $e');
@@ -62,7 +62,7 @@ class _MapHomeState extends State<MapHome> {
               initialCenter: _currentLocation != null
                   ? LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
                   : const LatLng(46.056, 14.505),
-              initialZoom: 14,
+              initialZoom: 16,
               cameraConstraint: CameraConstraint.contain(
                 bounds: LatLngBounds(
                   const LatLng(-90, -180),
@@ -84,7 +84,7 @@ class _MapHomeState extends State<MapHome> {
                   if (_currentLocation != null)
                     Marker(
                       point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                      child: PulseMarkerWidget(),
+                      child: const PulseMarkerWidget(),
                     ),
                 ],
               ),

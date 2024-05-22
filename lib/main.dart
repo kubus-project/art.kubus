@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart'; // Import the provider package
+import 'package:provider/provider.dart';
 import 'pages/markers.dart';
 import 'pages/circle.dart';
 import 'homenewusers.dart';
@@ -8,9 +8,20 @@ import 'walletmenu.dart';
 import 'map.dart';
 import 'providers/connection_provider.dart';
 import 'providers/profile_provider.dart';
-import  'providers/web3provider.dart'; // Import the ConnectionProvider class
+import  'providers/web3provider.dart';
+import 'package:camera/camera.dart'; 
+import 'ar/ar.dart';
+import 'package:logger/logger.dart';
 
-void main() {
+void main() async {
+  var logger = Logger();
+
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    cameras = await availableCameras();
+  } on CameraException catch (e) {
+    logger.e(e.description);
+  }
   runApp(const ArtKubus());
 }
 
@@ -23,12 +34,13 @@ class ArtKubus extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (context) => ConnectionProvider()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
-        ChangeNotifierProvider(create: (context) => Web3Provider()),// Add other providers here
+        ChangeNotifierProvider(create: (context) => Web3Provider()),
       ],
       child: MaterialApp(
         routes: {
           '/pages/markers': (context) => const MarkerPage(),
           '/pages/circle':(context) => const CirclePage(),
+          '/pages/home' : (context) => const ArtKubus(),
         },
         onGenerateRoute: (settings) {
           return MaterialPageRoute(
@@ -40,7 +52,7 @@ class ArtKubus extends StatelessWidget {
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity,
         ),
-        home: const MyHomePage(),  // Now MyHomePage has access to ConnectionProvider
+        home: const MyHomePage(),
       ),
     );
   }
@@ -67,8 +79,9 @@ class _MyHomePageState extends State<MyHomePage> {
     final connectionProvider = Provider.of<ConnectionProvider>(context);
 
     final List<Widget> widgetOptions = [
-      const HomeNewUsers(),
+      
       const MapHome(),
+      const Augmented('https://rokcernezel.com/wp-content/uploads/2024/04/logo2.jpg.webp'),
       const ProfileMenu(), 
     ];
 
@@ -91,12 +104,12 @@ class _MyHomePageState extends State<MyHomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
               IconButton(
-                icon: const Icon(Icons.map),
+                icon: const Icon(Icons.camera_alt),
                 onPressed: () {
                   if (!connectionProvider.isConnected) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('You need to connect to use the map.'),
+                        content: Text('You need to connect to use the feature.'),
                         duration: Duration(seconds: 2),
                       ),
                     );
@@ -126,3 +139,5 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 }
+
+List<CameraDescription> cameras = [];
