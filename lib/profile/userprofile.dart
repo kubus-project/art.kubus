@@ -43,9 +43,9 @@ class UserProfile extends StatelessWidget {
                 ),
               )
             else
-              Card(
+              const Card(
                 color: Colors.white, // Set the card color to white
-                child: const Icon(
+                child: Icon(
                   Icons.account_circle,
                   size: 120,
                   color: Colors.grey,
@@ -56,7 +56,7 @@ class UserProfile extends StatelessWidget {
               child: ListTile(
                 leading: const Icon(Icons.person),
                 title: const Text('Name', style: TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
-                subtitle: Text(profile?.name ?? '', style: TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
+                subtitle: Text(profile?.name ?? '', style: const TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
               ),
             ),
             Card(
@@ -64,7 +64,7 @@ class UserProfile extends StatelessWidget {
               child: ListTile(
                 leading: const Icon(Icons.info),
                 title: const Text('Bio', style: TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
-                subtitle: Text(profile?.bio ?? '', style: TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
+                subtitle: Text(profile?.bio ?? '', style: const TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
               ),
             ),
             Card(
@@ -72,7 +72,7 @@ class UserProfile extends StatelessWidget {
               child: ListTile(
                 leading: const Icon(Icons.link),
                 title: const Text('Links', style: TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
-                subtitle: Text(profile?.links ?? '', style: TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
+                subtitle: Text(profile?.links ?? '', style: const TextStyle(fontFamily: 'SofiaSans')), // Set the font to Sofia Sans
               ),
             ),
           ],

@@ -50,6 +50,9 @@ dependencies:
   proj4dart: any
   http: ^1.2.1
   web3dart: ^2.7.3
+  ar_core: ^0.0.2+7
+  camera: ^0.9.8+1
+  logger: ^2.3.0
   
 dev_dependencies:
   flutter_test:
