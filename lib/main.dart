@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:camera/camera.dart'; 
+import 'package:logger/logger.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'providers/connection_provider.dart';
+import 'providers/profile_provider.dart';
+import 'providers/web3provider.dart';
 import 'pages/markers.dart';
 import 'pages/circle.dart';
 import 'homenewusers.dart';
 import 'walletmenu.dart';
 import 'map.dart';
-import 'providers/connection_provider.dart';
-import 'providers/profile_provider.dart';
-import  'providers/web3provider.dart';
-import 'package:camera/camera.dart'; 
 import 'ar/ar.dart';
-import 'package:logger/logger.dart';
 
 void main() async {
   var logger = Logger();
@@ -48,11 +49,18 @@ class ArtKubus extends StatelessWidget {
           );
         },
         title: 'art.kubus',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
-        ),
-        home: const MyHomePage(),
+         theme: ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: Colors.black,
+    scaffoldBackgroundColor: Colors.black,
+    textTheme: GoogleFonts.sofiaSansTextTheme(
+      Theme.of(context).textTheme.apply(
+        bodyColor: Colors.white,
+        displayColor: Colors.white,
+      ),
+    ),
+          ),
+          home: const MyHomePage(),
       ),
     );
   }
@@ -76,7 +84,6 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final connectionProvider = Provider.of<ConnectionProvider>(context);
 
     final List<Widget> widgetOptions = [
       
@@ -105,18 +112,7 @@ class _MyHomePageState extends State<MyHomePage> {
             children: <Widget>[
               IconButton(
                 icon: const Icon(Icons.camera_alt),
-                onPressed: () {
-                  if (!connectionProvider.isConnected) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('You need to connect to use the feature.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  } else {
-                    _onItemTapped(1);
-                  }
-                },
+                onPressed: () => _onItemTapped(1),
               ),
               IconButton(
                 icon: Image.asset('assets/images/logo.png'), 

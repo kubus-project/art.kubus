@@ -31,7 +31,6 @@ class _ConnectWalletState extends State<ConnectWallet> {
         backgroundColor: Colors.black,
         title: const Text(
           'Connect Wallet',
-          style: TextStyle(fontFamily: 'Sofia Sans', color: Colors.white),
         ),
       ),
       body: Container(
@@ -45,7 +44,6 @@ class _ConnectWalletState extends State<ConnectWallet> {
               onPressed: _connectWallet,
               child: const Text(
                 'Connect Wallet',
-                style: TextStyle(fontFamily: 'Sofia Sans'),
               ),
             ),
           ],
