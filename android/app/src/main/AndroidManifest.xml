@@ -11,7 +11,7 @@
     android:requestLegacyExternalStorage="true"
         android:label="art.kubus"
         android:name="${applicationName}"
-        android:icon="@drawable/belilogo">
+        android:icon="@drawable/belilogo_crn">
         <activity
             android:name=".MainActivity"
             android:exported="true"

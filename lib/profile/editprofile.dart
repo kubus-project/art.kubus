@@ -92,8 +92,7 @@ Future<void> _saveProfile() async {
         appBar: AppBar(
           backgroundColor: Colors.black,
           title: const Text(
-            'Edit',
-            style: TextStyle(fontFamily: 'Sofia Sans', color: Colors.white),
+            'Edit'
           ),
         ),
         body: Container(
@@ -139,10 +138,10 @@ Future<void> _saveProfile() async {
               const SizedBox(height: 20),
               TextField(
                 controller: _nameController,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Sofia Sans'),
+                style: const TextStyle(color: Colors.white,  ),
                 decoration: const InputDecoration(
                   labelText: 'Name',
-                  labelStyle: TextStyle(color: Colors.grey, fontFamily: 'Sofia Sans'),
+                  labelStyle: TextStyle(color: Colors.grey,  ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
@@ -154,10 +153,10 @@ Future<void> _saveProfile() async {
               const SizedBox(height: 20),
               TextField(
                 controller: _bioController,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Sofia Sans'),
+                style: const TextStyle(color: Colors.white,  ),
                 decoration: const InputDecoration(
                   labelText: 'Bio',
-                  labelStyle: TextStyle(color: Colors.grey, fontFamily: 'Sofia Sans'),
+                  labelStyle: TextStyle(color: Colors.grey,  ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
@@ -169,10 +168,10 @@ Future<void> _saveProfile() async {
               const SizedBox(height: 20),
               TextField(
                 controller: _linksController,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Sofia Sans'),
+                style: const TextStyle(color: Colors.white,  ),
                 decoration: const InputDecoration(
                   labelText: 'Links',
-                  labelStyle: TextStyle(color: Colors.grey, fontFamily: 'Sofia Sans'),
+                  labelStyle: TextStyle(color: Colors.grey,  ),
                   enabledBorder: UnderlineInputBorder(
                     borderSide: BorderSide(color: Colors.grey),
                   ),
@@ -186,7 +185,7 @@ Future<void> _saveProfile() async {
                 onPressed: _saveProfile,
                 child: const Text(
                   'Save',
-                  style: TextStyle(fontFamily: 'Sofia Sans'),
+                  style: TextStyle( ),
                 ),
               ),
             ],
