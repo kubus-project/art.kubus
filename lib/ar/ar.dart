@@ -51,51 +51,60 @@ class _AugmentedState extends State<Augmented> {
         backgroundColor: Colors.black,
       ),
       body: loadingCamera
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    width: MediaQuery.of(context).size.width,
-                    child: ArWidget(controller)),
-                Positioned(
-                  top: yPosition,
-                  left: xPosition,
-                  child: GestureDetector(
-                    onPanUpdate: (tapInfo) {
-                      setState(() {
-                        xPosition += tapInfo.delta.dx;
-                        yPosition += tapInfo.delta.dy;
-                      });
-                    },
-                    child: Container(
-                        height: onchange,
-                        color: Colors.transparent,
-                        child: Image.network(
-                            widget.image ??
-                                'https://freepngimg.com/thumb/3d/32378-7-3d-photos-thumb.png',
-                            height: onchange,
-                            width: onchange)),
-                  ),
-                ),
-              ],
+    ? const Center(child: CircularProgressIndicator())
+    : Stack(
+        children: [
+          SizedBox(
+              height: MediaQuery.of(context).size.height,
+              width: MediaQuery.of(context).size.width,
+              child: ArWidget(controller)),
+          Positioned(
+            top: yPosition,
+            left: xPosition,
+            child: GestureDetector(
+              onPanUpdate: (tapInfo) {
+                setState(() {
+                  xPosition += tapInfo.delta.dx;
+                  yPosition += tapInfo.delta.dy;
+                });
+              },
+              child: Container(
+                  height: onchange,
+                  color: Colors.transparent,
+                  child: Image.network(
+                      widget.image ??
+                          'https://freepngimg.com/thumb/3d/32378-7-3d-photos-thumb.png',
+                      height: onchange,
+                      width: onchange)),
             ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.black,
-        child: Slider(
-          value: onchange,
-          min: 10,
-          max: 300,
-          thumbColor: Colors.white,
-          activeColor: Colors.white,
-          
-          onChanged: (value) {
-            setState(() {
-              onchange = value;
-            });
-          },
-        ),
+          ),
+          Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.15, // 15% from the bottom
+            child: Container(
+              width: MediaQuery.of(context).size.width, // Full width of the screen
+              child: Slider(
+                value: onchange,
+                min: 10,
+                max: 300,
+                thumbColor: Colors.white,
+                activeColor: Colors.white,
+                
+                onChanged: (value) {
+                  setState(() {
+                    onchange = value;
+                  });
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    controller?.dispose(); // Dispose the CameraController when the widget is removed from the tree
+    super.dispose();
   }
 }

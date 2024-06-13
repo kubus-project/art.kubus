@@ -9,20 +9,21 @@ class PulseMarkerWidget extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const MenuDrawer(''))),
       child: Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.5),
-              blurRadius: 20,
-              spreadRadius: 1,
-            ),
-          ],
-        ),
+  decoration: BoxDecoration(
+    shape: BoxShape.circle,
+    boxShadow: [
+      BoxShadow(
+        color: Colors.white.withOpacity(0.3),
+        spreadRadius: 1,
+        blurRadius: 22, // changes position of shadow
       ),
-    );
+    ],
+  ),
+  child: const Icon(
+    Icons.circle,
+    size: 9,
+  ),
+));
+
   }
 }

@@ -10,7 +10,7 @@ import 'providers/web3provider.dart';
 import 'pages/markers.dart';
 import 'pages/circle.dart';
 import 'homenewusers.dart';
-import 'walletmenu.dart';
+import 'web3/walletmenu.dart';
 import 'map.dart';
 import 'ar/ar.dart';
 
@@ -51,14 +51,31 @@ class ArtKubus extends StatelessWidget {
         title: 'art.kubus',
          theme: ThemeData(
     brightness: Brightness.dark,
-    primaryColor: Colors.black,
+    primaryColorDark: Colors.black,
     scaffoldBackgroundColor: Colors.black,
+    cardColor: Colors.white,
+    canvasColor: Colors.white,
     textTheme: GoogleFonts.sofiaSansTextTheme(
       Theme.of(context).textTheme.apply(
         bodyColor: Colors.white,
         displayColor: Colors.white,
+        decorationColor: Colors.white,
       ),
     ),
+    buttonTheme: const ButtonThemeData(
+      buttonColor: Colors.white,
+      textTheme: ButtonTextTheme.primary,
+    ),
+    floatingActionButtonTheme: const FloatingActionButtonThemeData(
+    backgroundColor: Colors.white,
+    foregroundColor: Colors.black,
+  ),
+    snackBarTheme: const SnackBarThemeData(
+      actionBackgroundColor: Colors.white,
+      backgroundColor: Colors.white,
+      actionTextColor: Colors.black,
+    ),
+    
           ),
           home: const MyHomePage(),
       ),
@@ -78,7 +95,6 @@ class MyHomePage extends StatefulWidget {
   @override
   createState() => _MyHomePageState();
 }
-
 class _MyHomePageState extends State<MyHomePage> {
   int _selectedIndex = 0;
 
@@ -86,7 +102,6 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
 
     final List<Widget> widgetOptions = [
-      
       const MapHome(),
       const Augmented('https://rokcernezel.com/wp-content/uploads/2024/04/logo2.jpg.webp'),
       const ProfileMenu(), 
@@ -97,33 +112,42 @@ class _MyHomePageState extends State<MyHomePage> {
       body: SafeArea(
         child: Stack(
           children: [
-            widgetOptions.elementAt(_selectedIndex)
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.black,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 6.0,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.camera_alt),
+            widgetOptions.elementAt(_selectedIndex),
+            // Floating action buttons
+            Positioned(
+              left: MediaQuery.of(context).size.width * 0.05,
+              bottom: 16,
+              child: FloatingActionButton(
                 onPressed: () => _onItemTapped(1),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                elevation: 1,
+                child: const Icon(Icons.image),
               ),
-              IconButton(
-                icon: Image.asset('assets/images/logo.png'), 
+            ),
+            Positioned(
+              left: MediaQuery.of(context).size.width * 0.5 - 28,
+              bottom: 16,
+              child: FloatingActionButton(
                 onPressed: () => _onItemTapped(0),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                elevation: 5,
+                child: Image.asset('assets/images/logo.png'),
               ),
-              IconButton(
-                icon: const Icon(Icons.wallet),
+            ),
+            Positioned(
+              right: MediaQuery.of(context).size.width * 0.05,
+              bottom: 16,
+              child: FloatingActionButton(
                 onPressed: () => _onItemTapped(2),
+                backgroundColor: Colors.transparent,
+                foregroundColor: Colors.white,
+                elevation: 1,
+                child: const Icon(Icons.menu,),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -135,5 +159,6 @@ class _MyHomePageState extends State<MyHomePage> {
     });
   }
 }
+
 
 List<CameraDescription> cameras = [];
