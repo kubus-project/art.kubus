@@ -38,12 +38,17 @@ class _WalletState extends State<Wallet> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
                       ),
                       onPressed: () {
                         showDialog(
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
+                              backgroundColor: Colors.white,
+                              titleTextStyle: TextStyle(color: Colors.black),
+                              contentTextStyle: TextStyle(color: Colors.black),
+                              iconColor: Colors.black,
                               title: const Text('Send Tokens'),
                               content: const Column(
                                 children: <Widget>[
@@ -81,12 +86,14 @@ class _WalletState extends State<Wallet> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
                       ),
                       onPressed: () {
                         showDialog(
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
+                              backgroundColor: Colors.white,
                               title: const Text('Receive Tokens'),
                               content: Image.network('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example'), // Replace with actual QR code image
                               actions: <Widget>[
