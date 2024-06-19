@@ -75,7 +75,18 @@ class ArtKubus extends StatelessWidget {
       backgroundColor: Colors.white,
       actionTextColor: Colors.black,
     ),
-    
+    popupMenuTheme: const PopupMenuThemeData(
+      color: Colors.white
+    ),
+    dialogTheme: const DialogTheme(
+      backgroundColor: Colors.transparent,
+      iconColor: Colors.white,
+      titleTextStyle: TextStyle(color: Colors.white)
+      ),
+    textButtonTheme: const TextButtonThemeData(
+      style: ButtonStyle(foregroundColor:WidgetStatePropertyAll(Colors.white))
+      
+    )
           ),
           home: const MyHomePage(),
       ),

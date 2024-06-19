@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:art_kubus/plugins/zoombuttons_plugin.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -80,8 +81,8 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
               _currentLocation!.latitude! + Random().nextDouble() * 0.02,
               _currentLocation!.longitude! + Random().nextDouble() * 0.01,
             ),
-            title: 'Marker $i',
-            description: 'This is marker $i',
+            title: 'Artwork $i',
+            description: 'This is an artwork. Here you will see the info and other cool related stuff about the art that has been published and pinned to this location. $i',
           ),
         );
       }
@@ -122,7 +123,7 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
                 ),
                 children: [
                   openStreetMapTileLayer,
-                  MarkerLayer(
+                   MarkerLayer(
                     markers: [
                       if (_currentLocation != null)
                         Marker(
@@ -131,6 +132,8 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
                         ),
                     ],
                   ),
+                  
+                  
                   
                   // Add a separate MarkerLayer for the ArtMarker widgets
                   if (_artMarkers != null)
@@ -142,15 +145,28 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
                         ),
                       ).toList(),
                     ),
+                    
+                    const FlutterMapZoomButtons(
+            minZoom: 4,
+            maxZoom: 19,
+            mini: true,
+            padding: 1,
+            alignment: Alignment(-0.44 , 0.345),
+
+            ),
                 ],
               ),
             ),
           ),
           Positioned(
-            top: 10.0,
-            right: 10.0,
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            right: MediaQuery.of(context).size.width * 0.05,
             child: FloatingActionButton(
-              child: Icon(_autoCenter ? Icons.location_searching : Icons.location_disabled, color: Colors.black,),
+              elevation: 1,
+              backgroundColor: Colors.transparent,
+              child: Icon(_autoCenter ? Icons.location_searching : Icons.location_disabled, 
+                          color: Colors.white,
+                          ),
               onPressed: () {
                 setState(() {
                   _autoCenter = !_autoCenter;

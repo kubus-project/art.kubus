@@ -21,14 +21,14 @@ class FlutterMapZoomButtons extends StatelessWidget {
     this.minZoom = 1,
     this.maxZoom = 18,
     this.mini = true,
-    this.padding = 2.0,
+    this.padding = 0.3,
     this.alignment = Alignment.topRight,
     this.zoomInColor,
     this.zoomInColorIcon,
-    this.zoomInIcon = Icons.zoom_in,
+    this.zoomInIcon = Icons.add,
     this.zoomOutColor,
     this.zoomOutColorIcon,
-    this.zoomOutIcon = Icons.zoom_out,
+    this.zoomOutIcon = Icons.remove,
   });
 
   @override
@@ -47,28 +47,30 @@ class FlutterMapZoomButtons extends StatelessWidget {
                 EdgeInsets.only(left: padding, top: padding, right: padding),
             child: FloatingActionButton(
               heroTag: 'zoomInButton',
-              mini: mini,
-              backgroundColor: zoomInColor ?? theme.primaryColor,
+              backgroundColor: Colors.transparent,
               onPressed: () {
                 final zoom = min(camera.zoom + 1, maxZoom);
                 controller.move(camera.center, zoom);
               },
-              child: Icon(zoomInIcon,
-                  color: zoomInColorIcon ?? theme.iconTheme.color),
+              elevation: 1,
+              child: Container(
+               child:Icon(zoomInIcon,
+                  color: zoomInColorIcon ?? theme.iconTheme.color, size: 15, ),
+            ),
             ),
           ),
           Padding(
             padding: EdgeInsets.all(padding),
             child: FloatingActionButton(
               heroTag: 'zoomOutButton',
-              mini: mini,
-              backgroundColor: zoomOutColor ?? theme.primaryColor,
+              backgroundColor: Colors.transparent,
               onPressed: () {
                 final zoom = max(camera.zoom - 1, minZoom);
                 controller.move(camera.center, zoom);
               },
+              elevation: 1,
               child: Icon(zoomOutIcon,
-                  color: zoomOutColorIcon ?? theme.iconTheme.color),
+                  color: zoomOutColorIcon ?? theme.iconTheme.color, size: 15,),
             ),
           ),
         ],
