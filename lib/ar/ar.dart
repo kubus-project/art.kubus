@@ -45,11 +45,6 @@ class _AugmentedState extends State<Augmented> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Augmented'),
-        foregroundColor: Colors.white,
-        backgroundColor: Colors.black,
-      ),
       body: loadingCamera
     ? const Center(child: CircularProgressIndicator())
     : Stack(
@@ -79,22 +74,16 @@ class _AugmentedState extends State<Augmented> {
             ),
           ),
           Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.15, // 15% from the bottom
-            child: Container(
-              width: MediaQuery.of(context).size.width, // Full width of the screen
-              child: Slider(
-                value: onchange,
-                min: 10,
-                max: 300,
-                thumbColor: Colors.white,
-                activeColor: Colors.white,
-                
-                onChanged: (value) {
-                  setState(() {
-                    onchange = value;
-                  });
-                },
-              ),
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            right: MediaQuery.of(context).size.width * 0.05,
+            child: FloatingActionButton(
+              onPressed: () {
+                // Call your function here
+              },
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              elevation: 1,
+              child: const Icon(Icons.add),
             ),
           ),
         ],

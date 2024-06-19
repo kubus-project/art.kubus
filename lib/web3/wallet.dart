@@ -46,8 +46,8 @@ class _WalletState extends State<Wallet> {
                           builder: (BuildContext context) {
                             return AlertDialog(
                               backgroundColor: Colors.white,
-                              titleTextStyle: TextStyle(color: Colors.black),
-                              contentTextStyle: TextStyle(color: Colors.black),
+                              titleTextStyle: const TextStyle(color: Colors.black),
+                              contentTextStyle: const TextStyle(color: Colors.black),
                               iconColor: Colors.black,
                               title: const Text('Send Tokens'),
                               content: const Column(
