@@ -53,10 +53,10 @@ class FlutterMapZoomButtons extends StatelessWidget {
                 controller.move(camera.center, zoom);
               },
               elevation: 1,
-              child: Container(
-               child:Icon(zoomInIcon,
-                  color: zoomInColorIcon ?? theme.iconTheme.color, size: 15, ),
-            ),
+      
+               child: Icon(zoomInIcon,
+                  color: zoomInColorIcon ?? theme.iconTheme.color ),
+            
             ),
           ),
           Padding(
@@ -69,10 +69,12 @@ class FlutterMapZoomButtons extends StatelessWidget {
                 controller.move(camera.center, zoom);
               },
               elevation: 1,
+
               child: Icon(zoomOutIcon,
-                  color: zoomOutColorIcon ?? theme.iconTheme.color, size: 15,),
+                  color: zoomOutColorIcon ?? theme.iconTheme.color),
             ),
-          ),
+            ),
+          
         ],
       ),
     );

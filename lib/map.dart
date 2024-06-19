@@ -69,7 +69,9 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
         _currentLocation = userLocation;
       });
       if (_autoCenter) {
-        _mapController.move(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), 16);
+        _mapController.move(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), _mapController.camera.zoom, 
+        
+        );
       }
 
       // Generate the ArtMarker widgets when the current location becomes available for the first time
@@ -145,15 +147,19 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
                         ),
                       ).toList(),
                     ),
-                    
+                    Transform.scale(
+                      scale: 0.5,
+                      child: 
                     const FlutterMapZoomButtons(
+                      
             minZoom: 4,
             maxZoom: 19,
-            mini: true,
-            padding: 1,
-            alignment: Alignment(-0.44 , 0.345),
+            mini: false,
+            padding: 10,
+            alignment: Alignment(-0.93,0.78),
 
             ),
+                    ),
                 ],
               ),
             ),
