@@ -13,18 +13,20 @@ class PulseMarkerWidget extends StatelessWidget {
             width: 200, // Set your desired width
             height: 200, // Set your desired height
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 const TextField(
                   decoration: InputDecoration(hintText: 'Enter title'),
                 ),
+                const SizedBox(height: 10), // Added for spacing
                 const TextField(
                   decoration: InputDecoration(hintText: 'Enter description'),
                 ),
+                const SizedBox(height: 10), // Added for spacing
                 IconButton(
                   icon: const Icon(Icons.camera_alt),
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/ar');
-                  },
+                  onPressed: () => Navigator.pushNamed(context, '/ar'),
                 ),
               ],
             ),
@@ -32,9 +34,7 @@ class PulseMarkerWidget extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
             ),
             TextButton(
               child: const Text('Create'),
@@ -61,7 +61,7 @@ class PulseMarkerWidget extends StatelessWidget {
             BoxShadow(
               color: Colors.white.withOpacity(0.3),
               spreadRadius: 1,
-              blurRadius: 22, // changes position of shadow
+              blurRadius: 22,
             ),
           ],
         ),

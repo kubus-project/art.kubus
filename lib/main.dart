@@ -11,7 +11,7 @@ import 'pages/markers.dart';
 import 'pages/circle.dart';
 import 'homenewusers.dart';
 import 'web3/walletmenu.dart';
-import 'map.dart';
+import 'map/map.dart';
 import 'ar/ar.dart';
 
 void main() async {
@@ -114,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     final List<Widget> widgetOptions = [
       const MapHome(),
-      const Augmented('https://rokcernezel.com/wp-content/uploads/2024/04/logo2.jpg.webp'),
+      Augmented(),
       const ProfileMenu(), 
     ];
 
@@ -138,12 +138,13 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             Positioned(
               left: MediaQuery.of(context).size.width * 0.5 - 28,
-              bottom: 16,
+              bottom: 42
+              ,
               child: FloatingActionButton(
                 onPressed: () => _onItemTapped(0),
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
-                elevation: 5,
+                elevation: 1,
                 child: Image.asset('assets/images/logo.png'),
               ),
             ),

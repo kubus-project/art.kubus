@@ -50,11 +50,12 @@ dependencies:
   proj4dart: any
   http: ^1.2.1
   web3dart: ^2.7.3
-  ar_core: ^0.0.2+7
   camera: ^0.9.8+1
   logger: ^2.3.0
   google_fonts: ^6.2.1
   flutter_compass: ^0.8.0
+  arcore_flutter_plugin: ^0.1.0
+  vector_math: ^2.1.4
   
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:art_kubus/plugins/zoombuttons_plugin.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -12,7 +11,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'package:location/location.dart';
 import 'markers/pulsingmarker.dart';
-import 'markers/artmarker.dart'; // Import the ArtMarker widget
+import 'markers/artmarker.dart';
+import 'package:art_kubus/map/compassaccuracy.dart';
 
 class MapHome extends StatefulWidget {
   static const String route = '/';
@@ -37,14 +37,30 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
   StreamSubscription<CompassEvent>? _compassSubscription;
 
   @override
-  void initState() {
-    super.initState();
-    _getLocation();
-    showIntroDialogIfNeeded();
-    _timer = Timer.periodic(const Duration(milliseconds: 500), (Timer t) => _getLocation());
+void initState() {
+  super.initState();
+  _getLocation();
+  showIntroDialogIfNeeded();
+  _timer = Timer.periodic(const Duration(milliseconds: 500), (Timer t) => _getLocation());
 
-    WidgetsBinding.instance.addObserver(this);
+  // Start listening to compass updates immediately
+  _compassSubscription = FlutterCompass.events!.listen((CompassEvent event) {
+    setState(() {
+      _direction = event.heading;
+    });
+  });
+
+  WidgetsBinding.instance.addObserver(this);
+}
+
+
+  void updateDirection(double newDirection) {
+  if ((newDirection - (_direction ?? 0)).abs() > 1) { // Example threshold
+    setState(() {
+      _direction = newDirection;
+    });
   }
+}
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -93,15 +109,42 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
     }
   }
 
+ void checkCompassAccuracyAndShowPopup(BuildContext context, CompassAccuracyWidget compassWidget) {
+  // Use the CompassAccuracyWidget to get the current compass accuracy
+  double compassAccuracy = compassKey.currentState!.getCompassAccuracy(); // Adjust this line based on how you access the method
+
+  // Check if the accuracy is below a certain threshold, indicating calibration is needed
+  if (compassAccuracy < 2) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Compass Calibration Needed"),
+          content: Text("Your compass needs calibration for better accuracy. Please move your device in a figure-eight motion. Current accuracy: $compassAccuracy"),
+          actions: <Widget>[
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
   @override
   Widget build(BuildContext context) {
+    double rotationRadians = -(_direction ?? 0) * (pi / 180);
     return Scaffold(
       body: Stack(
         children: [
           Transform.scale(
-            scale: 2, // Adjust this value as needed
+            scale: 2.2, // Adjust this value as needed
             child: Transform.rotate(
-              angle: _autoCenter ? ((_direction ?? 0) * (pi / 180) * -1) : 0,
+              angle: _autoCenter ? rotationRadians : 0,
               child: FlutterMap(
                 mapController: _mapController,
                 options: MapOptions(
@@ -147,23 +190,44 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
                         ),
                       ).toList(),
                     ),
-                    Transform.scale(
-                      scale: 0.5,
-                      child: 
-                    const FlutterMapZoomButtons(
-                      
-            minZoom: 4,
-            maxZoom: 19,
-            mini: false,
-            padding: 10,
-            alignment: Alignment(-0.93,0.78),
-
-            ),
-                    ),
+              
                 ],
               ),
             ),
           ),
+
+           Positioned(
+      bottom: MediaQuery.of(context).size.height * 0.2,
+      left: MediaQuery.of(context).size.width * 0.05,
+      child: FloatingActionButton(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white, 
+        elevation: 1,
+        onPressed: () {
+          _mapController.move(
+            _mapController.camera.center,
+            _mapController.camera.zoom + 1,
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
+    ),
+    Positioned(
+      bottom: MediaQuery.of(context).size.height * 0.1,
+      left: MediaQuery.of(context).size.width * 0.05,
+      child: FloatingActionButton(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white, 
+        elevation: 1,
+        onPressed: () {
+          _mapController.move(
+            _mapController.camera.center,
+            _mapController.camera.zoom - 1,
+          );
+        },
+        child: const Icon(Icons.remove),
+      ),
+    ),
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.1,
             right: MediaQuery.of(context).size.width * 0.05,
