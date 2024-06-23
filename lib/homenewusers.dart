@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'map.dart'; // Make sure this import is correct
+import 'map/map.dart'; // Make sure this import is correct
 
 class HomeNewUsers extends StatelessWidget {
   const HomeNewUsers({super.key});

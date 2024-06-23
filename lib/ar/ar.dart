@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:ar_core/augmented_reality/augmented_preview.dart';
@@ -42,6 +43,20 @@ class _AugmentedState extends State<Augmented> {
   double yPosition = 150;
   double onchange = 150;
 
+// Modified scanMarker method to accept BuildContext and show SnackBar
+void scanMarker(BuildContext context) {
+  // Removed incorrect line: child: scanMarker(context);
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("Scanning marker...")),
+  );
+}
+
+// Modified addMarker method to accept BuildContext and show SnackBar
+void addMarker(BuildContext context) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("Adding marker...")),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,38 +68,27 @@ class _AugmentedState extends State<Augmented> {
               height: MediaQuery.of(context).size.height,
               width: MediaQuery.of(context).size.width,
               child: ArWidget(controller)),
-          Positioned(
-            top: yPosition,
-            left: xPosition,
-            child: GestureDetector(
-              onPanUpdate: (tapInfo) {
-                setState(() {
-                  xPosition += tapInfo.delta.dx;
-                  yPosition += tapInfo.delta.dy;
-                });
-              },
-              child: Container(
-                  height: onchange,
-                  color: Colors.transparent,
-                  child: Image.network(
-                      widget.image ??
-                          'https://freepngimg.com/thumb/3d/32378-7-3d-photos-thumb.png',
-                      height: onchange,
-                      width: onchange)),
-            ),
+                  Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: MediaQuery.of(context).size.width * 0.05,
+            child: FloatingActionButton(
+  onPressed: () => scanMarker(context),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 1,
+  child: const Icon(Icons.search),
+)
           ),
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.1,
             right: MediaQuery.of(context).size.width * 0.05,
             child: FloatingActionButton(
-              onPressed: () {
-                // Call your function here
-              },
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              elevation: 1,
-              child: const Icon(Icons.add),
-            ),
+  onPressed: () => addMarker(context),
+  backgroundColor: Colors.transparent,
+  foregroundColor: Colors.white,
+  elevation: 1,
+  child: const Icon(Icons.add),
+)
           ),
         ],
       ),
