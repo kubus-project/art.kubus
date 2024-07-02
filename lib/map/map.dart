@@ -197,7 +197,7 @@ void initState() {
           ),
 
            Positioned(
-      bottom: MediaQuery.of(context).size.height * 0.2,
+      bottom: MediaQuery.of(context).size.height * 0.18,
       left: MediaQuery.of(context).size.width * 0.05,
       child: FloatingActionButton(
         backgroundColor: Colors.transparent,
@@ -209,6 +209,7 @@ void initState() {
             _mapController.camera.zoom + 1,
           );
         },
+        heroTag: 'zoomInFAB',
         child: const Icon(Icons.add),
       ),
     ),
@@ -225,6 +226,7 @@ void initState() {
             _mapController.camera.zoom - 1,
           );
         },
+        heroTag: 'zoomOutFAB',
         child: const Icon(Icons.remove),
       ),
     ),
@@ -234,15 +236,16 @@ void initState() {
             child: FloatingActionButton(
               elevation: 1,
               backgroundColor: Colors.transparent,
-              child: Icon(_autoCenter ? Icons.location_searching : Icons.location_disabled, 
-                          color: Colors.white,
-                          ),
               onPressed: () {
                 setState(() {
                   _autoCenter = !_autoCenter;
                   _direction = 0;
                 });
               },
+              heroTag: 'centerFAB',
+              child: Icon(_autoCenter ? Icons.location_searching : Icons.location_disabled, 
+                          color: Colors.white,
+                          ),
             ),
           ),
         ],

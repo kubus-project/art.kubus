@@ -44,7 +44,7 @@ Future<void> scanMarker(BuildContext context) async {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to send image to the backend")),
-      );
+      ); 
     }
   } catch (e) {
     ScaffoldMessenger.of(context).showSnackBar(
