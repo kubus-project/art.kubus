@@ -96,7 +96,6 @@ class ArtKubus extends StatelessWidget {
 
 
 Future<void> requestPermissions() async {
-  await Permission.storage.request();
   await Permission.location.request();
 }
 
@@ -114,7 +113,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     final List<Widget> widgetOptions = [
       const MapHome(),
-      Augmented(),
+      const Augmented(),
       const ProfileMenu(), 
     ];
 
@@ -133,7 +132,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
                 elevation: 1,
-                child: const Icon(Icons.image),
+                heroTag: 'ARFAB',
+                child: const Icon(Icons.view_in_ar_outlined),
               ),
             ),
             Positioned(
@@ -145,7 +145,8 @@ class _MyHomePageState extends State<MyHomePage> {
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
                 elevation: 1,
-                child: Image.asset('assets/images/logo.png'),
+                heroTag:'LogoFAB',
+                child: Image.asset('assets/images/logo.png')
               ),
             ),
             Positioned(
@@ -156,6 +157,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 backgroundColor: Colors.transparent,
                 foregroundColor: Colors.white,
                 elevation: 1,
+                heroTag: 'MenuFAB',
                 child: const Icon(Icons.menu,),
               ),
             ),
