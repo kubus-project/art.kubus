@@ -23,7 +23,7 @@ class MapHome extends StatefulWidget {
   State<MapHome> createState() => _MapHomeState();
 }
 
-class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
+class _MapHomeState extends State<MapHome> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   LocationData? _currentLocation;
   Location location = Location();
   Timer? _timer;
@@ -36,31 +36,47 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver {
   double? _direction;
   StreamSubscription<CompassEvent>? _compassSubscription;
 
+  late AnimationController _animationController;
+  late Animation<LatLng> _animation;
+
   @override
-void initState() {
-  super.initState();
-  _getLocation();
-  showIntroDialogIfNeeded();
-  _timer = Timer.periodic(const Duration(milliseconds: 500), (Timer t) => _getLocation());
+  void initState() {
+    super.initState();
+    _getLocation();
+    showIntroDialogIfNeeded();
+    _timer = Timer.periodic(const Duration(milliseconds: 10), (Timer t) => _getLocation());
 
-  // Start listening to compass updates immediately
-  _compassSubscription = FlutterCompass.events!.listen((CompassEvent event) {
-    setState(() {
-      _direction = event.heading;
+    // Start listening to compass updates immediately
+    _compassSubscription = FlutterCompass.events!.listen((CompassEvent event) {
+      setState(() {
+        _direction = event.heading;
+      });
     });
-  });
 
-  WidgetsBinding.instance.addObserver(this);
-}
+    WidgetsBinding.instance.addObserver(this);
 
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    );
 
-  void updateDirection(double newDirection) {
-  if ((newDirection - (_direction ?? 0)).abs() > 1) { // Example threshold
-    setState(() {
-      _direction = newDirection;
+    _animationController.addListener(() {
+      setState(() {
+        _currentLocation = LocationData.fromMap({
+          'latitude': _animation.value.latitude,
+          'longitude': _animation.value.longitude,
+        });
+      });
     });
   }
-}
+
+  void updateDirection(double newDirection) {
+    if ((newDirection - (_direction ?? 0)).abs() > 1) { // Example threshold
+      setState(() {
+        _direction = newDirection;
+      });
+    }
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -81,13 +97,16 @@ void initState() {
   void _getLocation() async {
     try {
       var userLocation = await location.getLocation();
-      setState(() {
-        _currentLocation = userLocation;
-      });
+      if (_currentLocation != null) {
+        _animateMarkerMovement(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), LatLng(userLocation.latitude!, userLocation.longitude!));
+      } else {
+        setState(() {
+          _currentLocation = userLocation;
+        });
+      }
+
       if (_autoCenter) {
-        _mapController.move(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), _mapController.camera.zoom, 
-        
-        );
+        _mapController.move(LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!), _mapController.camera.zoom);
       }
 
       // Generate the ArtMarker widgets when the current location becomes available for the first time
@@ -109,31 +128,43 @@ void initState() {
     }
   }
 
- void checkCompassAccuracyAndShowPopup(BuildContext context, CompassAccuracyWidget compassWidget) {
-  // Use the CompassAccuracyWidget to get the current compass accuracy
-  double compassAccuracy = compassKey.currentState!.getCompassAccuracy(); // Adjust this line based on how you access the method
+  void _animateMarkerMovement(LatLng from, LatLng to) {
+    _animation = LatLngTween(
+      begin: from,
+      end: to,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
 
-  // Check if the accuracy is below a certain threshold, indicating calibration is needed
-  if (compassAccuracy < 2) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Compass Calibration Needed"),
-          content: Text("Your compass needs calibration for better accuracy. Please move your device in a figure-eight motion. Current accuracy: $compassAccuracy"),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("OK"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-            ),
-          ],
-        );
-      },
-    );
+    _animationController.forward(from: 0.0);
   }
-}
+
+  void checkCompassAccuracyAndShowPopup(BuildContext context, CompassAccuracyWidget compassWidget) {
+    // Use the CompassAccuracyWidget to get the current compass accuracy
+    double compassAccuracy = compassKey.currentState!.getCompassAccuracy(); // Adjust this line based on how you access the method
+
+    // Check if the accuracy is below a certain threshold, indicating calibration is needed
+    if (compassAccuracy < 2) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Compass Calibration Needed"),
+            content: Text("Your compass needs calibration for better accuracy. Please move your device in a figure-eight motion. Current accuracy: $compassAccuracy"),
+            actions: <Widget>[
+              TextButton(
+                child: const Text("OK"),
+                onPressed: () {
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +199,7 @@ void initState() {
                 ),
                 children: [
                   openStreetMapTileLayer,
-                   MarkerLayer(
+                  MarkerLayer(
                     markers: [
                       if (_currentLocation != null)
                         Marker(
@@ -177,9 +208,6 @@ void initState() {
                         ),
                     ],
                   ),
-                  
-                  
-                  
                   // Add a separate MarkerLayer for the ArtMarker widgets
                   if (_artMarkers != null)
                     MarkerLayer(
@@ -190,46 +218,44 @@ void initState() {
                         ),
                       ).toList(),
                     ),
-              
                 ],
               ),
             ),
           ),
-
-           Positioned(
-      bottom: MediaQuery.of(context).size.height * 0.18,
-      left: MediaQuery.of(context).size.width * 0.05,
-      child: FloatingActionButton(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white, 
-        elevation: 1,
-        onPressed: () {
-          _mapController.move(
-            _mapController.camera.center,
-            _mapController.camera.zoom + 1,
-          );
-        },
-        heroTag: 'zoomInFAB',
-        child: const Icon(Icons.add),
-      ),
-    ),
-    Positioned(
-      bottom: MediaQuery.of(context).size.height * 0.1,
-      left: MediaQuery.of(context).size.width * 0.05,
-      child: FloatingActionButton(
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white, 
-        elevation: 1,
-        onPressed: () {
-          _mapController.move(
-            _mapController.camera.center,
-            _mapController.camera.zoom - 1,
-          );
-        },
-        heroTag: 'zoomOutFAB',
-        child: const Icon(Icons.remove),
-      ),
-    ),
+          Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.18,
+            left: MediaQuery.of(context).size.width * 0.05,
+            child: FloatingActionButton(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              elevation: 1,
+              onPressed: () {
+                _mapController.move(
+                  _mapController.camera.center,
+                  _mapController.camera.zoom + 1,
+                );
+              },
+              heroTag: 'zoomInFAB',
+              child: const Icon(Icons.add),
+            ),
+          ),
+          Positioned(
+            bottom: MediaQuery.of(context).size.height * 0.1,
+            left: MediaQuery.of(context).size.width * 0.05,
+            child: FloatingActionButton(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              elevation: 1,
+              onPressed: () {
+                _mapController.move(
+                  _mapController.camera.center,
+                  _mapController.camera.zoom - 1,
+                );
+              },
+              heroTag: 'zoomOutFAB',
+              child: const Icon(Icons.remove),
+            ),
+          ),
           Positioned(
             bottom: MediaQuery.of(context).size.height * 0.1,
             right: MediaQuery.of(context).size.width * 0.05,
@@ -243,16 +269,16 @@ void initState() {
                 });
               },
               heroTag: 'centerFAB',
-              child: Icon(_autoCenter ? Icons.location_searching : Icons.location_disabled, 
-                          color: Colors.white,
-                          ),
+              child: Icon(
+                _autoCenter ? Icons.location_searching : Icons.location_disabled,
+                color: Colors.white,
+              ),
             ),
           ),
         ],
       ),
     );
   }
-
 
   void showIntroDialogIfNeeded() {
     const seenIntroBoxKey = 'seenIntroBox(a)';
@@ -274,10 +300,11 @@ void initState() {
     }
   }
 
-@override
+  @override
   void dispose() {
     _timer?.cancel();
     _compassSubscription?.cancel(); // Stop listening to compass updates
+    _animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
