@@ -45,12 +45,11 @@ class _WalletState extends State<Wallet> {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              backgroundColor: Colors.white,
-                              titleTextStyle: const TextStyle(color: Colors.black),
-                              contentTextStyle: const TextStyle(color: Colors.black),
+                              backgroundColor: Colors.black,
                               iconColor: Colors.black,
                               title: const Text('Send Tokens'),
                               content: const Column(
+                                mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
                                   TextField(
                                     decoration: InputDecoration(
@@ -93,7 +92,7 @@ class _WalletState extends State<Wallet> {
                           context: context,
                           builder: (BuildContext context) {
                             return AlertDialog(
-                              backgroundColor: Colors.white,
+                              backgroundColor: Colors.black,
                               title: const Text('Receive Tokens'),
                               content: Image.network('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example'), // Replace with actual QR code image
                               actions: <Widget>[
@@ -109,6 +108,91 @@ class _WalletState extends State<Wallet> {
                         );
                       },
                       child: const Text('Receive Tokens'),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              backgroundColor: Colors.black,
+                              iconColor: Colors.black,
+                              title: const Text('Send NFTs'),
+                              content: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter Wallet Address',
+                                    ),
+                                  ),
+                                  TextField(
+                                    decoration: InputDecoration(
+                                      hintText: 'Enter NFT ID',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('Submit'),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: const Text('Send NFTs'),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              backgroundColor: Colors.black,
+                              title: const Text('Receive NFTs'),
+                              content: Image.network('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=example'), // Replace with actual QR code image
+                              actions: <Widget>[
+                                TextButton(
+                                  child: const Text('Close'),
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                      child: const Text('Receive NFTs'),
                     ),
                   ),
                 ),

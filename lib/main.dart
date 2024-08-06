@@ -10,7 +10,7 @@ import 'providers/web3provider.dart';
 import 'pages/markers.dart';
 import 'pages/circle.dart';
 import 'homenewusers.dart';
-import 'web3/walletmenu.dart';
+import 'menu.dart';
 import 'map/map.dart';
 import 'ar/ar.dart';
 
@@ -114,7 +114,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final List<Widget> widgetOptions = [
       const MapHome(),
       const Augmented(),
-      const ProfileMenu(), 
+      const Menu(), 
     ];
 
     return Scaffold(
