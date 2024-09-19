@@ -1,15 +1,17 @@
-import 'package:art_kubus/profile/userprofile.dart';
 import 'package:flutter/material.dart';
-import 'web3/nftcollectionpage.dart';
-import 'community/communitymenu.dart';
-import 'web3/wallet.dart';
-import 'settings.dart';
+import 'artvote.dart';
+import '/web3/wallet.dart';
+import '/profile/userprofile.dart';
+import 'platformvote.dart';
 
-class Menu extends StatelessWidget {
-  const Menu({super.key});
+class DAOMenu extends StatelessWidget {
+  const DAOMenu({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ArtDAO artDAO = ArtDAO();
+    artDAO.populateArtPiecesWithRandomImages(10); // Populate with 10 random art pieces
+
     return Scaffold(
       body: SafeArea(
         child: Stack(
@@ -32,7 +34,7 @@ class Menu extends StatelessWidget {
                     child: const Icon(Icons.person, size: 30),
                   ),
                   SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.3, // Adjust the width as needed
+                    width: MediaQuery.of(context).size.width * 0.3,
                     child: FloatingActionButton(
                       heroTag: 'WalletFAB',
                       onPressed: () {
@@ -70,41 +72,40 @@ class Menu extends StatelessWidget {
                     const Spacer(flex: 2),
                     buildMenuItem(
                       context,
-                      title: 'Collection',
+                      title: 'Vote on Art',
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const NFTCollectionPage()),
-                        );
+                        final artPieces = artDAO.listAllArtPieces();
+                        if (artPieces.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ArtVoteWidget(
+                                artPieces: artPieces,
+                                artDAO: ArtDAO(), // Pass a valid ArtDAO instance here
+                              ),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('No art pieces available to vote on.')),
+                          );
+                        }
                       },
-                      icon: Icons.collections,
-                      heroTag: 'CollectionButton',
+                      icon: Icons.how_to_vote,
+                      heroTag: 'VoteButton',
                     ),
                     const Spacer(flex: 1),
                     buildMenuItem(
                       context,
-                      title: 'Community',
+                      title: 'Platform Vote',
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const CommunityMenu()),
+                          MaterialPageRoute(builder: (context) => const PlatformVote()),
                         );
                       },
-                      icon: Icons.people,
-                      heroTag: 'CommunityButton',
-                    ),
-                    const Spacer(flex: 1),
-                    buildMenuItem(
-                      context,
-                      title: 'Settings',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const AppSettings()),
-                        );
-                      },
-                      icon: Icons.settings,
-                      heroTag: 'SettingsButton',
+                      icon: Icons.add_box,
+                      heroTag: 'PlatformVoteButton',
                     ),
                     const Spacer(flex: 2),
                   ],

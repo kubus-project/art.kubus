@@ -7,7 +7,6 @@ class Profile {
   String name;
   String bio;
   String links;
-  List<String> achievements; // Change to a list of strings
   File? imageFile;
   EthereumAddress? walletAddress; // Add a field for the wallet address
 
@@ -15,7 +14,6 @@ class Profile {
     required this.name,
     required this.bio,
     required this.links,
-    required this.achievements,
     this.imageFile,
     this.walletAddress, // Add a parameter for the wallet address
   });
@@ -33,7 +31,6 @@ class _EditProfileState extends State<EditProfile> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _linksController = TextEditingController();
-  final TextEditingController _achievementsController = TextEditingController(); // Add a controller for achievements
   EthereumAddress? _walletAddress; // Add a field for the wallet address
 
   @override
@@ -41,7 +38,6 @@ class _EditProfileState extends State<EditProfile> {
     _nameController.dispose();
     _bioController.dispose();
     _linksController.dispose();
-    _achievementsController.dispose(); // Dispose the achievements controller
     super.dispose();
   }
 
@@ -69,7 +65,6 @@ class _EditProfileState extends State<EditProfile> {
       name: _nameController.text,
       bio: _bioController.text,
       links: _linksController.text,
-      achievements: _achievementsController.text.split(','), // Split achievements by comma
       imageFile: _imageFile,
       walletAddress: _walletAddress, // Add the wallet address to the Profile object
     );
@@ -94,11 +89,9 @@ class _EditProfileState extends State<EditProfile> {
       },
       child: Scaffold(
         appBar: AppBar(
-          backgroundColor: Colors.black,
           title: const Text('Edit'),
         ),
-        body: Container(
-          color: Colors.black,
+        body: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -107,14 +100,9 @@ class _EditProfileState extends State<EditProfile> {
               Stack(
                 alignment: Alignment.bottomRight,
                 children: [
-                  Container(
+                  SizedBox(
                     width: 120,
                     height: 120,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(60),
-                      border: Border.all(color: Colors.grey, width: 2),
-                    ),
                     child: _imageFile != null
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(60),
@@ -128,7 +116,6 @@ class _EditProfileState extends State<EditProfile> {
                         : const Icon(
                             Icons.account_circle,
                             size: 120,
-                            color: Colors.grey,
                           ),
                   ),
                   IconButton(
@@ -140,70 +127,28 @@ class _EditProfileState extends State<EditProfile> {
               const SizedBox(height: 20),
               TextField(
                 controller: _nameController,
-                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   labelText: 'Name',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
                 ),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: _bioController,
-                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   labelText: 'Bio',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
                 ),
               ),
               const SizedBox(height: 20),
               TextField(
                 controller: _linksController,
-                style: const TextStyle(color: Colors.white),
                 decoration: const InputDecoration(
                   labelText: 'Links',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              TextField(
-                controller: _achievementsController,
-                style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
-                  labelText: 'Achievements (comma separated)',
-                  labelStyle: TextStyle(color: Colors.grey),
-                  enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.grey),
-                  ),
-                  focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: Colors.white),
-                  ),
                 ),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveProfile,
-                child: const Text(
-                  'Save',
-                  style: TextStyle(),
-                ),
+                child: const Text('Save'),
               ),
             ],
           ),

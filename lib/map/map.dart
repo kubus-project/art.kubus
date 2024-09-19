@@ -13,6 +13,8 @@ import 'package:location/location.dart';
 import 'markers/pulsingmarker.dart';
 import 'markers/artmarker.dart';
 import 'package:art_kubus/map/compassaccuracy.dart';
+import '/providers/themeprovider.dart';
+import 'package:provider/provider.dart';
 
 class MapHome extends StatefulWidget {
   static const String route = '/';
@@ -37,44 +39,46 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver, SingleTi
   StreamSubscription<CompassEvent>? _compassSubscription;
 
   late AnimationController _animationController;
-  late Animation<LatLng> _animation;
+  late Animation<double> _rotationAnimation;
+
+  late TileProviders tileProviders;
 
   @override
   void initState() {
     super.initState();
     _getLocation();
     showIntroDialogIfNeeded();
-    _timer = Timer.periodic(const Duration(milliseconds: 10), (Timer t) => _getLocation());
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) => _getLocation());
 
     // Start listening to compass updates immediately
     _compassSubscription = FlutterCompass.events!.listen((CompassEvent event) {
-      setState(() {
-        _direction = event.heading;
-      });
+      if (mounted) {
+        _updateDirection(event.heading);
+      }
     });
 
     WidgetsBinding.instance.addObserver(this);
 
     _animationController = AnimationController(
-      duration: const Duration(seconds: 1),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
 
-    _animationController.addListener(() {
-      setState(() {
-        _currentLocation = LocationData.fromMap({
-          'latitude': _animation.value.latitude,
-          'longitude': _animation.value.longitude,
-        });
-      });
-    });
+    _rotationAnimation = Tween<double>(begin: 0, end: 0).animate(_animationController);
+
+    // Initialize TileProviders
+    tileProviders = TileProviders(Provider.of<ThemeProvider>(context, listen: false));
   }
 
-  void updateDirection(double newDirection) {
-    if ((newDirection - (_direction ?? 0)).abs() > 1) { // Example threshold
-      setState(() {
-        _direction = newDirection;
-      });
+  void _updateDirection(double? newDirection) {
+    if (newDirection != null && (newDirection - (_direction ?? 0)).abs() > 1) { // Example threshold
+      _rotationAnimation = Tween<double>(begin: _direction ?? 0, end: newDirection).animate(_animationController)
+        ..addListener(() {
+          setState(() {
+            _direction = _rotationAnimation.value;
+          });
+        });
+      _animationController.forward(from: 0.0);
     }
   }
 
@@ -83,9 +87,9 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver, SingleTi
     if (state == AppLifecycleState.resumed) {
       // App is resumed, start listening to compass updates
       _compassSubscription = FlutterCompass.events!.listen((CompassEvent event) {
-        setState(() {
-          _direction = event.heading;
-        });
+        if (mounted) {
+          _updateDirection(event.heading);
+        }
       });
     } else {
       // App is paused, canceled, or detached, stop listening to compass updates
@@ -129,13 +133,27 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver, SingleTi
   }
 
   void _animateMarkerMovement(LatLng from, LatLng to) {
-    _animation = LatLngTween(
+    _animationController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    );
+
+    Animation<LatLng> animation = LatLngTween(
       begin: from,
       end: to,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
+
+    animation.addListener(() {
+      setState(() {
+        _currentLocation = LocationData.fromMap({
+          'latitude': animation.value.latitude,
+          'longitude': animation.value.longitude,
+        });
+      });
+    });
 
     _animationController.forward(from: 0.0);
   }
@@ -170,112 +188,116 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver, SingleTi
   Widget build(BuildContext context) {
     double rotationRadians = -(_direction ?? 0) * (pi / 180);
     return Scaffold(
-      body: Stack(
-        children: [
-          Transform.scale(
-            scale: 2.2, // Adjust this value as needed
-            child: Transform.rotate(
-              angle: _autoCenter ? rotationRadians : 0,
-              child: FlutterMap(
-                mapController: _mapController,
-                options: MapOptions(
-                  initialCenter: _currentLocation != null
-                      ? LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
-                      : const LatLng(46.056, 14.505),
-                  initialZoom: 16,
-                  cameraConstraint: CameraConstraint.contain(
-                    bounds: LatLngBounds(
-                      const LatLng(-90, -180),
-                      const LatLng(90, 180),
+      body: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return Stack(
+            children: [
+              Transform.scale(
+                scale: 2.2, // Adjust this value as needed
+                child: Transform.rotate(
+                  angle: _autoCenter ? rotationRadians : 0,
+                  child: FlutterMap(
+                    mapController: _mapController,
+                    options: MapOptions(
+                      initialCenter: _currentLocation != null
+                          ? LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
+                          : const LatLng(46.056, 14.505),
+                      initialZoom: 16,
+                      cameraConstraint: CameraConstraint.contain(
+                        bounds: LatLngBounds(
+                          const LatLng(-90, -180),
+                          const LatLng(90, 180),
+                        ),
+                      ),
+                      onPositionChanged: (position, hasGesture) {
+                        if (hasGesture) {
+                          setState(() {
+                            _autoCenter = false;
+                          });
+                        }
+                      },
                     ),
-                  ),
-                  onPositionChanged: (position, hasGesture) {
-                    if (hasGesture) {
-                      setState(() {
-                        _autoCenter = false;
-                      });
-                    }
-                  },
-                ),
-                children: [
-                  openStreetMapTileLayer,
-                  MarkerLayer(
-                    markers: [
-                      if (_currentLocation != null)
-                        Marker(
-                          point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                          child: const PulseMarkerWidget(),
+                    children: [
+                      tileProviders.getTileLayer(),
+                      MarkerLayer(
+                        markers: [
+                          if (_currentLocation != null)
+                            Marker(
+                              point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                              child: const PulseMarkerWidget(),
+                            ),
+                        ],
+                      ),
+                      // Add a separate MarkerLayer for the ArtMarker widgets
+                      if (_artMarkers != null)
+                        MarkerLayer(
+                          markers: _artMarkers!.map(
+                            (artMarker) => Marker(
+                              point: artMarker.position,
+                              child: artMarker,
+                            ),
+                          ).toList(),
                         ),
                     ],
                   ),
-                  // Add a separate MarkerLayer for the ArtMarker widgets
-                  if (_artMarkers != null)
-                    MarkerLayer(
-                      markers: _artMarkers!.map(
-                        (artMarker) => Marker(
-                          point: artMarker.position,
-                          child: artMarker,
-                        ),
-                      ).toList(),
-                    ),
-                ],
+                ),
               ),
-            ),
-          ),
-          Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.18,
-            left: MediaQuery.of(context).size.width * 0.05,
-            child: FloatingActionButton(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              elevation: 1,
-              onPressed: () {
-                _mapController.move(
-                  _mapController.camera.center,
-                  _mapController.camera.zoom + 1,
-                );
-              },
-              heroTag: 'zoomInFAB',
-              child: const Icon(Icons.add),
-            ),
-          ),
-          Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.1,
-            left: MediaQuery.of(context).size.width * 0.05,
-            child: FloatingActionButton(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              elevation: 1,
-              onPressed: () {
-                _mapController.move(
-                  _mapController.camera.center,
-                  _mapController.camera.zoom - 1,
-                );
-              },
-              heroTag: 'zoomOutFAB',
-              child: const Icon(Icons.remove),
-            ),
-          ),
-          Positioned(
-            bottom: MediaQuery.of(context).size.height * 0.1,
-            right: MediaQuery.of(context).size.width * 0.05,
-            child: FloatingActionButton(
-              elevation: 1,
-              backgroundColor: Colors.transparent,
-              onPressed: () {
-                setState(() {
-                  _autoCenter = !_autoCenter;
-                  _direction = 0;
-                });
-              },
-              heroTag: 'centerFAB',
-              child: Icon(
-                _autoCenter ? Icons.location_searching : Icons.location_disabled,
-                color: Colors.white,
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.18,
+                left: MediaQuery.of(context).size.width * 0.05,
+                child: FloatingActionButton(
+                  elevation: 1,
+                  onPressed: () {
+                    _mapController.move(
+                      _mapController.camera.center,
+                      _mapController.camera.zoom + 1,
+                    );
+                  },
+                  heroTag: 'zoomInFAB',
+                  child: const Icon(Icons.add),
+                ),
               ),
-            ),
-          ),
-        ],
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.1,
+                left: MediaQuery.of(context).size.width * 0.05,
+                child: FloatingActionButton(
+                  elevation: 1,
+                  onPressed: () {
+                    _mapController.move(
+                      _mapController.camera.center,
+                      _mapController.camera.zoom - 1,
+                    );
+                  },
+                  heroTag: 'zoomOutFAB',
+                  child: const Icon(Icons.remove),
+                ),
+              ),
+              Positioned(
+                bottom: MediaQuery.of(context).size.height * 0.1,
+                right: MediaQuery.of(context).size.width * 0.05,
+                child: FloatingActionButton(
+                  elevation: 1,
+                  onPressed: () {
+                    setState(() {
+                      _autoCenter = !_autoCenter;
+                      if (_autoCenter && _currentLocation != null) {
+                        _mapController.move(
+                          LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                          _mapController.camera.zoom,
+                        );
+                      }
+                      _direction = 0;
+                    });
+                  },
+                  heroTag: 'centerFAB',
+                  child: Icon(
+                    _autoCenter ? Icons.location_searching : Icons.location_disabled,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -306,6 +328,7 @@ class _MapHomeState extends State<MapHome> with WidgetsBindingObserver, SingleTi
     _compassSubscription?.cancel(); // Stop listening to compass updates
     _animationController.dispose();
     WidgetsBinding.instance.removeObserver(this);
+    tileProviders.dispose(); // Dispose TileProviders
     super.dispose();
   }
 }

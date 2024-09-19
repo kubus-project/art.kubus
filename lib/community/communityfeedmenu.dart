@@ -1,16 +1,15 @@
-import 'package:art_kubus/profile/userprofile.dart';
 import 'package:flutter/material.dart';
-import 'web3/nftcollectionpage.dart';
-import 'community/communitymenu.dart';
-import 'web3/wallet.dart';
-import 'settings.dart';
+import 'communityfeed.dart';
+import '/web3/wallet.dart';
+import '/profile/userprofile.dart';
 
-class Menu extends StatelessWidget {
-  const Menu({super.key});
+class CommunityFeedMenu extends StatelessWidget {
+  const CommunityFeedMenu({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
@@ -23,18 +22,20 @@ class Menu extends StatelessWidget {
                 children: [
                   FloatingActionButton(
                     heroTag: 'UserProfileFAB',
+                    backgroundColor: Colors.transparent,
                     onPressed: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => const UserProfile()),
                       );
                     },
-                    child: const Icon(Icons.person, size: 30),
+                    child: const Icon(Icons.person, color: Colors.white, size: 30),
                   ),
                   SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.3, // Adjust the width as needed
+                    width: MediaQuery.of(context).size.width * 0.2,
                     child: FloatingActionButton(
                       heroTag: 'WalletFAB',
+                      backgroundColor: Colors.transparent,
                       onPressed: () {
                         Navigator.push(
                           context,
@@ -47,12 +48,12 @@ class Menu extends StatelessWidget {
                           Flexible(
                             child: Text(
                               '1000', // Replace '1000' with the actual token amount
-                              style: TextStyle(fontSize: 18),
+                              style: TextStyle(color: Colors.white, fontSize: 18),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           SizedBox(width: 5),
-                          Icon(Icons.account_balance_wallet, size: 30),
+                          Icon(Icons.account_balance_wallet, color: Colors.white, size: 30),
                         ],
                       ),
                     ),
@@ -70,41 +71,25 @@ class Menu extends StatelessWidget {
                     const Spacer(flex: 2),
                     buildMenuItem(
                       context,
-                      title: 'Collection',
+                      title: 'Community Feed',
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const NFTCollectionPage()),
+                          MaterialPageRoute(builder: (context) => const InfiniteScrollFeed()),
                         );
                       },
-                      icon: Icons.collections,
-                      heroTag: 'CollectionButton',
+                      icon: Icons.feed,
+                      heroTag: 'CommunityFeedButton',
                     ),
                     const Spacer(flex: 1),
                     buildMenuItem(
                       context,
-                      title: 'Community',
+                      title: 'Post to Feed',
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const CommunityMenu()),
-                        );
+                        // Add navigation to post to feed page
                       },
-                      icon: Icons.people,
-                      heroTag: 'CommunityButton',
-                    ),
-                    const Spacer(flex: 1),
-                    buildMenuItem(
-                      context,
-                      title: 'Settings',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const AppSettings()),
-                        );
-                      },
-                      icon: Icons.settings,
-                      heroTag: 'SettingsButton',
+                      icon: Icons.post_add,
+                      heroTag: 'PostFeedButton',
                     ),
                     const Spacer(flex: 2),
                   ],
@@ -120,6 +105,8 @@ class Menu extends StatelessWidget {
   Widget buildMenuItem(BuildContext context, {required String title, VoidCallback? onPressed, required IconData icon, required String heroTag}) {
     return ElevatedButton(
       style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.all(10),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
@@ -129,10 +116,10 @@ class Menu extends StatelessWidget {
         children: [
           Hero(
             tag: heroTag,
-            child: Icon(icon, size: 40),
+            child: Icon(icon, size: 40, color: Colors.white),
           ),
           const SizedBox(height: 5),
-          Text(title),
+          Text(title, style: const TextStyle(color: Colors.white)),
         ],
       ),
     );

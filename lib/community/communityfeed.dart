@@ -39,37 +39,37 @@ class _InfiniteScrollFeedState extends State<InfiniteScrollFeed> {
   }
 
   Future<void> _fetchData() async {
-  if (!_isLoading) {
-    setState(() => _isLoading = true);
+    if (!_isLoading) {
+      setState(() => _isLoading = true);
 
-    try {
-      await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
+      try {
+        await Future.delayed(const Duration(seconds: 2)); // Simulate network delay
 
-      List<Profile> newProfiles = _generateRandomProfiles(10);
-      List<Post> newPosts = _generateRandomPosts(10);
+        List<Profile> newProfiles = _generateRandomProfiles(10);
+        List<Post> newPosts = _generateRandomPosts(10);
 
-      if (newProfiles.isEmpty || newPosts.isEmpty) {
-        _hasMoreData = false; // No more data to fetch
-      }
+        if (newProfiles.isEmpty || newPosts.isEmpty) {
+          _hasMoreData = false; // No more data to fetch
+        }
 
-      if (mounted) {
-        setState(() {
-          _profiles.addAll(newProfiles);
-          _posts.addAll(newPosts);
-        });
-      }
-    } catch (e) {
-      // Handle errors, e.g., show a snackbar or log the error
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to fetch data')));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() {
+            _profiles.addAll(newProfiles);
+            _posts.addAll(newPosts);
+          });
+        }
+      } catch (e) {
+        // Handle errors, e.g., show a snackbar or log the error
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to fetch data')));
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
       }
     }
   }
-}
 
   List<Profile> _generateRandomProfiles(int count) {
     List<String> names = ['PixelDreamer', 'CodeMuse', 'DesignNinja', 'ScriptWizard', 'TechSage', 'DataDancer', 'CloudCrafter', 'BinaryBard', 'VirtualVoyager', 'CyberSculptor'];
@@ -89,7 +89,7 @@ class _InfiniteScrollFeedState extends State<InfiniteScrollFeed> {
     Random random = Random();
     DateFormat dateFormat = DateFormat("dd. MM. yyyy", "sl_SI");
     DateFormat timeFormat = DateFormat("HH:mm");
-  
+
     return List<Post>.generate(count, (index) {
       String content = loremIpsum[random.nextInt(loremIpsum.length)];
       DateTime now = DateTime.now();
@@ -102,7 +102,7 @@ class _InfiniteScrollFeedState extends State<InfiniteScrollFeed> {
       String location = "Lat: ${latitude.toStringAsFixed(2)}, Long: ${longitude.toStringAsFixed(2)}";
       String artName = "Art Name ${random.nextInt(100)}";
       String pictureUrl = "https://picsum.photos/200/300?random=${random.nextInt(100)}";
-  
+
       return Post(content, "$date\n$time", location, artName, pictureUrl);
     });
   }
@@ -124,40 +124,48 @@ class _InfiniteScrollFeedState extends State<InfiniteScrollFeed> {
           }
         },
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddPostScreen()),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
     );
   }
-Widget _buildPostCard(int index) {
-  return Card(
-    color: Colors.white,
-    child: Column(
-      children: [
-        if (_posts[index].pictureUrl.isNotEmpty && _posts[index].pictureUrl != 'https://example.com/default-image.jpg') // Check if the post has a valid picture URL
-          Image.network(_posts[index].pictureUrl, width: double.infinity, fit: BoxFit.cover), // Make the image full width
-        ListTile(
-          textColor: Colors.black,
-          title: Text(_profiles[index].name),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+  Widget _buildPostCard(int index) {
+    return Card(
+      child: Column(
+        children: [
+          if (_posts[index].pictureUrl.isNotEmpty && _posts[index].pictureUrl != 'https://example.com/default-image.jpg') // Check if the post has a valid picture URL
+            Image.network(_posts[index].pictureUrl, width: double.infinity, fit: BoxFit.cover), // Make the image full width
+          ListTile(
+            title: Text(_profiles[index].name),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_posts[index].content),
+                const SizedBox(height: 4), // Add some space between content and location
+                Text(_posts[index].location, style: const TextStyle(fontWeight: FontWeight.bold)), // Display the location
+              ],
+            ),
+            trailing: Text(_posts[index].timestamp),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Text(_posts[index].content),
-              const SizedBox(height: 4), // Add some space between content and location
-              Text(_posts[index].location, style: const TextStyle(fontWeight: FontWeight.bold)), // Display the location
+              LikeButton(post: _posts[index]), // Pass color to LikeButton
+              IconButton(icon: const Icon(Icons.comment), onPressed: () => onCommentPressed(context, index)),
+              IconButton(icon: const Icon(Icons.share), onPressed: () => onSharePressed(context, index)),
             ],
           ),
-          trailing: Text(_posts[index].timestamp),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            LikeButton(post: _posts[index], iconColor: Colors.black), // Pass color to LikeButton
-            IconButton(icon: const Icon(Icons.comment, color: Colors.black), onPressed: () => onCommentPressed(context, index)),
-            IconButton(icon: const Icon(Icons.share, color: Colors.black), onPressed: () => onSharePressed(context, index)),
-          ],
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
 
   void onSharePressed(BuildContext context, int index) {
     final String content = "Check out this post: ${_posts[index].content}";
@@ -185,12 +193,11 @@ class Post {
 
 class LikeButton extends StatefulWidget {
   final Post post;
-  final Color iconColor; // Add iconColor parameter
 
-  const LikeButton({super.key, required this.post, this.iconColor = Colors.black}); // Set default color to black
+  const LikeButton({super.key, required this.post});
 
   @override
-  State <LikeButton> createState() => _LikeButtonState();
+  State<LikeButton> createState() => _LikeButtonState();
 }
 
 class _LikeButtonState extends State<LikeButton> {
@@ -204,7 +211,6 @@ class _LikeButtonState extends State<LikeButton> {
   Widget build(BuildContext context) {
     return IconButton(
       icon: Icon(widget.post.isLiked ? Icons.favorite : Icons.favorite_border),
-      color: widget.iconColor, // Use the passed color
       onPressed: _toggleLike,
     );
   }
@@ -212,4 +218,69 @@ class _LikeButtonState extends State<LikeButton> {
 
 void onCommentPressed(BuildContext context, int index) {
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Comment on post $index')));
+}
+
+class AddPostScreen extends StatefulWidget {
+  const AddPostScreen({super.key});
+
+  @override
+  State<AddPostScreen> createState() => _AddPostScreenState();
+}
+
+class _AddPostScreenState extends State<AddPostScreen> {
+  final TextEditingController _contentController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _artNameController = TextEditingController();
+  final TextEditingController _pictureUrlController = TextEditingController();
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    _locationController.dispose();
+    _artNameController.dispose();
+    _pictureUrlController.dispose();
+    super.dispose();
+  }
+
+  void _addPost() {
+    // Add logic to add the post
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add Post'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _contentController,
+              decoration: const InputDecoration(labelText: 'Content'),
+            ),
+            TextField(
+              controller: _locationController,
+              decoration: const InputDecoration(labelText: 'Location'),
+            ),
+            TextField(
+              controller: _artNameController,
+              decoration: const InputDecoration(labelText: 'Art Name'),
+            ),
+            TextField(
+              controller: _pictureUrlController,
+              decoration: const InputDecoration(labelText: 'Picture URL'),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _addPost,
+              child: const Text('Add Post'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

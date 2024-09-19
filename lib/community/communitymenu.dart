@@ -1,12 +1,11 @@
-import 'package:art_kubus/profile/userprofile.dart';
 import 'package:flutter/material.dart';
-import 'web3/nftcollectionpage.dart';
-import 'community/communitymenu.dart';
-import 'web3/wallet.dart';
-import 'settings.dart';
+import '/web3/dao/daomenu.dart';
+import 'communityfeed.dart';
+import '/web3/wallet.dart';
+import '/profile/userprofile.dart';
 
-class Menu extends StatelessWidget {
-  const Menu({super.key});
+class CommunityMenu extends StatelessWidget {
+  const CommunityMenu({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +31,7 @@ class Menu extends StatelessWidget {
                     child: const Icon(Icons.person, size: 30),
                   ),
                   SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.3, // Adjust the width as needed
+                    width: MediaQuery.of(context).size.width * 0.3,
                     child: FloatingActionButton(
                       heroTag: 'WalletFAB',
                       onPressed: () {
@@ -70,41 +69,28 @@ class Menu extends StatelessWidget {
                     const Spacer(flex: 2),
                     buildMenuItem(
                       context,
-                      title: 'Collection',
+                      title: 'Community Feed',
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const NFTCollectionPage()),
+                          MaterialPageRoute(builder: (context) => const InfiniteScrollFeed()),
                         );
                       },
-                      icon: Icons.collections,
-                      heroTag: 'CollectionButton',
+                      icon: Icons.feed,
+                      heroTag: 'CommunityFeedMenuButton',
                     ),
                     const Spacer(flex: 1),
                     buildMenuItem(
                       context,
-                      title: 'Community',
+                      title: 'DAO',
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => const CommunityMenu()),
+                          MaterialPageRoute(builder: (context) => const DAOMenu()),
                         );
                       },
-                      icon: Icons.people,
-                      heroTag: 'CommunityButton',
-                    ),
-                    const Spacer(flex: 1),
-                    buildMenuItem(
-                      context,
-                      title: 'Settings',
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const AppSettings()),
-                        );
-                      },
-                      icon: Icons.settings,
-                      heroTag: 'SettingsButton',
+                      icon: Icons.how_to_vote,
+                      heroTag: 'DAOMenuButton',
                     ),
                     const Spacer(flex: 2),
                   ],

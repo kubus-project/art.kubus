@@ -1,5 +1,5 @@
 enum ARSupportStatus {
-  Supported,
-  Unsupported,
-  UnknownError,
+  supported,
+  unsupported,
+  unknownError,
 }

@@ -6,14 +6,15 @@ class ArtMarker extends StatefulWidget {
   final String title;
   final String description;
 
-  const ArtMarker({super.key, 
+  const ArtMarker({
+    super.key,
     required this.position,
     required this.title,
     required this.description,
   });
 
   @override
-  State <ArtMarker> createState() => _ArtMarkerState();
+  State<ArtMarker> createState() => _ArtMarkerState();
 }
 
 class _ArtMarkerState extends State<ArtMarker> {
@@ -30,7 +31,7 @@ class _ArtMarkerState extends State<ArtMarker> {
       },
       child: Icon(
         Icons.square_outlined,
-        color: _isMarkerTapped ? Colors.white : Colors.white54,
+        color: _isMarkerTapped ? Theme.of(context).iconTheme.color : Theme.of(context).iconTheme.color?.withOpacity(0.54),
         size: 9,
       ),
     );

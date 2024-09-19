@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_compass/flutter_compass.dart';
 import 'dart:async';
 
-GlobalKey<_CompassAccuracyWidgetState> compassKey = GlobalKey<_CompassAccuracyWidgetState>();
+GlobalKey<CompassAccuracyWidgetState> compassKey = GlobalKey<CompassAccuracyWidgetState>();
 
 class CompassAccuracyWidget extends StatefulWidget {
   const CompassAccuracyWidget({super.key});
 
   @override
-  _CompassAccuracyWidgetState createState() => _CompassAccuracyWidgetState();
+  CompassAccuracyWidgetState createState() => CompassAccuracyWidgetState();
 }
+
 CompassAccuracyWidget compassWidget = CompassAccuracyWidget(key: compassKey);
 
-class _CompassAccuracyWidgetState extends State<CompassAccuracyWidget> {
+class CompassAccuracyWidgetState extends State<CompassAccuracyWidget> {
   double _currentHeading = 0.0;
   StreamSubscription<CompassEvent>? _compassSubscription;
 
@@ -38,8 +39,12 @@ class _CompassAccuracyWidgetState extends State<CompassAccuracyWidget> {
   Widget build(BuildContext context) {
     double accuracy = getCompassAccuracy();
 
-    return Container(
-      child: Text('Compass Accuracy: $accuracy'),
-    );
+    return Text('Compass Accuracy: $accuracy');
+  }
+
+  @override
+  void dispose() {
+    _compassSubscription?.cancel();
+    super.dispose();
   }
 }
