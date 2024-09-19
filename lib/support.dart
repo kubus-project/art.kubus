@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Support extends StatelessWidget {
+  const Support({super.key});
+
   void _launchURL(String url) async {
     if (await canLaunch(url)) {
       await launch(url);
@@ -12,7 +14,6 @@ class Support extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -23,16 +24,16 @@ class Support extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                icon: Icon(Icons.code, color: Colors.white),
+                icon: const Icon(Icons.code),
                 onPressed: () {
                   _launchURL('https://github.com/kubus-project');
                 },
                 tooltip: 'GitHub',
                 iconSize: 40.0,
               ),
-              SizedBox(width: 20),
+              const SizedBox(width: 20),
               IconButton(
-                icon: Icon(Icons.web_asset_sharp, color: Colors.white),
+                icon: const Icon(Icons.web_asset_sharp),
                 onPressed: () {
                   _launchURL('https://kubus.site');
                 },
@@ -41,20 +42,24 @@ class Support extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 20),
+          const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: () {
               // Add your live chat functionality here
             },
-            icon: Icon(Icons.support_agent_outlined, color: Colors.black, size: 40.0),
-            label: Text(
+            icon: const Icon(
+              Icons.support_agent_outlined,
+              size: 40.0,
+            ),
+            label: const Text(
               'Live Chat',
-              style: TextStyle(fontSize: 20.0), // Adjust font size as needed
-            ), 
+              style: TextStyle(fontSize: 20.0),
+            ),
             style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0), // Adjust padding as needed
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(
+                vertical: 16.0,
+                horizontal: 24.0,
+              ),
             ),
           ),
         ],

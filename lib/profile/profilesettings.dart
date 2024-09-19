@@ -1,3 +1,4 @@
+import 'package:art_kubus/support.dart';
 import 'package:flutter/material.dart';
 
 class ProfileSettings extends StatelessWidget {
@@ -13,6 +14,7 @@ class ProfileSettings extends StatelessWidget {
           PrivacySettingsSection(),
           SecuritySettingsSection(),
           DeactivationSection(),
+          SupportSection(),
         ],
       ),
     );
@@ -23,7 +25,7 @@ class PrivacySettingsSection extends StatefulWidget {
   const PrivacySettingsSection({super.key});
 
   @override
-  _PrivacySettingsSectionState createState() => _PrivacySettingsSectionState();
+  State<PrivacySettingsSection> createState() => _PrivacySettingsSectionState();
 }
 
 class _PrivacySettingsSectionState extends State<PrivacySettingsSection> {
@@ -37,7 +39,6 @@ class _PrivacySettingsSectionState extends State<PrivacySettingsSection> {
         ListTile(
           title: const Text('Profile Visibility'),
           trailing: DropdownButton<String>(
-            dropdownColor: Colors.black,
             value: _selectedVisibility,
             items: <String>['Public', 'Private', 'Friends Only']
                 .map<DropdownMenuItem<String>>((String value) {
@@ -62,7 +63,7 @@ class SecuritySettingsSection extends StatefulWidget {
   const SecuritySettingsSection({super.key});
 
   @override
-  _SecuritySettingsSectionState createState() => _SecuritySettingsSectionState();
+  State<SecuritySettingsSection> createState() => _SecuritySettingsSectionState();
 }
 
 class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
@@ -75,7 +76,7 @@ class _SecuritySettingsSectionState extends State<SecuritySettingsSection> {
       children: [
         ListTile(
           title: const Text('Change Password'),
-          trailing: const Icon(Icons.arrow_forward),
+          trailing: const Icon(Icons.arrow_forward_ios),
           onTap: () {
             // Navigate to change password screen
           },
@@ -106,9 +107,32 @@ class DeactivationSection extends StatelessWidget {
       children: [
         ListTile(
           title: const Text('Deactivate Account'),
-          trailing: const Icon(Icons.arrow_forward),
+          trailing: const Icon(Icons.arrow_forward_ios),
           onTap: () {
             // Navigate to account deactivation screen
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class SupportSection extends StatelessWidget {
+  const SupportSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Section(
+      title: 'Support',
+      children: [
+        ListTile(
+          title: const Text('Support'),
+          trailing: const Icon(Icons.arrow_forward_ios),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const Support()),
+            );
           },
         ),
       ],
@@ -131,10 +155,7 @@ class Section extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           ...children,
         ],

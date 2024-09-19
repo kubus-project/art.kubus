@@ -35,19 +35,21 @@ class _AugmentedState extends State<Augmented> {
     var cameraStatus = await Permission.camera.request();
     var storageStatus = await Permission.manageExternalStorage.request();
     if (!cameraStatus.isGranted || !storageStatus.isGranted) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Camera and Storage permissions are required for AR features.")),
       );
     }
   }
 
-Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vector.Vector4 rotation, vector.Vector3 scale) async {
-  if (_arObjectManager == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("AR Object Manager is not initialized")),
-    );
-    return;
-  }
+  Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vector.Vector4 rotation, vector.Vector3 scale) async {
+    if (_arObjectManager == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("AR Object Manager is not initialized")),
+      );
+      return;
+    }
 
     String filePath;
     if (glbAssetPath.startsWith('http')) {
@@ -59,6 +61,7 @@ Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vec
         await file.writeAsBytes(response.bodyBytes);
         filePath = file.path;
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Failed to download GLB file from: $glbAssetPath")),
         );
@@ -69,28 +72,31 @@ Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vec
       filePath = glbAssetPath;
     }
 
-   File file = File(filePath);
-  if (!await file.exists()) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("GLB file does not exist at the path: $filePath")),
+    File file = File(filePath);
+    if (!await file.exists()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("GLB file does not exist at the path: $filePath")),
+      );
+      return;
+    }
+
+    final node = ARNode(
+      type: NodeType.webGLB,
+      uri: filePath, // Use the full path for loading
+      scale: scale,
+      position: position,
+      rotation: rotation,
     );
-    return;
+    await _arObjectManager!.addNode(node);
+    activeModels.add(filePath); // Add the model to the list of active models
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("GLB file loaded successfully into AR.")),
+    );
   }
 
-  final node = ARNode(
-    type: NodeType.webGLB,
-    uri: filePath, // Use the full path for loading
-    scale: scale,
-    position: position,
-    rotation: rotation,
-  );
-  await _arObjectManager!.addNode(node);
-  activeModels.add(filePath); // Add the model to the list of active models
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("GLB file loaded successfully into AR.")),
-  );
-}
   void _showActiveModels(BuildContext context) {
     showDialog(
       context: context,
@@ -131,9 +137,6 @@ Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vec
             bottom: MediaQuery.of(context).size.height * 0.18,
             left: MediaQuery.of(context).size.width * 0.05,
             child: FloatingActionButton(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              elevation: 1,
               onPressed: () => _showAddGLBDialog(),
               heroTag: 'loadModelFromFileFAB',
               child: const Icon(Icons.add_to_photos_outlined),
@@ -143,10 +146,7 @@ Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vec
             bottom: MediaQuery.of(context).size.height * 0.1,
             right: MediaQuery.of(context).size.width * 0.05,
             child: const FloatingActionButton(
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              elevation: 1,
-              onPressed: (null),
+              onPressed: null,
               heroTag: 'scanMarker',
               child: Icon(Icons.qr_code_scanner),
             ),
@@ -157,9 +157,6 @@ Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vec
             child: FloatingActionButton(
               onPressed: () => _showActiveModels(context),
               tooltip: 'Show Active Models',
-              backgroundColor: Colors.transparent,
-              foregroundColor: Colors.white,
-              elevation: 1,
               child: const Icon(Icons.list),
             ),
           ),
@@ -167,102 +164,103 @@ Future<void> _addGLBObjectToAR(String glbAssetPath, vector.Vector3 position, vec
       ),
     );
   }
-void _showAddGLBDialog() {
-  // Controllers for position, rotation, and scale inputs
-  final TextEditingController positionController = TextEditingController();
-  final TextEditingController rotationController = TextEditingController();
-  final TextEditingController scaleController = TextEditingController();
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('Enter GLB file path and Transformations'),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              TextField(
-                controller: _pathController,
-                decoration: const InputDecoration(
-                  hintText: 'GLB file path',
+  void _showAddGLBDialog() {
+    // Controllers for position, rotation, and scale inputs
+    final TextEditingController positionController = TextEditingController();
+    final TextEditingController rotationController = TextEditingController();
+    final TextEditingController scaleController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Enter GLB file path and Transformations'),
+          content: SingleChildScrollView(
+            child: ListBody(
+              children: <Widget>[
+                TextField(
+                  controller: _pathController,
+                  decoration: const InputDecoration(
+                    hintText: 'GLB file path',
+                  ),
                 ),
-              ),
-              TextField(
-                controller: positionController,
-                decoration: const InputDecoration(
-                  hintText: 'Position (x,y,z)',
+                TextField(
+                  controller: positionController,
+                  decoration: const InputDecoration(
+                    hintText: 'Position (x,y,z)',
+                  ),
                 ),
-              ),
-              TextField(
-                controller: rotationController,
-                decoration: const InputDecoration(
-                  hintText: 'Rotation (x,y,z,w)',
+                TextField(
+                  controller: rotationController,
+                  decoration: const InputDecoration(
+                    hintText: 'Rotation (x,y,z,w)',
+                  ),
                 ),
-              ),
-              TextField(
-                controller: scaleController,
-                decoration: const InputDecoration(
-                  hintText: 'Scale (x,y,z)',
+                TextField(
+                  controller: scaleController,
+                  decoration: const InputDecoration(
+                    hintText: 'Scale (x,y,z)',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            child: const Text('Cancel'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: const Text('Load'),
-            onPressed: () {
-              // Parse inputs
-              final position = vector.Vector3.zero(); // Default value
-              final rotation = vector.Vector4.zero(); // Default value
-              final scale = vector.Vector3.all(1); // Default value
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: const Text('Load'),
+              onPressed: () {
+                // Parse inputs
+                final position = vector.Vector3.zero(); // Default value
+                final rotation = vector.Vector4.zero(); // Default value
+                final scale = vector.Vector3.all(1); // Default value
 
-              // Attempt to parse user input, fallback to default if parsing fails
-              try {
-                final positionParts = positionController.text.split(',').map((e) => double.parse(e)).toList();
-                if (positionParts.length == 3) {
-                  position.setValues(positionParts[0], positionParts[1], positionParts[2]);
+                // Attempt to parse user input, fallback to default if parsing fails
+                try {
+                  final positionParts = positionController.text.split(',').map((e) => double.parse(e)).toList();
+                  if (positionParts.length == 3) {
+                    position.setValues(positionParts[0], positionParts[1], positionParts[2]);
+                  }
+                } catch (_) {
+                  // Handle or ignore parsing error
                 }
-              } catch (_) {
-                // Handle or ignore parsing error
-              }
 
-              try {
-                final rotationParts = rotationController.text.split(',').map((e) => double.parse(e)).toList();
-                if (rotationParts.length == 4) {
-                  rotation.setValues(rotationParts[0], rotationParts[1], rotationParts[2], rotationParts[3]);
+                try {
+                  final rotationParts = rotationController.text.split(',').map((e) => double.parse(e)).toList();
+                  if (rotationParts.length == 4) {
+                    rotation.setValues(rotationParts[0], rotationParts[1], rotationParts[2], rotationParts[3]);
+                  }
+                } catch (_) {
+                  // Handle or ignore parsing error
                 }
-              } catch (_) {
-                // Handle or ignore parsing error
-              }
 
-              try {
-                final scaleParts = scaleController.text.split(',').map((e) => double.parse(e)).toList();
-                if (scaleParts.length == 3) {
-                  scale.setValues(scaleParts[0], scaleParts[1], scaleParts[2]);
+                try {
+                  final scaleParts = scaleController.text.split(',').map((e) => double.parse(e)).toList();
+                  if (scaleParts.length == 3) {
+                    scale.setValues(scaleParts[0], scaleParts[1], scaleParts[2]);
+                  }
+                } catch (_) {
+                  // Handle or ignore parsing error
                 }
-              } catch (_) {
-                // Handle or ignore parsing error
-              }
 
-              _addGLBObjectToAR(
-                _pathController.text,
-                position,
-                rotation,
-                scale,
-              );
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+                _addGLBObjectToAR(
+                  _pathController.text,
+                  position,
+                  rotation,
+                  scale,
+                );
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 }

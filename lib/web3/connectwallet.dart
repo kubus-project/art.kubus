@@ -9,6 +9,7 @@ class ConnectWallet extends StatefulWidget {
 }
 
 class _ConnectWalletState extends State<ConnectWallet> {
+  // ignore: unused_field
   EthereumAddress? _walletAddress; // Add a field for the wallet address
 
   Future<void> _connectWallet() async {
