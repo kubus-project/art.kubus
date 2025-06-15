@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:share/share.dart'; // Import the share package
+import 'package:share_plus/share_plus.dart';
 
 class InfiniteScrollFeed extends StatefulWidget {
   const InfiniteScrollFeed({super.key});
@@ -161,15 +161,13 @@ class _InfiniteScrollFeedState extends State<InfiniteScrollFeed> {
               IconButton(icon: const Icon(Icons.comment), onPressed: () => onCommentPressed(context, index)),
               IconButton(icon: const Icon(Icons.share), onPressed: () => onSharePressed(context, index)),
             ],
-          ),
-        ],
+          ),        ],
       ),
     );
   }
-
   void onSharePressed(BuildContext context, int index) {
     final String content = "Check out this post: ${_posts[index].content}";
-    Share.share(content); // Use the Share.share method to share content
+    Share.share(content);
   }
 }
 

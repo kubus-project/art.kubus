@@ -142,21 +142,17 @@ List<CameraDescription> cameras = [];
 final ThemeData darkTheme = ThemeData(
   brightness: Brightness.dark,
   primaryColor: Colors.black,
-  primaryColorDark: Colors.black,
-  primaryColorLight: Colors.black,
+  primaryColorDark: Colors.black,  primaryColorLight: Colors.black,
   scaffoldBackgroundColor: Colors.black,
   cardColor: Colors.black,
   canvasColor: Colors.black,
-  dialogBackgroundColor: Colors.black,
   dividerColor: Colors.white,
   focusColor: Colors.white,
   hoverColor: Colors.white,
   highlightColor: Colors.white,
   splashColor: Colors.white,
-  unselectedWidgetColor: Colors.white,
-  disabledColor: Colors.grey,
+  unselectedWidgetColor: Colors.white,  disabledColor: Colors.grey,
   secondaryHeaderColor: Colors.black,
-  indicatorColor: Colors.white,
   hintColor: Colors.white,
   textTheme: GoogleFonts.sofiaSansTextTheme(
     ThemeData.dark().textTheme.apply(
@@ -180,8 +176,7 @@ final ThemeData darkTheme = ThemeData(
   ),
   popupMenuTheme: const PopupMenuThemeData(
     color: Colors.black,
-  ),
-  dialogTheme: const DialogTheme(
+  ),  dialogTheme: const DialogThemeData(
     backgroundColor: Colors.black,
     iconColor: Colors.white,
     titleTextStyle: TextStyle(color: Colors.white),
@@ -216,8 +211,7 @@ final ThemeData darkTheme = ThemeData(
     backgroundColor: Colors.black,
     selectedItemColor: Colors.white,
     unselectedItemColor: Colors.grey,
-  ),
-  tabBarTheme: const TabBarTheme(
+  ),  tabBarTheme: const TabBarThemeData(
     labelColor: Colors.white,
     unselectedLabelColor: Colors.grey,
   ),
@@ -237,8 +231,7 @@ final ThemeData darkTheme = ThemeData(
     thumbColor: Colors.white,
     overlayColor: Colors.white24,
     valueIndicatorColor: Colors.white,
-  ),
-  cardTheme: const CardTheme(
+  ),  cardTheme: const CardThemeData(
     color: Colors.black,
     shadowColor: Colors.white,
   ),
@@ -256,21 +249,17 @@ final ThemeData darkTheme = ThemeData(
 final ThemeData lightTheme = ThemeData(
   brightness: Brightness.light,
   primaryColor: Colors.white,
-  primaryColorDark: Colors.white,
-  primaryColorLight: Colors.white,
+  primaryColorDark: Colors.white,  primaryColorLight: Colors.white,
   scaffoldBackgroundColor: Colors.white,
   cardColor: Colors.white,
   canvasColor: Colors.white,
-  dialogBackgroundColor: Colors.white,
   dividerColor: Colors.black,
   focusColor: Colors.black,
   hoverColor: Colors.black,
   highlightColor: Colors.black,
   splashColor: Colors.black,
-  unselectedWidgetColor: Colors.black,
-  disabledColor: Colors.grey,
+  unselectedWidgetColor: Colors.black,  disabledColor: Colors.grey,
   secondaryHeaderColor: Colors.white,
-  indicatorColor: Colors.black,
   hintColor: Colors.black,
   textTheme: GoogleFonts.sofiaSansTextTheme(
     ThemeData.light().textTheme.apply(
@@ -294,8 +283,7 @@ final ThemeData lightTheme = ThemeData(
   ),
   popupMenuTheme: const PopupMenuThemeData(
     color: Colors.white,
-  ),
-  dialogTheme: const DialogTheme(
+  ),  dialogTheme: const DialogThemeData(
     backgroundColor: Colors.white,
     iconColor: Colors.black,
     titleTextStyle: TextStyle(color: Colors.black),
@@ -330,8 +318,7 @@ final ThemeData lightTheme = ThemeData(
     backgroundColor: Colors.white,
     selectedItemColor: Colors.black,
     unselectedItemColor: Colors.grey,
-  ),
-  tabBarTheme: const TabBarTheme(
+  ),  tabBarTheme: const TabBarThemeData(
     labelColor: Colors.black,
     unselectedLabelColor: Colors.grey,
   ),
@@ -351,8 +338,7 @@ final ThemeData lightTheme = ThemeData(
     thumbColor: Colors.black,
     overlayColor: Colors.black26,
     valueIndicatorColor: Colors.black,
-  ),
-  cardTheme: const CardTheme(
+  ),  cardTheme: const CardThemeData(
     color: Colors.white,
     shadowColor: Colors.black,
   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'dart:ui' show PlatformDispatcher;
 import 'themeprovider.dart'; // Import the ThemeProvider
 
 class TileProviders with WidgetsBindingObserver {
@@ -18,7 +19,7 @@ class TileProviders with WidgetsBindingObserver {
   }
 
   void _updateThemeMode() {
-    final brightness = WidgetsBinding.instance.window.platformBrightness;
+    final brightness = PlatformDispatcher.instance.platformBrightness;
     if (themeProvider.themeMode == ThemeMode.system) {
       Future.microtask(() {
         themeProvider.setTheme(brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light);
@@ -50,7 +51,6 @@ class TileProviders with WidgetsBindingObserver {
         return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
       case ThemeMode.light:
       case ThemeMode.system:
-      default:
         return 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
     }
   }

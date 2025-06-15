@@ -57,9 +57,8 @@ class PulseMarkerWidget extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.white.withOpacity(0.3),
+          boxShadow: [            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.3),
               spreadRadius: 1,
               blurRadius: 22,
             ),

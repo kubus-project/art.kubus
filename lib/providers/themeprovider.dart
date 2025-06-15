@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' show PlatformDispatcher;
 
 class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
@@ -19,10 +20,9 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   void didChangePlatformBrightness() {
     _updateThemeMode();
   }
-
   void _updateThemeMode() {
     if (_themeMode == ThemeMode.system) {
-      final brightness = WidgetsBinding.instance.window.platformBrightness;
+      final brightness = PlatformDispatcher.instance.platformBrightness;
       setTheme(brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light);
     }
   }
