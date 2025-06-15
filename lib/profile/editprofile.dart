@@ -31,7 +31,7 @@ class _EditProfileState extends State<EditProfile> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _linksController = TextEditingController();
-  EthereumAddress? _walletAddress; // Add a field for the wallet address
+  // EthereumAddress? _walletAddress; // Add a field for the wallet address
 
   @override
   void dispose() {
@@ -57,17 +57,15 @@ class _EditProfileState extends State<EditProfile> {
         );
       }
     });
-  }
-
-  Future<void> _saveProfile() async {
+  }  Future<void> _saveProfile() async {
     // Create a new Profile object with the entered data
-    Profile profile = Profile(
-      name: _nameController.text,
-      bio: _bioController.text,
-      links: _linksController.text,
-      imageFile: _imageFile,
-      walletAddress: _walletAddress, // Add the wallet address to the Profile object
-    );
+    // Profile profile = Profile(
+    //   name: _nameController.text,
+    //   bio: _bioController.text,
+    //   links: _linksController.text,
+    //   imageFile: _imageFile,
+    //   walletAddress: null, // TODO: Add the wallet address to the Profile object
+    // );
 
     // TODO: Use the profile object, for example, send it to your server
     // sendProfileToServer(profile);

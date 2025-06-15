@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:ar_flutter_plugin_flutterflow/datatypes/config_planedetection.dart';
 import 'package:ar_flutter_plugin_flutterflow/datatypes/node_types.dart';
 import 'package:ar_flutter_plugin_flutterflow/managers/ar_object_manager.dart';
-import 'package:ar_flutter_plugin_flutterflow/managers/ar_session_manager.dart';
 import 'package:ar_flutter_plugin_flutterflow/models/ar_node.dart';
 import 'package:flutter/material.dart';
 import 'package:ar_flutter_plugin_flutterflow/ar_flutter_plugin.dart';
@@ -20,7 +19,7 @@ class Augmented extends StatefulWidget {
 }
 
 class _AugmentedState extends State<Augmented> {
-  ARSessionManager? _arSessionManager;
+  // ARSessionManager? _arSessionManager; // TODO: Implement AR session management
   ARObjectManager? _arObjectManager;
   final TextEditingController _pathController = TextEditingController();
   List<String> activeModels = []; // List to keep track of active models
@@ -125,10 +124,9 @@ class _AugmentedState extends State<Augmented> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-        children: [
-          ARView(
+        children: [          ARView(
             onARViewCreated: (arSessionManager, arObjectManager, _, __) {
-              _arSessionManager = arSessionManager;
+              // _arSessionManager = arSessionManager; // TODO: Store session manager
               _arObjectManager = arObjectManager;
             },
             planeDetectionConfig: PlaneDetectionConfig.horizontalAndVertical,

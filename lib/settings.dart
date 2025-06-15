@@ -43,7 +43,6 @@ class _ThemeSettingsSectionState extends State<ThemeSettingsSection> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     _selectedTheme = _themeModeToString(themeProvider.themeMode);
   }
-
   String _themeModeToString(ThemeMode themeMode) {
     switch (themeMode) {
       case ThemeMode.light:
@@ -51,7 +50,6 @@ class _ThemeSettingsSectionState extends State<ThemeSettingsSection> {
       case ThemeMode.dark:
         return 'Dark';
       case ThemeMode.system:
-      default:
         return 'System Default';
     }
   }

@@ -28,10 +28,9 @@ class _ArtMarkerState extends State<ArtMarker> {
           _isMarkerTapped = true;
         });
         _showMarkerInfoDialog(context);
-      },
-      child: Icon(
+      },      child: Icon(
         Icons.square_outlined,
-        color: _isMarkerTapped ? Theme.of(context).iconTheme.color : Theme.of(context).iconTheme.color?.withOpacity(0.54),
+        color: _isMarkerTapped ? Theme.of(context).iconTheme.color : Theme.of(context).iconTheme.color?.withValues(alpha: 0.54),
         size: 9,
       ),
     );

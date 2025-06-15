@@ -104,7 +104,7 @@ class ArtVoteWidgetState extends State<ArtVoteWidget> {
                     right: 16,
                     child: Container(
                       padding: const EdgeInsets.all(8.0),
-                      color: Theme.of(context).colorScheme.surface.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.7),
                       child: Text(
                         artPiece.title,
                         style: Theme.of(context).textTheme.headlineLarge,
@@ -117,8 +117,7 @@ class ArtVoteWidgetState extends State<ArtVoteWidget> {
                     left: MediaQuery.of(context).size.width / 4 - 40,
                     child: Container(
                       width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
+                      height: 80,                      decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
