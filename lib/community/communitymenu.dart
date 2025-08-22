@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '/web3/dao/daomenu.dart';
 import 'communityfeed.dart';
 import '/web3/wallet.dart';
-import '/profile/userprofile.dart';
+import '../screens/profile_screen.dart';
 
 class CommunityMenu extends StatelessWidget {
   const CommunityMenu({super.key});
@@ -21,11 +21,11 @@ class CommunityMenu extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   FloatingActionButton(
-                    heroTag: 'UserProfileFAB',
+                    heroTag: 'ProfileFAB',
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const UserProfile()),
+                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
                       );
                     },
                     child: const Icon(Icons.person, size: 30),

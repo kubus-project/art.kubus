@@ -41,3 +41,31 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment and API keys - SECURITY CRITICAL
+.env
+/lib/config/api_keys.dart
+/lib/config/secrets.dart
+/assets/config/
+/assets/keys/
+
+# Firebase configuration files
+/android/app/google-services.json
+/ios/Runner/GoogleService-Info.plist
+/web/firebase-config.js
+
+# Wallet and private keys
+/assets/wallets/
+/lib/crypto/private_keys.dart
+*.pem
+*.key
+*.p12
+*.keystore
+
+# Local configuration
+/config/local.dart
+/lib/config/local_config.dart
+
+# Test files with sensitive data
+/test_keys/
+/test_config/

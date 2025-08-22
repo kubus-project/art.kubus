@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'communityfeed.dart';
 import '/web3/wallet.dart';
-import '/profile/userprofile.dart';
+import '../screens/profile_screen.dart';
 
 class CommunityFeedMenu extends StatelessWidget {
   const CommunityFeedMenu({super.key});
@@ -21,12 +21,12 @@ class CommunityFeedMenu extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   FloatingActionButton(
-                    heroTag: 'UserProfileFAB',
+                    heroTag: 'ProfileFAB',
                     backgroundColor: Colors.transparent,
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const UserProfile()),
+                        MaterialPageRoute(builder: (context) => const ProfileScreen()),
                       );
                     },
                     child: const Icon(Icons.person, color: Colors.white, size: 30),

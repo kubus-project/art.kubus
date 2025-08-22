@@ -22,7 +22,7 @@ class TileProviders with WidgetsBindingObserver {
     final brightness = PlatformDispatcher.instance.platformBrightness;
     if (themeProvider.themeMode == ThemeMode.system) {
       Future.microtask(() {
-        themeProvider.setTheme(brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light);
+        themeProvider.setThemeMode(brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light);
       });
     }
   }
