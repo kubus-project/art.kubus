@@ -158,7 +158,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               ],
             ),
             const SizedBox(height: 20),
-            Container(
+            SizedBox(
               height: 250,
               child: CustomPaint(
                 painter: LineChartPainter(
@@ -276,7 +276,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   ),
                 ],
               ),
-            )).toList(),
+            )),
           ],
         ),
       ),
@@ -389,7 +389,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   ),
                 ],
               ),
-            )).toList(),
+            )),
           ],
         ),
       ),

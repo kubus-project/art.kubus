@@ -129,9 +129,9 @@ class StatsChartPainter extends CustomPainter {
     );
 
     // Calculate chart area (leave space for labels)
-    final chartTop = 20.0;
+    const chartTop = 20.0;
     final chartBottom = size.height - 40.0;
-    final chartLeft = 30.0;
+    const chartLeft = 30.0;
     final chartRight = size.width - 20.0;
     final chartWidth = chartRight - chartLeft;
     final chartHeight = chartBottom - chartTop;
@@ -224,7 +224,7 @@ class StatsChartPainter extends CustomPainter {
       // Draw value label above point
       textPainter.text = TextSpan(
         text: data[i].toStringAsFixed(0),
-        style: TextStyle(
+        style: const TextStyle(
           color: Colors.white,
           fontSize: 10,
           fontWeight: FontWeight.w600,

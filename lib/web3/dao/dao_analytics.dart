@@ -393,7 +393,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               ),
             ],
           ),
-        )).toList(),
+        )),
       ],
     );
   }
@@ -421,7 +421,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
   }
 
   Widget _buildOutcomeItem(String label, int count, Color color) {
-    final total = 47;
+    const total = 47;
     final percentage = (count / total * 100).round();
     
     return Column(

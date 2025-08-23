@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/achievements.dart';
 
-class AchievementsPage extends StatelessWidget {
+class AchievementsPage extends StatefulWidget {
   const AchievementsPage({super.key});
+
+  @override
+  State<AchievementsPage> createState() => _AchievementsPageState();
+}
+
+class _AchievementsPageState extends State<AchievementsPage> {
+  late List<AchievementProgress> _userProgress;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeUserProgress();
+  }
+
+  void _initializeUserProgress() {
+    // Sample user progress - in real app this would come from user service
+    _userProgress = [
+      const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
+      const AchievementProgress(achievementId: 'ar_collector', currentProgress: 7, isCompleted: false),
+      const AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 3, isCompleted: false),
+      const AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
+      const AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
+      const AchievementProgress(achievementId: 'art_critic', currentProgress: 4, isCompleted: false),
+      const AchievementProgress(achievementId: 'social_butterfly', currentProgress: 15, isCompleted: false),
+      const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,6 +58,10 @@ class AchievementsPage extends StatelessWidget {
   }
 
   Widget _buildStatsHeader() {
+    final completedCount = _userProgress.where((p) => p.isCompleted).length;
+    final totalPoints = AchievementService.calculateTotalPoints(_userProgress);
+    final completionPercentage = AchievementService.getOverallCompletionPercentage(_userProgress);
+
     return Container(
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.all(20),
@@ -41,47 +73,87 @@ class AchievementsPage extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: const Icon(
-              Icons.emoji_events,
-              color: Colors.white,
-              size: 30,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Icon(
+                  Icons.emoji_events,
+                  color: Colors.white,
+                  size: 30,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your Achievements',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Collect POAPs and unlock rewards for your AR art journey',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Achievements',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Collect POAPs and unlock rewards for your AR art journey',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem('Completed', '$completedCount/${AchievementService.allAchievements.length}'),
+              ),
+              Expanded(
+                child: _buildStatItem('Points', '$totalPoints'),
+              ),
+              Expanded(
+                child: _buildStatItem('Progress', '${completionPercentage.toInt()}%'),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: Colors.white.withOpacity(0.8),
+          ),
+        ),
+      ],
     );
   }
 
@@ -92,49 +164,23 @@ class AchievementsPage extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1.0,
+        childAspectRatio: 0.85,
       ),
-      itemCount: 8,
+      itemCount: _userProgress.length,
       itemBuilder: (context, index) {
-        return _buildAchievementCard(index);
+        final progress = _userProgress[index];
+        final achievement = AchievementService.getAchievementById(progress.achievementId);
+        if (achievement != null) {
+          return _buildAchievementCard(achievement, progress);
+        }
+        return const SizedBox.shrink();
       },
     );
   }
 
-  Widget _buildAchievementCard(int index) {
-    final achievements = [
-      {
-        'title': 'First AR Visit',
-        'description': 'Visited your first AR artwork',
-        'icon': Icons.visibility,
-        'color': const Color(0xFF6C63FF),
-        'unlocked': true,
-      },
-      {
-        'title': 'Art Collector',
-        'description': 'Collected 5 unique artworks',
-        'icon': Icons.collections,
-        'color': const Color(0xFF9C27B0),
-        'unlocked': true,
-      },
-      {
-        'title': 'Gallery Explorer',
-        'description': 'Visited 10 different galleries',
-        'icon': Icons.explore,
-        'color': const Color(0xFF00D4AA),
-        'unlocked': false,
-      },
-      {
-        'title': 'Community Member',
-        'description': 'Participated in DAO voting',
-        'icon': Icons.how_to_vote,
-        'color': const Color(0xFF4CAF50),
-        'unlocked': true,
-      },
-    ];
-
-    final achievement = achievements[index % achievements.length];
-    final isUnlocked = achievement['unlocked'] as bool;
+  Widget _buildAchievementCard(Achievement achievement, AchievementProgress progress) {
+    final isUnlocked = progress.isCompleted;
+    final progressPercent = progress.progressPercentage;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -143,7 +189,7 @@ class AchievementsPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnlocked 
-              ? (achievement['color'] as Color)
+              ? achievement.color
               : Colors.grey[800]!,
         ),
       ),
@@ -155,21 +201,21 @@ class AchievementsPage extends StatelessWidget {
             height: 60,
             decoration: BoxDecoration(
               color: isUnlocked 
-                  ? (achievement['color'] as Color).withOpacity(0.1)
+                  ? achievement.color.withOpacity(0.1)
                   : Colors.grey[800]!.withOpacity(0.3),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
-              achievement['icon'] as IconData,
+              achievement.icon,
               color: isUnlocked 
-                  ? (achievement['color'] as Color)
+                  ? achievement.color
                   : Colors.grey[600],
               size: 30,
             ),
           ),
           const SizedBox(height: 12),
           Text(
-            achievement['title'] as String,
+            achievement.title,
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.bold,
@@ -179,19 +225,36 @@ class AchievementsPage extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            achievement['description'] as String,
+            achievement.description,
             style: GoogleFonts.inter(
               fontSize: 12,
               color: isUnlocked ? Colors.grey[400] : Colors.grey[600],
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 8),
+          if (!isUnlocked && achievement.requiredProgress > 1) ...[
+            Text(
+              '${progress.currentProgress}/${achievement.requiredProgress}',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: Colors.grey[500],
+              ),
+            ),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: progressPercent,
+              backgroundColor: Colors.grey[800],
+              valueColor: AlwaysStoppedAnimation<Color>(achievement.color),
+              minHeight: 3,
+            ),
+          ],
           if (isUnlocked) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: (achievement['color'] as Color).withOpacity(0.1),
+                color: achievement.color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -199,11 +262,31 @@ class AchievementsPage extends StatelessWidget {
                 style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
-                  color: achievement['color'] as Color,
+                  color: achievement.color,
                 ),
               ),
             ),
           ],
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.monetization_on,
+                size: 12,
+                color: Colors.amber,
+              ),
+              const SizedBox(width: 2),
+              Text(
+                '${achievement.points}',
+                style: GoogleFonts.inter(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

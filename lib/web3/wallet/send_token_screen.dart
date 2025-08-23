@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
@@ -13,104 +12,102 @@ class SendTokenScreen extends StatefulWidget {
 
 class _SendTokenScreenState extends State<SendTokenScreen> 
     with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  
-  final _recipientController = TextEditingController();
-  final _amountController = TextEditingController();
-  final _memoController = TextEditingController();
-  
+  final TextEditingController _addressController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
   String _selectedToken = 'KUB8';
-  bool _isAdvancedMode = false;
-  double _gasPrice = 5.0;
-  int _gasLimit = 21000;
+  bool _isLoading = false;
+  String _addressError = '';
+  String _amountError = '';
+  double _estimatedGas = 0.0;
   
-  final List<Map<String, dynamic>> _recentContacts = [
-    {'name': 'Alice Cooper', 'address': '0x742d35Cc6634C0532925a3b8d3e3d3456789...', 'avatar': '🎨'},
-    {'name': 'Bob Smith', 'address': '0x123e35Cc6634C0532925a3b8d3e3d3456789...', 'avatar': '🖼️'},
-    {'name': 'Gallery DAO', 'address': '0x456d35Cc6634C0532925a3b8d3e3d3456789...', 'avatar': '🏛️'},
-    {'name': 'ArtistHub', 'address': '0x789f35Cc6634C0532925a3b8d3e3d3456789...', 'avatar': '🎭'},
-  ];
+  late AnimationController _animationController;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+    _estimateGasFee();
     _animationController.forward();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
-    _recipientController.dispose();
+    _addressController.dispose();
     _amountController.dispose();
-    _memoController.dispose();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0A),
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Send Tokens',
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-              onPressed: _scanQRCode,
-            ),
-          ],
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildTokenSelector(),
-              const SizedBox(height: 24),
-              _buildRecentContacts(),
-              const SizedBox(height: 24),
-              _buildRecipientField(),
-              const SizedBox(height: 24),
-              _buildAmountField(),
-              const SizedBox(height: 24),
-              _buildMemoField(),
-              const SizedBox(height: 24),
-              _buildAdvancedOptions(),
-              const SizedBox(height: 24),
-              _buildTransactionSummary(),
-              const SizedBox(height: 32),
-              _buildSendButton(),
-            ],
+        title: Text(
+          'Send Token',
+          style: GoogleFonts.inter(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+            onPressed: _scanQRCode,
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
+          final isWideScreen = constraints.maxWidth > 800;
+          
+          return SlideTransition(
+            position: _slideAnimation,
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : 24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: isWideScreen ? 600 : double.infinity,
+                ),
+                child: Center(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildTokenSelector(),
+                      SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                      _buildAddressInput(),
+                      SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                      _buildAmountInput(),
+                      SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                      _buildTransactionSummary(),
+                      SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
+                      _buildSendButton(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -119,7 +116,6 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final tokens = [
       {'symbol': 'KUB8', 'name': 'art.kubus Token', 'balance': '1,250.00', 'icon': '🎨'},
       {'symbol': 'SOL', 'name': 'Solana', 'balance': '12.5', 'icon': '☀️'},
-      {'symbol': 'ETH', 'name': 'Ethereum', 'balance': '0.85', 'icon': '💎'},
       {'symbol': 'USDC', 'name': 'USD Coin', 'balance': '500.00', 'icon': '💵'},
     ];
 
@@ -142,166 +138,102 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             final isMediumScreen = screenWidth < 600;
             
             // Calculate responsive dimensions
-            final cardWidth = isSmallScreen ? 100.0 : isMediumScreen ? 110.0 : 130.0;
-            final cardSpacing = isSmallScreen ? 8.0 : 12.0;
-            final totalCardsWidth = (tokens.length * cardWidth) + ((tokens.length - 1) * cardSpacing);
+            int crossAxisCount;
+            double childAspectRatio;
+            double spacing;
             
-            if (totalCardsWidth <= screenWidth) {
-              // Cards fit in available width - use centered layout
-              return Center(
-                child: Wrap(
-                  spacing: cardSpacing,
-                  children: tokens.map((token) {
-                    final isSelected = _selectedToken == token['symbol'];
-                    
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedToken = token['symbol']!),
-                      child: Container(
-                        width: cardWidth,
-                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                        decoration: BoxDecoration(
-                          color: isSelected 
-                              ? Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2)
-                              : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected 
-                                ? Provider.of<ThemeProvider>(context).accentColor
-                                : Colors.white.withOpacity(0.1),
-                            width: 2,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  token['icon']!,
-                                  style: TextStyle(fontSize: isSmallScreen ? 20 : 24),
-                                ),
-                                const Spacer(),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: Provider.of<ThemeProvider>(context).accentColor,
-                                    size: isSmallScreen ? 16 : 20,
-                                  ),
-                              ],
-                            ),
-                            SizedBox(height: isSmallScreen ? 6 : 8),
-                            Text(
-                              token['symbol']!,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 14 : 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              token['balance']!,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 10 : 12,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              );
+            if (isSmallScreen) {
+              crossAxisCount = 1;
+              childAspectRatio = 3.5;
+              spacing = 8.0;
+            } else if (isMediumScreen) {
+              crossAxisCount = 2;
+              childAspectRatio = 2.5;
+              spacing = 12.0;
             } else {
-              // Cards don't fit - use horizontal scroll
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: tokens.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final token = entry.value;
-                    final isSelected = _selectedToken == token['symbol'];
-                    
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedToken = token['symbol']!),
-                      child: Container(
-                        width: cardWidth,
-                        margin: EdgeInsets.only(
-                          right: index < tokens.length - 1 ? cardSpacing : 0,
+              crossAxisCount = 3;
+              childAspectRatio = 2.0;
+              spacing = 16.0;
+            }
+            
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: childAspectRatio,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+              ),
+              itemCount: tokens.length,
+              itemBuilder: (context, index) {
+                final token = tokens[index];
+                final isSelected = _selectedToken == token['symbol'];
+                
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _selectedToken = token['symbol'] as String;
+                      _estimateGasFee();
+                    });
+                  },
+                  child: Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                        ? Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1)
+                        : const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected 
+                          ? Provider.of<ThemeProvider>(context).accentColor
+                          : Colors.grey[800]!,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          token['icon'] as String,
+                          style: TextStyle(fontSize: isSmallScreen ? 20 : 24),
                         ),
-                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                        decoration: BoxDecoration(
-                          color: isSelected 
-                              ? Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2)
-                              : Colors.white.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isSelected 
-                                ? Provider.of<ThemeProvider>(context).accentColor
-                                : Colors.white.withOpacity(0.1),
-                            width: 2,
+                        SizedBox(height: isSmallScreen ? 4 : 8),
+                        Text(
+                          token['symbol'] as String,
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  token['icon']!,
-                                  style: TextStyle(fontSize: isSmallScreen ? 20 : 24),
-                                ),
-                                const Spacer(),
-                                if (isSelected)
-                                  Icon(
-                                    Icons.check_circle,
-                                    color: Provider.of<ThemeProvider>(context).accentColor,
-                                    size: isSmallScreen ? 16 : 20,
-                                  ),
-                              ],
-                            ),
-                            SizedBox(height: isSmallScreen ? 6 : 8),
-                            Text(
-                              token['symbol']!,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 14 : 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            Text(
-                              token['balance']!,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 10 : 12,
-                                color: Colors.white.withOpacity(0.7),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                        SizedBox(height: isSmallScreen ? 2 : 4),
+                        Text(
+                          'Balance: ${token['balance']}',
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            color: Colors.grey[400],
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              );
-            }
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
           },
         ),
       ],
     );
   }
 
-  Widget _buildRecentContacts() {
+  Widget _buildAddressInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recent Contacts',
+          'Recipient Address',
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -310,339 +242,38 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         ),
         const SizedBox(height: 16),
         Container(
-          height: 80,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: _recentContacts.length,
-            itemBuilder: (context, index) {
-              final contact = _recentContacts[index];
-              
-              return GestureDetector(
-                onTap: () => _selectContact(contact),
-                child: Container(
-                  width: 70,
-                  margin: const EdgeInsets.only(right: 16),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Provider.of<ThemeProvider>(context).accentColor,
-                              Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.6),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Center(
-                          child: Text(
-                            contact['avatar'],
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        contact['name'].split(' ')[0],
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRecipientField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recipient Address',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _recipientController,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Enter wallet address or ENS name',
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[800]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[800]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Provider.of<ThemeProvider>(context).accentColor),
-            ),
-            suffixIcon: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.qr_code_scanner, color: Colors.grey),
-                  onPressed: _scanQRCode,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.contacts, color: Colors.grey),
-                  onPressed: _showContactList,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAmountField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Amount',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: _setMaxAmount,
-              child: Text(
-                'MAX',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: const Color(0xFF1A1A1A),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[800]!),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _amountController,
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        hintText: '0.00',
-                        hintStyle: TextStyle(color: Colors.grey[500]),
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    _selectedToken,
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Provider.of<ThemeProvider>(context).accentColor,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    '≈ \$${_calculateUSDValue()}',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.white.withOpacity(0.7),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Balance: ${_getTokenBalance()}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMemoField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Memo (Optional)',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _memoController,
-          style: const TextStyle(color: Colors.white),
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: 'Add a note for this transaction...',
-            hintStyle: TextStyle(color: Colors.grey[500]),
-            filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[800]!),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[800]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Provider.of<ThemeProvider>(context).accentColor),
+            border: Border.all(
+              color: _addressError.isNotEmpty 
+                ? Colors.red 
+                : Colors.grey[800]!,
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAdvancedOptions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Advanced Options',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
+          child: TextField(
+            controller: _addressController,
+            style: GoogleFonts.inter(color: Colors.white),
+            onChanged: _validateAddress,
+            decoration: InputDecoration(
+              hintText: 'Enter recipient address',
+              hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.qr_code_scanner, color: Colors.grey),
+                onPressed: _scanQRCode,
               ),
             ),
-            const Spacer(),
-            Switch(
-              value: _isAdvancedMode,
-              onChanged: (value) => setState(() => _isAdvancedMode = value),
-              activeColor: Provider.of<ThemeProvider>(context).accentColor,
-            ),
-          ],
+          ),
         ),
-        if (_isAdvancedMode) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[800]!),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Gas Price (GWEI)',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                          ),
-                          Slider(
-                            value: _gasPrice,
-                            min: 1.0,
-                            max: 100.0,
-                            divisions: 99,
-                            activeColor: Provider.of<ThemeProvider>(context).accentColor,
-                            onChanged: (value) => setState(() => _gasPrice = value),
-                          ),
-                          Text(
-                            '${_gasPrice.toStringAsFixed(1)} GWEI',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.white.withOpacity(0.6),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Gas Limit',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                          ),
-                          TextFormField(
-                            initialValue: _gasLimit.toString(),
-                            style: const TextStyle(color: Colors.white),
-                            keyboardType: TextInputType.number,
-                            decoration: InputDecoration(
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                            onChanged: (value) => _gasLimit = int.tryParse(value) ?? 21000,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+        if (_addressError.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            _addressError,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.red,
             ),
           ),
         ],
@@ -650,16 +281,113 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     );
   }
 
+  Widget _buildAmountInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Amount',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            GestureDetector(
+              onTap: _setMaxAmount,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                  ),
+                ),
+                child: Text(
+                  'MAX',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Provider.of<ThemeProvider>(context).accentColor,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _amountError.isNotEmpty 
+                ? Colors.red 
+                : Colors.grey[800]!,
+            ),
+          ),
+          child: TextField(
+            controller: _amountController,
+            style: GoogleFonts.inter(color: Colors.white, fontSize: 18),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: _validateAmount,
+            decoration: InputDecoration(
+              hintText: '0.0',
+              hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 18),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(16),
+              suffixIcon: Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: Center(
+                  widthFactor: 1,
+                  child: Text(
+                    _selectedToken,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Provider.of<ThemeProvider>(context).accentColor,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (_amountError.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Text(
+            _amountError,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.red,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Text(
+          'Available: ${_getTokenBalance(_selectedToken)} $_selectedToken',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: Colors.grey[400],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildTransactionSummary() {
-    final networkFee = _calculateNetworkFee();
-    final feeCurrency = _getNetworkFeeCurrency();
-    final totalAmount = _calculateTotalAmount();
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
+    final usdValue = _calculateUSDValue(amount);
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[800]!),
       ),
       child: Column(
@@ -668,299 +396,205 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           Text(
             'Transaction Summary',
             style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
           const SizedBox(height: 16),
-          _buildSummaryRow('Amount', '${_amountController.text} $_selectedToken'),
-          _buildSummaryRow('Network Fee', '$networkFee $feeCurrency'),
-          _buildSummaryRow('Total', '$totalAmount $_selectedToken', isTotal: true),
-          if (feeCurrency != _selectedToken)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Note: Network fee is paid in $feeCurrency',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.yellow.withOpacity(0.8),
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
+          _buildSummaryRow('Amount', '$amount $_selectedToken'),
+          const SizedBox(height: 8),
+          _buildSummaryRow('USD Value', '\$${usdValue.toStringAsFixed(2)}'),
+          const SizedBox(height: 8),
+          _buildSummaryRow('Network Fee', '${_estimatedGas.toStringAsFixed(4)} ${_getNetworkCurrency()}'),
+          const Divider(color: Colors.grey),
+          const SizedBox(height: 8),
+          _buildSummaryRow(
+            'Total',
+            '${(amount + _estimatedGas).toStringAsFixed(4)} $_selectedToken',
+            isTotal: true,
+          ),
         ],
       ),
     );
   }
 
   Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: isTotal ? 16 : 14,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-              color: Colors.white.withOpacity(0.8),
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
+            color: Colors.grey[400],
           ),
-          const Spacer(),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: isTotal ? 16 : 14,
-              fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-              color: isTotal ? Provider.of<ThemeProvider>(context).accentColor : Colors.white,
-            ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: isTotal ? 16 : 14,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
+            color: Colors.white,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildSendButton() {
+    final isValid = _addressController.text.isNotEmpty &&
+                   _amountController.text.isNotEmpty &&
+                   _addressError.isEmpty &&
+                   _amountError.isEmpty;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: _isFormValid() ? _sendTransaction : null,
+        onPressed: isValid && !_isLoading ? _sendTransaction : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          disabledBackgroundColor: Colors.grey[600],
+          elevation: 0,
         ),
-        child: Text(
-          'Send Transaction',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _selectContact(Map<String, dynamic> contact) {
-    _recipientController.text = contact['address'];
-  }
-
-  void _scanQRCode() {
-    // Simulate QR code scanning
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text('QR Scanner', style: GoogleFonts.inter(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+        child: _isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
               ),
-              child: const Center(
-                child: Icon(Icons.qr_code_scanner, size: 80, color: Colors.white),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Point camera at QR code',
-              style: GoogleFonts.inter(color: Colors.grey[400]),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showContactList() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Select Contact',
+            )
+          : Text(
+              'Send $_selectedToken',
               style: GoogleFonts.inter(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w600,
                 color: Colors.white,
               ),
             ),
-            const SizedBox(height: 16),
-            ..._recentContacts.map((contact) => ListTile(
-              leading: CircleAvatar(
-                backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-                child: Text(contact['avatar']),
-              ),
-              title: Text(
-                contact['name'],
-                style: GoogleFonts.inter(color: Colors.white),
-              ),
-              subtitle: Text(
-                contact['address'],
-                style: GoogleFonts.inter(color: Colors.grey[400]),
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () {
-                _selectContact(contact);
-                Navigator.pop(context);
-              },
-            )).toList(),
-          ],
-        ),
       ),
     );
   }
 
-  void _setMaxAmount() {
-    final balance = _getTokenBalance();
-    _amountController.text = balance;
+  void _validateAddress(String value) {
+    setState(() {
+      if (value.isEmpty) {
+        _addressError = 'Address is required';
+      } else if (value.length < 32) {
+        _addressError = 'Invalid address format';
+      } else {
+        _addressError = '';
+      }
+    });
   }
 
-  String _getTokenBalance() {
-    switch (_selectedToken) {
+  void _validateAmount(String value) {
+    final amount = double.tryParse(value);
+    final balance = double.tryParse(_getTokenBalance(_selectedToken).replaceAll(',', '')) ?? 0.0;
+    
+    setState(() {
+      if (value.isEmpty) {
+        _amountError = 'Amount is required';
+      } else if (amount == null || amount <= 0) {
+        _amountError = 'Amount must be greater than 0';
+      } else if (amount > balance) {
+        _amountError = 'Insufficient balance';
+      } else {
+        _amountError = '';
+      }
+      _estimateGasFee();
+    });
+  }
+
+  void _setMaxAmount() {
+    final balance = _getTokenBalance(_selectedToken);
+    _amountController.text = balance.replaceAll(',', '');
+    _validateAmount(_amountController.text);
+  }
+
+  String _getTokenBalance(String token) {
+    switch (token) {
       case 'KUB8': return '1,250.00';
       case 'SOL': return '12.5';
-      case 'ETH': return '0.85';
       case 'USDC': return '500.00';
       default: return '0.00';
     }
   }
 
-  String _calculateUSDValue() {
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
-    final rate = {'KUB8': 0.20, 'SOL': 150.0, 'ETH': 2500.0, 'USDC': 1.0}[_selectedToken] ?? 0.0;
-    return (amount * rate).toStringAsFixed(2);
+  double _calculateUSDValue(double amount) {
+    final rate = {'KUB8': 0.20, 'SOL': 150.0, 'USDC': 1.0}[_selectedToken] ?? 0.0;
+    return amount * rate;
   }
 
-  String _calculateNetworkFee() {
-    // Define network fees for different tokens
-    final networkFees = {
-      'KUB8': 0.0001, // KUB8 fee
-      'SOL': (_gasPrice * _gasLimit / 1e9), // SOL fee (original calculation)
-      'ETH': 0.005, // ETH fee
-      'USDC': 0.0001, // USDC fee (usually same as base chain)
+  void _estimateGasFee() {
+    // Estimate gas fees for different tokens
+    final fees = {
+      'KUB8': 0.001, // SOL fee for SPL token
+      'SOL': 0.000005, // Base SOL fee
+      'USDC': 0.001, // SOL fee for SPL token
     };
     
-    final fee = networkFees[_selectedToken] ?? 0.0;
-    return fee.toStringAsFixed(6);
+    setState(() {
+      _estimatedGas = fees[_selectedToken] ?? 0.001;
+    });
   }
 
-  String _getNetworkFeeCurrency() {
-    // Return the currency symbol for network fees
-    final feeCurrencies = {
-      'KUB8': 'KUB8',
+  String _getNetworkCurrency() {
+    final currencies = {
+      'KUB8': 'SOL',
       'SOL': 'SOL',
-      'ETH': 'ETH',
-      'USDC': 'SOL', // USDC usually pays fees in the base chain currency
+      'USDC': 'SOL',
     };
-    
-    return feeCurrencies[_selectedToken] ?? _selectedToken;
+    return currencies[_selectedToken] ?? 'SOL';
   }
 
-  String _calculateTotalAmount() {
-    final amount = double.tryParse(_amountController.text) ?? 0.0;
-    final networkFee = double.tryParse(_calculateNetworkFee()) ?? 0.0;
-    
-    // If network fee is in the same currency as the selected token, add it to the total
-    final feeCurrency = _getNetworkFeeCurrency();
-    if (feeCurrency == _selectedToken) {
-      return (amount + networkFee).toStringAsFixed(6);
-    } else {
-      // If fee is in different currency, just return the amount
-      return amount.toStringAsFixed(6);
-    }
-  }
-
-  bool _isFormValid() {
-    return _recipientController.text.isNotEmpty &&
-           _amountController.text.isNotEmpty &&
-           double.tryParse(_amountController.text) != null &&
-           double.parse(_amountController.text) > 0;
-  }
-
-  void _sendTransaction() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text('Confirm Transaction', style: GoogleFonts.inter(color: Colors.white)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Send ${_amountController.text} $_selectedToken to:', 
-                 style: GoogleFonts.inter(color: Colors.grey[400])),
-            const SizedBox(height: 8),
-            Text(_recipientController.text, 
-                 style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 16),
-            Text('Network fee: ${_calculateNetworkFee()} ${_getNetworkFeeCurrency()}', 
-                 style: GoogleFonts.inter(color: Colors.grey[400])),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _processSend();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-            ),
-            child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _processSend() async {
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    // Simulate transaction processing
-    await Future.delayed(const Duration(seconds: 3));
-
-    Navigator.pop(context); // Close loading
-    Navigator.pop(context); // Close send screen
-
-    // Show success
+  void _scanQRCode() {
+    // Simulate QR code scanning
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Transaction sent successfully!'),
-        backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+      const SnackBar(
+        content: Text('QR Code scanner would open here'),
+        behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+
+  Future<void> _sendTransaction() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // Simulate transaction processing
+      await Future.delayed(const Duration(seconds: 2));
+      
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully sent ${_amountController.text} $_selectedToken'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Transaction failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 }

@@ -123,38 +123,35 @@ class _EventManagerState extends State<EventManager>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Event Manager',
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                'Manage your institution\'s events',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
-                ),
-              ),
-            ],
+          Text(
+            'Event Manager',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            'Manage your institution\'s events',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications, color: Colors.white),
+                icon: const Icon(Icons.notifications, color: Colors.white, size: 20),
                 onPressed: () => _showNotifications(),
               ),
               IconButton(
-                icon: const Icon(Icons.search, color: Colors.white),
+                icon: const Icon(Icons.search, color: Colors.white, size: 20),
                 onPressed: () => _showSearchDialog(),
               ),
             ],
@@ -168,30 +165,34 @@ class _EventManagerState extends State<EventManager>
     final filters = ['All', 'Upcoming', 'Active', 'Completed'];
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: filters.map((filter) {
-          final isSelected = _selectedFilter == filter;
-          return Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: FilterChip(
-              selected: isSelected,
-              label: Text(
-                filter,
-                style: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: filters.map((filter) {
+            final isSelected = _selectedFilter == filter;
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                selected: isSelected,
+                label: Text(
+                  filter,
+                  style: TextStyle(
+                    color: isSelected ? Colors.black : Colors.white,
+                    fontSize: 12,
+                  ),
                 ),
+                backgroundColor: Colors.transparent,
+                selectedColor: Provider.of<ThemeProvider>(context).accentColor,
+                onSelected: (selected) {
+                  setState(() {
+                    _selectedFilter = filter;
+                  });
+                },
               ),
-              backgroundColor: Colors.transparent,
-              selectedColor: Provider.of<ThemeProvider>(context).accentColor,
-              onSelected: (selected) {
-                setState(() {
-                  _selectedFilter = filter;
-                });
-              },
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
@@ -202,12 +203,12 @@ class _EventManagerState extends State<EventManager>
     final totalRegistrations = _events.fold<int>(0, (sum, event) => sum + event.registeredCount);
     
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
           Expanded(child: _buildStatItem('Total Events', totalEvents.toString())),
           Expanded(child: _buildStatItem('Active Now', activeEvents.toString())),
-          Expanded(child: _buildStatItem('Total Registrations', totalRegistrations.toString())),
+          Expanded(child: _buildStatItem('Registrations', totalRegistrations.toString())),
         ],
       ),
     );
@@ -215,8 +216,8 @@ class _EventManagerState extends State<EventManager>
 
   Widget _buildStatItem(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(right: 6),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
@@ -227,18 +228,21 @@ class _EventManagerState extends State<EventManager>
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 10,
+              fontSize: 9,
               color: Colors.white.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ],
       ),
@@ -253,21 +257,21 @@ class _EventManagerState extends State<EventManager>
           children: [
             Icon(
               Icons.event_busy,
-              size: 64,
+              size: 48,
               color: Colors.white.withOpacity(0.3),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               'No events found',
               style: GoogleFonts.inter(
-                fontSize: 18,
+                fontSize: 16,
                 color: Colors.white.withOpacity(0.7),
               ),
             ),
             Text(
               'Create your first event to get started',
               style: GoogleFonts.inter(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.white.withOpacity(0.5),
               ),
             ),
@@ -277,7 +281,7 @@ class _EventManagerState extends State<EventManager>
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: events.length,
       itemBuilder: (context, index) {
         return _buildEventCard(events[index]);
@@ -291,8 +295,8 @@ class _EventManagerState extends State<EventManager>
     final occupancyPercentage = event.registeredCount / event.capacity;
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
@@ -307,23 +311,26 @@ class _EventManagerState extends State<EventManager>
                 child: Text(
                   event.title,
                   style: GoogleFonts.inter(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: statusColor),
                 ),
                 child: Text(
                   event.status.name.toUpperCase(),
                   style: GoogleFonts.inter(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.w600,
                     color: statusColor,
                   ),
@@ -331,41 +338,47 @@ class _EventManagerState extends State<EventManager>
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             event.description,
             style: GoogleFonts.inter(
-              fontSize: 14,
+              fontSize: 12,
               color: Colors.white.withOpacity(0.7),
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.location_on, color: Colors.white.withOpacity(0.6), size: 16),
+              Icon(Icons.location_on, color: Colors.white.withOpacity(0.6), size: 14),
               const SizedBox(width: 4),
-              Text(
-                event.location,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
+              Flexible(
+                child: Text(
+                  event.location,
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(width: 16),
-              Icon(Icons.schedule, color: Colors.white.withOpacity(0.6), size: 16),
+              const SizedBox(width: 12),
+              Icon(Icons.schedule, color: Colors.white.withOpacity(0.6), size: 14),
               const SizedBox(width: 4),
-              Text(
-                _formatDate(event.startDate),
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.6),
+              Flexible(
+                child: Text(
+                  _formatDate(event.startDate),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -375,7 +388,7 @@ class _EventManagerState extends State<EventManager>
                     Text(
                       'Occupancy: ${event.registeredCount}/${event.capacity}',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 10,
                         color: Colors.white.withOpacity(0.7),
                       ),
                     ),
@@ -386,22 +399,23 @@ class _EventManagerState extends State<EventManager>
                       valueColor: AlwaysStoppedAnimation<Color>(
                         occupancyPercentage > 0.8 ? Colors.red : themeProvider.accentColor,
                       ),
+                      minHeight: 3,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Text(
                 '\$${event.price.toStringAsFixed(0)}',
                 style: GoogleFonts.inter(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: themeProvider.accentColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [

@@ -4,11 +4,15 @@ import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/artwork_provider.dart';
 import '../web3/dao/governance_hub.dart';
 import '../web3/artist/artist_studio.dart';
 import '../web3/institution/institution_hub.dart';
 import '../web3/marketplace/marketplace.dart';
 import '../web3/wallet.dart';
+import '../web3/connectwallet.dart';
+import '../web3/onboarding/web3_onboarding.dart' as web3;
+
 import '../widgets/enhanced_stats_chart.dart';
 import 'advanced_analytics_screen.dart';
 
@@ -53,7 +57,16 @@ class _HomeScreenState extends State<HomeScreen>
     
     // Initialize navigation provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(context, listen: false).initialize();
+      final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+      navigationProvider.initialize();
+      
+      // Add some default visits for demo purposes if no visits exist
+      if (navigationProvider.visitCounts.isEmpty) {
+        navigationProvider.trackScreenVisit('map');
+        navigationProvider.trackScreenVisit('ar');
+        navigationProvider.trackScreenVisit('community');
+        navigationProvider.trackScreenVisit('map'); // Visit map twice to show it as most visited
+      }
     });
   }
 
@@ -82,23 +95,32 @@ class _HomeScreenState extends State<HomeScreen>
                 child: CustomScrollView(
                   slivers: [
                     _buildAppBar(),
-                    SliverPadding(
-                      padding: const EdgeInsets.all(24),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          _buildWelcomeSection(),
-                          const SizedBox(height: 24),
-                          _buildQuickActions(),
-                          const SizedBox(height: 24),
-                          _buildStatsCards(),
-                          const SizedBox(height: 24),
-                          _buildWeb3Section(),
-                          const SizedBox(height: 24),
-                          _buildRecentActivity(),
-                          const SizedBox(height: 24),
-                          _buildFeaturedArtworks(),
-                        ]),
-                      ),
+                    SliverLayoutBuilder(
+                      builder: (context, constraints) {
+                        final screenWidth = constraints.crossAxisExtent;
+                        final isSmallScreen = screenWidth < 375;
+                        final padding = isSmallScreen ? 16.0 : 24.0;
+                        final spacing = isSmallScreen ? 16.0 : 24.0;
+                        
+                        return SliverPadding(
+                          padding: EdgeInsets.all(padding),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              _buildWelcomeSection(),
+                              SizedBox(height: spacing),
+                              _buildQuickActions(),
+                              SizedBox(height: spacing),
+                              _buildStatsCards(),
+                              SizedBox(height: spacing),
+                              _buildWeb3Section(),
+                              SizedBox(height: spacing),
+                              _buildRecentActivity(),
+                              SizedBox(height: spacing),
+                              _buildFeaturedArtworks(),
+                            ]),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -245,102 +267,116 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeProvider.accentColor,
-            themeProvider.accentColor.withValues(alpha: 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: themeProvider.accentColor.withValues(alpha: 0.3),
-            blurRadius: 20,
-            spreadRadius: 0,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Welcome Back!',
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Discover amazing AR art and connect with creators',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.9),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Icon(
-                  Icons.view_in_ar,
-                  color: Colors.white,
-                  size: 30,
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 375;
+        final padding = isSmallScreen ? 16.0 : 24.0;
+        final titleSize = isSmallScreen ? 20.0 : 24.0;
+        final descriptionSize = isSmallScreen ? 12.0 : 14.0;
+        final iconSize = isSmallScreen ? 50.0 : 60.0;
+        
+        return Container(
+          padding: EdgeInsets.all(padding),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                themeProvider.accentColor,
+                themeProvider.accentColor.withValues(alpha: 0.8),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: themeProvider.accentColor.withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          if (web3Provider.isConnected) ...[
-            Row(
-              children: [
-                _buildBalanceChip('KUB8', web3Provider.kub8Balance.toStringAsFixed(2)),
-                const SizedBox(width: 12),
-                _buildBalanceChip('SOL', web3Provider.solBalance.toStringAsFixed(3)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome Back!',
+                          style: GoogleFonts.inter(
+                            fontSize: titleSize,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: isSmallScreen ? 6 : 8),
+                        Text(
+                          'Discover amazing AR art and connect with creators',
+                          style: GoogleFonts.inter(
+                            fontSize: descriptionSize,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: iconSize,
+                    height: iconSize,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Icon(
+                      Icons.view_in_ar,
+                      color: Colors.white,
+                      size: isSmallScreen ? 25 : 30,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isSmallScreen ? 16 : 20),
+              if (web3Provider.isConnected) ...[
+                Row(
+                  children: [
+                    _buildBalanceChip('KUB8', web3Provider.kub8Balance.toStringAsFixed(2)),
+                    const SizedBox(width: 12),
+                    _buildBalanceChip('SOL', web3Provider.solBalance.toStringAsFixed(3)),
+                  ],
+                ),
+              ] else ...[
+                ElevatedButton.icon(
+                  onPressed: () => _showWalletOnboarding(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: themeProvider.accentColor,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: Icon(
+                    Icons.explore,
+                    size: isSmallScreen ? 16 : 18,
+                  ),
+                  label: Text(
+                    'Explore Web3',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 12 : 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
               ],
-            ),
-          ] else ...[
-            ElevatedButton(
-              onPressed: () => web3Provider.connectWallet(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: themeProvider.accentColor,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'Connect Wallet',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -584,210 +620,426 @@ class _HomeScreenState extends State<HomeScreen>
       ('Views', '8.5k', Icons.visibility),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Your Stats',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: stats.map((stat) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 12),
-                child: _buildStatCard(stat.$1, stat.$2, stat.$3),
-              ),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return GestureDetector(
-      onTap: () => _showStatsDialog(title, icon),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: themeProvider.accentColor.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 375;
+        final isVerySmallScreen = constraints.maxWidth < 320;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icon,
-              color: themeProvider.accentColor,
-              size: 24,
-            ),
-            const SizedBox(height: 8),
             Text(
-              value,
+              'Your Stats',
               style: GoogleFonts.inter(
-                fontSize: 18,
+                fontSize: isSmallScreen ? 18 : 20,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            if (isVerySmallScreen)
+              // Stack vertically on very small screens - show full details
+              Column(
+                children: stats.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final stat = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: index < stats.length - 1 ? 8 : 0),
+                    child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: false, isVerticalLayout: true),
+                  );
+                }).toList(),
+              )
+            else
+              // Horizontal layout for other screen sizes - show icons only
+              Row(
+                children: stats.map((stat) {
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: true, isVerticalLayout: false),
+                    ),
+                  );
+                }).toList(),
               ),
-            ),
           ],
-        ),
-      ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, {bool showIconOnly = false, bool isVerticalLayout = false}) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxWidth < 375;
+        
+        return GestureDetector(
+          onTap: () => _showStatsDialog(title, icon),
+          child: Container(
+            width: isVerticalLayout ? double.infinity : null,
+            padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: themeProvider.accentColor.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: showIconOnly 
+              ? Column(
+                  children: [
+                    Icon(
+                      icon,
+                      color: themeProvider.accentColor,
+                      size: 28, // Keep original icon size
+                    ),
+                    if (isSmallScreen) ...[
+                      SizedBox(height: isSmallScreen ? 4 : 6),
+                      Text(
+                        value,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 10 : 12,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 7 : 8,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
+                )
+              : isVerticalLayout 
+                ? Row(
+                    children: [
+                      Icon(
+                        icon,
+                        color: themeProvider.accentColor,
+                        size: 20, // Keep original icon size
+                      ),
+                      SizedBox(width: isSmallScreen ? 8 : 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              value,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 10 : 12,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            Text(
+                              title,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 7 : 8,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Icon(
+                        icon,
+                        color: themeProvider.accentColor,
+                        size: 24, // Keep original icon size
+                      ),
+                      SizedBox(height: isSmallScreen ? 4 : 6),
+                      Text(
+                        value,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 10 : 12,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 7 : 8,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildWeb3Section() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Web3 Features',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
+    return Consumer<Web3Provider>(
+      builder: (context, web3Provider, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: _buildWeb3Card(
-                'DAO',
-                'Governance',
-                Icons.how_to_vote,
-                const Color(0xFF4ECDC4),
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const GovernanceHub()),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Web3 Features',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-              ),
+                if (!web3Provider.isConnected)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock, size: 12, color: Colors.orange),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Wallet Required',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildWeb3Card(
-                'Artist',
-                'Studio',
-                Icons.palette,
-                const Color(0xFFFF9A8B),
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const ArtistStudio()),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildWeb3Card(
+                    'DAO',
+                    'Governance',
+                    Icons.how_to_vote,
+                    const Color(0xFF4ECDC4),
+                    web3Provider.isConnected 
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const GovernanceHub()),
+                        )
+                      : () => _showWalletOnboarding(context),
+                    isLocked: !web3Provider.isConnected,
+                  ),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildWeb3Card(
+                    'Artist',
+                    'Studio',
+                    Icons.palette,
+                    const Color(0xFFFF9A8B),
+                    web3Provider.isConnected 
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const ArtistStudio()),
+                        )
+                      : () => _showWalletOnboarding(context),
+                    isLocked: !web3Provider.isConnected,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildWeb3Card(
+                    'Institution',
+                    'Hub',
+                    Icons.museum,
+                    const Color(0xFF667eea),
+                    web3Provider.isConnected 
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const InstitutionHub()),
+                        )
+                      : () => _showWalletOnboarding(context),
+                    isLocked: !web3Provider.isConnected,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildWeb3Card(
+                    'Marketplace',
+                    'NFTs',
+                    Icons.store,
+                    const Color(0xFFFF6B6B),
+                    web3Provider.isConnected 
+                      ? () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const Marketplace()),
+                        )
+                      : () => _showWalletOnboarding(context),
+                    isLocked: !web3Provider.isConnected,
+                  ),
+                ),
+              ],
             ),
           ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildWeb3Card(
-                'Institution',
-                'Hub',
-                Icons.museum,
-                const Color(0xFF667eea),
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const InstitutionHub()),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildWeb3Card(
-                'Marketplace',
-                'NFTs',
-                Icons.store,
-                const Color(0xFFFF6B6B),
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const Marketplace()),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildWeb3Card(String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Widget _buildWeb3Card(String title, String subtitle, IconData icon, Color color, VoidCallback onTap, {bool isLocked = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        height: 120, // Fixed height for consistent layout
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              color.withValues(alpha: 0.1),
-              color.withValues(alpha: 0.05),
+              color.withValues(alpha: isLocked ? 0.05 : 0.1),
+              color.withValues(alpha: isLocked ? 0.02 : 0.05),
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: color.withValues(alpha: 0.3),
+            color: color.withValues(alpha: isLocked ? 0.1 : 0.3),
           ),
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
+            // Use Center widget for perfect centering when unlocked
+            if (!isLocked)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        icon,
+                        color: color,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 20,
+            // Locked state - positioned at top
+            if (isLocked)
+              Positioned.fill(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          icon,
+                          color: color.withValues(alpha: 0.5),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
+            // Lock indicator - positioned absolutely
+            if (isLocked)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.lock,
+                    size: 10,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            Text(
-              subtitle,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-            ),
           ],
         ),
       ),
@@ -899,55 +1151,82 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildFeaturedArtworks() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer<ArtworkProvider>(
+      builder: (context, artworkProvider, child) {
+        final featuredArtworks = artworkProvider.artworks.take(5).toList();
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Featured Artworks',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                _navigateToGallery();
-              },
-              child: Text(
-                'Explore',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Featured Artworks',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
-              ),
+                TextButton(
+                  onPressed: () {
+                    _navigateToGallery();
+                  },
+                  child: Text(
+                    'Explore',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Provider.of<ThemeProvider>(context).accentColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 180,
+              child: featuredArtworks.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_not_supported,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No featured artworks',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: featuredArtworks.length,
+                    itemBuilder: (context, index) {
+                      return _buildArtworkCard(featuredArtworks[index], index);
+                    },
+                  ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 180,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              return _buildArtworkCard(index);
-            },
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildArtworkCard(int index) {
+  Widget _buildArtworkCard(dynamic artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return GestureDetector(
       onTap: () {
-        _showArtworkDetail(index);
+        _showArtworkDetail(artwork);
       },
       child: Container(
         width: 140,
@@ -988,20 +1267,24 @@ class _HomeScreenState extends State<HomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AR Art #${index + 1}',
+                    artwork?.title ?? 'AR Art #${index + 1}',
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'by @artist',
+                    'by ${artwork?.artist ?? '@artist'}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -1147,278 +1430,164 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _handleQuickAction(String action) {
+    final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+    
     switch (action) {
       case 'Create AR':
+        navigationProvider.trackScreenVisit('ar');
         Navigator.pushNamed(context, '/ar');
         break;
       case 'Explore Map':
+        navigationProvider.trackScreenVisit('map');
         // Switch to map tab in main app
         DefaultTabController.of(context).animateTo(0);
         break;
       case 'Community':
+        navigationProvider.trackScreenVisit('community');
         // Switch to community tab in main app
         DefaultTabController.of(context).animateTo(3);
         break;
       case 'Profile':
+        navigationProvider.trackScreenVisit('profile');
         // Switch to profile tab in main app
         DefaultTabController.of(context).animateTo(4);
         break;
+      default:
+        // Handle any other actions through navigation provider
+        final screenKey = _getScreenKeyFromName(action);
+        if (screenKey != null) {
+          navigationProvider.navigateToScreen(context, screenKey);
+        }
     }
   }
 
-  void _showMarketBottomSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Text(
-                    'Art Marketplace',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                    ),
-                    child: Text(
-                      'DEVNET',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: DefaultTabController(
-                length: 3,
-                child: Column(
-                  children: [
-                    TabBar(
-                      tabs: const [
-                        Tab(text: 'Trending'),
-                        Tab(text: 'New'),
-                        Tab(text: 'Collections'),
-                      ],
-                      labelColor: Provider.of<ThemeProvider>(context).accentColor,
-                      unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      indicatorColor: Provider.of<ThemeProvider>(context).accentColor,
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _buildMarketGrid('trending'),
-                          _buildMarketGrid('new'),
-                          _buildCollectionsGrid(),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  String? _getScreenKeyFromName(String name) {
+    final entry = NavigationProvider.screenDefinitions.entries
+        .where((entry) => entry.value['name'] == name)
+        .firstOrNull;
+    return entry?.key;
   }
 
-  Widget _buildMarketGrid(String type) {
-    return GridView.builder(
-      padding: const EdgeInsets.all(24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.8,
-      ),
-      itemCount: 6,
-      itemBuilder: (context, index) => _buildMarketItem(index, type),
-    );
-  }
-
-  Widget _buildMarketItem(int index, String type) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final prices = ['2.5 SOL', '1.8 SOL', '3.2 SOL', '0.9 SOL', '4.1 SOL', '2.0 SOL'];
+  // Show wallet onboarding for first-time users
+  void _showWalletOnboarding(BuildContext context) {
+    print('DEBUG: Wallet onboarding triggered from home screen');
     
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
+    // Navigate directly to comprehensive Web3 onboarding
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => web3.Web3OnboardingScreen(
+          featureName: 'Web3 Features',
+          pages: _getWeb3OnboardingPages(),
+          onComplete: () {
+            Navigator.of(context).pop();
+            // Navigate to wallet creation/connection screen
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const ConnectWallet()),
+            );
+          },
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeProvider.accentColor.withOpacity(0.3),
-                    themeProvider.accentColor.withOpacity(0.1),
-                  ],
-                ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
-              child: const Center(
-                child: Icon(Icons.view_in_ar, color: Colors.white, size: 40),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$type Art #${index + 1}',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'by @artist${index + 1}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      prices[index],
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: themeProvider.accentColor,
-                      ),
-                    ),
-                    Icon(
-                      Icons.favorite_border,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+    );
+  }
+
+  List<web3.OnboardingPage> _getWeb3OnboardingPages() {
+    return [
+      const web3.OnboardingPage(
+        title: 'Welcome to Web3',
+        description: 'Connect your wallet to unlock decentralized features powered by blockchain technology.',
+        icon: Icons.account_balance_wallet,
+        gradientColors: [
+          Color(0xFF6C63FF),
+          Color(0xFF3F51B5),
+        ],
+        features: [
+          'Secure wallet-based authentication',
+          'True ownership of digital assets',
+          'Decentralized transactions',
+          'Cross-platform compatibility',
         ],
       ),
-    );
-  }
-
-  Widget _buildCollectionsGrid() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: 4,
-      itemBuilder: (context, index) => _buildCollectionItem(index),
-    );
-  }
-
-  Widget _buildCollectionItem(int index) {
-    final collections = [
-      'Digital Dreams',
-      'Urban AR',
-      'Nature Spirits',
-      'Tech Fusion'
+      const web3.OnboardingPage(
+        title: 'NFT Marketplace',
+        description: 'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
+        icon: Icons.store,
+        gradientColors: [
+          Color(0xFFFF6B6B),
+          Color(0xFFE91E63),
+        ],
+        features: [
+          'Browse trending digital artworks',
+          'Purchase NFTs with SOL tokens',
+          'List your own creations for sale',
+          'Track marketplace analytics',
+          'Discover featured collections',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'Artist Studio',
+        description: 'Create, mint, and manage your digital artworks with professional tools.',
+        icon: Icons.palette,
+        gradientColors: [
+          Color(0xFFFF9A8B),
+          Color(0xFFFF7043),
+        ],
+        features: [
+          'Upload and mint AR artworks as NFTs',
+          'Set pricing and royalties',
+          'Track creation analytics',
+          'Manage your digital portfolio',
+          'Collaborate with other artists',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'DAO Governance',
+        description: 'Participate in community decisions and help shape the future of the platform.',
+        icon: Icons.how_to_vote,
+        gradientColors: [
+          Color(0xFF4ECDC4),
+          Color(0xFF26A69A),
+        ],
+        features: [
+          'Vote on platform proposals',
+          'Submit improvement suggestions',
+          'Earn governance tokens',
+          'Access exclusive DAO benefits',
+          'Shape community guidelines',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'Institution Hub',
+        description: 'Connect with galleries, museums, and cultural institutions in the Web3 space.',
+        icon: Icons.museum,
+        gradientColors: [
+          Color(0xFF667eea),
+          Color(0xFF764ba2),
+        ],
+        features: [
+          'Partner with verified institutions',
+          'Access exclusive exhibitions',
+          'Institutional-grade security',
+          'Professional networking tools',
+          'Curated collection management',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'KUB8 Token Economy',
+        description: 'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
+        icon: Icons.monetization_on,
+        gradientColors: [
+          Color(0xFFFFD700),
+          Color(0xFFFF8C00),
+        ],
+        features: [
+          'Earn tokens for discoveries',
+          'Reward system for creators',
+          'Stake tokens for benefits',
+          'Pay for premium features',
+          'Trade on decentralized exchanges',
+        ],
+      ),
     ];
-    
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  themeProvider.accentColor.withOpacity(0.3),
-                  themeProvider.accentColor.withOpacity(0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.collections, color: Colors.white, size: 30),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  collections[index],
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${(index + 1) * 12} items • Floor: ${(index + 1) * 0.5} SOL',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showFullActivity() {
@@ -1655,7 +1824,7 @@ class _HomeScreenState extends State<HomeScreen>
                     title: '$statType Trend (Last 7 days)',
                     data: _getStatsData(statType),
                     accentColor: const Color(0xFF4A90E2),
-                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    labels: const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                   ),
                   const SizedBox(height: 20),
                   _buildStatsTimeline(statType),
@@ -1725,7 +1894,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ],
           ),
-        )).toList(),
+        )),
       ],
     );
   }

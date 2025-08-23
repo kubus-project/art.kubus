@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../providers/themeprovider.dart';
-import '../providers/web3provider.dart';
+import '../config/config.dart';
+import '../screens/welcome_intro_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
 
-/// App initializer that determines whether to show onboarding or main app
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
 
@@ -15,9 +13,6 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
-  bool _isLoading = true;
-  bool _showOnboarding = true;
-
   @override
   void initState() {
     super.initState();
@@ -25,113 +20,264 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Future<void> _initializeApp() async {
-    try {
-      // Check if user has completed onboarding
-      final prefs = await SharedPreferences.getInstance();
-      final hasCompletedOnboarding = prefs.getBool('has_completed_onboarding') ?? false;
-      final hasWallet = prefs.getBool('has_wallet') ?? false;
-
-      // Wait for theme provider to initialize
-      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-      while (!themeProvider.isInitialized) {
-        await Future.delayed(const Duration(milliseconds: 100));
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Check if it's the first time opening the app
+    final isFirstTime = prefs.getBool('first_time') ?? true;
+    
+    // Check wallet connection status
+    final hasWallet = prefs.getBool('has_wallet') ?? false;
+    final hasCompletedOnboarding = prefs.getBool('completed_onboarding') ?? false;
+    
+    if (!mounted) return;
+    
+    // Navigate based on user state
+    if (isFirstTime) {
+      // First time user - show welcome screen
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const WelcomeIntroScreen()),
+      );
+    } else if (!hasWallet || !hasCompletedOnboarding) {
+      // User needs wallet setup or onboarding
+      if (AppConfig.enforceWalletOnboarding) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      } else {
+        // Show explore-only mode
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const ExploreOnlyApp()),
+        );
       }
-
-      setState(() {
-        _showOnboarding = !hasCompletedOnboarding || !hasWallet;
-        _isLoading = false;
-      });
-
-      // If user has wallet, try to auto-connect
-      if (hasWallet && !_showOnboarding) {
-        final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-        try {
-          await web3Provider.connectWallet();
-        } catch (e) {
-          // Auto-connect failed, user can manually connect later
-          debugPrint('Auto-connect failed: $e');
-        }
-      }
-    } catch (e) {
-      debugPrint('App initialization error: $e');
-      setState(() {
-        _isLoading = false;
-        _showOnboarding = true;
-      });
+    } else {
+      // Existing user with wallet - go to main app
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainApp()),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const LoadingScreen();
-    }
-
-    if (_showOnboarding) {
-      return const OnboardingScreen();
-    }
-
-    return const MainApp();
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
   }
 }
 
-/// Loading screen shown during app initialization
-class LoadingScreen extends StatelessWidget {
-  const LoadingScreen({super.key});
+// Explore-only mode for users without wallets
+class ExploreOnlyApp extends StatelessWidget {
+  const ExploreOnlyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
-          : const Color(0xFFF8F9FA),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeProvider.accentColor,
-                    themeProvider.accentColor.withOpacity(0.7),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: themeProvider.accentColor.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+      appBar: AppBar(
+        title: const Text('art.kubus - Explore'),
+        actions: [
+          TextButton(
+            onPressed: () => _showWalletPrompt(context),
+            child: const Text('Connect Wallet'),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            child: Text(
+              'You\'re in explore-only mode. Connect a wallet to access all features.',
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Discover Art',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFeatureCard(
+                    context,
+                    'Browse Collections',
+                    'Explore amazing art collections from around the world',
+                    Icons.collections,
+                    () => _showWalletPrompt(context),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFeatureCard(
+                    context,
+                    'AR Experience',
+                    'View artworks in augmented reality',
+                    Icons.view_in_ar,
+                    () => _showWalletPrompt(context),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFeatureCard(
+                    context,
+                    'Community',
+                    'Join the art community discussions',
+                    Icons.people,
+                    () => _showWalletPrompt(context),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFeatureCard(
+                    context,
+                    'Marketplace',
+                    'Discover and trade NFT artworks',
+                    Icons.store,
+                    () => _showWalletPrompt(context),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.auto_awesome,
-                color: Colors.white,
-                size: 40,
-              ),
             ),
-            const SizedBox(height: 32),
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
-              strokeWidth: 3,
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Initializing art.kubus...',
-              style: TextStyle(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showWalletPrompt(context),
+        icon: const Icon(Icons.account_balance_wallet),
+        label: const Text('Connect Wallet'),
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard(
+    BuildContext context,
+    String title,
+    String description,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon, size: 32),
+        title: Text(title),
+        subtitle: Text(description),
+        trailing: const Icon(Icons.lock_outline),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  void _showWalletPrompt(BuildContext context) {
+    print('DEBUG: Wallet prompt triggered'); // Debug print
+    showDialog(
+      context: context,
+      builder: (context) => const WalletPromptScreen(),
+    );
+  }
+}
+
+// Wallet connection prompt dialog
+class WalletPromptScreen extends StatelessWidget {
+  const WalletPromptScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Row(
+        children: [
+          Icon(
+            Icons.account_balance_wallet,
+            color: Theme.of(context).primaryColor,
+          ),
+          const SizedBox(width: 8),
+          const Text('Connect Wallet'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.security,
+              size: 48,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'To access this feature, you need to connect a Web3 wallet.',
+            style: TextStyle(fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Set up your secure wallet to unlock:',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          // Features list
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  SizedBox(width: 8),
+                  Text('• Buy and sell NFTs'),
+                ],
+              ),
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  SizedBox(width: 8),
+                  Text('• Create your own artworks'),
+                ],
+              ),
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 16),
+                  SizedBox(width: 8),
+                  Text('• Community interactions'),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Maybe Later'),
+        ),
+        ElevatedButton.icon(
+          onPressed: () {
+            print('DEBUG: Set Up Wallet button pressed'); // Debug print
+            Navigator.of(context).pop();
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+            );
+          },
+          icon: const Icon(Icons.arrow_forward),
+          label: const Text('Set Up Wallet'),
+          style: ElevatedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -883,80 +883,91 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
   }
 
   Widget _buildImportWallet() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildHeader('Import Wallet'),
-          const SizedBox(height: 24),
-          Text(
-            'Enter your existing 12-word recovery phrase to import your wallet.',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isSmallScreen = constraints.maxHeight < 700;
+        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
+        final isWideScreen = constraints.maxWidth > 800;
+        
+        return SingleChildScrollView(
+          padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : 24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight - (isWideScreen ? 64 : isTablet ? 56 : 48),
+              maxWidth: isWideScreen ? 600 : double.infinity,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-              ),
-              child: TextField(
-                controller: _mnemonicController,
-                maxLines: null,
-                expands: true,
-                textAlignVertical: TextAlignVertical.top,
-                style: GoogleFonts.robotoMono(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Enter your 12-word recovery phrase...',
-                  hintStyle: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            child: Center(
+              child: Column(
+                children: [
+                  _buildHeader('Import Wallet'),
+                  SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                  Text(
+                    'Enter your existing 12-word recovery phrase to import your wallet.',
+                    style: GoogleFonts.inter(
+                      fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  border: InputBorder.none,
-                ),
-                onChanged: (value) {
-                  _userMnemonicInput = value.trim().split(' ');
-                  setState(() {});
-                },
+                  SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.all(isWideScreen ? 24 : isTablet ? 22 : 20),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(isWideScreen ? 20 : 16),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outline,
+                        ),
+                      ),
+                      child: TextField(
+                        controller: _mnemonicController,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        style: GoogleFonts.robotoMono(
+                          fontSize: isWideScreen ? 16 : isTablet ? 15 : isSmallScreen ? 12 : 14,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'word1 word2 word3 word4 word5 word6\nword7 word8 word9 word10 word11 word12',
+                          hintStyle: GoogleFonts.robotoMono(
+                            fontSize: isWideScreen ? 16 : isTablet ? 15 : isSmallScreen ? 12 : 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: isWideScreen ? 32 : isTablet ? 28 : 24),
+                  SizedBox(
+                    width: double.infinity,
+                    height: isWideScreen ? 60 : isTablet ? 56 : 50,
+                    child: ElevatedButton(
+                      onPressed: _importWallet,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF6C63FF),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(isWideScreen ? 16 : 12),
+                        ),
+                      ),
+                      child: Text(
+                        'Import Wallet',
+                        style: GoogleFonts.inter(
+                          fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _userMnemonicInput.length == 12 ? _importWallet : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: Text(
-                'Import Wallet',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

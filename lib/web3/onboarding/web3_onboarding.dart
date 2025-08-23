@@ -135,9 +135,11 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
+        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
+        final isWideScreen = constraints.maxWidth > 800;
         
         return Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : 24),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -145,7 +147,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                 child: Text(
                   widget.featureName,
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 20 : 24,
+                    fontSize: isWideScreen ? 28 : isTablet ? 26 : isSmallScreen ? 20 : 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -157,7 +159,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                 child: Text(
                   'Skip',
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 14 : 16,
+                    fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                     color: Colors.white.withOpacity(0.7),
                   ),
                 ),
@@ -174,58 +176,74 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxHeight < 700;
         final isVerySmallScreen = constraints.maxHeight < 600;
+        final isWideScreen = constraints.maxWidth > 800;
+        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
         
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.symmetric(
+            horizontal: isWideScreen ? 48 : isTablet ? 32 : 24,
+            vertical: isVerySmallScreen ? 12 : 24,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              minHeight: constraints.maxHeight - 48,
+              minHeight: constraints.maxHeight - (isVerySmallScreen ? 24 : 48),
+              maxWidth: isWideScreen ? 600 : double.infinity,
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: isVerySmallScreen ? 80 : isSmallScreen ? 100 : 120,
-                  height: isVerySmallScreen ? 80 : isSmallScreen ? 100 : 120,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: page.gradientColors,
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: isVerySmallScreen ? 80 : isSmallScreen ? 100 : isTablet ? 140 : isWideScreen ? 160 : 120,
+                    height: isVerySmallScreen ? 80 : isSmallScreen ? 100 : isTablet ? 140 : isWideScreen ? 160 : 120,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: page.gradientColors,
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: page.gradientColors.first.withValues(alpha: 0.3),
+                          blurRadius: isWideScreen ? 40 : isTablet ? 30 : 20,
+                          spreadRadius: 0,
+                          offset: Offset(0, isWideScreen ? 20 : isTablet ? 15 : 10),
+                        ),
+                      ],
                     ),
-                    shape: BoxShape.circle,
+                    child: Icon(
+                      page.icon,
+                      size: isVerySmallScreen ? 40 : isSmallScreen ? 50 : isTablet ? 70 : isWideScreen ? 80 : 60,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: Icon(
-                    page.icon,
-                    size: isVerySmallScreen ? 40 : isSmallScreen ? 50 : 60,
-                    color: Colors.white,
+                  SizedBox(height: isVerySmallScreen ? 20 : isSmallScreen ? 30 : isTablet ? 48 : isWideScreen ? 56 : 40),
+                  Text(
+                    page.title,
+                    style: GoogleFonts.inter(
+                      fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 24 : isTablet ? 32 : isWideScreen ? 36 : 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: isVerySmallScreen ? 20 : isSmallScreen ? 30 : 40),
-                Text(
-                  page.title,
-                  style: GoogleFonts.inter(
-                    fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 24 : 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                  SizedBox(height: isVerySmallScreen ? 8 : isSmallScreen ? 12 : isTablet ? 20 : isWideScreen ? 24 : 16),
+                  Text(
+                    page.description,
+                    style: GoogleFonts.inter(
+                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : isTablet ? 18 : isWideScreen ? 20 : 16,
+                      color: Colors.white.withOpacity(0.8),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: isVerySmallScreen ? 8 : isSmallScreen ? 12 : 16),
-                Text(
-                  page.description,
-                  style: GoogleFonts.inter(
-                    fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
-                    color: Colors.white.withOpacity(0.8),
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: isVerySmallScreen ? 16 : isSmallScreen ? 24 : 32),
-                if (page.features.isNotEmpty) ...[
-                  ...page.features.map((feature) => _buildFeatureItem(feature, isSmallScreen)),
+                  SizedBox(height: isVerySmallScreen ? 16 : isSmallScreen ? 24 : isTablet ? 40 : isWideScreen ? 48 : 32),
+                  if (page.features.isNotEmpty) ...[
+                    ...page.features.map((feature) => _buildFeatureItem(feature, isSmallScreen, isTablet, isWideScreen)),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -233,29 +251,29 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
     );
   }
 
-  Widget _buildFeatureItem(String feature, [bool isSmallScreen = false]) {
+  Widget _buildFeatureItem(String feature, [bool isSmallScreen = false, bool isTablet = false, bool isWideScreen = false]) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 16, 
-        top: isSmallScreen ? 6 : 8, 
-        bottom: isSmallScreen ? 6 : 8
+        left: isWideScreen ? 24 : isTablet ? 20 : 16, 
+        top: isSmallScreen ? 6 : isTablet ? 10 : isWideScreen ? 12 : 8, 
+        bottom: isSmallScreen ? 6 : isTablet ? 10 : isWideScreen ? 12 : 8
       ),
       child: Row(
         children: [
           Container(
-            width: isSmallScreen ? 5 : 6,
-            height: isSmallScreen ? 5 : 6,
+            width: isSmallScreen ? 5 : isTablet ? 7 : isWideScreen ? 8 : 6,
+            height: isSmallScreen ? 5 : isTablet ? 7 : isWideScreen ? 8 : 6,
             decoration: const BoxDecoration(
               color: Color(0xFF6C63FF),
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: isWideScreen ? 20 : isTablet ? 18 : 16),
           Expanded(
             child: Text(
               feature,
               style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 13 : 14,
+                fontSize: isSmallScreen ? 13 : isTablet ? 16 : isWideScreen ? 18 : 14,
                 color: Colors.white.withOpacity(0.9),
               ),
             ),
@@ -269,9 +287,11 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
+        final isTablet = constraints.maxWidth > 600 && constraints.maxWidth <= 800;
+        final isWideScreen = constraints.maxWidth > 800;
         
         return Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(isWideScreen ? 32 : isTablet ? 28 : isSmallScreen ? 20 : 24),
           child: Column(
             children: [
               // Page indicators
@@ -280,9 +300,11 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                 children: List.generate(
                   widget.pages.length,
                   (index) => Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: index == _currentPage ? (isSmallScreen ? 20 : 24) : (isSmallScreen ? 6 : 8),
-                    height: isSmallScreen ? 6 : 8,
+                    margin: EdgeInsets.symmetric(horizontal: isWideScreen ? 6 : isTablet ? 5 : 4),
+                    width: index == _currentPage 
+                        ? (isWideScreen ? 32 : isTablet ? 28 : isSmallScreen ? 20 : 24) 
+                        : (isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8),
+                    height: isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8,
                     decoration: BoxDecoration(
                       color: index == _currentPage
                           ? const Color(0xFF6C63FF)
@@ -292,7 +314,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   ),
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 24 : 32),
+              SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : isSmallScreen ? 24 : 32),
               // Navigation buttons
               Row(
                 children: [
@@ -301,37 +323,43 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                       child: OutlinedButton(
                         onPressed: _previousPage,
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFF6C63FF)),
-                          padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
+                          side: const BorderSide(color: Colors.white30),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          padding: EdgeInsets.symmetric(
+                            vertical: isWideScreen ? 18 : isTablet ? 16 : isSmallScreen ? 12 : 14,
+                          ),
                         ),
                         child: Text(
-                          'Previous',
+                          'Back',
                           style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 14 : 16,
+                            fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF6C63FF),
+                            color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                  if (_currentPage > 0) const SizedBox(width: 16),
+                  if (_currentPage > 0) SizedBox(width: isWideScreen ? 20 : isTablet ? 18 : 16),
                   Expanded(
+                    flex: _currentPage == 0 ? 1 : 2,
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF6C63FF),
-                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
+                        padding: EdgeInsets.symmetric(
+                          vertical: isWideScreen ? 18 : isTablet ? 16 : isSmallScreen ? 12 : 14,
+                        ),
+                        elevation: 0,
                       ),
                       child: Text(
                         _currentPage == widget.pages.length - 1 ? 'Get Started' : 'Next',
                         style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 14 : 16,
+                          fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),

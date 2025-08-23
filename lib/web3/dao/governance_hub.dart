@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
+import '../../providers/dao_provider.dart';
 
 class GovernanceHub extends StatefulWidget {
   const GovernanceHub({super.key});
@@ -87,10 +89,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         title: Text(
           'DAO Governance',
           style: GoogleFonts.inter(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
@@ -105,23 +108,29 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       ),
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: Column(
-          children: [
-            _buildGovernanceHeader(),
-            _buildNavigationTabs(),
-            Expanded(
-              child: IndexedStack(
-                index: _selectedIndex,
-                children: [
-                  _buildActiveProposals(),
-                  _buildVotingHistory(),
-                  _buildCreateProposal(),
-                  _buildTreasury(),
-                  _buildDelegation(),
-                ],
+        child: NestedScrollView(
+          headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+            return [
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    _buildGovernanceHeader(),
+                    _buildNavigationTabs(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ];
+          },
+          body: IndexedStack(
+            index: _selectedIndex,
+            children: [
+              _buildActiveProposals(),
+              _buildVotingHistory(),
+              _buildCreateProposal(),
+              _buildTreasury(),
+              _buildDelegation(),
+            ],
+          ),
         ),
       ),
     );
@@ -129,8 +138,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildGovernanceHeader() {
     return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -144,16 +153,16 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           Row(
             children: [
               Container(
-                width: 60,
-                height: 60,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(25),
                 ),
                 child: const Icon(
                   Icons.how_to_vote,
                   color: Colors.white,
-                  size: 30,
+                  size: 26,
                 ),
               ),
               const SizedBox(width: 16),
@@ -164,7 +173,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                     Text(
                       'art.kubus DAO',
                       style: GoogleFonts.inter(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -173,9 +182,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                     Text(
                       'Decentralized governance for the AR art platform',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: Colors.white.withOpacity(0.8),
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -188,11 +199,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Expanded(
                 child: _buildStatCard('Your Voting Power', '125 KUB8'),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildStatCard('Active Proposals', '7'),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 8),
               Expanded(
                 child: _buildStatCard('Total Members', '2.4K'),
               ),
@@ -205,7 +216,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildStatCard(String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
@@ -215,7 +226,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -224,10 +235,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 12,
+              fontSize: 10,
               color: Colors.white.withOpacity(0.8),
             ),
             textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -236,7 +249,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildNavigationTabs() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(12),
@@ -261,8 +274,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFF4CAF50) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -273,16 +286,18 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             Icon(
               icon,
               color: isSelected ? Colors.white : Colors.grey[400],
-              size: 24,
+              size: 22,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: isSelected ? Colors.white : Colors.grey[400],
               ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -294,7 +309,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       color: const Color(0xFF0A0A0A),
       child: ListView.builder(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         itemCount: 5,
         itemBuilder: (context, index) {
           return _buildProposalCard(index);
@@ -306,28 +321,47 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildProposalCard(int index) {
     final proposals = [
       {
-        'title': 'New Artist Verification System',
-        'description': 'Implement a new verification system for artists to prevent fraud and ensure authenticity.',
-        'type': 'Platform Update',
-        'votes': '2.1K',
+        'type': 'COMMUNITY',
+        'title': 'Artist Revenue Share Update',
+        'description': 'Proposal to increase artist revenue share from 70% to 80% for all marketplace transactions',
+        'votes': 234,
         'timeLeft': '3 days',
-        'status': 'Active',
       },
       {
-        'title': 'POAP Rewards for Event Attendance',
-        'description': 'Introduce POAP tokens for users who attend AR art exhibitions and events.',
-        'type': 'Rewards',
-        'votes': '1.8K',
+        'type': 'TECHNICAL',
+        'title': 'New AR Feature Implementation',
+        'description': 'Add advanced AR tracking capabilities for better artwork visualization and interaction',
+        'votes': 156,
         'timeLeft': '5 days',
-        'status': 'Active',
+      },
+      {
+        'type': 'TREASURY',
+        'title': 'Community Fund Allocation',
+        'description': 'Allocate 50,000 KUB8 tokens for community development and educational programs',
+        'votes': 89,
+        'timeLeft': '1 week',
+      },
+      {
+        'type': 'GOVERNANCE',
+        'title': 'Voting Power Restructure',
+        'description': 'Modify voting power calculation to include both token holding and community participation',
+        'votes': 312,
+        'timeLeft': '2 days',
+      },
+      {
+        'type': 'PARTNERSHIP',
+        'title': 'Museum Partnership Program',
+        'description': 'Establish partnerships with major museums for digital art exhibitions and collections',
+        'votes': 78,
+        'timeLeft': '6 days',
       },
     ];
 
     final proposal = proposals[index % proposals.length];
-
+    
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(16),
@@ -346,7 +380,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   border: Border.all(color: const Color(0xFF4CAF50)),
                 ),
                 child: Text(
-                  proposal['type']!,
+                  proposal['type'] as String,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
@@ -360,7 +394,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           ),
           const SizedBox(height: 12),
           Text(
-            proposal['title']!,
+            proposal['title'] as String,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -369,7 +403,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           ),
           const SizedBox(height: 8),
           Text(
-            proposal['description']!,
+            proposal['description'] as String,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[400],
@@ -470,13 +504,13 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       color: const Color(0xFF0A0A0A),
       child: ListView.builder(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         itemCount: votingHistory.length,
         itemBuilder: (context, index) {
           final vote = votingHistory[index];
           return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(20),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFF1A1A1A),
               borderRadius: BorderRadius.circular(16),
@@ -570,7 +604,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       color: const Color(0xFF0A0A0A),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -852,7 +886,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       color: const Color(0xFF0A0A0A),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -980,78 +1014,149 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildRecentTransactions() {
-    final transactions = [
-      {'type': 'Allocation', 'amount': '50,000 KUB8', 'purpose': 'AR Development Fund', 'date': '2025-08-20'},
-      {'type': 'Reward', 'amount': '25,000 KUB8', 'purpose': 'Artist Incentives', 'date': '2025-08-18'},
-      {'type': 'Grant', 'amount': '15,000 KUB8', 'purpose': 'Community Events', 'date': '2025-08-15'},
-    ];
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        final transactions = daoProvider.getRecentTransactions(limit: 5);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Transactions',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...transactions.map((tx) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[800]!),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.account_balance_wallet, color: Color(0xFF4CAF50), size: 20),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recent Transactions',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+            const SizedBox(height: 16),
+            if (transactions.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[800]!),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.history,
+                        color: Colors.grey[600],
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No recent transactions',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ...transactions.map((tx) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[800]!),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      tx['purpose']!,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: tx.type == 'allocation'
+                            ? Colors.blue.withOpacity(0.2)
+                            : tx.type == 'reward'
+                                ? Colors.green.withOpacity(0.2)
+                                : Colors.purple.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        tx.type == 'allocation'
+                            ? Icons.account_balance
+                            : tx.type == 'reward'
+                                ? Icons.emoji_events
+                                : Icons.card_giftcard,
+                        color: tx.type == 'allocation'
+                            ? Colors.blue
+                            : tx.type == 'reward'
+                                ? Colors.green
+                                : Colors.purple,
+                        size: 20,
                       ),
                     ),
-                    Text(
-                      '${tx['type']} • ${tx['date']}',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey[400],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            tx.type.toString().split('.').last.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Text(
+                            tx.description,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${tx.amount.toStringAsFixed(0)} ${tx.currency}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          _formatDate(tx.timestamp),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ),
-              Text(
-                tx['amount']!,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF4CAF50),
-                ),
-              ),
-            ],
-          ),
-        )).toList(),
-      ],
+              )),
+          ],
+        );
+      },
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else {
+      return '${difference.inMinutes}m ago';
+    }
   }
 
   Widget _buildTreasuryProposals() {
@@ -1165,7 +1270,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       color: const Color(0xFF0A0A0A),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1266,81 +1371,148 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTopDelegates() {
-    final delegates = [
-      {'name': 'art.artist', 'power': '45.2K KUB8', 'delegators': '128', 'participation': '96%'},
-      {'name': 'curator.eth', 'power': '32.1K KUB8', 'delegators': '87', 'participation': '89%'},
-      {'name': 'gallery.dao', 'power': '28.5K KUB8', 'delegators': '65', 'participation': '94%'},
-    ];
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        final delegates = daoProvider.getTopDelegates(limit: 5);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Top Delegates',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
-        ...delegates.map((delegate) => Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[800]!),
-          ),
-          child: Row(
-            children: [
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Top Delegates',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (delegates.isEmpty)
               Container(
-                width: 40,
-                height: 40,
+                padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF4CAF50), Color(0xFF00D4AA)],
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey[800]!),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.people,
+                        color: Colors.grey[600],
+                        size: 48,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No delegates yet',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
-                  borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(Icons.person, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      delegate['name']!,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+              )
+            else
+              ...delegates.map((delegate) => GestureDetector(
+                onTap: () => _delegateVote(delegate.name),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A1A),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[800]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF8B5CF6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: Text(
+                            delegate.name.substring(0, 1).toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    Text(
-                      '${delegate['power']} • ${delegate['delegators']} delegators • ${delegate['participation']} participation',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.grey[400],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              delegate.name,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            Text(
+                              '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.grey[400],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF4CAF50).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              'Active',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF4CAF50),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Tap to delegate',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              ElevatedButton(
-                onPressed: () => _delegateVote(delegate['name']!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(80, 32),
-                ),
-                child: const Text('Delegate'),
-              ),
-            ],
-          ),
-        )).toList(),
-      ],
+              )),
+          ],
+        );
+      },
     );
   }
 
@@ -1356,36 +1528,219 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             color: Colors.white,
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Choose how to use your voting power',
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: Colors.grey[400],
+          ),
+        ),
         const SizedBox(height: 16),
+        // Delegate to Others Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _showDelegateSelection,
+            icon: const Icon(Icons.people_outline, size: 20),
+            label: const Text('Delegate to Trusted Members'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4CAF50),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             Expanded(
-              child: ElevatedButton(
-                onPressed: _revokeDelegation,
+              child: ElevatedButton.icon(
+                onPressed: _selfDelegate,
+                icon: const Icon(Icons.person_outline, size: 18),
+                label: const Text('Self Delegate'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1A1A1A),
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Revoke Delegation'),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
-              child: ElevatedButton(
-                onPressed: _selfDelegate,
+              child: ElevatedButton.icon(
+                onPressed: _revokeDelegation,
+                icon: const Icon(Icons.cancel_outlined, size: 18),
+                label: const Text('Revoke'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
+                  backgroundColor: const Color(0xFF1A1A1A),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  side: BorderSide(color: Colors.grey[600]!),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                child: const Text('Self Delegate'),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+
+  void _showDelegateSelection() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        maxChildSize: 0.9,
+        minChildSize: 0.5,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[600],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Select a Delegate',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose a trusted community member to vote on your behalf',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Consumer<DAOProvider>(
+                  builder: (context, daoProvider, child) {
+                    final delegates = daoProvider.getTopDelegates(limit: 10);
+                    
+                    return ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: delegates.length,
+                      itemBuilder: (context, index) {
+                        final delegate = delegates[index];
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _delegateVote(delegate.name);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2A2A2A),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.all(16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF8B5CF6),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      delegate.name.substring(0, 1).toUpperCase(),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        delegate.name,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: Colors.grey[400],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  '${(delegate.votingPower / 1000).toStringAsFixed(1)}K KUB8',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF4CAF50),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.arrow_forward_ios,
+                                  color: Colors.grey,
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -1395,9 +1750,52 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
         title: Text('Delegate Voting Power', style: GoogleFonts.inter(color: Colors.white)),
-        content: Text(
-          'Are you sure you want to delegate your 125 KUB8 voting power to $delegateName?',
-          style: GoogleFonts.inter(color: Colors.grey[400]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Are you sure you want to delegate your 125 KUB8 voting power to $delegateName?',
+              style: GoogleFonts.inter(color: Colors.grey[400]),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFF4CAF50)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Delegation Benefits',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF4CAF50),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '• Your delegate will vote on your behalf\n• You can revoke delegation anytime\n• Your voting power remains yours',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.grey[400],
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -1407,14 +1805,116 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Voting power delegated to $delegateName'),
-                  backgroundColor: const Color(0xFF4CAF50),
-                ),
-              );
+              _completeDelegation(delegateName);
             },
-            child: const Text('Confirm', style: TextStyle(color: Color(0xFF4CAF50))),
+            child: const Text('Confirm Delegation', style: TextStyle(color: Color(0xFF4CAF50))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _completeDelegation(String delegateName) {
+    // Here you would typically call a smart contract or API
+    // For now, we'll simulate the delegation
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Voting power successfully delegated to $delegateName'),
+        backgroundColor: const Color(0xFF4CAF50),
+        action: SnackBarAction(
+          label: 'View Details',
+          textColor: Colors.white,
+          onPressed: () {
+            // Show delegation details
+            _showDelegationDetails(delegateName);
+          },
+        ),
+      ),
+    );
+    
+    // Update the delegation status in the UI
+    setState(() {
+      // You would update your delegation state here
+    });
+  }
+
+  void _showDelegationDetails(String delegateName) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Delegation Active',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildDetailRow('Delegate', delegateName),
+            _buildDetailRow('Voting Power', '125 KUB8'),
+            _buildDetailRow('Status', 'Active'),
+            _buildDetailRow('Started', 'Just now'),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _revokeDelegation();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1A1A1A),
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.grey[600]!),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('Revoke Delegation'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.grey[400],
+            ),
+          ),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
           ),
         ],
       ),
