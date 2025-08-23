@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/config.dart';
 
 class MockupDataProvider with ChangeNotifier {
   static const String _mockDataEnabledKey = 'mockup_data_enabled';
-  bool _isMockDataEnabled = true;
+  bool _isMockDataEnabled = !AppConfig.useRealBlockchain; // Use real blockchain by default
   bool _isInitialized = false;
 
   bool get isMockDataEnabled => _isMockDataEnabled;
@@ -14,11 +15,11 @@ class MockupDataProvider with ChangeNotifier {
     
     try {
       final prefs = await SharedPreferences.getInstance();
-      _isMockDataEnabled = prefs.getBool(_mockDataEnabledKey) ?? true;
+      _isMockDataEnabled = prefs.getBool(_mockDataEnabledKey) ?? !AppConfig.useRealBlockchain;
       _isInitialized = true;
       notifyListeners();
     } catch (e) {
-      _isMockDataEnabled = true;
+      _isMockDataEnabled = !AppConfig.useRealBlockchain;
       _isInitialized = true;
       notifyListeners();
     }

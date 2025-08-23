@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../providers/platform_provider.dart';
 import 'qr_scanner_screen.dart';
 
 class SendTokenScreen extends StatefulWidget {
@@ -72,23 +72,9 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           ),
         ),
         actions: [
-          Consumer<PlatformProvider>(
-            builder: (context, platformProvider, child) {
-              return IconButton(
-                icon: Icon(
-                  platformProvider.getQRScannerIcon(),
-                  color: platformProvider.supportsQRScanning 
-                    ? Colors.white 
-                    : platformProvider.getUnsupportedFeatureColor(context),
-                ),
-                onPressed: platformProvider.supportsQRScanning 
-                  ? _scanQRCode 
-                  : () => _showUnsupportedFeature(context, platformProvider),
-                tooltip: platformProvider.supportsQRScanning 
-                  ? 'Scan QR Code' 
-                  : 'QR Scanner not available on this platform',
-              );
-            },
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
+            onPressed: _scanQRCode,
           ),
         ],
       ),
@@ -296,23 +282,9 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
-              suffixIcon: Consumer<PlatformProvider>(
-                builder: (context, platformProvider, child) {
-                  return IconButton(
-                    icon: Icon(
-                      platformProvider.getQRScannerIcon(),
-                      color: platformProvider.supportsQRScanning 
-                        ? Colors.grey 
-                        : platformProvider.getUnsupportedFeatureColor(context),
-                    ),
-                    onPressed: platformProvider.supportsQRScanning 
-                      ? _scanQRCode 
-                      : () => _showUnsupportedFeature(context, platformProvider),
-                    tooltip: platformProvider.supportsQRScanning 
-                      ? 'Scan QR Code' 
-                      : 'QR Scanner not available',
-                  );
-                },
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.qr_code_scanner, color: Colors.grey),
+                onPressed: _scanQRCode,
               ),
             ),
           ),
@@ -608,23 +580,16 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     return currencies[_selectedToken] ?? 'SOL';
   }
 
-  void _showUnsupportedFeature(BuildContext context, PlatformProvider platformProvider) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(platformProvider.getUnsupportedFeatureMessage('QR Code scanning')),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.orange,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   void _scanQRCode() async {
-    final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
-    
-    // Check if platform supports QR scanning
-    if (!platformProvider.supportsQRScanning) {
-      _showUnsupportedFeature(context, platformProvider);
+    // Check if platform supports camera scanning
+    if (kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('QR scanning is not available on web platform. Please enter address manually.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.orange,
+        ),
+      );
       return;
     }
     

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/web3provider.dart';
+import '../../providers/wallet_provider.dart';
 import 'wallet_transactions.dart';
 import 'nft_gallery.dart';
 import 'token_swap.dart';
@@ -96,15 +97,48 @@ class _WalletOverviewState extends State<WalletOverview> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        web3Provider.isConnected 
-                            ? '\$${(web3Provider.solBalance * 20 + web3Provider.kub8Balance * 20).toStringAsFixed(2)}'
-                            : '\$0.00',
-                        style: GoogleFonts.inter(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                      Consumer<WalletProvider>(
+                        builder: (context, walletProvider, child) {
+                          if (!web3Provider.isConnected) {
+                            return Text(
+                              '\$0.00',
+                              style: GoogleFonts.inter(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            );
+                          }
+
+                          // Get KUB8 balance
+                          final kub8Balance = walletProvider.tokens
+                              .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                              .isNotEmpty 
+                              ? walletProvider.tokens
+                                  .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                                  .first.balance 
+                              : 0.0;
+                          
+                          // Get SOL balance  
+                          final solBalance = walletProvider.tokens
+                              .where((token) => token.symbol.toUpperCase() == 'SOL')
+                              .isNotEmpty 
+                              ? walletProvider.tokens
+                                  .where((token) => token.symbol.toUpperCase() == 'SOL')
+                                  .first.balance 
+                              : 0.0;
+
+                          final totalValue = kub8Balance * 1.0 + solBalance * 20.0;
+
+                          return Text(
+                            '\$${totalValue.toStringAsFixed(2)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -124,40 +158,63 @@ class _WalletOverviewState extends State<WalletOverview> {
                 ],
               ),
               const SizedBox(height: 16),
-              if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    web3Provider.formatAddress(web3Provider.walletAddress),
-                    style: GoogleFonts.robotoMono(
-                      fontSize: 14,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              else
-                GestureDetector(
-                  onTap: () => web3Provider.connectWallet(),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Connect Wallet',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF6C63FF),
+              Consumer<WalletProvider>(
+                builder: (context, walletProvider, child) {
+                  final walletAddress = walletProvider.currentWalletAddress;
+                  
+                  if (walletAddress != null && walletAddress.isNotEmpty)
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                  ),
-                ),
+                      child: Text(
+                        '${walletAddress.substring(0, 6)}...${walletAddress.substring(walletAddress.length - 4)}',
+                        style: GoogleFonts.robotoMono(
+                          fontSize: 14,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  else
+                    return GestureDetector(
+                      onTap: () async {
+                        try {
+                          await walletProvider.createWallet();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Wallet created successfully!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error creating wallet: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          'Create Wallet',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF6C63FF),
+                          ),
+                        ),
+                      ),
+                    );
+                },
+              ),
             ],
           ),
         );
@@ -190,9 +247,35 @@ class _WalletOverviewState extends State<WalletOverview> {
                 ),
               ),
               const SizedBox(height: 16),
-              _buildAssetRow('SOL', 'Solana', web3Provider.solBalance, '\$${(web3Provider.solBalance * 20).toStringAsFixed(2)}', const Color(0xFF9945FF)),
-              const SizedBox(height: 12),
-              _buildAssetRow('KUB8', 'Kubit Token', web3Provider.kub8Balance, '\$${(web3Provider.kub8Balance * 20).toStringAsFixed(2)}', const Color(0xFF00D4AA)),
+              Consumer<WalletProvider>(
+                builder: (context, walletProvider, child) {
+                  // Get KUB8 balance
+                  final kub8Balance = walletProvider.tokens
+                      .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                      .isNotEmpty 
+                      ? walletProvider.tokens
+                          .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                          .first.balance 
+                      : 0.0;
+                  
+                  // Get SOL balance  
+                  final solBalance = walletProvider.tokens
+                      .where((token) => token.symbol.toUpperCase() == 'SOL')
+                      .isNotEmpty 
+                      ? walletProvider.tokens
+                          .where((token) => token.symbol.toUpperCase() == 'SOL')
+                          .first.balance 
+                      : 0.0;
+
+                  return Column(
+                    children: [
+                      _buildAssetRow('KUB8', 'Kubit Token', kub8Balance, '\$${(kub8Balance * 1.0).toStringAsFixed(2)}', const Color(0xFF8B5CF6)),
+                      const SizedBox(height: 12),
+                      _buildAssetRow('SOL', 'Solana', solBalance, '\$${(solBalance * 20).toStringAsFixed(2)}', const Color(0xFF9945FF)),
+                    ],
+                  );
+                },
+              ),
             ],
           ),
         );

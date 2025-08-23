@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../providers/themeprovider.dart';
 import 'wallet_creation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -62,16 +60,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final isSmallScreen = screenHeight < 700 || screenWidth < 375;
     
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            _buildHeader(),
+            _buildHeader(isSmallScreen),
             Expanded(
               child: PageView.builder(
                 controller: _pageController,
@@ -82,20 +81,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
                 itemCount: _pages.length,
                 itemBuilder: (context, index) {
-                  return _buildPage(_pages[index]);
+                  return _buildPage(_pages[index], isSmallScreen);
                 },
               ),
             ),
-            _buildBottomSection(),
+            _buildBottomSection(isSmallScreen),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader([bool isSmallScreen = false]) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -103,23 +102,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: isSmallScreen ? 36 : 40,
+                height: isSmallScreen ? 36 : 40,
                 decoration: BoxDecoration(
-                  gradient: _pages[_currentPage].gradient,
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.secondary,
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_awesome,
                   color: Colors.white,
-                  size: 24,
+                  size: isSmallScreen ? 20 : 24,
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: isSmallScreen ? 8 : 12),
               Text(
                 'art.kubus',
                 style: GoogleFonts.inter(
-                  fontSize: 20,
+                  fontSize: isSmallScreen ? 18 : 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -133,8 +137,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Text(
                 'Skip',
                 style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Colors.grey[600],
+                  fontSize: isSmallScreen ? 14 : 16,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -143,24 +147,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildPage(OnboardingPage page) {
+  Widget _buildPage(OnboardingPage page, [bool isSmallScreen = false]) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isSmallScreen = constraints.maxHeight < 700;
+        final constraintSmallScreen = constraints.maxHeight < 700;
         final isVerySmallScreen = constraints.maxHeight < 600;
+        final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
         
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 20 : 24),
+              padding: EdgeInsets.symmetric(horizontal: effectiveSmallScreen ? 20 : 24),
               child: Column(
                 children: [
-                  SizedBox(height: isVerySmallScreen ? 20 : isSmallScreen ? 40 : 60),
+                  SizedBox(height: isVerySmallScreen ? 20 : effectiveSmallScreen ? 40 : 60),
                   // Icon with gradient background
                   Container(
-                    width: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
-                    height: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
+                    width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
+                    height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
                     decoration: BoxDecoration(
                       gradient: page.gradient,
                       borderRadius: BorderRadius.circular(30),
@@ -175,16 +180,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     child: Icon(
                       page.iconData,
-                      size: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
+                      size: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: isVerySmallScreen ? 30 : isSmallScreen ? 40 : 48),
+                  SizedBox(height: isVerySmallScreen ? 30 : effectiveSmallScreen ? 40 : 48),
                   // Title
                   Text(
                     page.title,
                     style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 26 : isSmallScreen ? 28 : 32,
+                      fontSize: isVerySmallScreen ? 26 : effectiveSmallScreen ? 28 : 32,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -195,7 +200,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   Text(
                     page.subtitle,
                     style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 22 : 24,
+                      fontSize: isVerySmallScreen ? 20 : effectiveSmallScreen ? 22 : 24,
                       fontWeight: FontWeight.w600,
                       color: page.gradient.colors.first,
                       height: 1.3,
@@ -223,13 +228,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildBottomSection() {
+  Widget _buildBottomSection([bool isSmallScreen = false]) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isSmallScreen = MediaQuery.of(context).size.height < 700;
+        final constraintSmallScreen = MediaQuery.of(context).size.height < 700;
+        final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
         
         return Padding(
-          padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
+          padding: EdgeInsets.all(effectiveSmallScreen ? 20 : 24),
           child: Column(
             children: [
               // Page indicator
@@ -240,17 +246,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   (index) => _buildDot(index),
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 24 : 32),
+              SizedBox(height: effectiveSmallScreen ? 24 : 32),
               // Action button
               SizedBox(
                 width: double.infinity,
-                height: isSmallScreen ? 50 : 56,
+                height: effectiveSmallScreen ? 50 : 56,
                 child: ElevatedButton(
                   onPressed: _currentPage == _pages.length - 1 
                       ? _startWalletCreation 
                       : _nextPage,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _pages[_currentPage].gradient.colors.first,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -260,13 +266,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     _currentPage == _pages.length - 1 ? 'Create Wallet' : 'Continue',
                     style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 16 : 18,
+                      fontSize: effectiveSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 12 : 16),
+              SizedBox(height: effectiveSmallScreen ? 12 : 16),
               // Alternative action
               if (_currentPage == _pages.length - 1)
                 TextButton(
@@ -274,7 +280,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     'Import Existing Wallet',
                     style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 14 : 16,
+                      fontSize: effectiveSmallScreen ? 14 : 16,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
@@ -295,8 +301,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       height: 8,
       decoration: BoxDecoration(
         color: isActive 
-            ? _pages[_currentPage].gradient.colors.first
-            : Colors.grey[400],
+            ? Theme.of(context).colorScheme.primary
+            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
       ),
     );

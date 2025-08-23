@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/web3provider.dart';
+import '../providers/wallet_provider.dart';
+import '../onboarding/wallet_creation_screen.dart';
 
 class ConnectWallet extends StatefulWidget {
   const ConnectWallet({super.key});
@@ -275,102 +277,153 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   Widget _buildConnectExistingView(Web3Provider web3Provider) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6C63FF), Color(0xFF3F51B5)],
-                ),
-                borderRadius: BorderRadius.circular(50),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 600;
+          
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - (isSmallScreen ? 32 : 48),
               ),
-              child: const Icon(
-                Icons.link,
-                color: Colors.white,
-                size: 50,
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Connect Your Existing Wallet',
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Choose your preferred wallet provider to connect securely',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Colors.grey[400],
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            if (_isLoading) ...[
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C63FF)),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _connectionStatus,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.grey[400],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ] else ...[
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildWalletOption(
-                      'MetaMask',
-                      'Most popular multi-chain wallet',
-                      Icons.account_balance_wallet,
-                      const Color(0xFFFF6B35),
-                      () => _connectWallet(web3Provider, 'MetaMask'),
-                      isRecommended: true,
+              child: Column(
+                children: [
+                  SizedBox(height: isSmallScreen ? 20 : 40),
+                  Container(
+                    width: isSmallScreen ? 80 : 100,
+                    height: isSmallScreen ? 80 : 100,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                      ),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 40 : 50),
                     ),
-                    const SizedBox(height: 16),
-                    _buildWalletOption(
-                      'WalletConnect',
-                      'Connect with 100+ supported wallets',
-                      Icons.qr_code_scanner,
-                      const Color(0xFF3B99FC),
-                      () => _connectWallet(web3Provider, 'WalletConnect'),
+                    child: Icon(
+                      Icons.link,
+                      color: Colors.white,
+                      size: isSmallScreen ? 40 : 50,
                     ),
-                    const SizedBox(height: 16),
-                    _buildWalletOption(
-                      'Coinbase Wallet',
-                      'Simple and secure by Coinbase',
-                      Icons.currency_bitcoin,
-                      const Color(0xFF0052FF),
-                      () => _connectWallet(web3Provider, 'Coinbase'),
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'Connect Your Wallet',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 24 : 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 16),
-                    _buildWalletOption(
-                      'Phantom',
-                      'Solana-focused wallet for NFTs',
-                      Icons.flash_on,
-                      const Color(0xFF9945FF),
-                      () => _connectWallet(web3Provider, 'Phantom'),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  Text(
+                    'Connect your preferred wallet to access the art.kubus ecosystem',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: Colors.grey[400],
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  if (_isLoading) ...[
+                    Center(
+                      child: Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: isSmallScreen ? 40 : 50,
+                              height: isSmallScreen ? 40 : 50,
+                              child: CircularProgressIndicator(
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+                                strokeWidth: isSmallScreen ? 3 : 4,
+                              ),
+                            ),
+                            SizedBox(height: isSmallScreen ? 16 : 20),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: isSmallScreen ? 280 : 400,
+                              ),
+                              child: Text(
+                                _connectionStatus,
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 13 : 14,
+                                  color: Colors.grey[400],
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    Column(
+                      children: [
+                        _buildWalletOption(
+                          'WalletConnect',
+                          'Connect 300+ wallets securely',
+                          Icons.qr_code_scanner,
+                          const Color(0xFF3B99FC),
+                          () => _connectWallet(web3Provider, 'WalletConnect'),
+                          isRecommended: true,
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildWalletOption(
+                          'art.kubus Wallet',
+                          'Built-in wallet for seamless experience',
+                          Icons.account_balance_wallet,
+                          const Color(0xFF8B5CF6),
+                          () => _connectWallet(web3Provider, 'ArtKubus'),
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildWalletOption(
+                          'Solana Wallets',
+                          'Phantom, Solflare & more',
+                          Icons.flash_on,
+                          const Color(0xFF9945FF),
+                          () => _connectWallet(web3Provider, 'Solana'),
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildWalletOption(
+                          'Mobile Wallets',
+                          'Trust Wallet, Coinbase & others',
+                          Icons.phone_android,
+                          const Color(0xFF00D4AA),
+                          () => _connectWallet(web3Provider, 'Mobile'),
+                        ),
+                      ],
                     ),
                   ],
-                ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'New to crypto wallets?',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _currentStep = 2),
+                    child: Text(
+                      'Create your first wallet here →',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: const Color(0xFF8B5CF6),
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ],
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -479,188 +532,278 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   Widget _buildCreateWalletView(Web3Provider web3Provider) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const SizedBox(height: 40),
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                ),
-                borderRadius: BorderRadius.circular(50),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 600;
+          
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - (isSmallScreen ? 32 : 48),
               ),
-              child: const Icon(
-                Icons.add_circle_outline,
-                color: Colors.white,
-                size: 50,
-              ),
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Create Your First Wallet',
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'New to Web3? We\'ll help you create your first wallet safely and securely.',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Colors.grey[400],
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            _buildCreateWalletStep(
-              1,
-              'Choose Wallet Type',
-              'Select the best wallet for your needs',
-              Icons.account_balance_wallet,
-              true,
-            ),
-            const SizedBox(height: 20),
-            _buildCreateWalletStep(
-              2,
-              'Secure Your Wallet',
-              'Save your recovery phrase safely',
-              Icons.security,
-              false,
-            ),
-            const SizedBox(height: 20),
-            _buildCreateWalletStep(
-              3,
-              'Start Exploring',
-              'Begin your Web3 journey with art.kubus',
-              Icons.explore,
-              false,
-            ),
-            const SizedBox(height: 48),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : () => _showWalletCreationOptions(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              child: Column(
+                children: [
+                  SizedBox(height: isSmallScreen ? 20 : 40),
+                  Container(
+                    width: isSmallScreen ? 80 : 100,
+                    height: isSmallScreen ? 80 : 100,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
                       ),
-                    )
-                  : Text(
-                      'Create Wallet',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 40 : 50),
                     ),
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      color: Colors.white,
+                      size: isSmallScreen ? 40 : 50,
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'Create Your Wallet',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 24 : 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  Text(
+                    'Choose how you\'d like to create your secure wallet for art.kubus',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: Colors.grey[400],
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  
+                  // Wallet Creation Options
+                  _buildWalletCreationCard(
+                    'Generate Mnemonic Wallet',
+                    'Create a new wallet with 12-word recovery phrase',
+                    Icons.key,
+                    const Color(0xFF8B5CF6),
+                    () => _navigateToMnemonicCreation(),
+                    isRecommended: true,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  _buildWalletCreationCard(
+                    'Import Existing Wallet',
+                    'Restore wallet using your seed phrase',
+                    Icons.import_export,
+                    const Color(0xFF4CAF50),
+                    () => _navigateToWalletImport(),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  
+                  // Security Notice
+                  Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A1A),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.security,
+                              color: const Color(0xFF4CAF50),
+                              size: isSmallScreen ? 20 : 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Security First',
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 16 : 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isSmallScreen ? 8 : 12),
+                        Text(
+                          'Your wallet is completely secure and private. We never store your recovery phrase or private keys.',
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 12 : 14,
+                            color: Colors.grey[400],
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _currentStep = 1),
+                        child: Text(
+                          'Already have a wallet? ',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _currentStep = 1),
+                        child: Text(
+                          'Connect it here',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: const Color(0xFF8B5CF6),
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () => setState(() => _currentStep = 1),
-              child: Text(
-                'Already have a wallet? Go back to connect it',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: const Color(0xFF6C63FF),
-                  decoration: TextDecoration.underline,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildWalletCreationCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    bool isRecommended = false,
+    bool isSmallScreen = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isRecommended ? color : Colors.grey[800]!,
+            width: isRecommended ? 2 : 1,
+          ),
+          boxShadow: isRecommended ? [
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ] : null,
+        ),
+        child: Stack(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: isSmallScreen ? 44 : 48,
+                  height: isSmallScreen ? 44 : 48,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 22 : 24),
+                  ),
+                  child: Icon(icon, color: color, size: isSmallScreen ? 20 : 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 12 : 14,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: color,
+                  size: isSmallScreen ? 16 : 20,
+                ),
+              ],
+            ),
+            if (isRecommended)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 6 : 8, 
+                    vertical: isSmallScreen ? 2 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Recommended',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 8 : 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCreateWalletStep(
-    int stepNumber,
-    String title,
-    String description,
-    IconData icon,
-    bool isActive,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isActive 
-          ? const Color(0xFF4CAF50).withOpacity(0.1)
-          : const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isActive 
-            ? const Color(0xFF4CAF50)
-            : Colors.grey[800]!,
-        ),
+  void _navigateToMnemonicCreation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WalletCreationScreen(isImporting: false),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isActive 
-                ? const Color(0xFF4CAF50)
-                : Colors.grey[700],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Center(
-              child: isActive
-                ? Icon(icon, color: Colors.white, size: 20)
-                : Text(
-                    stepNumber.toString(),
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.grey[400],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+    );
+  }
+
+  void _navigateToWalletImport() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WalletCreationScreen(isImporting: true),
       ),
     );
   }
@@ -732,7 +875,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           ),
           const SizedBox(height: 16),
           TextButton(
-            onPressed: () => web3Provider.disconnectWallet(),
+            onPressed: () {
+              web3Provider.disconnectWallet();
+              Provider.of<WalletProvider>(context, listen: false).disconnectWallet();
+            },
             child: Text(
               'Disconnect Wallet',
               style: GoogleFonts.inter(
@@ -753,34 +899,62 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     });
 
     try {
-      // Simulate realistic wallet connection process
-      await Future.delayed(const Duration(milliseconds: 500));
-      setState(() => _connectionStatus = 'Establishing secure connection...');
+      // final walletProvider = Provider.of<WalletProvider>(context, listen: false);
       
-      await Future.delayed(const Duration(milliseconds: 800));
-      setState(() => _connectionStatus = 'Verifying wallet credentials...');
-      
-      await Future.delayed(const Duration(milliseconds: 700));
-      setState(() => _connectionStatus = 'Finalizing connection...');
-      
-      await Future.delayed(const Duration(milliseconds: 500));
-      
-      // Actually connect the wallet through provider
-      await web3Provider.connectWallet();
-      
-      setState(() {
-        _isLoading = false;
-        _connectionStatus = '';
-      });
-      
-      if (web3Provider.isConnected) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$walletType connected successfully!'),
-            backgroundColor: const Color(0xFF00D4AA),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+      if (walletType == 'Solana') {
+        // Handle Solana wallet connection
+        await Future.delayed(const Duration(milliseconds: 500));
+        setState(() => _connectionStatus = 'Establishing secure connection...');
+        
+        await Future.delayed(const Duration(milliseconds: 800));
+        setState(() => _connectionStatus = 'Connecting to Solana network...');
+        
+        await Future.delayed(const Duration(milliseconds: 700));
+        setState(() => _connectionStatus = 'Initializing wallet...');
+        
+        // Show options for Solana wallets
+        final result = await _showSolanaWalletOptions();
+        
+        setState(() {
+          _isLoading = false;
+          _connectionStatus = '';
+        });
+        
+        // The individual wallet methods handle the actual connection
+        // and navigation, so we don't need to do anything else here
+        if (result == null) {
+          // User cancelled - nothing to do
+        }
+      } else {
+        // Handle other wallet types with existing logic
+        await Future.delayed(const Duration(milliseconds: 500));
+        setState(() => _connectionStatus = 'Establishing secure connection...');
+        
+        await Future.delayed(const Duration(milliseconds: 800));
+        setState(() => _connectionStatus = 'Verifying wallet credentials...');
+        
+        await Future.delayed(const Duration(milliseconds: 700));
+        setState(() => _connectionStatus = 'Finalizing connection...');
+        
+        await Future.delayed(const Duration(milliseconds: 500));
+        
+        // Actually connect the wallet through provider
+        await web3Provider.connectWallet();
+        
+        setState(() {
+          _isLoading = false;
+          _connectionStatus = '';
+        });
+        
+        if (web3Provider.isConnected) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('$walletType connected successfully!'),
+              backgroundColor: const Color(0xFF00D4AA),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() {
@@ -798,265 +972,618 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     }
   }
 
-  void _showWalletCreationOptions() {
-    showModalBottomSheet(
+  Future<String?> _showSolanaWalletOptions() async {
+    return await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[600],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Choose Your Wallet Type',
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Select the best wallet option for your needs',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Colors.grey[400],
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              Expanded(
-                child: Column(
-                  children: [
-                    _buildWalletCreationOption(
-                      'MetaMask',
-                      'Most popular choice for beginners',
-                      'Create account with MetaMask',
-                      const Color(0xFFFF6B35),
-                      () => _createWalletWithProvider('MetaMask'),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildWalletCreationOption(
-                      'Coinbase Wallet',
-                      'Simple and user-friendly',
-                      'Easy setup with Coinbase',
-                      const Color(0xFF0052FF),
-                      () => _createWalletWithProvider('Coinbase'),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildWalletCreationOption(
-                      'Trust Wallet',
-                      'Mobile-first experience',
-                      'Download Trust Wallet app',
-                      const Color(0xFF3375BB),
-                      () => _createWalletWithProvider('Trust'),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWalletCreationOption(
-    String name,
-    String description,
-    String actionText,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2A2A2A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[700]!),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final screenHeight = MediaQuery.of(context).size.height;
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isMobile = screenWidth < 600;
+          
+          // Calculate responsive height - ensure we don't exceed safe area
+          final maxHeight = screenHeight * (isMobile ? 0.85 : 0.7);
+          final minHeight = isMobile ? 400.0 : 500.0;
+          final calculatedHeight = maxHeight < minHeight ? maxHeight : minHeight.clamp(minHeight, maxHeight);
+          
+          return Container(
+            constraints: BoxConstraints(
+              maxHeight: calculatedHeight,
+              minHeight: isMobile ? 350.0 : 400.0,
+            ),
+            decoration: const BoxDecoration(
+              color: Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Handle bar
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 40,
+                  height: 4,
+                  margin: EdgeInsets.only(top: isMobile ? 12 : 16),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Icon(
-                    Icons.account_balance_wallet,
-                    color: color,
-                    size: 24,
+                    color: Colors.grey[600],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                
+                // Scrollable content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: EdgeInsets.all(isMobile ? 20 : 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        SizedBox(height: isMobile ? 8 : 16),
+                        Text(
+                          'Connect Solana Wallet',
+                          style: GoogleFonts.inter(
+                            fontSize: isMobile ? 20 : 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                      Text(
-                        description,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.grey[400],
+                        SizedBox(height: isMobile ? 6 : 8),
+                        Text(
+                          'Choose your preferred Solana wallet option',
+                          style: GoogleFonts.inter(
+                            fontSize: isMobile ? 13 : 14,
+                            color: Colors.grey[400],
+                          ),
+                          textAlign: TextAlign.center,
                         ),
-                      ),
-                    ],
+                        SizedBox(height: isMobile ? 24 : 32),
+                        _buildSolanaWalletOption(
+                          'Create New Solana Wallet',
+                          'Generate a new wallet with mnemonic phrase',
+                          Icons.add_circle_outline,
+                          const Color(0xFF9945FF),
+                          () async {
+                            Navigator.pop(context, 'create');
+                            await _createNewSolanaWallet();
+                          },
+                          isMobile: isMobile,
+                        ),
+                        SizedBox(height: isMobile ? 12 : 16),
+                        _buildSolanaWalletOption(
+                          'Import Existing Wallet',
+                          'Import using mnemonic phrase',
+                          Icons.file_download,
+                          const Color(0xFF14F195),
+                          () async {
+                            Navigator.pop(context, 'import');
+                            await _importSolanaWallet();
+                          },
+                          isMobile: isMobile,
+                        ),
+                        SizedBox(height: isMobile ? 12 : 16),
+                        _buildSolanaWalletOption(
+                          'Connect with Address',
+                          'Watch-only mode with public address',
+                          Icons.visibility,
+                          const Color(0xFFFFB74D),
+                          () async {
+                            Navigator.pop(context, 'connect');
+                            await _connectSolanaAddress();
+                          },
+                          isMobile: isMobile,
+                        ),
+                        SizedBox(height: isMobile ? 16 : 24),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(
+                            'Cancel',
+                            style: GoogleFonts.inter(
+                              fontSize: isMobile ? 14 : 16,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ),
+                        // Add bottom padding for mobile safe area
+                        if (isMobile) SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onTap,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: color,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildSolanaWalletOption(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    bool isMobile = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A2A2A),
+        borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+        border: Border.all(color: Colors.grey[800]!),
+      ),
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(
+          horizontal: isMobile ? 12 : 16,
+          vertical: isMobile ? 8 : 12,
+        ),
+        leading: Container(
+          width: isMobile ? 40 : 48,
+          height: isMobile ? 40 : 48,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(isMobile ? 10 : 12),
+          ),
+          child: Icon(icon, color: color, size: isMobile ? 20 : 24),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: isMobile ? 14 : 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: GoogleFonts.inter(
+            fontSize: isMobile ? 11 : 13,
+            color: Colors.grey[400],
+          ),
+        ),
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          color: Colors.grey[600],
+          size: isMobile ? 14 : 16,
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
+  Future<void> _createNewSolanaWallet() async {
+    if (!mounted) return;
+    
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    
+    try {
+      final result = await walletProvider.createWallet();
+      
+      // Show the mnemonic to the user
+      if (mounted) {
+        await _showMnemonicDialog(result['mnemonic']!, result['address']!);
+        
+        // Connect the wallet in Web3Provider as well
+        await web3Provider.connectWallet();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Wallet created and connected successfully!'),
+              backgroundColor: const Color(0xFF00D4AA),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        
+        // Navigate back to indicate successful connection
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      }
+      
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create wallet: ${e.toString()}'),
+            backgroundColor: const Color(0xFFFF6B6B),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _importSolanaWallet() async {
+    final controller = TextEditingController();
+    
+    final mnemonic = await showDialog<String>(
+      context: context,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isMobile = screenWidth < 600;
+          
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 40,
+              vertical: isMobile ? 24 : 40,
+            ),
+            title: Text(
+              'Import Wallet',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: isMobile ? 18 : 20,
+              ),
+            ),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 400,
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Enter your 12-word mnemonic phrase:',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey[400],
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    TextField(
+                      controller: controller,
+                      maxLines: isMobile ? 4 : 3,
+                      decoration: InputDecoration(
+                        hintText: 'word1 word2 word3 ...',
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey[600],
+                          fontSize: isMobile ? 13 : 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[700]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(color: Color(0xFF9945FF)),
+                        ),
+                        contentPadding: EdgeInsets.all(isMobile ? 12 : 16),
+                      ),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.inter(
+                    color: Colors.grey[400],
+                    fontSize: isMobile ? 13 : 14,
                   ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, controller.text.trim()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9945FF),
                 ),
                 child: Text(
-                  actionText,
+                  'Import',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
                     color: Colors.white,
+                    fontSize: isMobile ? 13 : 14,
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
-  }
-
-  void _createWalletWithProvider(String provider) {
-    Navigator.pop(context); // Close bottom sheet
     
-    // Show creation guidance
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Create $provider Wallet',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'To create your $provider wallet:',
-              style: GoogleFonts.inter(color: Colors.grey[400]),
+    if (mnemonic != null && mnemonic.isNotEmpty) {
+      if (!mounted) return;
+      
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+      
+      try {
+        final address = await walletProvider.importWalletFromMnemonic(mnemonic);
+        
+        // Connect the wallet in Web3Provider as well
+        await web3Provider.connectWallet();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Wallet imported successfully!\nAddress: ${address.substring(0, 8)}...'),
+              backgroundColor: const Color(0xFF00D4AA),
+              behavior: SnackBarBehavior.floating,
             ),
-            const SizedBox(height: 16),
-            _buildGuideStep('1', 'Download the $provider app or browser extension'),
-            const SizedBox(height: 8),
-            _buildGuideStep('2', 'Create a new wallet account'),
-            const SizedBox(height: 8),
-            _buildGuideStep('3', 'Securely save your recovery phrase'),
-            const SizedBox(height: 8),
-            _buildGuideStep('4', 'Return here to connect your new wallet'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.inter(color: Colors.grey[400]),
+          );
+          
+          // Navigate back to indicate successful connection
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to import wallet: ${e.toString()}'),
+              backgroundColor: const Color(0xFFFF6B6B),
+              behavior: SnackBarBehavior.floating,
             ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() => _currentStep = 1); // Go to connect existing
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C63FF),
-            ),
-            child: Text(
-              'Continue',
-              style: GoogleFonts.inter(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
+          );
+        }
+      }
+    }
   }
 
-  Widget _buildGuideStep(String number, String text) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 20,
-          height: 20,
-          decoration: BoxDecoration(
-            color: const Color(0xFF6C63FF),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: Text(
-              number,
+  Future<void> _connectSolanaAddress() async {
+    final controller = TextEditingController();
+    
+    final address = await showDialog<String>(
+      context: context,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isMobile = screenWidth < 600;
+          
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 40,
+              vertical: isMobile ? 24 : 40,
+            ),
+            title: Text(
+              'Connect with Address',
               style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
                 color: Colors.white,
+                fontSize: isMobile ? 18 : 20,
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Colors.grey[300],
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 400,
+                maxHeight: MediaQuery.of(context).size.height * 0.6,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Enter Solana wallet address (watch-only):',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey[400],
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    TextField(
+                      controller: controller,
+                      decoration: InputDecoration(
+                        hintText: 'Enter Solana address...',
+                        hintStyle: GoogleFonts.inter(
+                          color: Colors.grey[600],
+                          fontSize: isMobile ? 13 : 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderSide: BorderSide(color: Colors.grey[700]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: const BorderSide(color: Color(0xFF9945FF)),
+                        ),
+                        contentPadding: EdgeInsets.all(isMobile ? 12 : 16),
+                      ),
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-      ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.inter(
+                    color: Colors.grey[400],
+                    fontSize: isMobile ? 13 : 14,
+                  ),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, controller.text.trim()),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9945FF),
+                ),
+                child: Text(
+                  'Connect',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: isMobile ? 13 : 14,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    
+    if (address != null && address.isNotEmpty) {
+      if (!mounted) return;
+      
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+      
+      try {
+        await walletProvider.connectWalletWithAddress(address);
+        
+        // Connect the wallet in Web3Provider as well
+        await web3Provider.connectWallet();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Connected to wallet successfully!\nAddress: ${address.substring(0, 8)}...'),
+              backgroundColor: const Color(0xFF00D4AA),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          
+          // Navigate back to indicate successful connection
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to connect wallet: ${e.toString()}'),
+              backgroundColor: const Color(0xFFFF6B6B),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showMnemonicDialog(String mnemonic, String address) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+          final isMobile = screenWidth < 600;
+          
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 40,
+              vertical: isMobile ? 24 : 40,
+            ),
+            title: Text(
+              'Wallet Created Successfully!',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: isMobile ? 18 : 20,
+              ),
+            ),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 500,
+                maxHeight: screenHeight * (isMobile ? 0.7 : 0.6),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your new Solana wallet has been created. Please save your mnemonic phrase securely:',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey[400],
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isMobile ? 12 : 16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A2A2A),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[700]!),
+                      ),
+                      child: SelectableText(
+                        mnemonic,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    Text(
+                      'Address: ${address.substring(0, isMobile ? 6 : 8)}...${address.substring(address.length - (isMobile ? 6 : 8))}',
+                      style: GoogleFonts.inter(
+                        color: Colors.grey[400],
+                        fontSize: isMobile ? 11 : 12,
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 10 : 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3CD),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.warning,
+                            color: const Color(0xFF856404),
+                            size: isMobile ? 18 : 20,
+                          ),
+                          SizedBox(width: isMobile ? 6 : 8),
+                          Expanded(
+                            child: Text(
+                              'Keep this mnemonic phrase safe! It\'s the only way to recover your wallet.',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF856404),
+                                fontSize: isMobile ? 11 : 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Remove the snackbar since the calling method will handle success feedback
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9945FF),
+                ),
+                child: Text(
+                  'I\'ve Saved It',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: isMobile ? 13 : 14,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 

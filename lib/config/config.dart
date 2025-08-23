@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'api_keys.dart';
 
 /// Production-ready configuration for art.kubus app
 /// Manages feature flags, debug settings, and environment configuration
@@ -17,7 +18,10 @@ class AppConfig {
   // ===========================================
   
   /// Enable/disable mock data for development
-  static const bool useMockData = true; // Set to false for production
+  static const bool useMockData = false; // Set to true only for UI testing
+  
+  /// Use real blockchain connections by default
+  static const bool useRealBlockchain = true;
   
   /// Community features
   static const bool enableLiking = true;
@@ -90,8 +94,8 @@ class AppConfig {
     : 'https://api.artkubus.com';
   
   /// IPFS configuration (future integration)
-  static const String ipfsGateway = 'https://gateway.pinata.cloud/ipfs/';
-  static const String ipfsApiUrl = 'https://api.pinata.cloud/pinning/';
+  static String get ipfsGateway => ApiKeys.ipfsGateway;
+  static String get ipfsApiUrl => ApiKeys.ipfsApiUrl;
   static const bool enableIPFS = false; // Future feature
   
   /// Blockchain networks

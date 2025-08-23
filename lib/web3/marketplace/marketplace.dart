@@ -7,6 +7,7 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/collectibles_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/collectible.dart';
+import '../../config/config.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -220,8 +221,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   Widget _buildFeaturedNFTs() {
     return Consumer2<CollectiblesProvider, ArtworkProvider>(
       builder: (context, collectiblesProvider, artworkProvider, child) {
-        // Initialize mock data if empty
-        if (collectiblesProvider.allSeries.isEmpty) {
+        // Initialize mock data if empty and config allows it
+        if (collectiblesProvider.allSeries.isEmpty && AppConfig.useMockData) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             collectiblesProvider.initializeMockData();
           });
@@ -670,63 +671,72 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       series.name,
                       style: GoogleFonts.inter(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'Token #${collectible.tokenId}',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 10,
                         color: Colors.grey[400],
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 4),
                     
                     // Price or status
                     if (isForSale && collectible.currentListingPrice != null)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Listed for',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  color: Colors.grey[500],
+                          Flexible(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Listed for',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    color: Colors.grey[500],
+                                  ),
                                 ),
-                              ),
-                              Text(
-                                '${collectible.currentListingPrice} KUB8',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
+                                Text(
+                                  '${collectible.currentListingPrice} KUB8',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           IconButton(
                             onPressed: () => _removeFromSale(collectible),
                             icon: const Icon(
                               Icons.remove_circle,
                               color: Colors.red,
-                              size: 20,
+                              size: 16,
                             ),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            padding: EdgeInsets.zero,
                           ),
                         ],
                       )
@@ -737,7 +747,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           Text(
                             'Owned',
                             style: GoogleFonts.inter(
-                              fontSize: 10,
+                              fontSize: 9,
                               color: const Color(0xFF00D4AA),
                               fontWeight: FontWeight.w500,
                             ),
@@ -747,8 +757,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             icon: const Icon(
                               Icons.sell,
                               color: Colors.orange,
-                              size: 18,
+                              size: 16,
                             ),
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            padding: EdgeInsets.zero,
                           ),
                         ],
                       ),
@@ -1215,70 +1230,72 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       series.name,
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'by ${artwork?.artist ?? 'Unknown Artist'}',
                       style: GoogleFonts.inter(
-                        fontSize: 10,
+                        fontSize: 9,
                         color: Colors.grey[400],
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 6),
                     
                     // Mint progress
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${series.mintedCount}/${series.totalSupply} minted',
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '${series.mintedCount}/${series.totalSupply}',
                                 style: GoogleFonts.inter(
-                                  fontSize: 9,
+                                  fontSize: 8,
                                   color: Colors.grey[400],
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              LinearProgressIndicator(
-                                value: series.mintProgress,
-                                backgroundColor: Colors.grey[800],
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  isNearSoldOut ? Colors.orange : const Color(0xFF00D4AA),
-                                ),
-                                minHeight: 3,
+                            ),
+                            Text(
+                              '$progressPercentage%',
+                              style: GoogleFonts.inter(
+                                fontSize: 8,
+                                fontWeight: FontWeight.w500,
+                                color: isNearSoldOut ? Colors.orange : const Color(0xFF00D4AA),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '$progressPercentage%',
-                          style: GoogleFonts.inter(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w500,
-                            color: isNearSoldOut ? Colors.orange : const Color(0xFF00D4AA),
+                        const SizedBox(height: 1),
+                        LinearProgressIndicator(
+                          value: series.mintProgress,
+                          backgroundColor: Colors.grey[800],
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            isNearSoldOut ? Colors.orange : const Color(0xFF00D4AA),
                           ),
+                          minHeight: 2,
                         ),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     
                     // Price and mint button
                     Row(
@@ -1289,16 +1306,16 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Mint Price',
+                                'Price',
                                 style: GoogleFonts.inter(
-                                  fontSize: 8,
+                                  fontSize: 7,
                                   color: Colors.grey[500],
                                 ),
                               ),
                               Text(
                                 '${series.mintPrice.toInt()} KUB8',
                                 style: GoogleFonts.inter(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
@@ -1307,19 +1324,18 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             ],
                           ),
                         ),
-                        const SizedBox(width: 4),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
                             color: series.isSoldOut 
                                 ? Colors.grey[700] 
                                 : const Color(0xFF00D4AA),
-                            borderRadius: BorderRadius.circular(6),
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            series.isSoldOut ? 'Sold Out' : 'Mint',
+                            series.isSoldOut ? 'Sold' : 'Mint',
                             style: GoogleFonts.inter(
-                              fontSize: 9,
+                              fontSize: 8,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
@@ -2031,23 +2047,23 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       artwork.title,
                       style: GoogleFonts.inter(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       'by ${artwork.artist}',
                       style: GoogleFonts.inter(
                         color: Colors.grey[400],
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
+                    const SizedBox(height: 4),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -2056,23 +2072,23 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             '${artwork.rewards} KUB8',
                             style: GoogleFonts.inter(
                               color: const Color(0xFF00D4AA),
-                              fontSize: 12,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
                             color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             artwork.rarity.name.toUpperCase(),
                             style: GoogleFonts.inter(
                               color: Color(Artwork.getRarityColor(artwork.rarity)),
-                              fontSize: 8,
+                              fontSize: 7,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

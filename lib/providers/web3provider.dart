@@ -21,6 +21,7 @@ class Web3Provider extends ChangeNotifier {
   
   // Solana network configuration
   String _networkEndpoint = 'https://api.mainnet-beta.solana.com';
+  String _currentNetwork = 'Mainnet';
   final String _kub8TokenAddress = 'YOUR_KUB8_TOKEN_ADDRESS'; // Replace with actual token address
   final String _kub8Symbol = 'KUB8';
   final String _kub8Name = 'Kubit';
@@ -52,6 +53,7 @@ class Web3Provider extends ChangeNotifier {
   double get kub8Balance => _wallet?.kub8Balance ?? 0.0;
   String get walletAddress => _wallet?.address ?? '';
   String get networkEndpoint => _networkEndpoint;
+  String get currentNetwork => _currentNetwork;
   String get kub8TokenAddress => _kub8TokenAddress;
   String get kub8Symbol => _kub8Symbol;
   String get kub8Name => _kub8Name;
@@ -62,12 +64,15 @@ class Web3Provider extends ChangeNotifier {
     switch (network.toLowerCase()) {
       case 'mainnet':
         _networkEndpoint = 'https://api.mainnet-beta.solana.com';
+        _currentNetwork = 'Mainnet';
         break;
       case 'devnet':
         _networkEndpoint = 'https://api.devnet.solana.com';
+        _currentNetwork = 'Devnet';
         break;
       case 'testnet':
         _networkEndpoint = 'https://api.testnet.solana.com';
+        _currentNetwork = 'Testnet';
         break;
     }
     notifyListeners();
@@ -290,6 +295,45 @@ class Web3Provider extends ChangeNotifier {
         'txHash': 'swap_tx_001',
       },
     ];
+  }
+
+  // Add mock transaction for demo purposes
+  void addMockTransaction() {
+    if (!_isConnected) return;
+    
+    final currencies = ['SOL', 'KUB8'];
+    final random = DateTime.now().millisecondsSinceEpoch;
+    final isReceived = random % 2 == 0;
+    final currency = currencies[random % 2];
+    final amount = (random % 1000) / 100.0;
+    
+    _transactions.insert(0, {
+      'type': isReceived ? 'received' : 'sent',
+      'currency': currency,
+      'amount': amount,
+      'from': isReceived ? 'DEV_MockSender$random' : _wallet?.address ?? 'Unknown',
+      'to': isReceived ? _wallet?.address ?? 'Unknown' : 'DEV_MockReceiver$random',
+      'timestamp': _formatTimestamp(DateTime.now()),
+      'status': 'completed',
+      'txHash': 'mock_tx_$random',
+    });
+    
+    notifyListeners();
+  }
+
+  String _formatTimestamp(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+    
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   // Utility functions

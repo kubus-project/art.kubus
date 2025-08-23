@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../models/artwork.dart';
+import '../../config/config.dart';
 
 class ArtistAnalytics extends StatefulWidget {
   const ArtistAnalytics({super.key});
@@ -570,16 +571,27 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   Widget _buildTopArtworks() {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
-        // Get top performing artworks (mock analytics data for now)
+        // Get top performing artworks (show analytics data based on config)
         final topArtworks = artworkProvider.artworks.take(4).map((artwork) {
-          // Generate mock analytics for each artwork
-          final mockViews = (artwork.likesCount * 10 + artwork.viewsCount).toString();
-          final mockRevenue = (artwork.rewards * 0.5).toStringAsFixed(1);
+          String viewsText;
+          String revenueText;
+          
+          if (AppConfig.useMockData) {
+            // Generate mock analytics for each artwork
+            final mockViews = (artwork.likesCount * 10 + artwork.viewsCount).toString();
+            final mockRevenue = (artwork.rewards * 0.5).toStringAsFixed(1);
+            viewsText = mockViews;
+            revenueText = '$mockRevenue KUB8';
+          } else {
+            // Use real analytics data when available
+            viewsText = artwork.viewsCount.toString();
+            revenueText = '${artwork.rewards.toStringAsFixed(1)} KUB8';
+          }
           
           return {
             'title': artwork.title,
-            'views': mockViews,
-            'revenue': '$mockRevenue KUB8',
+            'views': viewsText,
+            'revenue': revenueText,
             'artwork': artwork,
           };
         }).toList();

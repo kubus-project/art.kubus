@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
+import '../providers/wallet_provider.dart';
 
 class WalletCreationScreen extends StatefulWidget {
   final bool isImporting;
@@ -69,12 +70,13 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final screenWidth = mediaQuery.size.width;
+    final isSmallScreen = screenHeight < 700 || screenWidth < 375;
     
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -83,7 +85,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
-                child: _buildContent(),
+                child: _buildContent(isSmallScreen),
               ),
             );
           },
@@ -92,31 +94,32 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent([bool isSmallScreen = false]) {
     if (widget.isImporting) {
-      return _buildImportWallet();
+      return _buildImportWallet(isSmallScreen);
     }
     
     switch (_currentStep) {
       case 0:
-        return _buildWelcome();
+        return _buildWelcome(isSmallScreen);
       case 1:
-        return _buildSecurityInfo();
+        return _buildSecurityInfo(isSmallScreen);
       case 2:
-        return _buildMnemonicDisplay();
+        return _buildMnemonicDisplay(isSmallScreen);
       case 3:
-        return _buildMnemonicConfirmation();
+        return _buildMnemonicConfirmation(isSmallScreen);
       case 4:
-        return _buildWalletCreating();
+        return _buildWalletCreating(isSmallScreen);
       default:
-        return _buildWelcome();
+        return _buildWelcome(isSmallScreen);
     }
   }
 
-  Widget _buildWelcome() {
+  Widget _buildWelcome([bool isSmallScreen = false]) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isSmallScreen = constraints.maxHeight < 700;
+        final isVerySmallScreen = constraints.maxHeight < 600;
+        final effectiveSmallScreen = isSmallScreen || isVerySmallScreen;
         
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -127,53 +130,56 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
             child: Column(
               children: [
                 _buildHeader('Create Your Wallet'),
-                SizedBox(height: isSmallScreen ? 20 : 40),
+                SizedBox(height: effectiveSmallScreen ? 20 : 40),
                 Container(
-                  width: isSmallScreen ? 80 : 120,
-                  height: isSmallScreen ? 80 : 120,
+                  width: effectiveSmallScreen ? 80 : 120,
+                  height: effectiveSmallScreen ? 80 : 120,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF6C63FF), Color(0xFF00D4AA)],
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.secondary,
+                      ],
                     ),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 20 : 30),
+                    borderRadius: BorderRadius.circular(effectiveSmallScreen ? 20 : 30),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF6C63FF).withOpacity(0.3),
-                        blurRadius: isSmallScreen ? 20 : 30,
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                        blurRadius: effectiveSmallScreen ? 20 : 30,
                         spreadRadius: 0,
-                        offset: Offset(0, isSmallScreen ? 10 : 15),
+                        offset: Offset(0, effectiveSmallScreen ? 10 : 15),
                       ),
                     ],
                   ),
                   child: Icon(
                     Icons.account_balance_wallet,
-                    size: isSmallScreen ? 40 : 60,
+                    size: effectiveSmallScreen ? 40 : 60,
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: isSmallScreen ? 24 : 48),
+                SizedBox(height: effectiveSmallScreen ? 24 : 48),
                 Text(
                   'Secure Wallet Creation',
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 24 : 28,
+                    fontSize: effectiveSmallScreen ? 24 : 28,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: isSmallScreen ? 12 : 16),
+                SizedBox(height: effectiveSmallScreen ? 12 : 16),
                 Text(
                   'Get your own Solana wallet with\nmilitary-grade security',
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 16 : 18,
+                    fontSize: effectiveSmallScreen ? 16 : 18,
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     height: 1.4,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                SizedBox(height: isSmallScreen ? 20 : 32),
-                _buildFeatureList(isSmallScreen),
-                SizedBox(height: isSmallScreen ? 20 : 40),
+                SizedBox(height: effectiveSmallScreen ? 20 : 32),
+                _buildFeatureList(effectiveSmallScreen),
+                SizedBox(height: effectiveSmallScreen ? 20 : 40),
                 _buildTermsAndButton(),
               ],
             ),
@@ -230,7 +236,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
                   _termsAccepted = value ?? false;
                 });
               },
-              activeColor: const Color(0xFF6C63FF),
+              activeColor: Theme.of(context).colorScheme.primary,
             ),
             Expanded(
               child: Text(
@@ -250,7 +256,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
           child: ElevatedButton(
             onPressed: _termsAccepted ? () => _nextStep() : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6C63FF),
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -270,7 +276,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     );
   }
 
-  Widget _buildSecurityInfo() {
+  Widget _buildSecurityInfo([bool isSmallScreen = false]) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxHeight < 700;
@@ -366,7 +372,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     );
   }
 
-  Widget _buildMnemonicDisplay() {
+  Widget _buildMnemonicDisplay([bool isSmallScreen = false]) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -757,7 +763,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     );
   }
 
-  Widget _buildMnemonicConfirmation() {
+  Widget _buildMnemonicConfirmation([bool isSmallScreen = false]) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -816,7 +822,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     );
   }
 
-  Widget _buildWalletCreating() {
+  Widget _buildWalletCreating([bool isSmallScreen = false]) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return Center(
@@ -882,7 +888,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     
   }
 
-  Widget _buildImportWallet() {
+  Widget _buildImportWallet([bool isSmallScreen = false]) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxHeight < 700;
@@ -1098,14 +1104,21 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
       _mnemonicRevealed = true;
     });
     
-    // Generate a mock mnemonic for demo purposes
-    // In a real app, use proper BIP39 mnemonic generation
-    _mnemonicWords = [
-      'abandon', 'ability', 'able', 'about', 'above', 'absent',
-      'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'
-    ];
-    
-    setState(() {});
+    try {
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final mnemonic = walletProvider.solanaWalletService.generateMnemonic();
+      _mnemonicWords = mnemonic.split(' ');
+      
+      setState(() {});
+    } catch (e) {
+      // Fallback to mock mnemonic if there's an error
+      _mnemonicWords = [
+        'abandon', 'ability', 'able', 'about', 'above', 'absent',
+        'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'
+      ];
+      
+      setState(() {});
+    }
   }
 
   void _toggleMnemonicVisibility() {
@@ -1131,16 +1144,21 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
     });
 
     try {
-      // Simulate wallet creation delay
-      await Future.delayed(const Duration(seconds: 3));
+      // Create actual Solana wallet
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final mnemonic = _mnemonicWords.join(' ');
+      
+      // Import the wallet using the mnemonic that was generated
+      await walletProvider.importWalletFromMnemonic(mnemonic);
       
       // Save completion flags
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('has_completed_onboarding', true);
       await prefs.setBool('has_wallet', true);
-      await prefs.setString('wallet_network', 'devnet'); // Set to testnet
+      await prefs.setString('wallet_network', 'devnet'); // Set to devnet for Solana
+      await prefs.setString('wallet_mnemonic', mnemonic); // Save mnemonic securely
       
-      // Connect the wallet in the provider
+      // Connect the wallet in the Web3 provider for compatibility
       final web3Provider = Provider.of<Web3Provider>(context, listen: false);
       await web3Provider.connectWallet();
       

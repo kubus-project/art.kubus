@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
+import '../providers/wallet_provider.dart';
+import '../providers/platform_provider.dart';
+import '../providers/config_provider.dart';
+import '../providers/profile_provider.dart';
+import '../widgets/platform_aware_widgets.dart';
 import '../web3/wallet.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -118,6 +124,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                           _buildUserSection(),
                           const SizedBox(height: 32),
                           _buildThemeSection(),
+                          const SizedBox(height: 24),
+                          _buildPlatformCapabilitiesSection(),
                           const SizedBox(height: 24),
                           _buildProfileSection(),
                           const SizedBox(height: 24),
@@ -259,16 +267,38 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           if (web3Provider.isConnected) ...[
             const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildBalanceCard('KUB8', web3Provider.kub8Balance.toStringAsFixed(2)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildBalanceCard('SOL', web3Provider.solBalance.toStringAsFixed(3)),
-                ),
-              ],
+            Consumer<WalletProvider>(
+              builder: (context, walletProvider, child) {
+                // Get KUB8 balance
+                final kub8Balance = walletProvider.tokens
+                    .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                    .isNotEmpty 
+                    ? walletProvider.tokens
+                        .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                        .first.balance 
+                    : 0.0;
+                
+                // Get SOL balance  
+                final solBalance = walletProvider.tokens
+                    .where((token) => token.symbol.toUpperCase() == 'SOL')
+                    .isNotEmpty 
+                    ? walletProvider.tokens
+                        .where((token) => token.symbol.toUpperCase() == 'SOL')
+                        .first.balance 
+                    : 0.0;
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildBalanceCard('KUB8', kub8Balance.toStringAsFixed(2)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildBalanceCard('SOL', solBalance.toStringAsFixed(3)),
+                    ),
+                  ],
+                );
+              },
             ),
           ],
         ],
@@ -574,6 +604,114 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Widget _buildPlatformCapabilitiesSection() {
+    return Consumer<PlatformProvider>(
+      builder: (context, platformProvider, child) {
+        return _buildSection(
+          'Platform Features',
+          Icons.devices,
+          [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[800]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        platformProvider.isMobile ? Icons.phone_android :
+                        platformProvider.isDesktop ? Icons.computer :
+                        Icons.web,
+                        color: Colors.blue,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Running on ${platformProvider.currentPlatform.toString().split('.').last}',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Available Features:',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[300],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ...platformProvider.capabilities.entries.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            entry.value ? Icons.check_circle : Icons.cancel,
+                            color: entry.value ? Colors.green : Colors.red,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _getCapabilityDisplayName(entry.key),
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: entry.value ? Colors.white : Colors.grey[500],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (kDebugMode) const PlatformDebugWidget(),
+          ],
+        );
+      },
+    );
+  }
+
+  String _getCapabilityDisplayName(PlatformCapability capability) {
+    switch (capability) {
+      case PlatformCapability.camera:
+        return 'Camera Access (QR Scanner, AR)';
+      case PlatformCapability.ar:
+        return 'Augmented Reality Features';
+      case PlatformCapability.nfc:
+        return 'NFC Communication';
+      case PlatformCapability.gps:
+        return 'Location Services';
+      case PlatformCapability.biometrics:
+        return 'Biometric Authentication';
+      case PlatformCapability.notifications:
+        return 'Push Notifications';
+      case PlatformCapability.fileSystem:
+        return 'File System Access';
+      case PlatformCapability.bluetooth:
+        return 'Bluetooth Connectivity';
+      case PlatformCapability.vibration:
+        return 'Haptic Feedback';
+      case PlatformCapability.orientation:
+        return 'Device Orientation';
+      case PlatformCapability.background:
+        return 'Background Processing';
+    }
+  }
+
   Widget _buildProfileSection() {
     return _buildSection(
       'Profile Settings',
@@ -715,6 +853,28 @@ class _SettingsScreenState extends State<SettingsScreen>
       'Data & Analytics',
       Icons.analytics,
       [
+        _buildSettingsTile(
+          'Mock Data',
+          'Use demo data for testing (Developer)',
+          Icons.science,
+          trailing: Consumer<ConfigProvider>(
+            builder: (context, configProvider, child) {
+              return Switch(
+                value: configProvider.useMockData,
+                onChanged: (value) async {
+                  await configProvider.setUseMockData(value);
+                  
+                  // Sync with ProfileProvider
+                  final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+                  profileProvider.syncWithConfigProvider(value);
+                  
+                  _showRestartDialog();
+                },
+                activeColor: Provider.of<ThemeProvider>(context).accentColor,
+              );
+            },
+          ),
+        ),
         _buildSettingsTile(
           'Analytics',
           'Help improve the app',
@@ -910,28 +1070,127 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Dialog methods
   void _showNetworkDialog() {
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    String currentNetwork = web3Provider.currentNetwork;
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Network'),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          'Select Network',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              title: const Text('Mainnet'),
-              subtitle: const Text('Live network'),
-              onTap: () {
+            _buildNetworkOption(
+              'Mainnet',
+              'Live Solana network',
+              currentNetwork == 'Mainnet',
+              () {
                 Navigator.pop(context);
-                // TODO: Switch to mainnet
+                web3Provider.switchNetwork('Mainnet');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Switched to Mainnet')),
+                );
               },
             ),
-            ListTile(
-              title: const Text('Devnet'),
-              subtitle: const Text('Development network'),
-              onTap: () {
+            const SizedBox(height: 8),
+            _buildNetworkOption(
+              'Devnet',
+              'Development network for testing',
+              currentNetwork == 'Devnet',
+              () {
                 Navigator.pop(context);
-                // TODO: Switch to devnet
+                web3Provider.switchNetwork('Devnet');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Switched to Devnet')),
+                );
               },
+            ),
+            const SizedBox(height: 8),
+            _buildNetworkOption(
+              'Testnet',
+              'Test network for development',
+              currentNetwork == 'Testnet',
+              () {
+                Navigator.pop(context);
+                web3Provider.switchNetwork('Testnet');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Switched to Testnet')),
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNetworkOption(String name, String description, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: isSelected 
+              ? Provider.of<ThemeProvider>(context).accentColor 
+              : Theme.of(context).colorScheme.outline,
+            width: isSelected ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          color: isSelected 
+            ? Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1)
+            : Theme.of(context).colorScheme.primaryContainer,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+              color: isSelected 
+                ? Provider.of<ThemeProvider>(context).accentColor 
+                : Theme.of(context).colorScheme.outline,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    description,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -940,22 +1199,203 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showBackupDialog() {
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    
+    if (!web3Provider.isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please connect your wallet first')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Backup Wallet'),
-        content: const Text('This will show your recovery phrase. Make sure you\'re in a private place.'),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Row(
+          children: [
+            Icon(
+              Icons.warning_amber,
+              color: Colors.orange,
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Backup Wallet',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This will show your recovery phrase.',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange, width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '⚠️ Security Warning',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '• Make sure you\'re in a private place\n• Never share your recovery phrase\n• Write it down and store it safely',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.orange.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
           ),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+            ),
             onPressed: () {
               Navigator.pop(context);
-              // TODO: Show backup screen
+              _showRecoveryPhrase();
             },
-            child: const Text('Continue'),
+            child: Text(
+              'Continue',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRecoveryPhrase() {
+    // Generate a mock recovery phrase for demo
+    final words = [
+      'abandon', 'ability', 'able', 'about', 'above', 'absent', 
+      'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'
+    ];
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          'Recovery Phrase',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Write down these 12 words in order:',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  childAspectRatio: 2.5,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                ),
+                itemCount: 12,
+                itemBuilder: (context, index) => Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${index + 1}. ${words[index]}',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Recovery phrase shown. Please store it safely!')),
+              );
+            },
+            child: Text(
+              'I\'ve Written It Down',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -1141,22 +1581,192 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Wallet dialog methods
   void _showTransactionHistoryDialog() {
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Transaction History'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('No transactions found'),
-            SizedBox(height: 16),
-            Text('Your transaction history will appear here when you start making transactions.'),
-          ],
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          'Transaction History',
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          height: MediaQuery.of(context).size.height * 0.5,
+          child: configProvider.useMockData && web3Provider.transactions.isNotEmpty
+            ? Column(
+                children: [
+                  Text(
+                    'Recent Transactions',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: web3Provider.transactions.length,
+                      itemBuilder: (context, index) {
+                        final tx = web3Provider.transactions[index];
+                        return _buildTransactionItem(tx);
+                      },
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.receipt_long,
+                    size: 64,
+                    color: Colors.grey[400],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Transactions Found',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your transaction history will appear here when you start making transactions.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+        ),
+        actions: [
+          if (configProvider.useMockData && web3Provider.isConnected)
+            TextButton(
+              onPressed: () {
+                web3Provider.addMockTransaction();
+                Navigator.pop(context);
+                _showTransactionHistoryDialog();
+              },
+              child: Text(
+                'Add Mock Transaction',
+                style: GoogleFonts.inter(
+                  color: Provider.of<ThemeProvider>(context).accentColor,
+                ),
+              ),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Close',
+              style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem(Map<String, dynamic> tx) {
+    final isIncoming = tx['type'] == 'received';
+    final amount = tx['amount'] as double;
+    final currency = tx['currency'] as String;
+    final timestamp = tx['timestamp'] as String;
+    final from = tx['from'] as String;
+    final to = tx['to'] as String;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: isIncoming 
+                ? Colors.green.withValues(alpha: 0.1) 
+                : Colors.red.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              isIncoming ? Icons.call_received : Icons.call_made,
+              color: isIncoming ? Colors.green : Colors.red,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isIncoming ? 'Received' : 'Sent',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  '${isIncoming ? 'From' : 'To'}: ${(isIncoming ? from : to).substring(0, 8)}...',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Text(
+                  timestamp,
+                  style: GoogleFonts.inter(
+                    fontSize: 9,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '${isIncoming ? '+' : '-'}$amount $currency',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isIncoming ? Colors.green : Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRestartDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restart Required'),
+        content: const Text('The mock data setting has been changed. Please restart the app for changes to take effect.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: const Text('OK'),
           ),
         ],
       ),

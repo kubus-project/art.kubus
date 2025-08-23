@@ -40,14 +40,13 @@ dependencies:
   url_launcher: ^6.3.1
   image_picker: ^1.1.1
   provider: ^6.1.5
-  location: ^6.0.2
-  flutter_map: ^7.0.2
+  location: ^8.0.1
+  flutter_map: ^7.0.2  # Keeping compatible with flutter_map_geojson
   latlong2: ^0.9.1
   flutter_map_cancellable_tile_provider: ^3.0.2
   flutter_map_geojson: ^1.0.8
   shared_preferences: ^2.5.3
   proj4dart: any
-  http: ^1.4.0
   
   # UI and Theming
   google_fonts: ^6.2.1
@@ -55,8 +54,18 @@ dependencies:
   # Charts and Graphs
   fl_chart: ^1.0.0
   
-  # Web3 and Blockchain
-  web3dart: ^2.7.3
+  # Web3 and Blockchain (Solana-focused)
+  http: ^1.4.0
+  pointycastle: ^3.9.1  # Compatible with reown_walletkit
+  solana: ^0.31.2+1  # Updated Solana SDK for Dart
+  bip39: ^1.0.6    # BIP39 mnemonic generation
+  
+  # WalletConnect for real wallet connections (using new package)
+  reown_walletkit: ^1.1.0  # Using a more stable version
+
+  # QR Code functionality
+  qr_flutter: ^4.1.0  # QR code generation
+  mobile_scanner: ^5.0.2  # QR code scanning (modern replacement for qr_code_scanner)
   
   # Camera and AR
   camera: ^0.11.1
@@ -71,11 +80,11 @@ dependencies:
   
   # Utilities
   vector_math: ^2.1.4
-  file_picker: ^8.0.7
+  file_picker: ^8.1.2  # Updated to avoid conflicts
   path: ^1.9.0
   filesystem_picker: ^4.1.0
   intl: ^0.19.0
-  share_plus: ^11.0.0  # Replacing discontinued 'share' package
+  share_plus: ^11.0.0  # Updated to latest version
   
 dev_dependencies:
   flutter_test:
@@ -86,7 +95,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
