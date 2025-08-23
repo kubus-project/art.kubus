@@ -3,8 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
+import '../providers/wallet_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/config_provider.dart';
 import '../web3/dao/governance_hub.dart';
 import '../web3/artist/artist_studio.dart';
 import '../web3/institution/institution_hub.dart';
@@ -342,12 +344,34 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               SizedBox(height: isSmallScreen ? 16 : 20),
               if (web3Provider.isConnected) ...[
-                Row(
-                  children: [
-                    _buildBalanceChip('KUB8', web3Provider.kub8Balance.toStringAsFixed(2)),
-                    const SizedBox(width: 12),
-                    _buildBalanceChip('SOL', web3Provider.solBalance.toStringAsFixed(3)),
-                  ],
+                Consumer<WalletProvider>(
+                  builder: (context, walletProvider, child) {
+                    // Get KUB8 balance
+                    final kub8Balance = walletProvider.tokens
+                        .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                        .isNotEmpty 
+                        ? walletProvider.tokens
+                            .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                            .first.balance 
+                        : 0.0;
+                    
+                    // Get SOL balance  
+                    final solBalance = walletProvider.tokens
+                        .where((token) => token.symbol.toUpperCase() == 'SOL')
+                        .isNotEmpty 
+                        ? walletProvider.tokens
+                            .where((token) => token.symbol.toUpperCase() == 'SOL')
+                            .first.balance 
+                        : 0.0;
+
+                    return Row(
+                      children: [
+                        _buildBalanceChip('KUB8', kub8Balance.toStringAsFixed(2)),
+                        const SizedBox(width: 12),
+                        _buildBalanceChip('SOL', solBalance.toStringAsFixed(3)),
+                      ],
+                    );
+                  },
                 ),
               ] else ...[
                 ElevatedButton.icon(
@@ -614,54 +638,115 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildStatsCards() {
-    final stats = [
-      ('Artworks', '42', Icons.image),
-      ('Followers', '1.2k', Icons.people),
-      ('Views', '8.5k', Icons.visibility),
-    ];
+    return Consumer<ConfigProvider>(
+      builder: (context, configProvider, child) {
+        if (!configProvider.useMockData) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your Stats',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.analytics,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No Stats Available',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Stats will appear as you interact with the platform',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 375;
-        final isVerySmallScreen = constraints.maxWidth < 320;
-        
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your Stats',
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 18 : 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            if (isVerySmallScreen)
-              // Stack vertically on very small screens - show full details
-              Column(
-                children: stats.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final stat = entry.value;
-                  return Padding(
-                    padding: EdgeInsets.only(bottom: index < stats.length - 1 ? 8 : 0),
-                    child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: false, isVerticalLayout: true),
-                  );
-                }).toList(),
-              )
-            else
-              // Horizontal layout for other screen sizes - show icons only
-              Row(
-                children: stats.map((stat) {
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(right: 12),
-                      child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: true, isVerticalLayout: false),
-                    ),
-                  );
-                }).toList(),
-              ),
-          ],
+        final stats = [
+          ('Artworks', '42', Icons.image),
+          ('Followers', '1.2k', Icons.people),
+          ('Views', '8.5k', Icons.visibility),
+        ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isSmallScreen = constraints.maxWidth < 375;
+            final isVerySmallScreen = constraints.maxWidth < 320;
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Stats',
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                if (isVerySmallScreen)
+                  // Stack vertically on very small screens - show full details
+                  Column(
+                    children: stats.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final stat = entry.value;
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: index < stats.length - 1 ? 8 : 0),
+                        child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: false, isVerticalLayout: true),
+                      );
+                    }).toList(),
+                  )
+                else
+                  // Horizontal layout for other screen sizes - show icons only
+                  Row(
+                    children: stats.map((stat) {
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: true, isVerticalLayout: false),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -1047,6 +1132,65 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildRecentActivity() {
+    return Consumer<ConfigProvider>(
+      builder: (context, config, child) {
+        if (!config.useMockData) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Recent Activity',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline,
+                    width: 1,
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.timeline,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No Recent Activity',
+                        style: GoogleFonts.inter(
+                          fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Your recent activities will appear here',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1085,6 +1229,8 @@ class _HomeScreenState extends State<HomeScreen>
           },
         ),
       ],
+    );
+      },
     );
   }
 

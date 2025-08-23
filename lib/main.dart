@@ -13,6 +13,8 @@ import 'providers/dao_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/collectibles_provider.dart';
+import 'providers/platform_provider.dart';
+import 'providers/config_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'ar/ar.dart';
@@ -29,6 +31,8 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (context) => ConfigProvider()),
+        ChangeNotifierProvider(create: (context) => PlatformProvider()),
         ChangeNotifierProvider(create: (context) => ConnectionProvider()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
         ChangeNotifierProvider(create: (context) => Web3Provider()),

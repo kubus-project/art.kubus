@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../models/achievements.dart';
+import '../../providers/config_provider.dart';
 
 class AchievementsPage extends StatefulWidget {
   const AchievementsPage({super.key});
@@ -19,41 +21,64 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }
 
   void _initializeUserProgress() {
-    // Sample user progress - in real app this would come from user service
-    _userProgress = [
-      const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-      const AchievementProgress(achievementId: 'ar_collector', currentProgress: 7, isCompleted: false),
-      const AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 3, isCompleted: false),
-      const AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
-      const AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
-      const AchievementProgress(achievementId: 'art_critic', currentProgress: 4, isCompleted: false),
-      const AchievementProgress(achievementId: 'social_butterfly', currentProgress: 15, isCompleted: false),
-      const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
-    ];
+    final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+    
+    if (configProvider.useMockData) {
+      // Enhanced mock data for testing
+      _userProgress = [
+        const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
+        const AchievementProgress(achievementId: 'ar_collector', currentProgress: 12, isCompleted: true),
+        const AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 8, isCompleted: true),
+        const AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
+        const AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
+        const AchievementProgress(achievementId: 'art_critic', currentProgress: 25, isCompleted: true),
+        const AchievementProgress(achievementId: 'social_butterfly', currentProgress: 50, isCompleted: true),
+        const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
+      ];
+    } else {
+      // Real user progress - would come from user service/API
+      _userProgress = [
+        const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
+        const AchievementProgress(achievementId: 'ar_collector', currentProgress: 7, isCompleted: false),
+        const AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 3, isCompleted: false),
+        const AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
+        const AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
+        const AchievementProgress(achievementId: 'art_critic', currentProgress: 4, isCompleted: false),
+        const AchievementProgress(achievementId: 'social_butterfly', currentProgress: 15, isCompleted: false),
+        const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
+      ];
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
-          'Achievements & POAPs',
-          style: GoogleFonts.inter(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+    return Consumer<ConfigProvider>(
+      builder: (context, configProvider, child) {
+        // Reinitialize when config changes
+        _initializeUserProgress();
+        
+        return Scaffold(
+          backgroundColor: const Color(0xFF0A0A0A),
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              'Achievements & POAPs',
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
           ),
-        ),
-      ),
-      body: Column(
-        children: [
-          _buildStatsHeader(),
-          Expanded(child: _buildAchievementsList()),
-        ],
-      ),
+          body: Column(
+            children: [
+              _buildStatsHeader(),
+              Expanded(child: _buildAchievementsList()),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -195,6 +220,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 60,
@@ -214,23 +240,31 @@ class _AchievementsPageState extends State<AchievementsPage> {
             ),
           ),
           const SizedBox(height: 12),
-          Text(
-            achievement.title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isUnlocked ? Colors.white : Colors.grey[600],
+          Flexible(
+            child: Text(
+              achievement.title,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: isUnlocked ? Colors.white : Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
-          Text(
-            achievement.description,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: isUnlocked ? Colors.grey[400] : Colors.grey[600],
+          Flexible(
+            child: Text(
+              achievement.description,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: isUnlocked ? Colors.grey[400] : Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           if (!isUnlocked && achievement.requiredProgress > 1) ...[

@@ -1,17 +1,20 @@
 import 'package:flutter/foundation.dart';
 import '../models/wallet.dart';
+import '../services/solana_wallet_service.dart';
 import 'mockup_data_provider.dart';
 
 class WalletProvider extends ChangeNotifier {
   final MockupDataProvider _mockupDataProvider;
+  final SolanaWalletService _solanaWalletService;
   
   Wallet? _wallet;
   List<Token> _tokens = [];
   List<WalletTransaction> _transactions = [];
   bool _isLoading = false;
   bool _isBalanceVisible = true;
+  String? _currentWalletAddress;
 
-  WalletProvider(this._mockupDataProvider) {
+  WalletProvider(this._mockupDataProvider) : _solanaWalletService = SolanaWalletService() {
     _mockupDataProvider.addListener(_onMockupModeChanged);
     _loadData();
   }
@@ -33,6 +36,8 @@ class WalletProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isBalanceVisible => _isBalanceVisible;
   double get totalBalance => _wallet?.totalValue ?? 0.0;
+  String? get currentWalletAddress => _currentWalletAddress;
+  SolanaWalletService get solanaWalletService => _solanaWalletService;
 
   Future<void> _loadData() async {
     _isLoading = true;
@@ -57,11 +62,16 @@ class WalletProvider extends ChangeNotifier {
     await _loadMockTokens();
     await _loadMockTransactions();
     
+    // Use the real wallet address if available, otherwise fall back to mock address
+    final address = _currentWalletAddress ?? '0x742d35Cc6235C501F0e8A0B36cf71FcC2F82b46F';
+    final networkName = _currentWalletAddress != null ? 'Solana' : 'Polygon';
+    final walletName = _currentWalletAddress != null ? 'Solana Wallet' : 'Main Wallet';
+    
     _wallet = Wallet(
-      id: 'wallet_1',
-      address: '0x742d35Cc6235C501F0e8A0B36cf71FcC2F82b46F',
-      name: 'Main Wallet',
-      network: 'Polygon',
+      id: _currentWalletAddress != null ? 'solana_wallet_${address.substring(0, 8)}' : 'wallet_1',
+      address: address,
+      name: walletName,
+      network: networkName,
       tokens: _tokens,
       transactions: _transactions,
       totalValue: _tokens.fold(0.0, (sum, token) => sum + token.value),
@@ -206,10 +216,103 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> _loadFromBlockchain() async {
-    // TODO: Implement blockchain loading
-    _wallet = null;
-    _tokens = [];
-    _transactions = [];
+    try {
+      if (_currentWalletAddress == null) {
+        debugPrint('No wallet address available, falling back to mock data');
+        await _loadMockWallet();
+        return;
+      }
+
+      // Load Solana wallet data
+      await _loadSolanaWallet(_currentWalletAddress!);
+    } catch (e) {
+      debugPrint('Error loading blockchain data: $e');
+      // Fall back to mock data on error
+      await _loadMockWallet();
+    }
+  }
+
+  Future<void> _loadSolanaWallet(String address) async {
+    try {
+      // Get SOL balance
+      final solBalance = await _solanaWalletService.getBalance(address);
+      
+      // Get token balances
+      final tokenBalances = await _solanaWalletService.getTokenBalances(address);
+      
+      // Get transaction history
+      final transactionHistory = await _solanaWalletService.getTransactionHistory(address);
+      
+      // Create tokens list starting with SOL
+      _tokens = [
+        Token(
+          id: 'sol_native',
+          name: 'Solana',
+          symbol: 'SOL',
+          type: TokenType.native,
+          balance: solBalance,
+          value: solBalance * 50.0, // Placeholder price - should come from price API
+          changePercentage: 0.0,
+          contractAddress: 'native',
+          decimals: 9,
+          logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+          network: 'Solana',
+        ),
+      ];
+      
+      // Add SPL tokens
+      for (final tokenBalance in tokenBalances) {
+        _tokens.add(Token(
+          id: 'spl_${tokenBalance.mint}',
+          name: tokenBalance.name,
+          symbol: tokenBalance.symbol,
+          type: TokenType.erc20, // Using erc20 for SPL tokens for now
+          balance: tokenBalance.balance,
+          value: tokenBalance.balance * 1.0, // Placeholder value
+          changePercentage: 0.0,
+          contractAddress: tokenBalance.mint,
+          decimals: tokenBalance.decimals,
+          logoUrl: '', // TokenBalance doesn't have logoUrl
+          network: 'Solana',
+        ));
+      }
+      
+      // Convert transaction history to wallet transactions
+      _transactions = transactionHistory.map((tx) {
+        return WalletTransaction(
+          id: tx.signature,
+          type: TransactionType.send, // Simplified - in real implementation parse transaction details
+          token: 'SOL', // Default to SOL for now
+          amount: tx.fee / 1000000000.0, // Convert lamports to SOL for fee
+          fromAddress: _currentWalletAddress ?? '',
+          toAddress: '', // Would need to parse transaction for actual to address
+          timestamp: tx.blockTime,
+          status: tx.status.toLowerCase() == 'finalized' 
+              ? TransactionStatus.confirmed 
+              : TransactionStatus.pending,
+          txHash: tx.signature,
+          gasUsed: tx.fee,
+          gasFee: tx.fee / 1000000000.0, // Convert lamports to SOL
+          metadata: {'slot': tx.slot.toString()},
+        );
+      }).toList();
+      
+      // Create wallet
+      _wallet = Wallet(
+        id: 'solana_wallet_${address.substring(0, 8)}',
+        address: address,
+        name: 'Solana Wallet',
+        network: 'Solana',
+        tokens: _tokens,
+        transactions: _transactions,
+        totalValue: _tokens.fold(0.0, (sum, token) => sum + token.value),
+        lastUpdated: DateTime.now(),
+      );
+      
+    } catch (e) {
+      debugPrint('Error loading Solana wallet: $e');
+      throw e;
+    }
   }
 
   // Balance visibility toggle
@@ -411,4 +514,78 @@ class WalletProvider extends ChangeNotifier {
   Future<void> refreshData() async {
     await _loadData();
   }
+
+  // Wallet Management
+  Future<Map<String, String>> createWallet() async {
+    final mnemonic = _solanaWalletService.generateMnemonic();
+    final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(mnemonic);
+    
+    _currentWalletAddress = keyPair.publicKey;
+    
+    // Load the newly created wallet
+    if (!_mockupDataProvider.isMockDataEnabled) {
+      await _loadData();
+    }
+    
+    return {
+      'mnemonic': mnemonic,
+      'address': _currentWalletAddress!,
+    };
+  }
+
+  Future<String> importWalletFromMnemonic(String mnemonic) async {
+    if (!_solanaWalletService.validateMnemonic(mnemonic)) {
+      throw Exception('Invalid mnemonic phrase');
+    }
+    
+    final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(mnemonic);
+    _currentWalletAddress = keyPair.publicKey;
+    
+    // Load the imported wallet
+    if (!_mockupDataProvider.isMockDataEnabled) {
+      await _loadData();
+    }
+    
+    return _currentWalletAddress!;
+  }
+
+  Future<void> connectWalletWithAddress(String address) async {
+    _currentWalletAddress = address;
+    
+    // Load the connected wallet
+    if (!_mockupDataProvider.isMockDataEnabled) {
+      await _loadData();
+    }
+  }
+
+  void disconnectWallet() {
+    _currentWalletAddress = null;
+    _wallet = null;
+    _tokens.clear();
+    _transactions.clear();
+    notifyListeners();
+  }
+
+  // Solana-specific methods
+  Future<void> requestAirdrop(double amount) async {
+    if (_currentWalletAddress == null) {
+      throw Exception('No wallet connected');
+    }
+    
+    await _solanaWalletService.requestAirdrop(_currentWalletAddress!, amount: amount);
+    
+    // Refresh wallet data after airdrop
+    await refreshData();
+  }
+
+  void switchSolanaNetwork(String network) {
+    _solanaWalletService.switchNetwork(network);
+    
+    // Refresh data with new network
+    if (!_mockupDataProvider.isMockDataEnabled && _currentWalletAddress != null) {
+      _loadData();
+    }
+  }
+
+  String get currentSolanaNetwork => _solanaWalletService.currentNetwork;
 }

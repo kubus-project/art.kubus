@@ -3,7 +3,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
+import '../providers/wallet_provider.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/config_provider.dart';
+import '../providers/profile_provider.dart';
 import '../web3/wallet.dart';
 import '../web3/achievements/achievements_page.dart';
 import 'settings_screen.dart';
@@ -378,45 +381,67 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: Column(
               children: [
                 if (web3Provider.isConnected) ...[
-                  isSmallScreen
-                    ? Column(
-                        children: [
-                          _buildBalanceCard(
-                            'KUB8 Balance',
-                            web3Provider.kub8Balance.toStringAsFixed(2),
-                            Icons.currency_bitcoin,
-                            isSmallScreen: isSmallScreen,
-                          ),
-                          const SizedBox(height: 12),
-                          _buildBalanceCard(
-                            'SOL Balance',
-                            web3Provider.solBalance.toStringAsFixed(3),
-                            Icons.account_balance_wallet,
-                            isSmallScreen: isSmallScreen,
-                          ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: _buildBalanceCard(
-                              'KUB8 Balance',
-                              web3Provider.kub8Balance.toStringAsFixed(2),
-                              Icons.currency_bitcoin,
-                              isSmallScreen: isSmallScreen,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildBalanceCard(
-                              'SOL Balance',
-                              web3Provider.solBalance.toStringAsFixed(3),
-                              Icons.account_balance_wallet,
-                              isSmallScreen: isSmallScreen,
-                            ),
-                          ),
-                        ],
-                      ),
+                  Consumer<WalletProvider>(
+                    builder: (context, walletProvider, child) {
+                      // Get KUB8 balance
+                      final kub8Balance = walletProvider.tokens
+                          .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                          .isNotEmpty 
+                          ? walletProvider.tokens
+                              .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                              .first.balance 
+                          : 0.0;
+                      
+                      // Get SOL balance  
+                      final solBalance = walletProvider.tokens
+                          .where((token) => token.symbol.toUpperCase() == 'SOL')
+                          .isNotEmpty 
+                          ? walletProvider.tokens
+                              .where((token) => token.symbol.toUpperCase() == 'SOL')
+                              .first.balance 
+                          : 0.0;
+
+                      return isSmallScreen && constraints.maxWidth < 300
+                        ? Column(
+                            children: [
+                              _buildBalanceCard(
+                                'KUB8 Balance',
+                                kub8Balance.toStringAsFixed(2),
+                                Icons.currency_bitcoin,
+                                isSmallScreen: isSmallScreen,
+                              ),
+                              const SizedBox(height: 12),
+                              _buildBalanceCard(
+                                'SOL Balance',
+                                solBalance.toStringAsFixed(3),
+                                Icons.account_balance_wallet,
+                                isSmallScreen: isSmallScreen,
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: _buildBalanceCard(
+                                  'KUB8 Balance',
+                                  kub8Balance.toStringAsFixed(2),
+                                  Icons.currency_bitcoin,
+                                  isSmallScreen: isSmallScreen,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: _buildBalanceCard(
+                                  'SOL Balance',
+                                  solBalance.toStringAsFixed(3),
+                                  Icons.account_balance_wallet,
+                                  isSmallScreen: isSmallScreen,
+                                ),
+                              ),
+                            ],
+                          );
+                    },
+                  ),
                   SizedBox(height: isSmallScreen ? 16 : 20),
                 ],
                 isSmallScreen
@@ -425,22 +450,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                         Row(
                           children: [
                             Expanded(
-                              child: _buildStatCard(
-                                'Artworks',
-                                '24',
-                                Icons.palette,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => _showArtworks(),
+                              child: Consumer<ProfileProvider>(
+                                builder: (context, profileProvider, child) {
+                                  return _buildStatCard(
+                                    'Artworks',
+                                    profileProvider.formattedArtworksCount,
+                                    Icons.palette,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () => _showArtworks(),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildStatCard(
-                                'Collections',
-                                '8',
-                                Icons.collections,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => _showCollections(),
+                              child: Consumer<ProfileProvider>(
+                                builder: (context, profileProvider, child) {
+                                  return _buildStatCard(
+                                    'Collections',
+                                    profileProvider.formattedCollectionsCount,
+                                    Icons.collections,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () => _showCollections(),
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -449,22 +482,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                         Row(
                           children: [
                             Expanded(
-                              child: _buildStatCard(
-                                'Followers',
-                                '2.1K',
-                                Icons.people,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => _showFollowers(),
+                              child: Consumer<ProfileProvider>(
+                                builder: (context, profileProvider, child) {
+                                  return _buildStatCard(
+                                    'Followers',
+                                    profileProvider.formattedFollowersCount,
+                                    Icons.people,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () => _showFollowers(),
+                                  );
+                                },
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: _buildStatCard(
-                                'Following',
-                                '186',
-                                Icons.person_add,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => _showFollowing(),
+                              child: Consumer<ProfileProvider>(
+                                builder: (context, profileProvider, child) {
+                                  return _buildStatCard(
+                                    'Following',
+                                    profileProvider.formattedFollowingCount,
+                                    Icons.person_add,
+                                    isSmallScreen: isSmallScreen,
+                                    onTap: () => _showFollowing(),
+                                  );
+                                },
                               ),
                             ),
                           ],
@@ -474,42 +515,58 @@ class _ProfileScreenState extends State<ProfileScreen>
                   : Row(
                       children: [
                         Expanded(
-                          child: _buildStatCard(
-                            'Artworks',
-                            '24',
-                            Icons.palette,
-                            isSmallScreen: isSmallScreen,
-                            onTap: () => _showArtworks(),
+                          child: Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              return _buildStatCard(
+                                'Artworks',
+                                profileProvider.formattedArtworksCount,
+                                Icons.palette,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showArtworks(),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildStatCard(
-                            'Collections',
-                            '8',
-                            Icons.collections,
-                            isSmallScreen: isSmallScreen,
-                            onTap: () => _showCollections(),
+                          child: Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              return _buildStatCard(
+                                'Collections',
+                                profileProvider.formattedCollectionsCount,
+                                Icons.collections,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showCollections(),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildStatCard(
-                            'Followers',
-                            '2.1K',
-                            Icons.people,
-                            isSmallScreen: isSmallScreen,
-                            onTap: () => _showFollowers(),
+                          child: Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              return _buildStatCard(
+                                'Followers',
+                                profileProvider.formattedFollowersCount,
+                                Icons.people,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showFollowers(),
+                              );
+                            },
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildStatCard(
-                            'Following',
-                            '186',
-                            Icons.person_add,
-                            isSmallScreen: isSmallScreen,
-                            onTap: () => _showFollowing(),
+                          child: Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              return _buildStatCard(
+                                'Following',
+                                profileProvider.formattedFollowingCount,
+                                Icons.person_add,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showFollowing(),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -921,40 +978,51 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildTabBar() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    
     return SliverToBoxAdapter(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          bool isSmallScreen = constraints.maxWidth < 375;
+          final isSmallScreen = constraints.maxWidth < 375;
           
           return Container(
-            margin: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: TabBar(
               controller: _tabController,
-              isScrollable: isSmallScreen,
-              tabAlignment: isSmallScreen ? TabAlignment.start : TabAlignment.fill,
+              isScrollable: false, // Make tabs full width
+              tabAlignment: TabAlignment.fill, // Ensure full width distribution
               tabs: _tabs.map((tab) => Tab(
                 child: Text(
                   tab,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 10 : 12,
+                  style: GoogleFonts.inter(
+                    fontSize: isSmallScreen ? 12 : 14,
                     fontWeight: FontWeight.w600,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               )).toList(),
-              labelColor: Provider.of<ThemeProvider>(context).accentColor,
-              unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              indicatorColor: Provider.of<ThemeProvider>(context).accentColor,
+              indicator: BoxDecoration(
+                color: themeProvider.accentColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
               indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: Colors.white,
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              labelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                fontWeight: FontWeight.w600,
+              ),
+              unselectedLabelStyle: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 12 : 14,
+                fontWeight: FontWeight.normal,
+              ),
               dividerHeight: 0,
-              labelPadding: isSmallScreen 
-                ? const EdgeInsets.symmetric(horizontal: 8) 
-                : null,
             ),
           );
         },
@@ -1127,9 +1195,43 @@ class _ProfileScreenState extends State<ProfileScreen>
         
         return Padding(
           padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-          child: ListView.builder(
-            itemCount: 15,
-            itemBuilder: (context, index) => _buildActivityItem(index),
+          child: Consumer<ConfigProvider>(
+            builder: (context, config, child) {
+              return config.useMockData 
+                ? ListView.builder(
+                    itemCount: 15,
+                    itemBuilder: (context, index) => _buildActivityItem(index),
+                  )
+                : Center(
+                    child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.timeline,
+                      size: 64,
+                      color: Colors.grey[400],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No Activity Yet',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Start creating and interacting to see your activity here',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[500],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ));
+            },
           ),
         );
       },
@@ -1322,6 +1424,56 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPerformanceStats() {
+    return Consumer<ConfigProvider>(
+      builder: (context, config, child) {
+        if (!config.useMockData) {
+          // Real stats would come from providers/API
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Performance',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Column(
+                  children: [
+                Icon(
+                  Icons.analytics,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Stats Available',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Performance stats will appear as you interact with the platform',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Mock data for demo purposes
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1342,6 +1494,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(height: 12),
         _buildPerformanceCard('Discoveries', '42', Icons.location_on, '+15%'),
       ],
+    );
+      },
     );
   }
 

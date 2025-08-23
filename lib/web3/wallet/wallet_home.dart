@@ -23,6 +23,118 @@ class _WalletHomeState extends State<WalletHome> {
       builder: (context, walletProvider, child) {
         final wallet = walletProvider.wallet;
         final tokens = walletProvider.tokens;
+        final isLoading = walletProvider.isLoading;
+        
+        // Show loading indicator while wallet is loading
+        if (isLoading) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF121212),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF121212),
+              elevation: 0,
+              title: Text(
+                'My Wallet',
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            body: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    color: Color(0xFF8B5CF6),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading your wallet...',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+        
+        // Show empty state if no wallet data
+        if (wallet == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFF121212),
+            appBar: AppBar(
+              backgroundColor: const Color(0xFF121212),
+              elevation: 0,
+              title: Text(
+                'My Wallet',
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings, color: Colors.white),
+                  onPressed: _showWalletSettings,
+                ),
+              ],
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.account_balance_wallet,
+                    size: 64,
+                    color: Colors.white38,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No wallet connected',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Connect a wallet to get started',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      // TODO: Implement wallet connection
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Wallet connection coming soon!'),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8B5CF6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Connect Wallet'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -85,84 +197,153 @@ class _WalletHomeState extends State<WalletHome> {
                                   color: Colors.white.withOpacity(0.8),
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  wallet?.shortAddress ?? 'No Address',
-                                  style: GoogleFonts.inter(
-                                    fontSize: isSmallScreen ? 12 : 14,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
+                              GestureDetector(
+                                onTap: () {
+                                  // Show full address and copy to clipboard
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Address: ${wallet.address}'),
+                                      action: SnackBarAction(
+                                        label: 'Copy',
+                                        onPressed: () {
+                                          // TODO: Add clipboard functionality
+                                        },
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(20),
                                   ),
+                                  child: Text(
+                                    wallet.shortAddress,
+                                    style: GoogleFonts.inter(
+                                      fontSize: isSmallScreen ? 12 : 14,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isSmallScreen ? 12 : 16),
+                          // Main KUB8 Balance
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                _getKub8Balance().toStringAsFixed(2),
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 36 : 48,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'KUB8',
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 16 : 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white.withOpacity(0.9),
                                 ),
                               ),
                             ],
                           ),
                           SizedBox(height: isSmallScreen ? 8 : 12),
-                          Text(
-                            '\$${wallet?.totalValue.toStringAsFixed(2) ?? '0.00'}',
-                            style: GoogleFonts.inter(
-                              fontSize: isSmallScreen ? 28 : 36,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(height: isSmallScreen ? 16 : 20),
-                          // Action Buttons
+                          // Secondary balances (SOL and USD)
                           Row(
                             children: [
-                              Expanded(
-                                child: _buildActionButton(
-                                  'Send',
-                                  Icons.arrow_upward,
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const SendTokenScreen()),
-                                  ),
-                                  isSmallScreen,
+                              Text(
+                                '${_getSolBalance().toStringAsFixed(3)} SOL',
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withOpacity(0.7),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildActionButton(
-                                  'Receive',
-                                  Icons.arrow_downward,
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const ReceiveTokenScreen()),
-                                  ),
-                                  isSmallScreen,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildActionButton(
-                                  'Swap',
-                                  Icons.swap_horiz,
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const TokenSwap()),
-                                  ),
-                                  isSmallScreen,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildActionButton(
-                                  'NFTs',
-                                  Icons.image,
-                                  () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const NFTGallery()),
-                                  ),
-                                  isSmallScreen,
+                              const SizedBox(width: 16),
+                              Text(
+                                '≈ \$${wallet.totalValue.toStringAsFixed(2)}',
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 14 : 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.white.withOpacity(0.7),
                                 ),
                               ),
                             ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    SizedBox(height: isSmallScreen ? 16 : 20),
+                    
+                    // Action Buttons (Separated from balance card)
+                    Container(
+                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionButton(
+                              'Send',
+                              Icons.arrow_upward,
+                              const Color(0xFFFF6B6B), // Red for Send
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const SendTokenScreen()),
+                              ),
+                              isSmallScreen,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildActionButton(
+                              'Receive',
+                              Icons.arrow_downward,
+                              const Color(0xFF4ECDC4), // Teal for Receive
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const ReceiveTokenScreen()),
+                              ),
+                              isSmallScreen,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildActionButton(
+                              'Swap',
+                              Icons.swap_horiz,
+                              const Color(0xFF45B7D1), // Blue for Swap
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const TokenSwap()),
+                              ),
+                              isSmallScreen,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildActionButton(
+                              'NFTs',
+                              Icons.image,
+                              const Color(0xFF96CEB4), // Green for NFTs
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const NFTGallery()),
+                              ),
+                              isSmallScreen,
+                            ),
                           ),
                         ],
                       ),
@@ -289,11 +470,12 @@ class _WalletHomeState extends State<WalletHome> {
     );
   }
 
-  Widget _buildActionButton(String title, IconData icon, VoidCallback onPressed, bool isSmallScreen) {
+  Widget _buildActionButton(String title, IconData icon, Color color, VoidCallback onPressed, bool isSmallScreen) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color, width: 1.5),
       ),
       child: Material(
         color: Colors.transparent,
@@ -309,18 +491,20 @@ class _WalletHomeState extends State<WalletHome> {
               children: [
                 Icon(
                   icon,
-                  color: Colors.white,
+                  color: color,
                   size: isSmallScreen ? 20 : 24,
                 ),
                 SizedBox(height: isSmallScreen ? 4 : 8),
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 12 : 14,
-                    fontWeight: FontWeight.w500,
+                    fontSize: isSmallScreen ? 10 : 12,
+                    fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -328,6 +512,19 @@ class _WalletHomeState extends State<WalletHome> {
         ),
       ),
     );
+  }
+
+  // Helper methods to get specific token balances
+  double _getKub8Balance() {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final kub8Tokens = walletProvider.tokens.where((token) => token.symbol.toUpperCase() == 'KUB8');
+    return kub8Tokens.isNotEmpty ? kub8Tokens.first.balance : 0.0;
+  }
+
+  double _getSolBalance() {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final solTokens = walletProvider.tokens.where((token) => token.symbol.toUpperCase() == 'SOL');
+    return solTokens.isNotEmpty ? solTokens.first.balance : 0.0;
   }
 
   Color _getTokenColor(String symbol) {
@@ -499,8 +696,7 @@ class _WalletHomeState extends State<WalletHome> {
       case TransactionType.unstake:
         return Colors.orange;
       case TransactionType.governance_vote:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return const Color(0xFF8B5CF6);
     }
   }
 
@@ -517,8 +713,7 @@ class _WalletHomeState extends State<WalletHome> {
       case TransactionType.unstake:
         return Icons.lock_open;
       case TransactionType.governance_vote:
-        // TODO: Handle this case.
-        throw UnimplementedError();
+        return Icons.how_to_vote;
     }
   }
 

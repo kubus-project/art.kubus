@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../providers/themeprovider.dart';
+import '../providers/config_provider.dart';
 import 'art_detail_screen.dart';
 import 'collection_detail_screen.dart';
 import 'user_profile_screen.dart';
@@ -224,50 +225,198 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildFeedTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: _communityPosts.length,
-      itemBuilder: (context, index) => _buildPostCard(index),
+    return Consumer<ConfigProvider>(
+      builder: (context, config, child) {
+        if (!config.useMockData || _communityPosts.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.feed,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Posts Available',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Community posts will appear here when available',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: _communityPosts.length,
+          itemBuilder: (context, index) => _buildPostCard(index),
+        );
+      },
     );
   }
 
   Widget _buildDiscoverTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildDiscoverCategories(),
-          const SizedBox(height: 24),
-          Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 0.8,
-              ),
-              itemCount: 12,
-              itemBuilder: (context, index) => _buildDiscoverArtCard(index),
+    return Consumer<ConfigProvider>(
+      builder: (context, config, child) {
+        if (!config.useMockData) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.explore,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Artworks to Discover',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Discover new artworks and artists when content is available',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              _buildDiscoverCategories(),
+              const SizedBox(height: 24),
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 0.8,
+                  ),
+                  itemCount: 12,
+                  itemBuilder: (context, index) => _buildDiscoverArtCard(index),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildFollowingTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: 8,
-      itemBuilder: (context, index) => _buildFollowingItem(index),
+    return Consumer<ConfigProvider>(
+      builder: (context, config, child) {
+        if (!config.useMockData) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.people,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Following List',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Follow artists to see their updates here',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: 8,
+          itemBuilder: (context, index) => _buildFollowingItem(index),
+        );
+      },
     );
   }
 
   Widget _buildCollectionsTab() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: 6,
-      itemBuilder: (context, index) => _buildCollectionItem(index),
+    return Consumer<ConfigProvider>(
+      builder: (context, config, child) {
+        if (!config.useMockData) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.collections,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No Collections Available',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[400],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Curated collections will appear here when available',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: 6,
+          itemBuilder: (context, index) => _buildCollectionItem(index),
+        );
+      },
     );
   }
 

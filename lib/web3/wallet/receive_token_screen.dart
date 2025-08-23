@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../config/api_keys.dart';
 
 class ReceiveTokenScreen extends StatefulWidget {
   const ReceiveTokenScreen({super.key});
@@ -17,14 +20,12 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   String _selectedToken = 'KUB8';
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-  
-  final List<Map<String, String>> _tokens = [
-    {'symbol': 'KUB8', 'name': 'art.kubus Token', 'balance': '1,250.00', 'icon': '🎨'},
-    {'symbol': 'SOL', 'name': 'Solana', 'balance': '12.5', 'icon': '☀️'},
-    {'symbol': 'USDC', 'name': 'USD Coin', 'balance': '500.00', 'icon': '💵'},
-  ];
 
-  final String _walletAddress = 'Bm7s9F8zXqJ3rV2kH4nL6pA8dC5eR9tY1mN3vB6xK0w';
+  // Getter for wallet address that uses the provider
+  String get _walletAddress {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    return walletProvider.currentWalletAddress ?? ApiKeys.mockReceiveAddress;
+  }
 
   @override
   void initState() {
@@ -115,8 +116,31 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
         const SizedBox(height: 16),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _tokens.map((token) {
+          child: Consumer<WalletProvider>(
+            builder: (context, walletProvider, child) {
+              final kub8Balance = walletProvider.tokens
+                  .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                  .isNotEmpty 
+                  ? walletProvider.tokens
+                      .where((token) => token.symbol.toUpperCase() == 'KUB8')
+                      .first.balance 
+                  : 0.0;
+              
+              final solBalance = walletProvider.tokens
+                  .where((token) => token.symbol.toUpperCase() == 'SOL')
+                  .isNotEmpty 
+                  ? walletProvider.tokens
+                      .where((token) => token.symbol.toUpperCase() == 'SOL')
+                      .first.balance 
+                  : 0.0;
+
+              final tokens = [
+                {'symbol': 'KUB8', 'name': 'art.kubus Token', 'balance': kub8Balance.toStringAsFixed(2), 'icon': '🎨'},
+                {'symbol': 'SOL', 'name': 'Solana', 'balance': solBalance.toStringAsFixed(3), 'icon': '☀️'},
+              ];
+
+              return Row(
+                children: tokens.map((token) {
               final isSelected = _selectedToken == token['symbol'];
               return Padding(
                 padding: const EdgeInsets.only(right: 12),
@@ -162,6 +186,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 ),
               );
             }).toList(),
+              );
+            },
           ),
         ),
       ],
@@ -187,14 +213,26 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
-                child: Text(
-                  'QR CODE\nWOULD BE\nHERE',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                  ),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: QrImageView(
+                  data: _walletAddress,
+                  version: QrVersions.auto,
+                  size: 184.0,
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                  errorStateBuilder: (cxt, err) {
+                    return const Center(
+                      child: Text(
+                        'QR Error\nGeneration\nFailed',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -245,7 +283,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 ),
               ),
               IconButton(
-                onPressed: _copyAddress,
+                onPressed: () => _copyAddress(_walletAddress),
                 icon: const Icon(
                   Icons.copy,
                   color: Colors.grey,
@@ -277,7 +315,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: _copyAddress,
+              onPressed: () => _copyAddress(_walletAddress),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -428,8 +466,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  void _copyAddress() {
-    Clipboard.setData(ClipboardData(text: _walletAddress));
+  void _copyAddress(String walletAddress) {
+    Clipboard.setData(ClipboardData(text: walletAddress));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Address copied to clipboard'),

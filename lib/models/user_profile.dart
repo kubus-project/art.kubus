@@ -7,6 +7,7 @@ class UserProfile {
   final int followersCount;
   final int followingCount;
   final int artworksCount;
+  final int collectionsCount;
   final bool isFollowing;
   final bool isVerified;
   final DateTime joinDate;
@@ -21,6 +22,7 @@ class UserProfile {
     required this.followersCount,
     required this.followingCount,
     required this.artworksCount,
+    required this.collectionsCount,
     required this.isFollowing,
     required this.isVerified,
     required this.joinDate,
@@ -36,6 +38,7 @@ class UserProfile {
     int? followersCount,
     int? followingCount,
     int? artworksCount,
+    int? collectionsCount,
     bool? isFollowing,
     bool? isVerified,
     DateTime? joinDate,
@@ -50,6 +53,7 @@ class UserProfile {
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       artworksCount: artworksCount ?? this.artworksCount,
+      collectionsCount: collectionsCount ?? this.collectionsCount,
       isFollowing: isFollowing ?? this.isFollowing,
       isVerified: isVerified ?? this.isVerified,
       joinDate: joinDate ?? this.joinDate,
@@ -69,6 +73,7 @@ class UserProfile {
         followersCount: 1250,
         followingCount: 340,
         artworksCount: 45,
+        collectionsCount: 8,
         isFollowing: true,
         isVerified: true,
         joinDate: DateTime(2024, 1, 15),
@@ -83,6 +88,7 @@ class UserProfile {
         followersCount: 890,
         followingCount: 120,
         artworksCount: 32,
+        collectionsCount: 5,
         isFollowing: false,
         isVerified: false,
         joinDate: DateTime(2024, 3, 8),
@@ -97,6 +103,7 @@ class UserProfile {
         followersCount: 2100,
         followingCount: 580,
         artworksCount: 78,
+        collectionsCount: 12,
         isFollowing: true,
         isVerified: true,
         joinDate: DateTime(2023, 11, 22),
@@ -111,6 +118,7 @@ class UserProfile {
         followersCount: 1680,
         followingCount: 290,
         artworksCount: 56,
+        collectionsCount: 9,
         isFollowing: false,
         isVerified: true,
         joinDate: DateTime(2024, 2, 3),
@@ -125,6 +133,7 @@ class UserProfile {
         followersCount: 750,
         followingCount: 200,
         artworksCount: 94,
+        collectionsCount: 15,
         isFollowing: true,
         isVerified: false,
         joinDate: DateTime(2024, 4, 12),

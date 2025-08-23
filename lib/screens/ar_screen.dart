@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
+import '../providers/platform_provider.dart';
 
 class ARScreen extends StatefulWidget {
   const ARScreen({super.key});
@@ -28,7 +29,6 @@ class _ARScreenState extends State<ARScreen>
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
     
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -44,6 +44,17 @@ class _ARScreenState extends State<ARScreen>
     ));
     
     _animationController.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    // Only initialize camera on platforms that support AR
+    final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
+    if (platformProvider.supportsARFeatures && !_isCameraInitialized) {
+      _initializeCamera();
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -75,25 +86,31 @@ class _ARScreenState extends State<ARScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return FadeTransition(
-            opacity: _fadeAnimation,
-            child: Stack(
-              children: [
-                _buildCameraView(),
-                _buildOverlay(),
-                _buildTopBar(),
-                _buildBottomControls(),
-                if (_artworkDetected) _buildArtworkInfo(),
-              ],
-            ),
-          );
-        },
-      ),
+    return Consumer<PlatformProvider>(
+      builder: (context, platformProvider, child) {
+        return Scaffold(
+          backgroundColor: Colors.black,
+          body: AnimatedBuilder(
+            animation: _animationController,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: platformProvider.supportsARFeatures
+                    ? Stack(
+                        children: [
+                          _buildCameraView(),
+                          _buildOverlay(),
+                          _buildTopBar(),
+                          _buildBottomControls(),
+                          if (_artworkDetected) _buildArtworkInfo(),
+                        ],
+                      )
+                    : _buildUnsupportedPlatform(platformProvider),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -605,6 +622,82 @@ class _ARScreenState extends State<ARScreen>
         });
       }
     });
+  }
+
+  Widget _buildUnsupportedPlatform(PlatformProvider platformProvider) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              platformProvider.getARIcon(),
+              size: 80,
+              color: platformProvider.getUnsupportedFeatureColor(context),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'AR Features Not Available',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              platformProvider.getUnsupportedFeatureMessage('AR functionality'),
+              style: GoogleFonts.inter(
+                color: Colors.grey[400],
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            Text(
+              'Available AR features:',
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Column(
+              children: [
+                _buildFeatureItem('📱', 'Scan QR codes to view artwork information'),
+                _buildFeatureItem('🎨', 'Browse digital art collections'),
+                _buildFeatureItem('💎', 'View NFT metadata and details'),
+                _buildFeatureItem('🔗', 'Connect with artists and collectors'),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureItem(String icon, String description) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              description,
+              style: GoogleFonts.inter(
+                color: Colors.grey[300],
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/web3provider.dart';
+import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
 import '../config/config.dart';
 import 'wallet/wallet_home.dart';
@@ -173,7 +174,7 @@ class _Web3DashboardState extends State<Web3Dashboard>
           _buildAnalyticsCard(
             context,
             'Portfolio Value',
-            web3Provider.isConnected ? '\$${_calculatePortfolioValue()}' : '--',
+            web3Provider.isConnected || AppConfig.useMockData ? '\$${_calculatePortfolioValue()}' : '--',
             Icons.account_balance,
             Colors.green,
           ),
@@ -269,16 +270,29 @@ class _Web3DashboardState extends State<Web3Dashboard>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Wallet Info'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Address: ${web3Provider.walletAddress}'),
-            const SizedBox(height: 8),
-            Text('Balance: ${web3Provider.solBalance} SOL'),
-            const SizedBox(height: 8),
-            Text('Network: ${_getCurrentNetwork()}'),
-          ],
+        content: Consumer<WalletProvider>(
+          builder: (context, walletProvider, child) {
+            // Get SOL balance
+            final solBalance = walletProvider.tokens
+                .where((token) => token.symbol.toUpperCase() == 'SOL')
+                .isNotEmpty 
+                ? walletProvider.tokens
+                    .where((token) => token.symbol.toUpperCase() == 'SOL')
+                    .first.balance 
+                : 0.0;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Address: ${web3Provider.walletAddress}'),
+                const SizedBox(height: 8),
+                Text('Balance: ${solBalance.toStringAsFixed(3)} SOL'),
+                const SizedBox(height: 8),
+                Text('Network: ${_getCurrentNetwork()}'),
+              ],
+            );
+          },
         ),
         actions: [
           TextButton(
@@ -301,8 +315,32 @@ class _Web3DashboardState extends State<Web3Dashboard>
   }
 
   String _calculatePortfolioValue() {
-    if (AppConfig.useMockData) {
-      return '2,450.75';
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    
+    if (AppConfig.useMockData || web3Provider.isConnected) {
+      // Get KUB8 balance
+      final kub8Balance = walletProvider.tokens
+          .where((token) => token.symbol.toUpperCase() == 'KUB8')
+          .isNotEmpty 
+          ? walletProvider.tokens
+              .where((token) => token.symbol.toUpperCase() == 'KUB8')
+              .first.balance 
+          : 0.0;
+      
+      // Get SOL balance  
+      final solBalance = walletProvider.tokens
+          .where((token) => token.symbol.toUpperCase() == 'SOL')
+          .isNotEmpty 
+          ? walletProvider.tokens
+              .where((token) => token.symbol.toUpperCase() == 'SOL')
+              .first.balance 
+          : 0.0;
+
+      // Calculate based on KUB8 and SOL balances like in wallet_home
+      final kub8Value = kub8Balance * 1.0; // 1 KUB8 = $1 USD
+      final solValue = solBalance * 20.0; // 1 SOL = $20 USD (mock rate)
+      return (kub8Value + solValue).toStringAsFixed(2);
     }
     return '0.00';
   }

@@ -6,35 +6,59 @@ class NFTGallery extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFF0A0A0A),
-      child: GridView.builder(
-        padding: const EdgeInsets.all(24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.8,
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF121212),
+        elevation: 0,
+        title: Text(
+          'NFT Gallery',
+          style: GoogleFonts.inter(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        itemCount: 8,
-        itemBuilder: (context, index) {
-          return _buildNFTCard(index);
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          int crossAxisCount = constraints.maxWidth < 600 ? 2 : 3;
+          double childAspectRatio = constraints.maxWidth < 600 ? 0.75 : 0.8;
+          
+          return GridView.builder(
+            padding: EdgeInsets.all(constraints.maxWidth < 600 ? 16 : 24),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: childAspectRatio,
+            ),
+            itemCount: 8,
+            itemBuilder: (context, index) {
+              return _buildNFTCard(index, constraints.maxWidth < 600);
+            },
+          );
         },
       ),
     );
   }
 
-  Widget _buildNFTCard(int index) {
+  Widget _buildNFTCard(int index, bool isSmallScreen) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
+            flex: 3,
             child: Container(
               width: double.infinity,
               decoration: BoxDecoration(
@@ -42,60 +66,79 @@ class NFTGallery extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF6C63FF).withOpacity(0.3),
-                    const Color(0xFF4CAF50).withOpacity(0.3),
+                    const Color(0xFF8B5CF6).withOpacity(0.4),
+                    const Color(0xFF7C3AED).withOpacity(0.4),
                   ],
                 ),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: const Icon(
-                Icons.image,
-                color: Colors.white,
-                size: 48,
+              child: const Center(
+                child: Icon(
+                  Icons.image,
+                  color: Colors.white,
+                  size: 48,
+                ),
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AR Art #${index + 1}',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+          Expanded(
+            flex: 2,
+            child: Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'AR Art #${index + 1}',
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'art.kubus',
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Collection: art.kubus',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.grey[400],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '${(index + 1) * 0.1} KUB8',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF6C63FF),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${(index + 1) * 0.1} KUB8',
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF8B5CF6),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                    Icon(
-                      Icons.more_vert,
-                      color: Colors.grey[400],
-                      size: 16,
-                    ),
-                  ],
-                ),
-              ],
+                      Icon(
+                        Icons.more_vert,
+                        color: Colors.white.withOpacity(0.7),
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],

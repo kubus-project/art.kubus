@@ -20,8 +20,30 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   ThemeMode get themeMode => _themeMode;
   Color get accentColor => _accentColor;
   bool get isInitialized => _isInitialized;
-  bool get isDarkMode => _themeMode == ThemeMode.dark;
-  bool get isLightMode => _themeMode == ThemeMode.light;
+  
+  // Enhanced theme detection that properly handles system mode
+  bool get isDarkMode {
+    switch (_themeMode) {
+      case ThemeMode.dark:
+        return true;
+      case ThemeMode.light:
+        return false;
+      case ThemeMode.system:
+        return PlatformDispatcher.instance.platformBrightness == Brightness.dark;
+    }
+  }
+  
+  bool get isLightMode {
+    switch (_themeMode) {
+      case ThemeMode.light:
+        return true;
+      case ThemeMode.dark:
+        return false;
+      case ThemeMode.system:
+        return PlatformDispatcher.instance.platformBrightness == Brightness.light;
+    }
+  }
+  
   bool get isSystemMode => _themeMode == ThemeMode.system;
 
   // Available accent colors

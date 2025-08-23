@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
+import '../providers/config_provider.dart';
+import '../providers/profile_provider.dart';
 import '../screens/welcome_intro_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
@@ -20,6 +23,17 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Future<void> _initializeApp() async {
+    // Initialize ConfigProvider first
+    final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+    await configProvider.initialize();
+    
+    // Initialize ProfileProvider
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    await profileProvider.initialize();
+    
+    // Connect ProfileProvider to ConfigProvider for mock data sync
+    profileProvider.setUseMockData(configProvider.useMockData);
+    
     final prefs = await SharedPreferences.getInstance();
     
     // Check if it's the first time opening the app
