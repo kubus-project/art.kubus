@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
-import '../providers/web3provider.dart';
 import 'wallet_creation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {

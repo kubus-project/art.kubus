@@ -3,9 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
+import '../providers/artwork_provider.dart';
 import '../web3/wallet.dart';
 import '../web3/achievements/achievements_page.dart';
 import 'settings_screen.dart';
+import 'art_detail_screen.dart';
+import 'collection_detail_screen.dart';
+import 'user_profile_screen.dart';
+import '../models/user_profile.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   late Animation<Offset> _slideAnimation;
   
   late TabController _tabController;
-  final List<String> _tabs = ['Portfolio', 'Collections', 'Activity', 'Stats'];
+  final List<String> _tabs = ['Activity', 'Stats'];
 
   @override
   void initState() {
@@ -80,15 +85,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     _buildProfileHeader(),
                     _buildStatsSection(),
                     _buildTabBar(),
-                    SliverFillRemaining(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _buildPortfolioTab(),
-                          _buildCollectionsTab(),
-                          _buildActivityTab(),
-                          _buildStatsTab(),
-                        ],
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildActivityTab(),
+                            _buildStatsTab(),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -106,182 +112,247 @@ class _ProfileScreenState extends State<ProfileScreen>
     final web3Provider = Provider.of<Web3Provider>(context);
     
     return SliverToBoxAdapter(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 375;
+          bool isVerySmallScreen = constraints.maxWidth < 320;
+          
+          return Container(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            child: Column(
               children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        'Profile',
+                        style: GoogleFonts.inter(
+                          fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 26 : 28,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            _shareProfile();
+                          },
+                          icon: Icon(
+                            Icons.share,
+                            color: themeProvider.accentColor,
+                            size: isSmallScreen ? 22 : 24,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                            );
+                          },
+                          icon: Icon(
+                            Icons.settings,
+                            color: themeProvider.accentColor,
+                            size: isSmallScreen ? 22 : 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                SizedBox(height: isSmallScreen ? 24 : 32),
+                Container(
+                  width: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
+                  height: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        themeProvider.accentColor,
+                        themeProvider.accentColor.withValues(alpha: 0.7),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60),
+                    boxShadow: [
+                      BoxShadow(
+                        color: themeProvider.accentColor.withValues(alpha: 0.3),
+                        blurRadius: isSmallScreen ? 15 : 20,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 16 : 20),
                 Text(
-                  'Profile',
+                  'Anonymous Artist',
                   style: GoogleFonts.inter(
-                    fontSize: 28,
+                    fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 22 : 24,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () {
-                        _shareProfile();
-                      },
-                      icon: Icon(
-                        Icons.share,
-                        color: themeProvider.accentColor,
-                        size: 24,
+                SizedBox(height: isSmallScreen ? 6 : 8),
+                if (web3Provider.isConnected) ...[
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 12 : 16, 
+                      vertical: isSmallScreen ? 6 : 8
+                    ),
+                    decoration: BoxDecoration(
+                      color: themeProvider.accentColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: themeProvider.accentColor.withOpacity(0.3),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                        );
-                      },
-                      icon: Icon(
-                        Icons.settings,
+                    child: Text(
+                      web3Provider.formatAddress(web3Provider.walletAddress),
+                      style: GoogleFonts.robotoMono(
+                        fontSize: isSmallScreen ? 12 : 14,
+                        fontWeight: FontWeight.w600,
                         color: themeProvider.accentColor,
-                        size: 24,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    themeProvider.accentColor,
-                    themeProvider.accentColor.withOpacity(0.7),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(60),
-                boxShadow: [
-                  BoxShadow(
-                    color: themeProvider.accentColor.withOpacity(0.3),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 10),
+                  ),
+                ] else ...[
+                  Text(
+                    'Connect wallet to see profile',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
                 ],
-              ),
-              child: const Icon(
-                Icons.person,
-                color: Colors.white,
-                size: 60,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'Anonymous Artist',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (web3Provider.isConnected) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: themeProvider.accentColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: themeProvider.accentColor.withOpacity(0.3),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                Text(
+                  'Digital artist exploring the intersection of AR, blockchain, and creativity. Creating immersive experiences that blur the line between digital and physical worlds.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
+                    height: 1.5,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                   ),
+                  maxLines: isSmallScreen ? 3 : 4,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Text(
-                  web3Provider.formatAddress(web3Provider.walletAddress),
-                  style: GoogleFonts.robotoMono(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              ),
-            ] else ...[
-              Text(
-                'Connect wallet to see profile',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-            const SizedBox(height: 16),
-            Flexible(
-              child: Text(
-                'Digital artist exploring the intersection of AR, blockchain, and creativity. Creating immersive experiences that blur the line between digital and physical worlds.',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  height: 1.5,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-                ),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(height: 24),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                return Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _editProfile();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeProvider.accentColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
+                SizedBox(height: isSmallScreen ? 20 : 24),
+                isSmallScreen 
+                  ? Column(
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _editProfile();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: themeProvider.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(vertical: isVerySmallScreen ? 14 : 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Edit Profile',
+                              style: GoogleFonts.inter(
+                                fontSize: isVerySmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: themeProvider.accentColor,
+                            ),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        child: Text(
-                          'Edit Profile',
-                          style: GoogleFonts.inter(
-                            fontSize: constraints.maxWidth > 350 ? 16 : 14,
-                            fontWeight: FontWeight.w600,
+                          child: TextButton(
+                            onPressed: () {
+                              _showMoreOptions();
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: isVerySmallScreen ? 14 : 16),
+                            ),
+                            child: Text(
+                              'More Options',
+                              style: GoogleFonts.inter(
+                                fontSize: isVerySmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.w600,
+                                color: themeProvider.accentColor,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                          color: themeProvider.accentColor,
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _editProfile();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: themeProvider.accentColor,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Edit Profile',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          _showMoreOptions();
-                        },
-                        icon: Icon(
-                          Icons.more_horiz,
-                          color: themeProvider.accentColor,
+                        const SizedBox(width: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: themeProvider.accentColor,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: IconButton(
+                            onPressed: () {
+                              _showMoreOptions();
+                            },
+                            icon: Icon(
+                              Icons.more_horiz,
+                              color: themeProvider.accentColor,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                );
-              },
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -290,90 +361,168 @@ class _ProfileScreenState extends State<ProfileScreen>
     final web3Provider = Provider.of<Web3Provider>(context);
     
     return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
-          ),
-        ),
-        child: Column(
-          children: [
-            if (web3Provider.isConnected) ...[
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: _buildBalanceCard(
-                          'KUB8 Balance',
-                          web3Provider.kub8Balance.toStringAsFixed(2),
-                          Icons.currency_bitcoin,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildBalanceCard(
-                          'SOL Balance',
-                          web3Provider.solBalance.toStringAsFixed(3),
-                          Icons.account_balance_wallet,
-                        ),
-                      ),
-                    ],
-                  );
-                },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 375;
+          
+          return Container(
+            margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline,
               ),
-              const SizedBox(height: 20),
-            ],
-            LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 600) {
-                  // Mobile layout - 2x2 grid
-                  return Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(child: _buildStatCard('Artworks', '12', Icons.palette)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildStatCard('Collections', '5', Icons.collections)),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(child: _buildStatCard('Followers', '234', Icons.people)),
-                          const SizedBox(width: 16),
-                          Expanded(child: _buildStatCard('Following', '89', Icons.person_add)),
-                        ],
-                      ),
-                    ],
-                  );
-                } else {
-                  // Desktop layout - single row
-                  return Row(
-                    children: [
-                      Expanded(child: _buildStatCard('Artworks', '12', Icons.palette)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildStatCard('Collections', '5', Icons.collections)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildStatCard('Followers', '234', Icons.people)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildStatCard('Following', '89', Icons.person_add)),
-                    ],
-                  );
-                }
-              },
             ),
-          ],
-        ),
+            child: Column(
+              children: [
+                if (web3Provider.isConnected) ...[
+                  isSmallScreen
+                    ? Column(
+                        children: [
+                          _buildBalanceCard(
+                            'KUB8 Balance',
+                            web3Provider.kub8Balance.toStringAsFixed(2),
+                            Icons.currency_bitcoin,
+                            isSmallScreen: isSmallScreen,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildBalanceCard(
+                            'SOL Balance',
+                            web3Provider.solBalance.toStringAsFixed(3),
+                            Icons.account_balance_wallet,
+                            isSmallScreen: isSmallScreen,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: _buildBalanceCard(
+                              'KUB8 Balance',
+                              web3Provider.kub8Balance.toStringAsFixed(2),
+                              Icons.currency_bitcoin,
+                              isSmallScreen: isSmallScreen,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _buildBalanceCard(
+                              'SOL Balance',
+                              web3Provider.solBalance.toStringAsFixed(3),
+                              Icons.account_balance_wallet,
+                              isSmallScreen: isSmallScreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                  SizedBox(height: isSmallScreen ? 16 : 20),
+                ],
+                isSmallScreen
+                  ? Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                'Artworks',
+                                '24',
+                                Icons.palette,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showArtworks(),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                'Collections',
+                                '8',
+                                Icons.collections,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showCollections(),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildStatCard(
+                                'Followers',
+                                '2.1K',
+                                Icons.people,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showFollowers(),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildStatCard(
+                                'Following',
+                                '186',
+                                Icons.person_add,
+                                isSmallScreen: isSmallScreen,
+                                onTap: () => _showFollowing(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Artworks',
+                            '24',
+                            Icons.palette,
+                            isSmallScreen: isSmallScreen,
+                            onTap: () => _showArtworks(),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Collections',
+                            '8',
+                            Icons.collections,
+                            isSmallScreen: isSmallScreen,
+                            onTap: () => _showCollections(),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Followers',
+                            '2.1K',
+                            Icons.people,
+                            isSmallScreen: isSmallScreen,
+                            onTap: () => _showFollowers(),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Following',
+                            '186',
+                            Icons.person_add,
+                            isSmallScreen: isSmallScreen,
+                            onTap: () => _showFollowing(),
+                          ),
+                        ),
+                      ],
+                    ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBalanceCard(String title, String value, IconData icon) {
+  Widget _buildBalanceCard(String title, String value, IconData icon, {bool isSmallScreen = false}) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return GestureDetector(
@@ -384,10 +533,10 @@ class _ProfileScreenState extends State<ProfileScreen>
         );
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
           color: themeProvider.accentColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
           border: Border.all(
             color: themeProvider.accentColor.withOpacity(0.3),
           ),
@@ -397,13 +546,13 @@ class _ProfileScreenState extends State<ProfileScreen>
             Icon(
               icon,
               color: themeProvider.accentColor,
-              size: 24,
+              size: isSmallScreen ? 20 : 24,
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
             Text(
               value,
               style: GoogleFonts.inter(
-                fontSize: 18,
+                fontSize: isSmallScreen ? 16 : 18,
                 fontWeight: FontWeight.bold,
                 color: themeProvider.accentColor,
               ),
@@ -411,8 +560,183 @@ class _ProfileScreenState extends State<ProfileScreen>
             Text(
               title,
               style: GoogleFonts.inter(
-                fontSize: 12,
+                fontSize: isSmallScreen ? 8 : 10,
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, {bool isSmallScreen = false, VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: Provider.of<ThemeProvider>(context).accentColor,
+              size: isSmallScreen ? 16 : 18,
+            ),
+            SizedBox(height: isSmallScreen ? 4 : 6),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 10 : 12,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 7 : 8,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showArtworks() {
+    // Show artworks in a modal bottom sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Consumer<ArtworkProvider>(
+        builder: (context, artworkProvider, child) {
+          final userArtworks = artworkProvider.userArtworks;
+          
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.8,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'My Artworks (${userArtworks.length})',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: userArtworks.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.image_not_supported,
+                              size: 64,
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No artworks yet',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Start creating to see your artworks here',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          bool isSmallScreen = constraints.maxWidth < 375;
+                          int crossAxisCount = isSmallScreen ? 2 : 3;
+                          
+                          return GridView.builder(
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
+                              childAspectRatio: 0.8,
+                            ),
+                            itemCount: userArtworks.length,
+                            itemBuilder: (context, index) => _buildArtworkGridItem(userArtworks[index], index),
+                          );
+                        },
+                      ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showCollections() {
+    // Show collections in a modal bottom sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'My Collections (8)',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: 8,
+                itemBuilder: (context, index) => _buildCollectionListItem(index),
               ),
             ),
           ],
@@ -421,127 +745,238 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+  void _showFollowers() {
+    // Show followers list
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              'Followers (2.1K)',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: 10,
+                itemBuilder: (context, index) => ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+                    child: Text('U${index + 1}'),
+                  ),
+                  title: Text('User ${index + 1}'),
+                  subtitle: Text('@user${index + 1}'),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: Provider.of<ThemeProvider>(context).accentColor,
-            size: 20,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+    );
+  }
+
+  void _showFollowing() {
+    final followingUsers = UserProfile.getSampleUsers().where((user) => user.isFollowing).toList();
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-          ),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            const SizedBox(height: 16),
+            Text(
+              'Following (${followingUsers.length})',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                itemCount: followingUsers.length,
+                itemBuilder: (context, index) {
+                  final user = followingUsers[index];
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UserProfileScreen(
+                              userId: user.id,
+                              username: user.username,
+                            ),
+                          ),
+                        );
+                      },
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      leading: Container(
+                        width: 50,
+                        height: 50,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Provider.of<ThemeProvider>(context).accentColor,
+                              Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.7),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            user.name,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          if (user.isVerified) ...[
+                            const SizedBox(width: 4),
+                            Icon(
+                              Icons.verified,
+                              size: 16,
+                              color: Provider.of<ThemeProvider>(context).accentColor,
+                            ),
+                          ],
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.username,
+                            style: GoogleFonts.inter(
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                          if (user.badges.isNotEmpty)
+                            Text(
+                              user.badges.join(' • '),
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Provider.of<ThemeProvider>(context).accentColor,
+                              ),
+                            ),
+                        ],
+                      ),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Provider.of<ThemeProvider>(context).accentColor,
+                          ),
+                        ),
+                        child: Text(
+                          'Following',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Provider.of<ThemeProvider>(context).accentColor,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildTabBar() {
     return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: TabBar(
-          controller: _tabController,
-          tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-          labelColor: Provider.of<ThemeProvider>(context).accentColor,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          indicatorColor: Provider.of<ThemeProvider>(context).accentColor,
-          indicatorSize: TabBarIndicatorSize.tab,
-          dividerHeight: 0,
-        ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 375;
+          
+          return Container(
+            margin: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 16),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: isSmallScreen,
+              tabAlignment: isSmallScreen ? TabAlignment.start : TabAlignment.fill,
+              tabs: _tabs.map((tab) => Tab(
+                child: Text(
+                  tab,
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 10 : 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              )).toList(),
+              labelColor: Provider.of<ThemeProvider>(context).accentColor,
+              unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              indicatorColor: Provider.of<ThemeProvider>(context).accentColor,
+              indicatorSize: TabBarIndicatorSize.tab,
+              dividerHeight: 0,
+              labelPadding: isSmallScreen 
+                ? const EdgeInsets.symmetric(horizontal: 8) 
+                : null,
+            ),
+          );
+        },
       ),
     );
   }
-
-  Widget _buildPortfolioTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: 12,
-        itemBuilder: (context, index) => _buildArtworkCard(index),
-      ),
-    );
-  }
-
-  Widget _buildCollectionsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: ListView.builder(
-        itemCount: 5,
-        itemBuilder: (context, index) => _buildCollectionCard(index),
-      ),
-    );
-  }
-
-  Widget _buildActivityTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: ListView.builder(
-        itemCount: 15,
-        itemBuilder: (context, index) => _buildActivityItem(index),
-      ),
-    );
-  }
-
-  Widget _buildStatsTab() {
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildAchievementsSection(),
-          const SizedBox(height: 24),
-          _buildPerformanceStats(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildArtworkCard(int index) {
+  
+  Widget _buildArtworkGridItem(dynamic artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return GestureDetector(
-      onTap: () => _viewArtwork(index),
+      onTap: () => _openArtworkDetails(artwork),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline,
+          ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: Container(
@@ -552,43 +987,37 @@ class _ProfileScreenState extends State<ProfileScreen>
                       themeProvider.accentColor.withOpacity(0.1),
                     ],
                   ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 ),
                 child: const Center(
-                  child: Icon(Icons.view_in_ar, color: Colors.white, size: 40),
+                  child: Icon(Icons.view_in_ar, color: Colors.white, size: 32),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'My Artwork #${index + 1}',
+                    artwork?.title ?? 'Artwork #${index + 1}',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${(index + 1) * 5} views',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                      ),
-                      Icon(
-                        Icons.favorite,
-                        size: 16,
-                        color: Colors.red.withOpacity(0.7),
-                      ),
-                    ],
+                  Text(
+                    artwork?.artist ?? 'Unknown Artist',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -599,66 +1028,122 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildCollectionCard(int index) {
-    final collections = ['Digital Dreams', 'Urban AR', 'Nature Spirits', 'Tech Fusion', 'Abstract Reality'];
+  Widget _buildCollectionListItem(int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  themeProvider.accentColor.withOpacity(0.3),
-                  themeProvider.accentColor.withOpacity(0.1),
+    return GestureDetector(
+      onTap: () => _openCollectionDetails(index),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeProvider.accentColor.withOpacity(0.3),
+                    themeProvider.accentColor.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.collections, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Collection ${index + 1}',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Text(
+                    '${3 + index} artworks',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.collections, color: Colors.white, size: 30),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  collections[index],
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${(index + 1) * 3} items • Created ${DateTime.now().subtract(Duration(days: index * 10)).year}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: () => _viewCollection(index),
-            icon: Icon(
+            Icon(
               Icons.arrow_forward_ios,
               size: 16,
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openArtworkDetails(int index) {
+    // Create artwork data for the existing ArtDetailScreen
+    final artData = {
+      'title': 'Artwork #${index + 1}',
+      'artist': 'You',
+      'type': 'Digital Sculpture',
+      'rarity': ['Common', 'Rare', 'Epic', 'Legendary'][index % 4],
+      'discovered': true,
+    };
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ArtDetailScreen(artworkId: artData['id']?.toString() ?? ''),
+      ),
+    );
+  }
+
+  void _openCollectionDetails(int index) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CollectionDetailScreen(collectionIndex: index),
+      ),
+    );
+  }
+  
+  Widget _buildActivityTab() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        bool isSmallScreen = constraints.maxWidth < 375;
+        
+        return Padding(
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+          child: ListView.builder(
+            itemCount: 15,
+            itemBuilder: (context, index) => _buildActivityItem(index),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatsTab() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          _buildAchievementsSection(),
+          const SizedBox(height: 24),
+          _buildPerformanceStats(),
         ],
       ),
     );
@@ -1081,16 +1566,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
       onTap: onTap,
     );
-  }
-
-  void _viewArtwork(int index) {
-    // Navigate to artwork detail screen
-    Navigator.pushNamed(context, '/artwork-detail', arguments: index);
-  }
-
-  void _viewCollection(int index) {
-    // Navigate to collection detail screen
-    Navigator.pushNamed(context, '/collection-detail', arguments: index);
   }
 }
 

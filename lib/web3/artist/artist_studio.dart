@@ -61,10 +61,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
         title: Text(
           'Artist Studio',
           style: GoogleFonts.inter(
-            fontSize: 24,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
+          overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
@@ -77,20 +78,28 @@ class _ArtistStudioState extends State<ArtistStudio> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _buildStudioHeader(),
-          _buildNavigationTabs(),
-          Expanded(child: _pages[_selectedIndex]),
-        ],
+      body: NestedScrollView(
+        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+          return [
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  _buildStudioHeader(),
+                  _buildNavigationTabs(),
+                ],
+              ),
+            ),
+          ];
+        },
+        body: _pages[_selectedIndex],
       ),
     );
   }
 
   Widget _buildStudioHeader() {
     return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -102,16 +111,16 @@ class _ArtistStudioState extends State<ArtistStudio> {
       child: Row(
         children: [
           Container(
-            width: 60,
-            height: 60,
+            width: 50,
+            height: 50,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(25),
             ),
             child: const Icon(
               Icons.palette,
               color: Colors.white,
-              size: 30,
+              size: 26,
             ),
           ),
           const SizedBox(width: 16),
@@ -122,7 +131,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 Text(
                   'Welcome to your Studio',
                   style: GoogleFonts.inter(
-                    fontSize: 18,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
@@ -131,9 +140,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 Text(
                   'Create AR markers for your artwork and share them with the world',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: Colors.white.withOpacity(0.8),
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -145,16 +156,16 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
   Widget _buildNavigationTabs() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          _buildTabButton('Gallery', Icons.collections, 0),
-          _buildTabButton('Create', Icons.add_circle_outline, 1),
-          _buildTabButton('Analytics', Icons.analytics, 2),
+          Expanded(child: _buildTabButton('Gallery', Icons.collections, 0)),
+          Expanded(child: _buildTabButton('Create', Icons.add_circle_outline, 1)),
+          Expanded(child: _buildTabButton('Analytics', Icons.analytics, 2)),
         ],
       ),
     );
@@ -162,33 +173,35 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
   Widget _buildTabButton(String label, IconData icon, int index) {
     final isSelected = _selectedIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _selectedIndex = index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF6C63FF) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
+    return GestureDetector(
+      onTap: () => setState(() => _selectedIndex = index),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF6C63FF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? Colors.white : Colors.grey[400],
+              size: 20,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
                 color: isSelected ? Colors.white : Colors.grey[400],
-                size: 24,
               ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: isSelected ? Colors.white : Colors.grey[400],
-                ),
-              ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
       ),
     );

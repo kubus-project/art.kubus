@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/institution_provider.dart';
 
 class InstitutionAnalytics extends StatefulWidget {
   const InstitutionAnalytics({super.key});
@@ -47,23 +48,23 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       opacity: _fadeAnimation,
       child: Container(
         color: const Color(0xFF0A0A0A),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildHeader(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildPeriodSelector(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildStatsOverview(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildVisitorAnalytics(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildEventPerformance(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildRevenueAnalytics(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               _buildArtworkAnalytics(),
             ],
           ),
@@ -73,39 +74,35 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Institution Analytics',
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Track your institution\'s performance and engagement',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
+        Text(
+          'Institution Analytics',
+          style: GoogleFonts.inter(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Track your institution\'s performance and engagement',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(height: 12),
         Row(
           children: [
             IconButton(
               onPressed: () => _showExportDialog(),
-              icon: const Icon(Icons.download, color: Colors.white),
+              icon: const Icon(Icons.download, color: Colors.white, size: 20),
             ),
             IconButton(
               onPressed: () => _showSettingsDialog(),
-              icon: const Icon(Icons.settings, color: Colors.white),
+              icon: const Icon(Icons.settings, color: Colors.white, size: 20),
             ),
           ],
         ),
@@ -117,7 +114,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     final periods = ['This Week', 'This Month', 'This Quarter', 'This Year'];
     
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -129,33 +126,42 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           Text(
             'Time Period',
             style: GoogleFonts.inter(
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: periods.map((period) {
-              final isSelected = _selectedPeriod == period;
-              return FilterChip(
-                selected: isSelected,
-                label: Text(
-                  period,
-                  style: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white,
-                  ),
-                ),
-                backgroundColor: Colors.transparent,
-                selectedColor: Provider.of<ThemeProvider>(context).accentColor,
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedPeriod = period;
-                  });
-                },
-              );
-            }).toList(),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            value: _selectedPeriod,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            dropdownColor: const Color(0xFF1A1A1A),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white,
+            ),
+            items: periods.map((period) => DropdownMenuItem<String>(
+              value: period,
+              child: Text(period),
+            )).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedPeriod = value;
+                });
+              }
+            },
           ),
         ],
       ),
@@ -163,41 +169,87 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildStatsOverview() {
-    final stats = [
-      {'title': 'Total Visitors', 'value': '12,450', 'change': '+15.3%', 'positive': true},
-      {'title': 'Active Events', 'value': '8', 'change': '+2', 'positive': true},
-      {'title': 'Artwork Views', 'value': '45.2k', 'change': '+22.1%', 'positive': true},
-      {'title': 'Revenue', 'value': '\$18.5k', 'change': '+8.7%', 'positive': true},
-    ];
+    return Consumer<InstitutionProvider>(
+      builder: (context, institutionProvider, child) {
+        if (institutionProvider.institutions.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        // Get analytics data from the provider
+        final institution = institutionProvider.institutions.first;
+        final analytics = institutionProvider.getInstitutionAnalytics(institution.id);
+        
+        final stats = [
+          {
+            'title': 'Total Visitors',
+            'value': '${analytics['totalVisitors'] ?? 0}',
+            'change': '+${analytics['visitorGrowth']?.toStringAsFixed(1) ?? '0.0'}%',
+            'positive': (analytics['visitorGrowth'] ?? 0) >= 0
+          },
+          {
+            'title': 'Active Events',
+            'value': '${analytics['activeEvents'] ?? 0}',
+            'change': '+${analytics['activeEventsCount'] ?? 0}',
+            'positive': true
+          },
+          {
+            'title': 'Artwork Views',
+            'value': _formatNumber(analytics['artworkViews'] ?? 0),
+            'change': '+${analytics['revenueGrowth']?.toStringAsFixed(1) ?? '0.0'}%',
+            'positive': (analytics['revenueGrowth'] ?? 0) >= 0
+          },
+          {
+            'title': 'Revenue',
+            'value': '\$${_formatRevenue(analytics['revenue'] ?? 0)}',
+            'change': '+${analytics['revenueGrowth']?.toStringAsFixed(1) ?? '0.0'}%',
+            'positive': (analytics['revenueGrowth'] ?? 0) >= 0
+          },
+        ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Overview',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 1.5,
-          children: stats.map((stat) => _buildStatCard(stat)).toList(),
-        ),
-      ],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Overview',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1.3,
+              children: stats.map((stat) => _buildStatCard(stat)).toList(),
+            ),
+          ],
+        );
+      },
     );
+  }
+
+  String _formatNumber(int number) {
+    if (number >= 1000) {
+      return '${(number / 1000).toStringAsFixed(1)}k';
+    }
+    return number.toString();
+  }
+
+  String _formatRevenue(double revenue) {
+    if (revenue >= 1000) {
+      return '${(revenue / 1000).toStringAsFixed(1)}k';
+    }
+    return revenue.toStringAsFixed(0);
   }
 
   Widget _buildStatCard(Map<String, dynamic> stat) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -206,40 +258,53 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            stat['title'],
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            stat['value'],
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          Flexible(
+            child: Text(
+              stat['title'],
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
           const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(
-                stat['positive'] ? Icons.trending_up : Icons.trending_down,
-                color: stat['positive'] ? Colors.green : Colors.red,
-                size: 16,
+          Flexible(
+            child: Text(
+              stat['value'],
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
-              const SizedBox(width: 4),
-              Text(
-                stat['change'],
-                style: GoogleFonts.inter(
-                  fontSize: 12,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Flexible(
+            child: Row(
+              children: [
+                Icon(
+                  stat['positive'] ? Icons.trending_up : Icons.trending_down,
                   color: stat['positive'] ? Colors.green : Colors.red,
-                  fontWeight: FontWeight.w600,
+                  size: 14,
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    stat['change'],
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: stat['positive'] ? Colors.green : Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -248,7 +313,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
 
   Widget _buildVisitorAnalytics() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
@@ -288,7 +353,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     final data = [120, 180, 150, 200, 160, 220, 180];
     final maxValue = data.reduce((a, b) => a > b ? a : b);
     
-    return Container(
+    return SizedBox(
       height: 120,
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -456,7 +521,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 ),
               ],
             ),
-          )).toList(),
+          )),
         ],
       ),
     );

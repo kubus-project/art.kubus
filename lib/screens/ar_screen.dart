@@ -16,7 +16,6 @@ class _ARScreenState extends State<ARScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
   
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
@@ -42,14 +41,6 @@ class _ARScreenState extends State<ARScreen>
     ).animate(CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
     ));
     
     _animationController.forward();
@@ -91,17 +82,14 @@ class _ARScreenState extends State<ARScreen>
         builder: (context, child) {
           return FadeTransition(
             opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: Stack(
-                children: [
-                  _buildCameraView(),
-                  _buildOverlay(),
-                  _buildTopBar(),
-                  _buildBottomControls(),
-                  if (_artworkDetected) _buildArtworkInfo(),
-                ],
-              ),
+            child: Stack(
+              children: [
+                _buildCameraView(),
+                _buildOverlay(),
+                _buildTopBar(),
+                _buildBottomControls(),
+                if (_artworkDetected) _buildArtworkInfo(),
+              ],
             ),
           );
         },

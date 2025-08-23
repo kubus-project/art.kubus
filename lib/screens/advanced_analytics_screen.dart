@@ -635,7 +635,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         children: [
           Row(
             children: [
-              Icon(Icons.psychology, color: Colors.purple, size: 24),
+              const Icon(Icons.psychology, color: Colors.purple, size: 24),
               const SizedBox(width: 8),
               Text(
                 'AI Insights',

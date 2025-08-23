@@ -129,42 +129,39 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your Gallery',
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                '${_artworks.length} artworks',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
-                ),
-              ),
-            ],
+          Text(
+            'Your Gallery',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
+          const SizedBox(height: 4),
+          Text(
+            '${_artworks.length} artworks',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.sort, color: Colors.white),
+                icon: const Icon(Icons.sort, color: Colors.white, size: 20),
                 onPressed: () => _showSortDialog(),
               ),
               IconButton(
-                icon: const Icon(Icons.search, color: Colors.white),
+                icon: const Icon(Icons.search, color: Colors.white, size: 20),
                 onPressed: () => _showSearchDialog(),
               ),
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white),
+                icon: const Icon(Icons.add, color: Colors.white, size: 20),
                 onPressed: () => _showCreateArtworkDialog(),
               ),
             ],
@@ -180,13 +177,13 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     final activeCount = _artworks.where((a) => a.status == ArtworkStatus.active).length;
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           Expanded(child: _buildStatCard('Active', activeCount.toString(), Icons.visibility)),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(child: _buildStatCard('Views', totalViews.toString(), Icons.remove_red_eye)),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(child: _buildStatCard('Likes', totalLikes.toString(), Icons.favorite)),
         ],
       ),
@@ -195,7 +192,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   Widget _buildStatCard(String label, String value, IconData icon) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(12),
@@ -203,12 +200,12 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
-          const SizedBox(height: 8),
+          Icon(icon, color: Colors.white.withOpacity(0.7), size: 16),
+          const SizedBox(height: 4),
           Text(
             value,
             style: GoogleFonts.inter(
-              fontSize: 18,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
@@ -216,7 +213,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           Text(
             label,
             style: GoogleFonts.inter(
-              fontSize: 10,
+              fontSize: 8,
               color: Colors.white.withOpacity(0.7),
             ),
           ),
@@ -259,12 +256,12 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   Widget _buildArtworkGrid(List<Artwork> artworks) {
     return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.75,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 0.8,
       ),
       itemCount: artworks.length,
       itemBuilder: (context, index) {
@@ -336,25 +333,27 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             Expanded(
               flex: 2,
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      artwork.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                    Flexible(
+                      child: Text(
+                        artwork.title,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       '${artwork.price} KUB8',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
+                        fontSize: 10,
                         color: Provider.of<ThemeProvider>(context).accentColor,
                         fontWeight: FontWeight.w500,
                       ),
@@ -362,23 +361,29 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     const Spacer(),
                     Row(
                       children: [
-                        Icon(Icons.remove_red_eye, size: 12, color: Colors.white.withOpacity(0.6)),
-                        const SizedBox(width: 4),
-                        Text(
-                          artwork.views.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.6),
+                        Icon(Icons.remove_red_eye, size: 10, color: Colors.white.withOpacity(0.6)),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            artwork.views.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 8,
+                              color: Colors.white.withOpacity(0.6),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        Icon(Icons.favorite, size: 12, color: Colors.white.withOpacity(0.6)),
-                        const SizedBox(width: 4),
-                        Text(
-                          artwork.likes.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.6),
+                        const SizedBox(width: 8),
+                        Icon(Icons.favorite, size: 10, color: Colors.white.withOpacity(0.6)),
+                        const SizedBox(width: 2),
+                        Flexible(
+                          child: Text(
+                            artwork.likes.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 8,
+                              color: Colors.white.withOpacity(0.6),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const Spacer(),
@@ -386,7 +391,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                           icon: Icon(
                             Icons.more_vert,
                             color: Colors.white.withOpacity(0.6),
-                            size: 16,
+                            size: 14,
                           ),
                           onSelected: (value) => _handleArtworkAction(artwork, value),
                           itemBuilder: (context) => [

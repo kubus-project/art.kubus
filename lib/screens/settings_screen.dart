@@ -50,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _enableCrashReporting = true;
   
   // Wallet settings state
-  String _networkSelection = 'Ethereum';
+  String _networkSelection = 'Solana';
   bool _autoBackup = true;
   
   // Profile interaction settings
@@ -359,51 +359,93 @@ class _SettingsScreenState extends State<SettingsScreen>
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildThemeOption(
-                  'Light',
-                  Icons.light_mode,
-                  ThemeMode.light,
-                  themeProvider,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildThemeOption(
-                  'Dark',
-                  Icons.dark_mode,
-                  ThemeMode.dark,
-                  themeProvider,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildThemeOption(
-                  'System',
-                  Icons.auto_mode,
-                  ThemeMode.system,
-                  themeProvider,
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmallScreen = constraints.maxWidth < 375;
+              
+              if (isSmallScreen) {
+                // Stack vertically on small screens
+                return Column(
+                  children: [
+                    _buildThemeOption(
+                      'Light',
+                      Icons.light_mode,
+                      ThemeMode.light,
+                      themeProvider,
+                      isSmallScreen: true,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildThemeOption(
+                      'Dark',
+                      Icons.dark_mode,
+                      ThemeMode.dark,
+                      themeProvider,
+                      isSmallScreen: true,
+                    ),
+                    const SizedBox(height: 8),
+                    _buildThemeOption(
+                      'System',
+                      Icons.auto_mode,
+                      ThemeMode.system,
+                      themeProvider,
+                      isSmallScreen: true,
+                    ),
+                  ],
+                );
+              } else {
+                // Keep horizontal layout on larger screens
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildThemeOption(
+                        'Light',
+                        Icons.light_mode,
+                        ThemeMode.light,
+                        themeProvider,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildThemeOption(
+                        'Dark',
+                        Icons.dark_mode,
+                        ThemeMode.dark,
+                        themeProvider,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildThemeOption(
+                        'System',
+                        Icons.auto_mode,
+                        ThemeMode.system,
+                        themeProvider,
+                      ),
+                    ),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildThemeOption(String label, IconData icon, ThemeMode mode, ThemeProvider themeProvider) {
+  Widget _buildThemeOption(String label, IconData icon, ThemeMode mode, ThemeProvider themeProvider, {bool isSmallScreen = false}) {
     final isSelected = themeProvider.themeMode == mode;
     
     return GestureDetector(
       onTap: () => themeProvider.setThemeMode(mode),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        width: isSmallScreen ? double.infinity : null,
+        padding: EdgeInsets.symmetric(
+          vertical: isSmallScreen ? 16 : 12, 
+          horizontal: isSmallScreen ? 16 : 8,
+        ),
         decoration: BoxDecoration(
           color: isSelected 
-              ? themeProvider.accentColor.withOpacity(0.1)
+              ? themeProvider.accentColor.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
@@ -412,28 +454,54 @@ class _SettingsScreenState extends State<SettingsScreen>
                 : Theme.of(context).colorScheme.outline,
           ),
         ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected 
-                  ? themeProvider.accentColor
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              size: 20,
+        child: isSmallScreen 
+          ? Row(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected 
+                      ? themeProvider.accentColor
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected 
+                        ? themeProvider.accentColor
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected 
+                      ? themeProvider.accentColor
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  size: 20,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected 
+                        ? themeProvider.accentColor
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                color: isSelected 
-                    ? themeProvider.accentColor
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1634,28 +1702,28 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Change Password'),
-        content: Column(
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Current Password',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'New Password',
                 border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextField(
               obscureText: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Confirm New Password',
                 border: OutlineInputBorder(),
               ),
