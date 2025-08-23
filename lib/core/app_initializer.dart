@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/artwork_provider.dart';
 import '../screens/welcome_intro_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
@@ -30,6 +31,10 @@ class _AppInitializerState extends State<AppInitializer> {
     // Initialize ProfileProvider
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.initialize();
+    
+    // Initialize ArtworkProvider and connect to ConfigProvider
+    final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
+    artworkProvider.setUseMockData(configProvider.useMockData);
     
     // Connect ProfileProvider to ConfigProvider for mock data sync
     profileProvider.setUseMockData(configProvider.useMockData);

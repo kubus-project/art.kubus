@@ -9,6 +9,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/platform_provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/artwork_provider.dart';
 import '../widgets/platform_aware_widgets.dart';
 import '../web3/wallet.dart';
 
@@ -867,6 +868,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   // Sync with ProfileProvider
                   final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
                   profileProvider.syncWithConfigProvider(value);
+                  
+                  // Sync with ArtworkProvider
+                  final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
+                  artworkProvider.setUseMockData(value);
                   
                   _showRestartDialog();
                 },

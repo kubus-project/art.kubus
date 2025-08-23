@@ -32,7 +32,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   final Map<int, bool> _followedArtists = {};
 
   Future<void> _loadCommunityData() async {
-    final posts = CommunityService.getMockPosts();
+    final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+    final posts = CommunityService.getMockPosts(useMockData: configProvider.useMockData);
     
     // Load saved interactions (likes, bookmarks, follows)
     await CommunityService.loadSavedInteractions(posts);
@@ -81,10 +82,28 @@ class _CommunityScreenState extends State<CommunityScreen>
     ));
     
     _animationController.forward();
+    
+    // Listen for config provider changes to reload data
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+      configProvider.addListener(_onConfigChanged);
+    });
+  }
+  
+  void _onConfigChanged() {
+    _loadCommunityData();
   }
 
   @override
   void dispose() {
+    // Remove config provider listener
+    try {
+      final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+      configProvider.removeListener(_onConfigChanged);
+    } catch (e) {
+      // Provider may not be available during dispose
+    }
+    
     _animationController.dispose();
     _tabController.dispose();
     super.dispose();
@@ -1025,10 +1044,14 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: 6,
-                itemBuilder: (context, index) => _buildSearchResult(index),
+              child: Consumer<ConfigProvider>(
+                builder: (context, configProvider, child) {
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: configProvider.useMockData ? 6 : 0,
+                    itemBuilder: (context, index) => _buildSearchResult(index),
+                  );
+                },
               ),
             ),
           ],
@@ -1038,47 +1061,65 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildSearchResult(int index) {
-    final results = [
-      ('Digital Dreams Collection', 'Collection • 12 items', Icons.collections),
-      ('Maya Digital', 'Artist • @maya_3d', Icons.person),
-      ('AR Sculpture #1', 'Artwork • By Alex Creator', Icons.view_in_ar),
-      ('Urban AR', 'Collection • 8 items', Icons.collections),
-      ('Sam Artist', 'Artist • @sam_ar', Icons.person),
-      ('Interactive Portal', 'Artwork • By Luna Vision', Icons.view_in_ar),
-    ];
-    
-    final result = results[index];
-    
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(
-          result.$3,
-          color: Provider.of<ThemeProvider>(context).accentColor,
-          size: 20,
-        ),
-      ),
-      title: Text(
-        result.$1,
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
-      subtitle: Text(
-        result.$2,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-        ),
-      ),
-      onTap: () => Navigator.pop(context),
+    return Consumer<ConfigProvider>(
+      builder: (context, configProvider, child) {
+        if (!configProvider.useMockData) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'No search results available',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          );
+        }
+
+        final results = [
+          ('Digital Dreams Collection', 'Collection • 12 items', Icons.collections),
+          ('Maya Digital', 'Artist • @maya_3d', Icons.person),
+          ('AR Sculpture #1', 'Artwork • By Alex Creator', Icons.view_in_ar),
+          ('Urban AR', 'Collection • 8 items', Icons.collections),
+          ('Sam Artist', 'Artist • @sam_ar', Icons.person),
+          ('Interactive Portal', 'Artwork • By Luna Vision', Icons.view_in_ar),
+        ];
+        
+        final result = results[index];
+        
+        return ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              result.$3,
+              color: Provider.of<ThemeProvider>(context).accentColor,
+              size: 20,
+            ),
+          ),
+          title: Text(
+            result.$1,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          subtitle: Text(
+            result.$2,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
+          onTap: () => Navigator.pop(context),
+        );
+      },
     );
   }
 

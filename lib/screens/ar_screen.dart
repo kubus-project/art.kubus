@@ -666,10 +666,10 @@ class _ARScreenState extends State<ARScreen>
             const SizedBox(height: 16),
             Column(
               children: [
-                _buildFeatureItem('📱', 'Scan QR codes to view artwork information'),
-                _buildFeatureItem('🎨', 'Browse digital art collections'),
-                _buildFeatureItem('💎', 'View NFT metadata and details'),
-                _buildFeatureItem('🔗', 'Connect with artists and collectors'),
+                _buildFeatureItem('📱', 'Scan art markers to view AR artworks in real space'),
+                _buildFeatureItem('🎨', 'View digital collections in augmented reality'),
+                _buildFeatureItem('💎', 'Contribute to artists and buy NFT series'),
+                _buildFeatureItem('🔗', 'Earn POAP achievements and rewards'),
               ],
             ),
           ],

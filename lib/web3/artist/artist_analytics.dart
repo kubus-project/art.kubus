@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/config_provider.dart';
 import '../../models/artwork.dart';
-import '../../config/config.dart';
 
 class ArtistAnalytics extends StatefulWidget {
   const ArtistAnalytics({super.key});
@@ -569,14 +569,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildTopArtworks() {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, child) {
+    return Consumer2<ArtworkProvider, ConfigProvider>(
+      builder: (context, artworkProvider, configProvider, child) {
         // Get top performing artworks (show analytics data based on config)
         final topArtworks = artworkProvider.artworks.take(4).map((artwork) {
           String viewsText;
           String revenueText;
           
-          if (AppConfig.useMockData) {
+          if (configProvider.useMockData) {
             // Generate mock analytics for each artwork
             final mockViews = (artwork.likesCount * 10 + artwork.viewsCount).toString();
             final mockRevenue = (artwork.rewards * 0.5).toStringAsFixed(1);

@@ -10,11 +10,26 @@ class ArtworkProvider extends ChangeNotifier {
   final Map<String, bool> _loadingStates = {};
   String? _error;
   TaskProvider? _taskProvider;
+  bool _useMockData = false;
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
   
   bool isLoading(String operation) => _loadingStates[operation] ?? false;
+
+  /// Set mock data usage
+  void setUseMockData(bool useMockData) {
+    if (_useMockData != useMockData) {
+      _useMockData = useMockData;
+      if (useMockData) {
+        loadArtworks();
+      } else {
+        _artworks.clear();
+        _comments.clear();
+        notifyListeners();
+      }
+    }
+  }
 
   /// Set the task provider for tracking user actions
   void setTaskProvider(TaskProvider taskProvider) {
@@ -273,6 +288,8 @@ class ArtworkProvider extends ChangeNotifier {
 
   /// Load initial artworks (mock data for now)
   Future<void> loadArtworks() async {
+    if (!_useMockData) return; // Only load if mock data is enabled
+    
     _setLoading('load_artworks', true);
     try {
       // Mock data - replace with actual API calls

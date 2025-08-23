@@ -260,8 +260,8 @@ class CommunityService {
   }
 
   // Generate mock posts with enhanced features
-  static List<CommunityPost> getMockPosts() {
-    if (!AppConfig.useMockData) return [];
+  static List<CommunityPost> getMockPosts({bool useMockData = true}) {
+    if (!useMockData) return [];
 
     return [
       CommunityPost(

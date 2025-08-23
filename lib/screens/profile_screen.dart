@@ -4,16 +4,14 @@ import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
-import '../providers/artwork_provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/task_provider.dart';
 import '../web3/wallet.dart';
 import '../web3/achievements/achievements_page.dart';
 import 'settings_screen.dart';
-import 'art_detail_screen.dart';
-import 'collection_detail_screen.dart';
-import 'user_profile_screen.dart';
-import '../models/user_profile.dart';
+import 'profile_screen_methods.dart';
+import '../models/achievements.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -87,6 +85,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                   slivers: [
                     _buildProfileHeader(),
                     _buildStatsSection(),
+                    SliverToBoxAdapter(
+                      child: SizedBox(height: 24),
+                    ),
                     _buildTabBar(),
                     SliverToBoxAdapter(
                       child: SizedBox(
@@ -457,7 +458,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     profileProvider.formattedArtworksCount,
                                     Icons.palette,
                                     isSmallScreen: isSmallScreen,
-                                    onTap: () => _showArtworks(),
+                                    onTap: () => ProfileScreenMethods.showArtworks(context),
                                   );
                                 },
                               ),
@@ -471,7 +472,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     profileProvider.formattedCollectionsCount,
                                     Icons.collections,
                                     isSmallScreen: isSmallScreen,
-                                    onTap: () => _showCollections(),
+                                    onTap: () => ProfileScreenMethods.showCollections(context),
                                   );
                                 },
                               ),
@@ -489,7 +490,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     profileProvider.formattedFollowersCount,
                                     Icons.people,
                                     isSmallScreen: isSmallScreen,
-                                    onTap: () => _showFollowers(),
+                                    onTap: () => ProfileScreenMethods.showFollowers(context),
                                   );
                                 },
                               ),
@@ -503,7 +504,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     profileProvider.formattedFollowingCount,
                                     Icons.person_add,
                                     isSmallScreen: isSmallScreen,
-                                    onTap: () => _showFollowing(),
+                                    onTap: () => ProfileScreenMethods.showFollowing(context),
                                   );
                                 },
                               ),
@@ -522,7 +523,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 profileProvider.formattedArtworksCount,
                                 Icons.palette,
                                 isSmallScreen: isSmallScreen,
-                                onTap: () => _showArtworks(),
+                                onTap: () => ProfileScreenMethods.showArtworks(context),
                               );
                             },
                           ),
@@ -536,7 +537,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 profileProvider.formattedCollectionsCount,
                                 Icons.collections,
                                 isSmallScreen: isSmallScreen,
-                                onTap: () => _showCollections(),
+                                onTap: () => ProfileScreenMethods.showCollections(context),
                               );
                             },
                           ),
@@ -550,7 +551,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 profileProvider.formattedFollowersCount,
                                 Icons.people,
                                 isSmallScreen: isSmallScreen,
-                                onTap: () => _showFollowers(),
+                                onTap: () => ProfileScreenMethods.showFollowers(context),
                               );
                             },
                           ),
@@ -564,7 +565,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                                 profileProvider.formattedFollowingCount,
                                 Icons.person_add,
                                 isSmallScreen: isSmallScreen,
-                                onTap: () => _showFollowing(),
+                                onTap: () => ProfileScreenMethods.showFollowing(context),
                               );
                             },
                           ),
@@ -674,309 +675,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _showArtworks() {
-    // Show artworks in a modal bottom sheet
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Consumer<ArtworkProvider>(
-        builder: (context, artworkProvider, child) {
-          final userArtworks = artworkProvider.userArtworks;
-          
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'My Artworks (${userArtworks.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: userArtworks.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.image_not_supported,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No artworks yet',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Start creating to see your artworks here',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      )
-                    : LayoutBuilder(
-                        builder: (context, constraints) {
-                          bool isSmallScreen = constraints.maxWidth < 375;
-                          int crossAxisCount = isSmallScreen ? 2 : 3;
-                          
-                          return GridView.builder(
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 12,
-                              mainAxisSpacing: 12,
-                              childAspectRatio: 0.8,
-                            ),
-                            itemCount: userArtworks.length,
-                            itemBuilder: (context, index) => _buildArtworkGridItem(userArtworks[index], index),
-                          );
-                        },
-                      ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  void _showCollections() {
-    // Show collections in a modal bottom sheet
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'My Collections (8)',
-                  style: GoogleFonts.inter(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: 8,
-                itemBuilder: (context, index) => _buildCollectionListItem(index),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showFollowers() {
-    // Show followers list
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Text(
-              'Followers (2.1K)',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: 10,
-                itemBuilder: (context, index) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-                    child: Text('U${index + 1}'),
-                  ),
-                  title: Text('User ${index + 1}'),
-                  subtitle: Text('@user${index + 1}'),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showFollowing() {
-    final followingUsers = UserProfile.getSampleUsers().where((user) => user.isFollowing).toList();
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Following (${followingUsers.length})',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: ListView.builder(
-                itemCount: followingUsers.length,
-                itemBuilder: (context, index) {
-                  final user = followingUsers[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: ListTile(
-                      onTap: () {
-                        Navigator.pop(context);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UserProfileScreen(
-                              userId: user.id,
-                              username: user.username,
-                            ),
-                          ),
-                        );
-                      },
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      leading: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Provider.of<ThemeProvider>(context).accentColor,
-                              Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.7),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: const Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      title: Row(
-                        children: [
-                          Text(
-                            user.name,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          if (user.isVerified) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              Icons.verified,
-                              size: 16,
-                              color: Provider.of<ThemeProvider>(context).accentColor,
-                            ),
-                          ],
-                        ],
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            user.username,
-                            style: GoogleFonts.inter(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                            ),
-                          ),
-                          if (user.badges.isNotEmpty)
-                            Text(
-                              user.badges.join(' • '),
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Provider.of<ThemeProvider>(context).accentColor,
-                              ),
-                            ),
-                        ],
-                      ),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Provider.of<ThemeProvider>(context).accentColor,
-                          ),
-                        ),
-                        child: Text(
-                          'Following',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Provider.of<ThemeProvider>(context).accentColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTabBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
@@ -1029,165 +727,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
-  
-  Widget _buildArtworkGridItem(dynamic artwork, int index) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return GestureDetector(
-      onTap: () => _openArtworkDetails(artwork),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      themeProvider.accentColor.withOpacity(0.3),
-                      themeProvider.accentColor.withOpacity(0.1),
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                ),
-                child: const Center(
-                  child: Icon(Icons.view_in_ar, color: Colors.white, size: 32),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    artwork?.title ?? 'Artwork #${index + 1}',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    artwork?.artist ?? 'Unknown Artist',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildCollectionListItem(int index) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return GestureDetector(
-      onTap: () => _openCollectionDetails(index),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeProvider.accentColor.withOpacity(0.3),
-                    themeProvider.accentColor.withOpacity(0.1),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(Icons.collections, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Collection ${index + 1}',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  Text(
-                    '${3 + index} artworks',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _openArtworkDetails(int index) {
-    // Create artwork data for the existing ArtDetailScreen
-    final artData = {
-      'title': 'Artwork #${index + 1}',
-      'artist': 'You',
-      'type': 'Digital Sculpture',
-      'rarity': ['Common', 'Rare', 'Epic', 'Legendary'][index % 4],
-      'discovered': true,
-    };
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ArtDetailScreen(artworkId: artData['id']?.toString() ?? ''),
-      ),
-    );
-  }
-
-  void _openCollectionDetails(int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CollectionDetailScreen(collectionIndex: index),
-      ),
-    );
-  }
-  
   Widget _buildActivityTab() {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1323,62 +863,170 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAchievementsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Achievements',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AchievementsPage(),
+    return Consumer2<TaskProvider, ConfigProvider>(
+      builder: (context, taskProvider, configProvider, child) {
+        if (!configProvider.useMockData) {
+          // Show real achievement data when mock data is disabled
+          final achievements = taskProvider.achievementProgress;
+          
+          // Get the first 6 achievements to display
+          final displayAchievements = AchievementService.allAchievements.take(6).toList();
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Achievements',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
-                );
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF9C27B0).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFF9C27B0), width: 1),
-                ),
-                child: Text(
-                  'View All',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF9C27B0),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AchievementsPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF9C27B0).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF9C27B0), width: 1),
+                      ),
+                      child: Text(
+                        'View All',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF9C27B0),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _buildAchievementBadge('First Upload', Icons.upload, true),
-            _buildAchievementBadge('Explorer', Icons.explore, true),
-            _buildAchievementBadge('Collector', Icons.collections, true),
-            _buildAchievementBadge('Social Butterfly', Icons.people, false),
-            _buildAchievementBadge('AR Master', Icons.view_in_ar, false),
-            _buildAchievementBadge('Trendsetter', Icons.trending_up, false),
-          ],
-        ),
-      ],
+              const SizedBox(height: 16),
+              achievements.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.emoji_events,
+                          size: 48,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'No Achievements Yet',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Start exploring to unlock achievements',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: displayAchievements.map((achievement) {
+                      final progress = achievements.firstWhere(
+                        (p) => p.achievementId == achievement.id,
+                        orElse: () => AchievementProgress(
+                          achievementId: achievement.id,
+                          currentProgress: 0,
+                          isCompleted: false,
+                        ),
+                      );
+                      return _buildAchievementBadge(
+                        achievement.title,
+                        achievement.icon,
+                        progress.isCompleted,
+                      );
+                    }).toList(),
+                  ),
+            ],
+          );
+        } else {
+          // Show mock data when mock data is enabled
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Achievements',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AchievementsPage(),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF9C27B0).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFF9C27B0), width: 1),
+                      ),
+                      child: Text(
+                        'View All',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF9C27B0),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  _buildAchievementBadge('First AR Explorer', Icons.visibility, true),
+                  _buildAchievementBadge('Gallery Explorer', Icons.explore, true),
+                  _buildAchievementBadge('Art Curator', Icons.folder_special, true),
+                  _buildAchievementBadge('Social Butterfly', Icons.share, false),
+                  _buildAchievementBadge('AR Master', Icons.auto_awesome, false),
+                  _buildAchievementBadge('Art Influencer', Icons.trending_up, false),
+                ],
+              ),
+            ],
+          );
+        }
+      },
     );
   }
 
