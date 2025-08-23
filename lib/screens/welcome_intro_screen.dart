@@ -17,10 +17,8 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
-  late AnimationController _contentSlideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late Animation<Offset> _contentSlideAnimation;
   
   int _currentPage = 0;
   late PageController _pageController;
@@ -71,11 +69,6 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
       vsync: this,
     );
     
-    _contentSlideController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -85,37 +78,21 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
     ));
     
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.1),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _slideController,
-      curve: Curves.easeOutBack,
-    ));
-    
-    _contentSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.4),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _contentSlideController,
       curve: Curves.easeOutCubic,
     ));
     
     _fadeController.forward();
     _slideController.forward();
-    
-    // Start content animation after a brief delay
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        _contentSlideController.forward();
-      }
-    });
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
-    _contentSlideController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -127,7 +104,7 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: AnimatedBuilder(
-        animation: Listenable.merge([_fadeAnimation, _slideAnimation, _contentSlideAnimation]),
+        animation: Listenable.merge([_fadeAnimation, _slideAnimation]),
         builder: (context, child) {
           return FadeTransition(
             opacity: _fadeAnimation,
@@ -163,8 +140,6 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
                           setState(() {
                             _currentPage = index;
                           });
-                          // Animate content when page changes
-                          _animateContentOnPageChange();
                         },
                         itemCount: _pages.length,
                         itemBuilder: (context, index) {
@@ -251,21 +226,16 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
   }
 
   Widget _buildPage(WelcomePageData page) {
-    return AnimatedBuilder(
-      animation: _contentSlideAnimation,
-      builder: (context, child) {
-        return SlideTransition(
-          position: _contentSlideAnimation,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - 
-                    MediaQuery.of(context).padding.top - 140, // Account for header and navigation
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height - 
+              MediaQuery.of(context).padding.top - 140, // Account for header and navigation
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
                   // Reduced top spacing to ensure content fits better
                   SizedBox(height: MediaQuery.of(context).size.height * 0.08),
                   
@@ -345,10 +315,7 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
                 ],
               ),
             ),
-          ),
         );
-      },
-    );
   }
 
   Widget _buildPageIndicator(int index) {
@@ -384,15 +351,6 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
         curve: Curves.easeInOut,
       );
     }
-  }
-
-  void _animateContentOnPageChange() {
-    _contentSlideController.reset();
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) {
-        _contentSlideController.forward();
-      }
-    });
   }
 
   void _skipIntro() async {
