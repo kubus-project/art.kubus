@@ -16,6 +16,7 @@ class WalletProvider extends ChangeNotifier {
 
   WalletProvider(this._mockupDataProvider) : _solanaWalletService = SolanaWalletService() {
     _mockupDataProvider.addListener(_onMockupModeChanged);
+    print('WalletProvider initialized, mock data enabled: ${_mockupDataProvider.isMockDataEnabled}');
     _loadData();
   }
 
@@ -26,6 +27,7 @@ class WalletProvider extends ChangeNotifier {
   }
 
   void _onMockupModeChanged() {
+    print('WalletProvider: Mock mode changed to ${_mockupDataProvider.isMockDataEnabled}');
     _loadData();
   }
 
@@ -43,11 +45,25 @@ class WalletProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
+    print('WalletProvider._loadData: Starting, mock enabled = ${_mockupDataProvider.isMockDataEnabled}, initialized = ${_mockupDataProvider.isInitialized}');
+
+    // Wait for mockup provider to initialize if needed
+    if (!_mockupDataProvider.isInitialized) {
+      print('WalletProvider._loadData: Waiting for MockupDataProvider to initialize...');
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!_mockupDataProvider.isInitialized) {
+        print('WalletProvider._loadData: MockupDataProvider still not initialized, proceeding anyway');
+      }
+    }
+
     try {
       if (_mockupDataProvider.isMockDataEnabled) {
+        print('WalletProvider._loadData: Loading mock wallet');
         await _loadMockWallet();
+        print('WalletProvider._loadData: Mock wallet loaded - ${_tokens.length} tokens, balance: ${_wallet?.totalValue}');
       } else {
         // TODO: Load from blockchain
+        print('WalletProvider._loadData: Loading from blockchain');
         await _loadFromBlockchain();
       }
     } catch (e) {
@@ -218,8 +234,11 @@ class WalletProvider extends ChangeNotifier {
   Future<void> _loadFromBlockchain() async {
     try {
       if (_currentWalletAddress == null) {
-        debugPrint('No wallet address available, falling back to mock data');
-        await _loadMockWallet();
+        debugPrint('No wallet address available - clearing wallet data');
+        // Clear all data when mock is disabled and no real wallet
+        _wallet = null;
+        _tokens = [];
+        _transactions = [];
         return;
       }
 
@@ -227,8 +246,10 @@ class WalletProvider extends ChangeNotifier {
       await _loadSolanaWallet(_currentWalletAddress!);
     } catch (e) {
       debugPrint('Error loading blockchain data: $e');
-      // Fall back to mock data on error
-      await _loadMockWallet();
+      // Clear data on error when mock data is disabled
+      _wallet = null;
+      _tokens = [];
+      _transactions = [];
     }
   }
 
@@ -311,7 +332,7 @@ class WalletProvider extends ChangeNotifier {
       
     } catch (e) {
       debugPrint('Error loading Solana wallet: $e');
-      throw e;
+      rethrow;
     }
   }
 

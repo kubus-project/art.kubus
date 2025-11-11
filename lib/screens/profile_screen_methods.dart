@@ -464,7 +464,7 @@ class ProfileScreenMethods {
                                   child: Container(
                                     decoration: BoxDecoration(
                                       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                      color: Theme.of(context).colorScheme.surfaceVariant,
+                                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                     ),
                                     child: const Center(
                                       child: Icon(Icons.image, size: 32),

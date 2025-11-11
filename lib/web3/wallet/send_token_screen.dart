@@ -55,12 +55,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -68,7 +68,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         actions: [
@@ -78,7 +78,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                 icon: Icon(
                   platformProvider.getQRScannerIcon(),
                   color: platformProvider.supportsQRScanning 
-                    ? Colors.white 
+                    ? Theme.of(context).colorScheme.onPrimary 
                     : platformProvider.getUnsupportedFeatureColor(context),
                 ),
                 onPressed: platformProvider.supportsQRScanning 
@@ -149,8 +149,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             : 0.0;
 
         final tokens = [
-          {'symbol': 'KUB8', 'name': 'art.kubus Token', 'balance': kub8Balance.toStringAsFixed(2), 'icon': '🎨'},
-          {'symbol': 'SOL', 'name': 'Solana', 'balance': solBalance.toStringAsFixed(3), 'icon': '☀️'},
+          {'symbol': 'KUB8', 'name': 'art.kubus Token', 'balance': kub8Balance.toStringAsFixed(2), 'icon': Icons.palette},
+          {'symbol': 'SOL', 'name': 'Solana', 'balance': solBalance.toStringAsFixed(3), 'icon': Icons.wb_sunny},
         ];
 
         return Column(
@@ -161,7 +161,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
         const SizedBox(height: 16),
@@ -216,21 +216,24 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                     decoration: BoxDecoration(
                       color: isSelected 
                         ? Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1)
-                        : const Color(0xFF1A1A1A),
+                        : Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected 
                           ? Provider.of<ThemeProvider>(context).accentColor
-                          : Colors.grey[800]!,
+                          : Theme.of(context).colorScheme.outline,
                         width: isSelected ? 2 : 1,
                       ),
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          token['icon'] as String,
-                          style: TextStyle(fontSize: isSmallScreen ? 20 : 24),
+                        Icon(
+                          token['icon'] as IconData,
+                          size: isSmallScreen ? 24 : 28,
+                          color: isSelected 
+                            ? Provider.of<ThemeProvider>(context).accentColor
+                            : Theme.of(context).colorScheme.onPrimaryContainer,
                         ),
                         SizedBox(height: isSmallScreen ? 4 : 8),
                         Text(
@@ -238,7 +241,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         SizedBox(height: isSmallScreen ? 2 : 4),
@@ -246,7 +249,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                           'Balance: ${token['balance']}',
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 10 : 12,
-                            color: Colors.grey[400],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -273,27 +276,27 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _addressError.isNotEmpty 
                 ? Colors.red 
-                : Colors.grey[800]!,
+                : Theme.of(context).colorScheme.outline,
             ),
           ),
           child: TextField(
             controller: _addressController,
-            style: GoogleFonts.inter(color: Colors.white),
+            style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
             onChanged: _validateAddress,
             decoration: InputDecoration(
               hintText: 'Enter recipient address',
-              hintStyle: GoogleFonts.inter(color: Colors.grey[400]),
+              hintStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
               suffixIcon: Consumer<PlatformProvider>(
@@ -343,7 +346,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             GestureDetector(
@@ -372,22 +375,22 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         const SizedBox(height: 16),
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _amountError.isNotEmpty 
                 ? Colors.red 
-                : Colors.grey[800]!,
+                : Theme.of(context).colorScheme.outline,
             ),
           ),
           child: TextField(
             controller: _amountController,
-            style: GoogleFonts.inter(color: Colors.white, fontSize: 18),
+            style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary, fontSize: 18),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: _validateAmount,
             decoration: InputDecoration(
               hintText: '0.0',
-              hintStyle: GoogleFonts.inter(color: Colors.grey[400], fontSize: 18),
+              hintStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 18),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
               suffixIcon: Padding(
@@ -422,7 +425,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           'Available: ${_getTokenBalance(_selectedToken)} $_selectedToken',
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       ],
@@ -436,9 +439,9 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -448,7 +451,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -457,7 +460,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           _buildSummaryRow('USD Value', '\$${usdValue.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
           _buildSummaryRow('Network Fee', '${_estimatedGas.toStringAsFixed(4)} ${_getNetworkCurrency()}'),
-          const Divider(color: Colors.grey),
+          Divider(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           const SizedBox(height: 8),
           _buildSummaryRow(
             'Total',
@@ -478,7 +481,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           style: GoogleFonts.inter(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
-            color: Colors.grey[400],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
         Text(
@@ -486,7 +489,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           style: GoogleFonts.inter(
             fontSize: isTotal ? 16 : 14,
             fontWeight: isTotal ? FontWeight.bold : FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -512,12 +515,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           elevation: 0,
         ),
         child: _isLoading
-          ? const SizedBox(
+          ? SizedBox(
               height: 20,
               width: 20,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
               ),
             )
           : Text(
@@ -525,7 +528,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
       ),
@@ -695,3 +698,6 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
   }
 }
+
+
+

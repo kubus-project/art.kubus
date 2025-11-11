@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/providers/themeprovider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../providers/dao_provider.dart';
+import '../../providers/mockup_data_provider.dart';
+
 
 class GovernanceHub extends StatefulWidget {
   const GovernanceHub({super.key});
@@ -82,7 +85,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -91,17 +94,17 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showOnboarding,
           ),
           IconButton(
-            icon: const Icon(Icons.info_outline, color: Colors.white),
+            icon: Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showGovernanceInfo,
           ),
         ],
@@ -137,80 +140,89 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildGovernanceHeader() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF4CAF50), Color(0xFF00D4AA)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Row(
+    return Consumer2<DAOProvider, MockupDataProvider>(
+      builder: (context, daoProvider, mockupProvider, child) {
+        // Get voting power and proposal count based on mock data setting
+        final votingPower = mockupProvider.isMockDataEnabled ? '125 KUB8' : '0 KUB8';
+        final activeProposals = mockupProvider.isMockDataEnabled ? '7' : '0';
+        final totalMembers = mockupProvider.isMockDataEnabled ? '2.4K' : '--';
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF4CAF50), Color(0xFF00D4AA)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(25),
-                ),
-                child: const Icon(
-                  Icons.how_to_vote,
-                  color: Colors.white,
-                  size: 26,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    child: const Icon(
+                      Icons.how_to_vote,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'art.kubus DAO',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Decentralized governance for the AR art platform',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white.withValues(alpha: 0.9),
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'art.kubus DAO',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Decentralized governance for the AR art platform',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatCard('Your Voting Power', votingPower),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatCard('Active Proposals', activeProposals),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatCard('Total Members', totalMembers),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard('Your Voting Power', '125 KUB8'),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatCard('Active Proposals', '7'),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildStatCard('Total Members', '2.4K'),
-              ),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -218,7 +230,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -228,7 +240,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
@@ -236,7 +248,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             label,
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: Colors.white.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -251,7 +263,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: SingleChildScrollView(
@@ -285,7 +297,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.grey[400],
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               size: 22,
             ),
             const SizedBox(height: 4),
@@ -294,7 +306,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[400],
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -306,15 +318,62 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildActiveProposals() {
-    return Container(
-      color: const Color(0xFF0A0A0A),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: 5,
-        itemBuilder: (context, index) {
-          return _buildProposalCard(index);
-        },
-      ),
+    return Consumer2<DAOProvider, MockupDataProvider>(
+      builder: (context, daoProvider, mockupProvider, child) {
+        // Debug: Print mock data state
+        print('DAO Proposals - isMockDataEnabled: ${mockupProvider.isMockDataEnabled}');
+        
+        // Only show proposals if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.how_to_vote,
+                      size: 64,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No active proposals',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enable mock data to view proposals',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: 5,
+            itemBuilder: (context, index) {
+              return _buildProposalCard(index);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -363,7 +422,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[800]!),
       ),
@@ -398,7 +457,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -439,7 +498,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 child: ElevatedButton(
                   onPressed: () => _vote(false),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1A1A1A),
+                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                     foregroundColor: Colors.white,
                     side: BorderSide(color: Colors.grey[600]!),
                     shape: RoundedRectangleBorder(
@@ -474,15 +533,57 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildVotingHistory() {
-    final votingHistory = [
-      {
-        'title': 'Artist Revenue Share Update',
-        'date': '2025-08-15',
-        'vote': 'Yes',
-        'result': 'Passed',
-        'participation': '78%',
-        'yourPower': '125 KUB8',
-      },
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show voting history if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return Container(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.history,
+                      size: 64,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'No voting history',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Enable mock data to view voting history',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
+        final votingHistory = [
+          {
+            'title': 'Artist Revenue Share Update',
+            'date': '2025-08-15',
+            'vote': 'Yes',
+            'result': 'Passed',
+            'participation': '78%',
+            'yourPower': '125 KUB8',
+          },
       {
         'title': 'New AR Feature Implementation',
         'date': '2025-08-10',
@@ -502,7 +603,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     ];
 
     return Container(
-      color: const Color(0xFF0A0A0A),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: votingHistory.length,
@@ -512,7 +613,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF1A1A1A),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey[800]!),
             ),
@@ -527,7 +628,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -575,6 +676,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         },
       ),
     );
+      },
+    );
   }
 
   Widget _buildHistoryInfo(String label, String value) {
@@ -593,7 +696,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -602,7 +705,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildCreateProposal() {
     return Container(
-      color: const Color(0xFF0A0A0A),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -613,7 +716,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -691,7 +794,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -699,12 +802,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[500]),
             filled: true,
-            fillColor: const Color(0xFF1A1A1A),
+            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(color: Colors.grey[800]!),
@@ -741,14 +844,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[800]!),
           ),
@@ -756,8 +859,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             value: _selectedCategory,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: const Color(0xFF1A1A1A),
-            style: const TextStyle(color: Colors.white),
+            dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             items: categories.map((category) {
               return DropdownMenuItem<String>(
                 value: category,
@@ -779,7 +882,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[800]!),
       ),
@@ -788,14 +891,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         children: [
           Row(
             children: [
-              const Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 20),
+              Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 20),
               const SizedBox(width: 8),
               Text(
                 'Proposal Requirements',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -850,10 +953,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text(
           'Proposal Submitted',
-          style: GoogleFonts.inter(color: Colors.white),
+          style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
         ),
         content: Text(
           'Your proposal has been submitted successfully. It will be reviewed by the community and voting will begin in 24 hours.',
@@ -884,7 +987,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildTreasury() {
     return Container(
-      color: const Color(0xFF0A0A0A),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -895,7 +998,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -919,65 +1022,109 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTreasuryOverview() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF6C63FF), Color(0xFF4CAF50)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Row(
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show treasury data if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey[800]!),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.account_balance,
+                    size: 48,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No treasury data available',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enable mock data to view treasury information',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Provider.of<ThemeProvider>(context).accentColor, Color(0xFF4CAF50)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
             children: [
-              const Icon(Icons.account_balance, color: Colors.white, size: 32),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Total Treasury Value',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
+              Row(
+                children: [
+                  Icon(Icons.account_balance, color: Theme.of(context).colorScheme.onSurface, size: 32),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Total Treasury Value',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        Text(
+                          '2,450,000 KUB8',
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          '≈ \$490,000 USD',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(
-                      '2,450,000 KUB8',
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      '≈ \$490,000 USD',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(child: _buildTreasuryStatCard('Monthly Inflow', '125K KUB8', Icons.trending_up)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildTreasuryStatCard('Monthly Outflow', '89K KUB8', Icons.trending_down)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _buildTreasuryStatCard('Reserve Ratio', '78%', Icons.security)),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(child: _buildTreasuryStatCard('Monthly Inflow', '125K KUB8', Icons.trending_up)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildTreasuryStatCard('Monthly Outflow', '89K KUB8', Icons.trending_down)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildTreasuryStatCard('Reserve Ratio', '78%', Icons.security)),
-            ],
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -985,26 +1132,26 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.white, size: 20),
+          Icon(icon, color: Theme.of(context).colorScheme.onSurface, size: 20),
           const SizedBox(height: 8),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: Colors.white.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -1014,9 +1161,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildRecentTransactions() {
-    return Consumer<DAOProvider>(
-      builder: (context, daoProvider, child) {
-        final transactions = daoProvider.getRecentTransactions(limit: 5);
+    return Consumer2<DAOProvider, MockupDataProvider>(
+      builder: (context, daoProvider, mockupProvider, child) {
+        // Only show transactions if mock data is enabled
+        final transactions = mockupProvider.isMockDataEnabled 
+            ? daoProvider.getRecentTransactions(limit: 5)
+            : <dynamic>[];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1026,7 +1176,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -1034,7 +1184,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[800]!),
                 ),
@@ -1063,7 +1213,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[800]!),
                 ),
@@ -1104,7 +1254,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
@@ -1125,7 +1275,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
@@ -1170,7 +1320,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const Spacer(),
@@ -1184,7 +1334,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A1A),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey[800]!),
           ),
@@ -1221,7 +1371,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -1250,7 +1400,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                     child: ElevatedButton(
                       onPressed: () => _vote(false),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1A1A1A),
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                         foregroundColor: Colors.white,
                         side: BorderSide(color: Colors.grey[600]!),
                       ),
@@ -1268,7 +1418,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildDelegation() {
     return Container(
-      color: const Color(0xFF0A0A0A),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -1279,7 +1429,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -1306,7 +1456,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey[800]!),
       ),
@@ -1315,14 +1465,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         children: [
           Row(
             children: [
-              const Icon(Icons.person, color: Color(0xFF4CAF50), size: 24),
+              Icon(Icons.person, color: Color(0xFF4CAF50), size: 24),
               const SizedBox(width: 12),
               Text(
                 'Your Delegation Status',
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -1363,7 +1513,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -1371,9 +1521,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTopDelegates() {
-    return Consumer<DAOProvider>(
-      builder: (context, daoProvider, child) {
-        final delegates = daoProvider.getTopDelegates(limit: 5);
+    return Consumer2<DAOProvider, MockupDataProvider>(
+      builder: (context, daoProvider, mockupProvider, child) {
+        // Only show delegates if mock data is enabled
+        final delegates = mockupProvider.isMockDataEnabled
+            ? daoProvider.getTopDelegates(limit: 5)
+            : <dynamic>[];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1383,7 +1536,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -1391,7 +1544,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1A),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.grey[800]!),
                 ),
@@ -1422,7 +1575,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey[800]!),
                   ),
@@ -1432,7 +1585,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF8B5CF6),
+                          color: Provider.of<ThemeProvider>(context).accentColor,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Center(
@@ -1441,7 +1594,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -1456,7 +1609,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             Text(
@@ -1477,7 +1630,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Container(
@@ -1525,7 +1678,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -1542,7 +1695,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           width: double.infinity,
           child: ElevatedButton.icon(
             onPressed: _showDelegateSelection,
-            icon: const Icon(Icons.people_outline, size: 20),
+            icon: Icon(Icons.people_outline, size: 20),
             label: const Text('Delegate to Trusted Members'),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4CAF50),
@@ -1560,10 +1713,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _selfDelegate,
-                icon: const Icon(Icons.person_outline, size: 18),
+                icon: Icon(Icons.person_outline, size: 18),
                 label: const Text('Self Delegate'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A1A1A),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1577,10 +1730,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: _revokeDelegation,
-                icon: const Icon(Icons.cancel_outlined, size: 18),
+                icon: Icon(Icons.cancel_outlined, size: 18),
                 label: const Text('Revoke'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A1A1A),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1606,8 +1759,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         maxChildSize: 0.9,
         minChildSize: 0.5,
         builder: (context, scrollController) => Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF1A1A1A),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -1630,7 +1783,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1646,9 +1799,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 ),
               ),
               Expanded(
-                child: Consumer<DAOProvider>(
-                  builder: (context, daoProvider, child) {
-                    final delegates = daoProvider.getTopDelegates(limit: 10);
+                child: Consumer2<DAOProvider, MockupDataProvider>(
+                  builder: (context, daoProvider, mockupProvider, child) {
+                    // Only show delegates if mock data is enabled
+                    final delegates = mockupProvider.isMockDataEnabled
+                        ? daoProvider.getTopDelegates(limit: 10)
+                        : <dynamic>[];
                     
                     return ListView.builder(
                       controller: scrollController,
@@ -1664,7 +1820,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                               _delegateVote(delegate.name);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF2A2A2A),
+                              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.all(16),
                               shape: RoundedRectangleBorder(
@@ -1677,7 +1833,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF8B5CF6),
+                                    color: Provider.of<ThemeProvider>(context).accentColor,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Center(
@@ -1686,7 +1842,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                       style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.white,
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                   ),
@@ -1701,7 +1857,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                         style: GoogleFonts.inter(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
-                                          color: Colors.white,
+                                          color: Theme.of(context).colorScheme.onSurface,
                                         ),
                                       ),
                                       Text(
@@ -1723,7 +1879,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                const Icon(
+                                Icon(
                                   Icons.arrow_forward_ios,
                                   color: Colors.grey,
                                   size: 16,
@@ -1748,8 +1904,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text('Delegate Voting Power', style: GoogleFonts.inter(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Delegate Voting Power', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1771,7 +1927,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 16),
+                      Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 16),
                       const SizedBox(width: 8),
                       Text(
                         'Delegation Benefits',
@@ -1824,7 +1980,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         backgroundColor: const Color(0xFF4CAF50),
         action: SnackBarAction(
           label: 'View Details',
-          textColor: Colors.white,
+          textColor: Theme.of(context).colorScheme.onPrimary,
           onPressed: () {
             // Show delegation details
             _showDelegationDetails(delegateName);
@@ -1845,8 +2001,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -1855,14 +2011,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           children: [
             Row(
               children: [
-                const Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 24),
+                Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'Delegation Active',
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -1881,7 +2037,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   _revokeDelegation();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A1A1A),
+                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1913,7 +2069,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -1954,8 +2110,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -1966,7 +2122,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -1984,3 +2140,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 }
+
+
+
+
+
+
+
+

@@ -17,10 +17,12 @@ class MockupDataProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _isMockDataEnabled = prefs.getBool(_mockDataEnabledKey) ?? !AppConfig.useRealBlockchain;
       _isInitialized = true;
+      print('MockupDataProvider initialized: isMockDataEnabled = $_isMockDataEnabled');
       notifyListeners();
     } catch (e) {
       _isMockDataEnabled = !AppConfig.useRealBlockchain;
       _isInitialized = true;
+      print('MockupDataProvider initialized (error): isMockDataEnabled = $_isMockDataEnabled');
       notifyListeners();
     }
   }
@@ -30,8 +32,10 @@ class MockupDataProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       _isMockDataEnabled = !_isMockDataEnabled;
       await prefs.setBool(_mockDataEnabledKey, _isMockDataEnabled);
+      print('MockupDataProvider toggled: isMockDataEnabled = $_isMockDataEnabled');
       notifyListeners();
     } catch (e) {
+      print('MockupDataProvider toggle error: $e');
       // Handle error silently for now
     }
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_logo.dart';
 import 'wallet_creation_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -19,8 +20,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       subtitle: 'Discover, Create & Trade\nAR Art with KUB8',
       description: 'Experience immersive augmented reality art in the real world. Create, discover, and trade unique digital artworks using blockchain technology.',
       iconData: Icons.view_in_ar,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF6C63FF), Color(0xFF9C27B0)],
+      gradient: LinearGradient(
+        colors: [Colors.white, Color(0xFF9C27B0)],
       ),
     ),
     OnboardingPage(
@@ -101,23 +102,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           // Logo
           Row(
             children: [
-              Container(
+              AppLogo(
                 width: isSmallScreen ? 36 : 40,
                 height: isSmallScreen ? 36 : 40,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.secondary,
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.auto_awesome,
-                  color: Colors.white,
-                  size: isSmallScreen ? 20 : 24,
-                ),
               ),
               SizedBox(width: isSmallScreen ? 8 : 12),
               Text(
@@ -357,3 +344,7 @@ class OnboardingPage {
     required this.gradient,
   });
 }
+
+
+
+

@@ -5,6 +5,8 @@ import '../onboarding/onboarding_data.dart';
 import 'marker_creator.dart';
 import 'artwork_gallery.dart';
 import 'artist_analytics.dart';
+import 'package:provider/provider.dart';
+import '../../providers/themeprovider.dart';
 
 class ArtistStudio extends StatefulWidget {
   const ArtistStudio({super.key});
@@ -54,7 +56,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -63,17 +65,17 @@ class _ArtistStudioState extends State<ArtistStudio> {
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon:  Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showOnboarding,
           ),
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
+            icon:  Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showSettings,
           ),
         ],
@@ -101,10 +103,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF6C63FF), Color(0xFF9C27B0)],
+          colors: [Provider.of<ThemeProvider>(context).accentColor, Color(0xFF9C27B0)],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -114,7 +116,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(25),
             ),
             child: const Icon(
@@ -141,7 +143,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   'Create AR markers for your artwork and share them with the world',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -158,7 +160,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -179,7 +181,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF6C63FF) : Colors.transparent,
+          color: isSelected ? Provider.of<ThemeProvider>(context).accentColor : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -187,7 +189,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.grey[400],
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -196,7 +198,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[400],
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -212,9 +214,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
+        padding: EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.onSurface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -225,7 +227,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 24),
@@ -236,3 +238,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 }
+
+
+
+
+
+
+

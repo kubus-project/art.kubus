@@ -67,7 +67,7 @@ class _EnhancedStatsChartState extends State<EnhancedStatsChart>
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -224,7 +224,7 @@ class StatsChartPainter extends CustomPainter {
       // Draw value label above point
       textPainter.text = TextSpan(
         text: data[i].toStringAsFixed(0),
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
           fontSize: 10,
           fontWeight: FontWeight.w600,
@@ -348,7 +348,7 @@ class _EnhancedBarChartState extends State<EnhancedBarChart>
             widget.title,
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -385,7 +385,7 @@ class _EnhancedBarChartState extends State<EnhancedBarChart>
                                     style: GoogleFonts.inter(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                     ),
                                     textAlign: TextAlign.center,
                                   ),

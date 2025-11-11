@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/config.dart';
+import 'package:provider/provider.dart';
+import '../../providers/themeprovider.dart';
 
 class Web3OnboardingScreen extends StatefulWidget {
   final String featureName;
@@ -94,7 +97,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -149,7 +152,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   style: GoogleFonts.inter(
                     fontSize: isWideScreen ? 28 : isTablet ? 26 : isSmallScreen ? 20 : 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -160,7 +163,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   'Skip',
                   style: GoogleFonts.inter(
                     fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ),
@@ -224,7 +227,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     style: GoogleFonts.inter(
                       fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 24 : isTablet ? 32 : isWideScreen ? 36 : 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -233,7 +236,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     page.description,
                     style: GoogleFonts.inter(
                       fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : isTablet ? 18 : isWideScreen ? 20 : 16,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
@@ -263,8 +266,8 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
           Container(
             width: isSmallScreen ? 5 : isTablet ? 7 : isWideScreen ? 8 : 6,
             height: isSmallScreen ? 5 : isTablet ? 7 : isWideScreen ? 8 : 6,
-            decoration: const BoxDecoration(
-              color: Color(0xFF6C63FF),
+            decoration: BoxDecoration(
+              color: Provider.of<ThemeProvider>(context).accentColor,
               shape: BoxShape.circle,
             ),
           ),
@@ -274,7 +277,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
               feature,
               style: GoogleFonts.inter(
                 fontSize: isSmallScreen ? 13 : isTablet ? 16 : isWideScreen ? 18 : 14,
-                color: Colors.white.withOpacity(0.9),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
               ),
             ),
           ),
@@ -307,8 +310,8 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     height: isWideScreen ? 10 : isTablet ? 9 : isSmallScreen ? 6 : 8,
                     decoration: BoxDecoration(
                       color: index == _currentPage
-                          ? const Color(0xFF6C63FF)
-                          : Colors.white.withOpacity(0.3),
+                          ? Provider.of<ThemeProvider>(context).accentColor
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -322,11 +325,11 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     Expanded(
                       child: OutlinedButton(
                         onPressed: _previousPage,
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.white30),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                           padding: EdgeInsets.symmetric(
                             vertical: isWideScreen ? 18 : isTablet ? 16 : isSmallScreen ? 12 : 14,
                           ),
@@ -336,7 +339,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                           style: GoogleFonts.inter(
                             fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -347,7 +350,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
+                        backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -361,7 +364,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                         style: GoogleFonts.inter(
                           fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
@@ -395,5 +398,26 @@ class OnboardingPage {
 // Utility function to check if onboarding is needed
 Future<bool> isOnboardingNeeded(String featureName) async {
   final prefs = await SharedPreferences.getInstance();
+  
+  // Check user preference for skipping Web3 onboarding (defaults to config setting)
+  final userSkipWeb3Onboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipWeb3OnboardingForReturningUsers;
+  
+  // Check if Web3 onboarding should be skipped for returning users
+  if (userSkipWeb3Onboarding) {
+    final hasSeenWelcome = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
+    final isFirstLaunch = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
+    final isFirstTime = prefs.getBool('first_time') ?? true;
+    
+    // If user is a returning user, skip Web3 onboarding
+    if (!isFirstTime || hasSeenWelcome || !isFirstLaunch) {
+      return false;
+    }
+  }
+  
+  // Otherwise, check if this specific feature onboarding was completed
   return !(prefs.getBool('${featureName}_onboarding_completed') ?? false);
 }
+
+
+
+

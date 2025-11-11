@@ -19,11 +19,11 @@ class MenuItemWidget extends StatelessWidget {
     return ListTile(
       title: Text(
         caption,
-        style: const TextStyle(color: Colors.white),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       ),
       leading: icon,
       selected: isSelected,
-      tileColor: Colors.black,
+      tileColor: Theme.of(context).scaffoldBackgroundColor,
       onTap: () {
         if (isSelected) {
           // Close drawer

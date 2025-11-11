@@ -70,7 +70,7 @@ class AchievementService {
       title: 'First AR Explorer',
       description: 'Visited your first AR artwork',
       icon: Icons.visibility,
-      color: Color(0xFF6C63FF),
+      color: Color.fromARGB(255, 255, 255, 255),
       category: 'AR Exploration',
       points: 10,
       rewardDescription: 'Unlock AR viewing tips',
@@ -380,3 +380,5 @@ class AchievementService {
     }).toList();
   }
 }
+
+

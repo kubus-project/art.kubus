@@ -24,9 +24,9 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _screens = [
-      const MapScreen(), // Map as first screen for art exploration
+      const MapScreen(),
       const ARScreen(),
-      const HomeScreen(), // Home moved to middle
+      const HomeScreen(),
       const CommunityScreen(),
       const ProfileScreen(),
     ];
@@ -34,12 +34,8 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -49,20 +45,16 @@ class _MainAppState extends State<MainApp> {
   }
 
   Widget _buildBottomNavigationBar() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
         
         return Container(
           decoration: BoxDecoration(
-            color: themeProvider.isDarkMode 
-                ? const Color(0xFF1A1A1A) 
-                : Colors.white,
+            color: Theme.of(context).colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
+                color: Theme.of(context).shadowColor.withOpacity(0.1),
                 blurRadius: 20,
                 offset: const Offset(0, -5),
               ),
@@ -121,7 +113,7 @@ class _MainAppState extends State<MainApp> {
                 icon,
                 color: isSelected 
                     ? themeProvider.accentColor
-                    : Colors.grey[600],
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 size: isSmallScreen ? 18 : 22,
               ),
               SizedBox(height: isSmallScreen ? 1 : 2),
@@ -132,7 +124,7 @@ class _MainAppState extends State<MainApp> {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected 
                       ? themeProvider.accentColor
-                      : Colors.grey[600],
+                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 textAlign: TextAlign.center,
                 maxLines: 1,

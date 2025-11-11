@@ -117,8 +117,9 @@ class ArtVoteWidgetState extends State<ArtVoteWidget> {
                     left: MediaQuery.of(context).size.width / 4 - 40,
                     child: Container(
                       width: 80,
-                      height: 80,                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      height: 80,                      
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.onSurface,
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
@@ -138,7 +139,7 @@ class ArtVoteWidgetState extends State<ArtVoteWidget> {
                         shape: BoxShape.circle,
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.thumb_down, size: 40, color: Colors.white),
+                        icon: Icon(Icons.thumb_down, size: 40, color: Theme.of(context).colorScheme.onPrimary),
                         onPressed: () => _addVote(false),
                       ),
                     ),

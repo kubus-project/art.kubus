@@ -7,18 +7,18 @@ class WalletTransactions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: const Color(0xFF0A0A0A),
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: ListView.builder(
         padding: const EdgeInsets.all(24),
         itemCount: 10,
         itemBuilder: (context, index) {
-          return _buildTransactionItem(index);
+          return _buildTransactionItem(context, index);
         },
       ),
     );
   }
 
-  Widget _buildTransactionItem(int index) {
+  Widget _buildTransactionItem(BuildContext context, int index) {
     final isReceived = index % 2 == 0;
     final amount = (index + 1) * 0.5;
     
@@ -26,9 +26,9 @@ class WalletTransactions extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: Theme.of(context).colorScheme.outline),
       ),
       child: Row(
         children: [
@@ -56,7 +56,7 @@ class WalletTransactions extends StatelessWidget {
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -64,7 +64,7 @@ class WalletTransactions extends StatelessWidget {
                   '${DateTime.now().subtract(Duration(days: index)).day}/${DateTime.now().subtract(Duration(days: index)).month}',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -86,7 +86,7 @@ class WalletTransactions extends StatelessWidget {
                 '\$${(amount * 2000).toStringAsFixed(2)}',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ],
@@ -96,3 +96,4 @@ class WalletTransactions extends StatelessWidget {
     );
   }
 }
+

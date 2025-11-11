@@ -1,8 +1,9 @@
+import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../models/achievements.dart';
-import '../../providers/config_provider.dart';
+import '../../providers/mockup_data_provider.dart';
 
 class AchievementsPage extends StatefulWidget {
   const AchievementsPage({super.key});
@@ -21,9 +22,9 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }
 
   void _initializeUserProgress() {
-    final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
     
-    if (configProvider.useMockData) {
+    if (mockupProvider.isMockDataEnabled) {
       // Enhanced mock data for testing
       _userProgress = [
         const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
@@ -36,29 +37,20 @@ class _AchievementsPageState extends State<AchievementsPage> {
         const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
       ];
     } else {
-      // Real user progress - would come from user service/API
-      _userProgress = [
-        const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-        const AchievementProgress(achievementId: 'ar_collector', currentProgress: 7, isCompleted: false),
-        const AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 3, isCompleted: false),
-        const AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
-        const AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
-        const AchievementProgress(achievementId: 'art_critic', currentProgress: 4, isCompleted: false),
-        const AchievementProgress(achievementId: 'social_butterfly', currentProgress: 15, isCompleted: false),
-        const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
-      ];
+      // No mock data - empty achievements when disabled
+      _userProgress = [];
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ConfigProvider>(
-      builder: (context, configProvider, child) {
-        // Reinitialize when config changes
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Reinitialize when mock data setting changes
         _initializeUserProgress();
         
         return Scaffold(
-          backgroundColor: const Color(0xFF0A0A0A),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -67,7 +59,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -91,10 +83,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF9C27B0), Color(0xFF6C63FF)],
+          colors: [Color(0xFF9C27B0), Provider.of<ThemeProvider>(context).accentColor],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -106,10 +98,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(30),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.emoji_events,
                   color: Colors.white,
                   size: 30,
@@ -133,7 +125,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
                       'Collect POAPs and unlock rewards for your AR art journey',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -175,7 +167,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.8),
+            color: Colors.white.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -210,12 +202,12 @@ class _AchievementsPageState extends State<AchievementsPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isUnlocked 
               ? achievement.color
-              : Colors.grey[800]!,
+              : Theme.of(context).colorScheme.outline,
         ),
       ),
       child: Column(
@@ -227,15 +219,15 @@ class _AchievementsPageState extends State<AchievementsPage> {
             height: 60,
             decoration: BoxDecoration(
               color: isUnlocked 
-                  ? achievement.color.withOpacity(0.1)
-                  : Colors.grey[800]!.withOpacity(0.3),
+                  ? achievement.color.withValues(alpha: 0.1)
+                  : Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
               achievement.icon,
               color: isUnlocked 
                   ? achievement.color
-                  : Colors.grey[600],
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
               size: 30,
             ),
           ),
@@ -246,7 +238,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isUnlocked ? Colors.white : Colors.grey[600],
+                color: isUnlocked ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -259,7 +251,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               achievement.description,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: isUnlocked ? Colors.grey[400] : Colors.grey[600],
+                color: isUnlocked ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.8) : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
@@ -272,13 +264,13 @@ class _AchievementsPageState extends State<AchievementsPage> {
               '${progress.currentProgress}/${achievement.requiredProgress}',
               style: GoogleFonts.inter(
                 fontSize: 10,
-                color: Colors.grey[500],
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 4),
             LinearProgressIndicator(
               value: progressPercent,
-              backgroundColor: Colors.grey[800],
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(achievement.color),
               minHeight: 3,
             ),
@@ -288,7 +280,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: achievement.color.withOpacity(0.1),
+                color: achievement.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
@@ -326,3 +318,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
     );
   }
 }
+
+
+
+

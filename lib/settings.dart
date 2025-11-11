@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/themeprovider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/mockup_data_provider.dart';
+import 'providers/web3provider.dart';
 import 'config/config.dart';
 
 class AppSettings extends StatefulWidget {
@@ -169,8 +170,8 @@ class _AppSettingsState extends State<AppSettings> {
                         },
                       ),
                       const Divider(height: 1),
-                      Consumer<MockupDataProvider>(
-                        builder: (context, mockupProvider, child) {
+                      Consumer2<MockupDataProvider, Web3Provider>(
+                        builder: (context, mockupProvider, web3Provider, child) {
                           return SwitchListTile(
                             secondary: const Icon(Icons.data_usage),
                             title: const Text('Mockup Data'),
@@ -179,12 +180,36 @@ class _AppSettingsState extends State<AppSettings> {
                                 : 'Production mode (IPFS integration)'),
                             value: mockupProvider.isMockDataEnabled,
                             onChanged: (value) async {
+                              print('Toggle mock data to: $value');
                               await mockupProvider.toggleMockData();
+                              print('Mock data toggled, now: ${mockupProvider.isMockDataEnabled}');
+                              
+                              // Auto-connect/disconnect mock wallet when toggle changes
+                              if (value) {
+                                // Enabling mock data - connect mock wallet if not connected
+                                print('Enabling mock data, connecting wallet...');
+                                if (!web3Provider.isConnected) {
+                                  try {
+                                    await web3Provider.connectWallet(isRealConnection: false);
+                                    print('Mock wallet connected: ${web3Provider.isConnected}');
+                                  } catch (e) {
+                                    print('Error connecting mock wallet: $e');
+                                  }
+                                }
+                              } else {
+                                // Disabling mock data - disconnect wallet
+                                print('Disabling mock data, disconnecting wallet...');
+                                if (web3Provider.isConnected) {
+                                  web3Provider.disconnectWallet();
+                                  print('Wallet disconnected');
+                                }
+                              }
+                              
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(value 
-                                        ? 'Switched to mockup data mode' 
+                                        ? 'Switched to mockup data mode with demo wallet' 
                                         : 'Switched to production mode (IPFS ready)'),
                                     duration: const Duration(seconds: 2),
                                   ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/themeprovider.dart';
 
 class DAOAnalytics extends StatefulWidget {
   const DAOAnalytics({super.key});
@@ -45,7 +47,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0A),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -54,7 +56,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           actions: [
@@ -89,15 +91,15 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
       ),
       child: DropdownButton<String>(
         value: _selectedPeriod,
         underline: const SizedBox(),
-        dropdownColor: const Color(0xFF1A1A1A),
-        style: const TextStyle(color: Colors.white),
+        dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+        style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
         items: ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last Year'].map((period) {
           return DropdownMenuItem<String>(
             value: period,
@@ -136,7 +138,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
           '2,134',
           '+89 this week',
           Icons.people,
-          const Color(0xFF6C63FF),
+          Provider.of<ThemeProvider>(context).accentColor,
           '+4.3%',
           true,
         ),
@@ -174,9 +176,9 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,14 +217,14 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
             title,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 4),
@@ -230,7 +232,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             subtitle,
             style: GoogleFonts.inter(
               fontSize: 10,
-              color: Colors.white.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -242,9 +244,9 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,7 +256,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -275,7 +277,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
   Widget _buildChartLegend() {
     final items = [
       {'label': 'Participation Rate', 'color': const Color(0xFF4CAF50)},
-      {'label': 'New Voters', 'color': const Color(0xFF6C63FF)},
+      {'label': 'New Voters', 'color': Provider.of<ThemeProvider>(context).accentColor},
       {'label': 'Proposals', 'color': const Color(0xFFFFD93D)},
     ];
     
@@ -299,7 +301,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
                 item['label'] as String,
                 style: GoogleFonts.inter(
                   fontSize: 10,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -313,9 +315,9 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -325,7 +327,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -344,7 +346,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
   Widget _buildProposalTypeChart() {
     final types = [
       {'type': 'Platform Update', 'count': 18, 'color': const Color(0xFF4CAF50)},
-      {'type': 'Treasury', 'count': 12, 'color': const Color(0xFF6C63FF)},
+      {'type': 'Treasury', 'count': 12, 'color': Provider.of<ThemeProvider>(context).accentColor},
       {'type': 'Policy Change', 'count': 8, 'color': const Color(0xFFFFD93D)},
       {'type': 'Community', 'count': 9, 'color': const Color(0xFF00D4AA)},
     ];
@@ -357,7 +359,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -379,7 +381,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
                   type['type'] as String,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                   ),
                 ),
               ),
@@ -388,7 +390,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -407,7 +409,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -433,7 +435,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.8),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
             const Spacer(),
@@ -442,7 +444,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -451,7 +453,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
         Container(
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(2),
           ),
           child: FractionallySizedBox(
@@ -473,9 +475,9 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +487,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -495,7 +497,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
           const SizedBox(height: 12),
           _buildPowerDistributionItem('Top 100 Holders', '86.4%', const Color(0xFF4CAF50)),
           const SizedBox(height: 12),
-          _buildPowerDistributionItem('Remaining Holders', '13.6%', const Color(0xFF6C63FF)),
+          _buildPowerDistributionItem('Remaining Holders', '13.6%', Provider.of<ThemeProvider>(context).accentColor),
         ],
       ),
     );
@@ -519,7 +521,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             label,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -539,9 +541,9 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,7 +553,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -579,13 +581,13 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
+          Icon(icon, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 20),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -595,14 +597,14 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 10,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -616,9 +618,9 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -628,7 +630,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 20),
@@ -660,7 +662,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
                       'Overall Score',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -675,7 +677,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
                     const SizedBox(height: 8),
                     _buildHealthMetric('Diversity', 0.72, const Color(0xFFFFD93D)),
                     const SizedBox(height: 8),
-                    _buildHealthMetric('Activity', 0.94, const Color(0xFF6C63FF)),
+                    _buildHealthMetric('Activity', 0.94, Provider.of<ThemeProvider>(context).accentColor),
                     const SizedBox(height: 8),
                     _buildHealthMetric('Consensus', 0.68, const Color(0xFF00D4AA)),
                   ],
@@ -698,7 +700,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.8),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               ),
             ),
             const Spacer(),
@@ -707,7 +709,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -716,7 +718,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
         Container(
           height: 4,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(2),
           ),
           child: FractionallySizedBox(
@@ -744,7 +746,7 @@ class ParticipationChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.grey.withValues(alpha: 0.1)
       ..strokeWidth = 0.5;
 
     // Draw grid
@@ -774,7 +776,7 @@ class ParticipationChartPainter extends CustomPainter {
     canvas.drawPath(participationPath, paint);
 
     // Draw new voters line
-    paint.color = const Color(0xFF6C63FF);
+    paint.color = Colors.grey;
     final newVotersData = [0.2, 0.3, 0.2, 0.5, 0.4, 0.6, 0.5, 0.7];
     final newVotersPath = Path();
     for (int i = 0; i < newVotersData.length; i++) {
@@ -807,3 +809,10 @@ class ParticipationChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+
+
+
+
+
+

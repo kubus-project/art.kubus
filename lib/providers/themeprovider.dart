@@ -8,7 +8,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   static const String _accentColorKey = 'accent_color';
   
   ThemeMode _themeMode = ThemeMode.dark; // Default to dark theme
-  Color _accentColor = const Color(0xFF6C63FF);
+  Color _accentColor = const Color(0xFF00838F); // Deep blue-cyan
   bool _isInitialized = false;
 
   ThemeProvider() {
@@ -46,16 +46,16 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   
   bool get isSystemMode => _themeMode == ThemeMode.system;
 
-  // Available accent colors
+  // Available accent colors with deep blue-cyan theme
   static const List<Color> availableAccentColors = [
-    Color(0xFF6C63FF), // Primary Purple
-    Color(0xFF00D4AA), // Teal
-    Color(0xFFFFD93D), // Yellow
-    Color(0xFF9C27B0), // Purple
-    Color(0xFFFF6B6B), // Red
-    Color(0xFF4ECDC4), // Cyan
-    Color(0xFFFFBE0B), // Orange
-    Color(0xFF8B5CF6), // Violet
+    Color(0xFF00838F), // Deep Blue-Cyan (Primary)
+    Color(0xFF0097A7), // Cyan 700
+    Color(0xFF00ACC1), // Cyan 600
+    Color(0xFF26C6DA), // Cyan 400
+    Color(0xFF006064), // Cyan 900 (Darker)
+    Color(0xFF00BCD4), // Cyan 500
+    Color(0xFF4DD0E1), // Cyan 300
+    Color(0xFF0288D1), // Light Blue 700
   ];
 
   // Load theme preferences from storage
@@ -68,7 +68,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       _themeMode = ThemeMode.values[themeModeIndex];
       
       // Load accent color
-      final accentColorValue = prefs.getInt(_accentColorKey) ?? 0xFF6C63FF;
+      final accentColorValue = prefs.getInt(_accentColorKey) ?? 0xFF00838F;
       _accentColor = Color(accentColorValue);
       
       _isInitialized = true;

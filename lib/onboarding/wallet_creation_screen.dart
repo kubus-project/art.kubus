@@ -154,7 +154,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
                   child: Icon(
                     Icons.account_balance_wallet,
                     size: effectiveSmallScreen ? 40 : 60,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onPrimary,
                   ),
                 ),
                 SizedBox(height: effectiveSmallScreen ? 24 : 48),
@@ -191,10 +191,10 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
 
   Widget _buildFeatureList([bool isSmallScreen = false]) {
     final features = [
-      ('🔒', 'End-to-end encryption'),
-      ('📱', 'Biometric authentication'),
-      ('💎', 'SOL & KUB8 support'),
-      ('🎨', 'NFT storage'),
+      (Icons.lock, 'End-to-end encryption'),
+      (Icons.smartphone, 'Biometric authentication'),
+      (Icons.diamond, 'SOL & KUB8 support'),
+      (Icons.palette, 'NFT storage'),
     ];
 
     return Column(
@@ -203,9 +203,10 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
           padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 8),
           child: Row(
             children: [
-              Text(
+              Icon(
                 feature.$1,
-                style: TextStyle(fontSize: isSmallScreen ? 20 : 24),
+                size: isSmallScreen ? 20 : 24,
+                color: Provider.of<ThemeProvider>(context).accentColor,
               ),
               const SizedBox(width: 16),
               Flexible(
@@ -257,7 +258,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
             onPressed: _termsAccepted ? () => _nextStep() : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -329,10 +330,10 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
 
   Widget _buildSecurityTips([bool isSmallScreen = false]) {
     final tips = [
-      '✍️ Write it down on paper',
-      '🔒 Store in a safe place',
-      '🚫 Never share with anyone',
-      '📷 Don\'t take screenshots',
+      (Icons.edit, 'Write it down on paper'),
+      (Icons.lock, 'Store in a safe place'),
+      (Icons.block, 'Never share with anyone'),
+      (Icons.photo_camera, 'Don\'t take screenshots'),
     ];
 
     return Container(
@@ -350,14 +351,15 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
             padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 8),
             child: Row(
               children: [
-                Text(
-                  tip.substring(0, 2),
-                  style: TextStyle(fontSize: isSmallScreen ? 16 : 20),
+                Icon(
+                  tip.$1,
+                  size: isSmallScreen ? 16 : 20,
+                  color: Colors.orange,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    tip.substring(3),
+                    tip.$2,
                     style: GoogleFonts.inter(
                       fontSize: isSmallScreen ? 13 : 14,
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
@@ -677,9 +679,9 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
                 SnackBar(
                   content: Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.check_circle,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -851,12 +853,12 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
                   ),
                 ],
               ),
-              child: const Center(
+              child: Center(
                 child: SizedBox(
                   width: 60,
                   height: 60,
                   child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    valueColor: AlwaysStoppedAnimation<Color>(Provider.of<ThemeProvider>(context).accentColor),
                     strokeWidth: 4,
                   ),
                 ),
@@ -953,7 +955,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
                     child: ElevatedButton(
                       onPressed: _importWallet,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(isWideScreen ? 16 : 12),
                         ),
@@ -963,7 +965,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
                         style: GoogleFonts.inter(
                           fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ),
@@ -1015,7 +1017,7 @@ class _WalletCreationScreenState extends State<WalletCreationScreen>
             onPressed: _canProceed() ? _nextStep : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF6C63FF),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),

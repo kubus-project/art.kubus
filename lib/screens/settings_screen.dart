@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/config.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
@@ -55,6 +56,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _crashReporting = true;
   bool _enableAnalytics = true;
   bool _enableCrashReporting = true;
+  bool _skipOnboardingForReturningUsers = true;
   
   // Wallet settings state
   String _networkSelection = 'Solana';
@@ -101,12 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -213,9 +211,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.person,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 30,
                 ),
               ),
@@ -229,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimary,
                       ),
                     ),
                     if (web3Provider.isConnected) ...[
@@ -258,9 +256,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.edit,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 20,
                 ),
               ),
@@ -328,7 +326,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
             Text(
@@ -583,7 +581,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     color: color,
                     borderRadius: BorderRadius.circular(20),
                     border: isSelected 
-                        ? Border.all(color: Colors.white, width: 3)
+                        ? Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 3)
                         : null,
                     boxShadow: isSelected ? [
                       BoxShadow(
@@ -594,7 +592,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ] : null,
                   ),
                   child: isSelected 
-                      ? const Icon(Icons.check, color: Colors.white, size: 20)
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.onPrimary, size: 20)
                       : null,
                 ),
               );
@@ -615,9 +613,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
+                color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[800]!),
+                border: Border.all(color: Theme.of(context).colorScheme.outline),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -637,7 +635,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         ),
                       ),
                     ],
@@ -648,7 +646,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[300],
+                      color: Theme.of(context).colorScheme.outline,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -668,7 +666,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                               _getCapabilityDisplayName(entry.key),
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                color: entry.value ? Colors.white : Colors.grey[500],
+                                color: entry.value ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                               ),
                             ),
                           ),
@@ -904,6 +902,21 @@ class _SettingsScreenState extends State<SettingsScreen>
             onChanged: (value) {
               setState(() {
                 _crashReporting = value;
+              });
+              _saveAllSettings();
+            },
+            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+          ),
+        ),
+        _buildSettingsTile(
+          'Skip Onboarding',
+          'Skip welcome screens for returning users',
+          Icons.fast_forward,
+          trailing: Switch(
+            value: _skipOnboardingForReturningUsers,
+            onChanged: (value) {
+              setState(() {
+                _skipOnboardingForReturningUsers = value;
               });
               _saveAllSettings();
             },
@@ -1257,13 +1270,23 @@ class _SettingsScreenState extends State<SettingsScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '⚠️ Security Warning',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.warning,
+                        size: 16,
+                        color: Colors.orange,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Security Warning',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1299,7 +1322,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             child: Text(
               'Continue',
               style: GoogleFonts.inter(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1397,7 +1420,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             child: Text(
               'I\'ve Written It Down',
               style: GoogleFonts.inter(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1500,7 +1523,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               await prefs.clear();
               // TODO: Reset app state
             },
-            child: const Text('Reset', style: TextStyle(color: Colors.white)),
+            child: Text('Reset', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -1524,7 +1547,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               Navigator.pop(context);
               // TODO: Delete account
             },
-            child: const Text('Delete Forever', style: TextStyle(color: Colors.white)),
+            child: Text('Delete Forever', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -1542,6 +1565,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     // Privacy settings  
     await prefs.setBool('enableAnalytics', _enableAnalytics);
     await prefs.setBool('enableCrashReporting', _enableCrashReporting);
+    
+    // App behavior settings
+    await prefs.setBool('skipOnboardingForReturningUsers', _skipOnboardingForReturningUsers);
     
     // Wallet settings
     await prefs.setString('networkSelection', _networkSelection);
@@ -1566,6 +1592,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       // Privacy settings
       _enableAnalytics = prefs.getBool('enableAnalytics') ?? true;
       _enableCrashReporting = prefs.getBool('enableCrashReporting') ?? true;
+      
+      // App behavior settings
+      _skipOnboardingForReturningUsers = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
       
       // Wallet settings
       _networkSelection = prefs.getString('networkSelection') ?? 'Mainnet';
@@ -1632,7 +1661,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   Icon(
                     Icons.receipt_long,
                     size: 64,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -1640,7 +1669,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Colors.grey[400],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1648,7 +1677,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     'Your transaction history will appear here when you start making transactions.',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.grey[500],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -2370,20 +2399,23 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: const Text('Deactivate Account'),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.warning_amber, size: 48, color: Colors.orange),
-            SizedBox(height: 16),
-            Text(
+            const Icon(Icons.warning_amber, size: 48, color: Colors.orange),
+            const SizedBox(height: 16),
+            const Text(
               'Are you sure you want to deactivate your account?',
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               'You can reactivate it later by logging in.',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 14, 
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

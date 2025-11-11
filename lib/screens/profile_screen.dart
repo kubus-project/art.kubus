@@ -71,7 +71,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
+          ? Theme.of(context).scaffoldBackgroundColor 
           : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: AnimatedBuilder(
@@ -1554,3 +1554,4 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
+

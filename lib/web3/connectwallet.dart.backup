@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
+import '../onboarding/wallet_creation_screen.dart';
 
 class ConnectWallet extends StatefulWidget {
   const ConnectWallet({super.key});
@@ -16,10 +17,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
-  final TextEditingController _mnemonicController = TextEditingController();
   
   bool _isLoading = false;
-  int _currentStep = 0; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic)
+  String _connectionStatus = '';
+  int _currentStep = 0; // 0: Choose option, 1: Connect existing, 2: Create new
 
   @override
   void initState() {
@@ -48,7 +49,6 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   @override
   void dispose() {
     _animationController.dispose();
-    _mnemonicController.dispose();
     super.dispose();
   }
 
@@ -94,7 +94,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       case 0:
         return 'Connect Wallet';
       case 1:
-        return 'Connect Wallet';
+        return 'Connect Existing Wallet';
       case 2:
         return 'Create New Wallet';
       default:
@@ -107,9 +107,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       case 0:
         return _buildChooseOptionView();
       case 1:
-        return _buildConnectWithMnemonicView(web3Provider);
+        return _buildConnectExistingView(web3Provider);
       case 2:
-        return _buildCreateNewWalletView(web3Provider);
+        return _buildCreateWalletView(web3Provider);
       default:
         return _buildChooseOptionView();
     }
@@ -172,16 +172,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               ),
               const SizedBox(height: 48),
               _buildOptionCard(
-                'Connect Wallet',
-                'Import using 12-word recovery phrase',
-                Icons.key,
+                'Connect Existing Wallet',
+                'Use your existing Web3 wallet',
+                Icons.link,
                 const Color(0xFF6C63FF),
                 () => setState(() => _currentStep = 1),
               ),
               const SizedBox(height: 16),
               _buildOptionCard(
                 'Create New Wallet',
-                'Generate new Solana wallet with recovery phrase',
+                'Set up a new wallet for beginners',
                 Icons.add_circle_outline,
                 const Color(0xFF4CAF50),
                 () => setState(() => _currentStep = 2),
@@ -210,9 +210,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     String description,
     IconData icon,
     Color color,
-    VoidCallback onTap, {
-    bool isSubdued = false,
-  }) {
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -221,12 +220,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSubdued 
-              ? Theme.of(context).colorScheme.outline.withOpacity(0.5)
-              : Theme.of(context).colorScheme.outline,
-          ),
-          boxShadow: isSubdued ? [] : [
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          boxShadow: [
             BoxShadow(
               color: color.withOpacity(0.1),
               blurRadius: 10,
@@ -280,591 +275,536 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  /* // Mock wallet connection method - REMOVED (use settings toggle instead)
-  Future<void> _connectMockWallet() async {
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-      await web3Provider.connectWallet(isRealConnection: false);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Mock wallet connected successfully!'),
-            backgroundColor: const Color(0xFF00D4AA),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to connect: ${e.toString()}'),
-            backgroundColor: const Color(0xFFFF6B6B),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-  */ // End of removed mock wallet connection
-
-  // Connect wallet with mnemonic phrase view
-  Widget _buildConnectWithMnemonicView(Web3Provider web3Provider) {
+  Widget _buildConnectExistingView(Web3Provider web3Provider) {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF6C63FF), Color(0xFF5A52D5)],
-                ),
-                borderRadius: BorderRadius.circular(40),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 600;
+          
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - (isSmallScreen ? 32 : 48),
               ),
-              child: const Icon(
-                Icons.key,
-                color: Colors.white,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Import Wallet',
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Enter your 12-word recovery phrase to import your Solana wallet',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            
-            // Mnemonic Input Field
-            TextField(
-              controller: _mnemonicController,
-              maxLines: 4,
-              decoration: InputDecoration(
-                hintText: 'Enter your 12-word recovery phrase separated by spaces',
-                hintStyle: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                ),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 2),
-                ),
-              ),
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Warning Box
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
-              child: Row(
+              child: Column(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
+                  SizedBox(height: isSmallScreen ? 20 : 40),
+                  Container(
+                    width: isSmallScreen ? 80 : 100,
+                    height: isSmallScreen ? 80 : 100,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                      ),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 40 : 50),
+                    ),
+                    child: Icon(
+                      Icons.link,
+                      color: Colors.white,
+                      size: isSmallScreen ? 40 : 50,
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'Connect Your Wallet',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 24 : 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  Text(
+                    'Connect your preferred wallet to access the art.kubus ecosystem',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  if (_isLoading) ...[
+                    Center(
+                      child: Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: isSmallScreen ? 40 : 50,
+                              height: isSmallScreen ? 40 : 50,
+                              child: CircularProgressIndicator(
+                                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF8B5CF6)),
+                                strokeWidth: isSmallScreen ? 3 : 4,
+                              ),
+                            ),
+                            SizedBox(height: isSmallScreen ? 16 : 20),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: isSmallScreen ? 280 : 400,
+                              ),
+                              child: Text(
+                                _connectionStatus,
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 13 : 14,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  height: 1.4,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    Column(
+                      children: [
+                        _buildWalletOption(
+                          'WalletConnect',
+                          'Connect 300+ wallets securely',
+                          Icons.qr_code_scanner,
+                          const Color(0xFF3B99FC),
+                          () => _connectWallet(web3Provider, 'WalletConnect'),
+                          isRecommended: true,
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildWalletOption(
+                          'art.kubus Wallet',
+                          'Built-in wallet for seamless experience',
+                          Icons.account_balance_wallet,
+                          const Color(0xFF8B5CF6),
+                          () => _connectWallet(web3Provider, 'ArtKubus'),
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildWalletOption(
+                          'Solana Wallets',
+                          'Phantom, Solflare & more',
+                          Icons.flash_on,
+                          const Color(0xFF9945FF),
+                          () => _connectWallet(web3Provider, 'Solana'),
+                        ),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        _buildWalletOption(
+                          'Mobile Wallets',
+                          'Trust Wallet, Coinbase & others',
+                          Icons.phone_android,
+                          const Color(0xFF00D4AA),
+                          () => _connectWallet(web3Provider, 'Mobile'),
+                        ),
+                      ],
+                    ),
+                  ],
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'New to crypto wallets?',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => setState(() => _currentStep = 2),
                     child: Text(
-                      'Never share your recovery phrase with anyone. art.kubus will never ask for it.',
+                      'Create your first wallet here →',
                       style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        height: 1.4,
+                        fontSize: 14,
+                        color: const Color(0xFF8B5CF6),
+                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 32),
-            
-            // Connect Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : () => _importWalletFromMnemonic(web3Provider),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6C63FF),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  disabledBackgroundColor: const Color(0xFF6C63FF).withOpacity(0.5),
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        'Import Wallet',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Future<void> _importWalletFromMnemonic(Web3Provider web3Provider) async {
-    final mnemonic = _mnemonicController.text.trim();
-    
-    if (mnemonic.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please enter your recovery phrase'),
-          backgroundColor: const Color(0xFFFF6B6B),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-    
-    // Validate mnemonic format (12 words)
-    final words = mnemonic.split(' ').where((w) => w.isNotEmpty).toList();
-    if (words.length != 12) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid recovery phrase. Expected 12 words, got ${words.length}'),
-          backgroundColor: const Color(0xFFFF6B6B),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-    
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final address = await walletProvider.importWalletFromMnemonic(mnemonic);
-      
-      // Connect the wallet in Web3Provider as well
-      await web3Provider.connectWallet(isRealConnection: true);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Wallet imported successfully!\nAddress: ${address.substring(0, 8)}...'),
-            backgroundColor: const Color(0xFF00D4AA),
-            behavior: SnackBarBehavior.floating,
+  Widget _buildWalletOption(
+    String name,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    bool isRecommended = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isRecommended ? color : Theme.of(context).colorScheme.outline,
+            width: isRecommended ? 2 : 1,
           ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to import wallet: ${e.toString()}'),
-            backgroundColor: const Color(0xFFFF6B6B),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-
-  // Create new wallet view - generates mnemonic
-  Widget _buildCreateNewWalletView(Web3Provider web3Provider) {
-    return FadeTransition(
-      opacity: _fadeAnimation,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          boxShadow: isRecommended ? [
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ] : null,
+        ),
+        child: Stack(
           children: [
-            const SizedBox(height: 20),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4CAF50), Color(0xFF45A049)],
+            Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
                 ),
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: const Icon(
-                Icons.add_circle_outline,
-                color: Colors.white,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Create New Wallet',
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Generate a new Solana wallet with a 12-word recovery phrase',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 32),
-            
-            // Info Box
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 24),
-                      const SizedBox(width: 12),
                       Text(
-                        'What you\'ll receive:',
+                        name,
                         style: GoogleFonts.inter(
-                          fontSize: 16,
+                          fontSize: 18,
                           fontWeight: FontWeight.w600,
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '• A new Solana wallet address\n• A 12-word recovery phrase\n• Full ownership and control\n\nYou\'ll need to write down and confirm your recovery phrase before proceeding.',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                      height: 1.6,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Warning Box
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange.withOpacity(0.3)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Keep your recovery phrase safe! It\'s the only way to recover your wallet. Never share it with anyone.',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            
-            // Generate Button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : () => _generateNewWallet(web3Provider),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  disabledBackgroundColor: const Color(0xFF4CAF50).withOpacity(0.5),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Text(
-                        'Generate Wallet',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'Already have a wallet? ',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => setState(() => _currentStep = 1),
-                  child: Text(
-                    'Import it here',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: const Color(0xFF6C63FF),
-                      decoration: TextDecoration.underline,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  size: 16,
                 ),
               ],
             ),
+            if (isRecommended)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Recommended',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  Future<void> _generateNewWallet(Web3Provider web3Provider) async {
-    setState(() {
-      _isLoading = true;
-    });
-    
-    try {
-      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final result = await walletProvider.createWallet();
-      
-      // Show the mnemonic to the user
-      if (mounted) {
-        await _showMnemonicDialog(result['mnemonic']!, result['address']!);
-        
-        // Connect the wallet in Web3Provider as well
-        await web3Provider.connectWallet(isRealConnection: true);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Wallet created and connected successfully!'),
-              backgroundColor: const Color(0xFF00D4AA),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          Navigator.pop(context);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create wallet: ${e.toString()}'),
-            backgroundColor: const Color(0xFFFF6B6B),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _showMnemonicDialog(String mnemonic, String address) async {
-    final TextEditingController confirmController = TextEditingController();
-    bool confirmed = false;
-    
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            'Save Your Recovery Phrase',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+  Widget _buildCreateWalletView(Web3Provider web3Provider) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isSmallScreen = constraints.maxWidth < 600;
+          
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight - (isSmallScreen ? 32 : 48),
+              ),
+              child: Column(
+                children: [
+                  SizedBox(height: isSmallScreen ? 20 : 40),
+                  Container(
+                    width: isSmallScreen ? 80 : 100,
+                    height: isSmallScreen ? 80 : 100,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                      ),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 40 : 50),
+                    ),
+                    child: Icon(
+                      Icons.add_circle_outline,
+                      color: Colors.white,
+                      size: isSmallScreen ? 40 : 50,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Write this down and keep it safe!',
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  Text(
+                    'Create Your Wallet',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 24 : 28,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  Text(
+                    'Choose how you\'d like to create your secure wallet for art.kubus',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  
+                  // Wallet Creation Options
+                  _buildWalletCreationCard(
+                    'Generate Mnemonic Wallet',
+                    'Create a new wallet with 12-word recovery phrase',
+                    Icons.key,
+                    const Color(0xFF8B5CF6),
+                    () => _navigateToMnemonicCreation(),
+                    isRecommended: true,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  _buildWalletCreationCard(
+                    'Import Existing Wallet',
+                    'Restore wallet using your seed phrase',
+                    Icons.import_export,
+                    const Color(0xFF4CAF50),
+                    () => _navigateToWalletImport(),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  
+                  SizedBox(height: isSmallScreen ? 32 : 48),
+                  
+                  // Security Notice
+                  Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.security,
+                              color: const Color(0xFF4CAF50),
+                              size: isSmallScreen ? 20 : 24,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Security First',
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 16 : 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: isSmallScreen ? 8 : 12),
+                        Text(
+                          'Your wallet is completely secure and private. We never store your recovery phrase or private keys.',
                           style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.orange,
+                            fontSize: isSmallScreen ? 12 : 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                  
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: () => setState(() => _currentStep = 1),
+                        child: Text(
+                          'Already have a wallet? ',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () => setState(() => _currentStep = 1),
+                        child: Text(
+                          'Connect it here',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: const Color(0xFF8B5CF6),
+                            decoration: TextDecoration.underline,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildWalletCreationCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    bool isRecommended = false,
+    bool isSmallScreen = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isRecommended ? color : Theme.of(context).colorScheme.outline,
+            width: isRecommended ? 2 : 1,
+          ),
+          boxShadow: isRecommended ? [
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ] : null,
+        ),
+        child: Stack(
+          children: [
+            Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  width: isSmallScreen ? 44 : 48,
+                  height: isSmallScreen ? 44 : 48,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).colorScheme.outline),
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 22 : 24),
                   ),
-                  child: SelectableText(
-                    mnemonic,
-                    style: GoogleFonts.robotoMono(
-                      fontSize: 14,
-                      height: 1.6,
+                  child: Icon(icon, color: color, size: isSmallScreen ? 20 : 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 12 : 14,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  color: color,
+                  size: isSmallScreen ? 16 : 20,
+                ),
+              ],
+            ),
+            if (isRecommended)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 6 : 8, 
+                    vertical: isSmallScreen ? 2 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: color,
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Recommended',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 8 : 10,
+                      fontWeight: FontWeight.w600,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Confirm by typing your recovery phrase:',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: confirmController,
-                  maxLines: 3,
-                  decoration: InputDecoration(
-                    hintText: 'Paste or type your recovery phrase',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setDialogState(() {
-                      confirmed = value.trim() == mnemonic;
-                    });
-                  },
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Your wallet address: ${address.substring(0, 8)}...${address.substring(address.length - 6)}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.inter(color: Colors.grey),
               ),
-            ),
-            ElevatedButton(
-              onPressed: confirmed
-                  ? () {
-                      confirmController.dispose();
-                      Navigator.pop(context);
-                    }
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4CAF50),
-                disabledBackgroundColor: Colors.grey.withOpacity(0.3),
-              ),
-              child: Text(
-                'I\'ve Saved It',
-                style: GoogleFonts.inter(
-                  color: confirmed ? Colors.white : Colors.grey,
-                ),
-              ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _navigateToMnemonicCreation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WalletCreationScreen(isImporting: false),
+      ),
+    );
+  }
+
+  void _navigateToWalletImport() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const WalletCreationScreen(isImporting: true),
       ),
     );
   }
@@ -953,64 +893,32 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  /* // UNUSED function - kept for reference
   Future<void> _connectWallet(Web3Provider web3Provider, String walletType) async {
     setState(() {
       _isLoading = true;
-      
+      _connectionStatus = 'Connecting to $walletType...';
     });
 
     try {
       // final walletProvider = Provider.of<WalletProvider>(context, listen: false);
       
-      if (walletType == 'Mock') {
-        // Handle Mock wallet connection (for testing with mock data)
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        
-        await Future.delayed(const Duration(milliseconds: 800));
-        
-        
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        // Connect mock wallet through provider (pass isRealConnection=false)
-        await web3Provider.connectWallet(isRealConnection: false);
-        
-        setState(() {
-          _isLoading = false;
-          
-        });
-        
-        if (web3Provider.isConnected) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Mock wallet connected successfully!'),
-                backgroundColor: Color(0xFFFF9800),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-            // Navigate to connected view
-            setState(() => _currentStep = 3);
-          }
-        }
-      } else if (walletType == 'Solana') {
+      if (walletType == 'Solana') {
         // Handle Solana wallet connection
         await Future.delayed(const Duration(milliseconds: 500));
-        
+        setState(() => _connectionStatus = 'Establishing secure connection...');
         
         await Future.delayed(const Duration(milliseconds: 800));
-        
+        setState(() => _connectionStatus = 'Connecting to Solana network...');
         
         await Future.delayed(const Duration(milliseconds: 700));
-        
+        setState(() => _connectionStatus = 'Initializing wallet...');
         
         // Show options for Solana wallets
         final result = await _showSolanaWalletOptions();
         
         setState(() {
           _isLoading = false;
-          
+          _connectionStatus = '';
         });
         
         // The individual wallet methods handle the actual connection
@@ -1021,22 +929,22 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       } else {
         // Handle other wallet types with existing logic
         await Future.delayed(const Duration(milliseconds: 500));
-        
+        setState(() => _connectionStatus = 'Establishing secure connection...');
         
         await Future.delayed(const Duration(milliseconds: 800));
-        
+        setState(() => _connectionStatus = 'Verifying wallet credentials...');
         
         await Future.delayed(const Duration(milliseconds: 700));
-        
+        setState(() => _connectionStatus = 'Finalizing connection...');
         
         await Future.delayed(const Duration(milliseconds: 500));
         
-        // Actually connect the wallet through provider (real Solana connection)
-        await web3Provider.connectWallet(isRealConnection: true);
+        // Actually connect the wallet through provider
+        await web3Provider.connectWallet();
         
         setState(() {
           _isLoading = false;
-          
+          _connectionStatus = '';
         });
         
         if (web3Provider.isConnected) {
@@ -1052,7 +960,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     } catch (e) {
       setState(() {
         _isLoading = false;
-        
+        _connectionStatus = '';
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1064,7 +972,6 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       );
     }
   }
-  */ // End of unused _connectWallet
 
   Future<String?> _showSolanaWalletOptions() async {
     return await showModalBottomSheet<String>(
@@ -1259,7 +1166,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         await _showMnemonicDialog(result['mnemonic']!, result['address']!);
         
         // Connect the wallet in Web3Provider as well
-        await web3Provider.connectWallet(isRealConnection: true);
+        await web3Provider.connectWallet();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1396,7 +1303,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         final address = await walletProvider.importWalletFromMnemonic(mnemonic);
         
         // Connect the wallet in Web3Provider as well
-        await web3Provider.connectWallet(isRealConnection: true);
+        await web3Provider.connectWallet();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1529,7 +1436,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         await walletProvider.connectWalletWithAddress(address);
         
         // Connect the wallet in Web3Provider as well
-        await web3Provider.connectWallet(isRealConnection: true);
+        await web3Provider.connectWallet();
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1555,6 +1462,130 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
       }
     }
+  }
+
+  Future<void> _showMnemonicDialog(String mnemonic, String address) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LayoutBuilder(
+        builder: (context, constraints) {
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+          final isMobile = screenWidth < 600;
+          
+          return AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            insetPadding: EdgeInsets.symmetric(
+              horizontal: isMobile ? 16 : 40,
+              vertical: isMobile ? 24 : 40,
+            ),
+            title: Text(
+              'Wallet Created Successfully!',
+              style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: isMobile ? 18 : 20,
+              ),
+            ),
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isMobile ? double.infinity : 500,
+                maxHeight: screenHeight * (isMobile ? 0.7 : 0.6),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Your new Solana wallet has been created. Please save your mnemonic phrase securely:',
+                      style: GoogleFonts.inter(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        fontSize: isMobile ? 13 : 14,
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(isMobile ? 12 : 16),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceVariant,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+                      ),
+                      child: SelectableText(
+                        mnemonic,
+                        style: GoogleFonts.inter(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: isMobile ? 14 : 16,
+                          fontWeight: FontWeight.w500,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    Text(
+                      'Address: ${address.substring(0, isMobile ? 6 : 8)}...${address.substring(address.length - (isMobile ? 6 : 8))}',
+                      style: GoogleFonts.inter(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        fontSize: isMobile ? 11 : 12,
+                      ),
+                    ),
+                    SizedBox(height: isMobile ? 12 : 16),
+                    Container(
+                      padding: EdgeInsets.all(isMobile ? 10 : 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3CD),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.warning,
+                            color: const Color(0xFF856404),
+                            size: isMobile ? 18 : 20,
+                          ),
+                          SizedBox(width: isMobile ? 6 : 8),
+                          Expanded(
+                            child: Text(
+                              'Keep this mnemonic phrase safe! It\'s the only way to recover your wallet.',
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF856404),
+                                fontSize: isMobile ? 11 : 12,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  // Remove the snackbar since the calling method will handle success feedback
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF9945FF),
+                ),
+                child: Text(
+                  'I\'ve Saved It',
+                  style: GoogleFonts.inter(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: isMobile ? 13 : 14,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
 
   void _showWeb3Guide() {
@@ -1641,4 +1672,3 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 }
-

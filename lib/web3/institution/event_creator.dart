@@ -78,7 +78,7 @@ class _EventCreatorState extends State<EventCreator>
       child: SlideTransition(
         position: _slideAnimation,
         child: Container(
-          color: const Color(0xFF0A0A0A),
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             children: [
               _buildHeader(),
@@ -105,21 +105,21 @@ class _EventCreatorState extends State<EventCreator>
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 'Step ${_currentStep + 1} of 4',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () => _showHelp(),
           ),
         ],
@@ -141,7 +141,7 @@ class _EventCreatorState extends State<EventCreator>
               decoration: BoxDecoration(
                 color: index <= _currentStep 
                     ? themeProvider.accentColor 
-                    : Colors.white.withOpacity(0.2),
+                    : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -369,7 +369,7 @@ class _EventCreatorState extends State<EventCreator>
                     'Your event will be reviewed and published within 24 hours.',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -385,9 +385,9 @@ class _EventCreatorState extends State<EventCreator>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,7 +397,7 @@ class _EventCreatorState extends State<EventCreator>
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -405,7 +405,7 @@ class _EventCreatorState extends State<EventCreator>
             _descriptionController.text.isNotEmpty ? _descriptionController.text : 'Event Description',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 16),
@@ -434,7 +434,7 @@ class _EventCreatorState extends State<EventCreator>
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -442,7 +442,7 @@ class _EventCreatorState extends State<EventCreator>
             value,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -456,7 +456,7 @@ class _EventCreatorState extends State<EventCreator>
       style: GoogleFonts.inter(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -477,7 +477,7 @@ class _EventCreatorState extends State<EventCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -486,19 +486,19 @@ class _EventCreatorState extends State<EventCreator>
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -526,23 +526,23 @@ class _EventCreatorState extends State<EventCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
           ),
           child: DropdownButton<String>(
             value: value,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: const Color(0xFF1A1A1A),
-            style: const TextStyle(color: Colors.white),
+            dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             items: items.map((item) {
               return DropdownMenuItem<String>(
                 value: item,
@@ -569,7 +569,7 @@ class _EventCreatorState extends State<EventCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -578,20 +578,20 @@ class _EventCreatorState extends State<EventCreator>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.calendar_today, color: Colors.white, size: 16),
+                Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.onSurface, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   date != null 
                       ? '${date.day}/${date.month}/${date.year}'
                       : 'Select date',
                   style: TextStyle(
-                    color: date != null ? Colors.white : Colors.white.withOpacity(0.5),
+                    color: date != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
               ],
@@ -615,7 +615,7 @@ class _EventCreatorState extends State<EventCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -624,20 +624,20 @@ class _EventCreatorState extends State<EventCreator>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
+              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.access_time, color: Colors.white, size: 16),
+                Icon(Icons.access_time, color: Theme.of(context).colorScheme.onSurface, size: 16),
                 const SizedBox(width: 8),
                 Text(
                   time != null 
                       ? time.format(context)
                       : 'Select time',
                   style: TextStyle(
-                    color: time != null ? Colors.white : Colors.white.withOpacity(0.5),
+                    color: time != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                 ),
               ],
@@ -657,9 +657,9 @@ class _EventCreatorState extends State<EventCreator>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -672,14 +672,14 @@ class _EventCreatorState extends State<EventCreator>
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -707,7 +707,7 @@ class _EventCreatorState extends State<EventCreator>
               child: ElevatedButton(
                 onPressed: () => setState(() => _currentStep--),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.1),
+                  backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -716,7 +716,7 @@ class _EventCreatorState extends State<EventCreator>
                 child: Text(
                   'Previous',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -736,7 +736,7 @@ class _EventCreatorState extends State<EventCreator>
               child: Text(
                 _currentStep < 3 ? 'Next' : 'Create Event',
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -785,11 +785,11 @@ class _EventCreatorState extends State<EventCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Success!', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Success!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Your event has been created successfully and is pending approval.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           ElevatedButton(
@@ -797,7 +797,7 @@ class _EventCreatorState extends State<EventCreator>
               Navigator.pop(context);
               _resetForm();
             },
-            child: const Text('Create Another'),
+            child: Text('Create Another'),
           ),
         ],
       ),
@@ -874,23 +874,29 @@ class _EventCreatorState extends State<EventCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Event Creation Help', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Event Creation Help', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Follow the 4-step process to create your event:\n\n'
           '1. Basic Info: Enter title, description, and type\n'
           '2. Date & Time: Set when your event occurs\n'
           '3. Details: Configure capacity, pricing, and settings\n'
           '4. Review: Confirm all details before creating',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
+            child: Text('Got it'),
           ),
         ],
       ),
     );
   }
 }
+
+
+
+
+
+

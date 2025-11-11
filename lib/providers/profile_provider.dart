@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
-import 'dart:convert';
 import 'dart:math';
 
 class ProfileProvider extends ChangeNotifier {

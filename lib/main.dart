@@ -10,7 +10,7 @@ import 'providers/artwork_provider.dart';
 import 'providers/mockup_data_provider.dart';
 import 'providers/institution_provider.dart';
 import 'providers/dao_provider.dart';
-import 'providers/wallet_provider.dart';
+ import 'providers/wallet_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/collectibles_provider.dart';
 import 'providers/platform_provider.dart';
@@ -35,10 +35,16 @@ void main() async {
         ChangeNotifierProvider(create: (context) => PlatformProvider()),
         ChangeNotifierProvider(create: (context) => ConnectionProvider()),
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
-        ChangeNotifierProvider(create: (context) => Web3Provider()),
+        ChangeNotifierProvider(create: (context) => MockupDataProvider()),
+        ChangeNotifierProxyProvider<MockupDataProvider, Web3Provider>(
+          create: (context) => Web3Provider(mockupProvider: context.read<MockupDataProvider>()),
+          update: (context, mockupProvider, web3Provider) {
+            web3Provider?.setMockupProvider(mockupProvider);
+            return web3Provider ?? Web3Provider(mockupProvider: mockupProvider);
+          },
+        ),
         ChangeNotifierProvider(create: (context) => ThemeProvider()),
         ChangeNotifierProvider(create: (context) => NavigationProvider()),
-        ChangeNotifierProvider(create: (context) => MockupDataProvider()),
         ChangeNotifierProvider(create: (context) => TaskProvider()),
         ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
           create: (context) {

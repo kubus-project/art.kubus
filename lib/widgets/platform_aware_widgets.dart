@@ -48,8 +48,8 @@ class PlatformAwareFeatureButton extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: isSupported 
               ? (color ?? Theme.of(context).primaryColor)
-              : Colors.grey[800],
-            foregroundColor: Colors.white,
+              : Theme.of(context).colorScheme.outline,
+            foregroundColor: Theme.of(context).colorScheme.onPrimary,
             padding: EdgeInsets.symmetric(
               horizontal: platformProvider.defaultPadding,
               vertical: platformProvider.defaultPadding * 0.75,
@@ -98,10 +98,10 @@ class PlatformAwareCard extends StatelessWidget {
           margin: margin ?? platformProvider.defaultMargin,
           padding: padding ?? EdgeInsets.all(platformProvider.defaultPadding),
           decoration: BoxDecoration(
-            color: backgroundColor ?? const Color(0xFF1A1A1A),
+            color: backgroundColor ?? Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(platformProvider.defaultBorderRadius),
             border: Border.all(
-              color: Colors.grey[800]!,
+              color: Theme.of(context).colorScheme.outline,
               width: platformProvider.isDesktop ? 1 : 0.5,
             ),
             boxShadow: platformProvider.isDesktop
@@ -223,3 +223,4 @@ class PlatformDebugWidget extends StatelessWidget {
     );
   }
 }
+

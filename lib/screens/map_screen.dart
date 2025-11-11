@@ -155,29 +155,39 @@ class _MapScreenState extends State<MapScreen>
   void _showMapIntroDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Welcome to AR Art Discovery!',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.map, size: 48, color: Colors.blue),
-            const SizedBox(height: 16),
-            Text(
-              'Explore art around you in augmented reality. Get close to artworks to discover them and earn rewards!',
-              style: GoogleFonts.outfit(),
-              textAlign: TextAlign.center,
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) => AlertDialog(
+          title: Text(
+            'Welcome to AR Art Discovery!',
+            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.map, 
+                size: 48, 
+                color: themeProvider.accentColor,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Explore art around you in augmented reality. Get close to artworks to discover them and earn rewards!',
+                style: GoogleFonts.outfit(),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: TextButton.styleFrom(
+                foregroundColor: themeProvider.accentColor,
+              ),
+              child: Text('Got it!', style: GoogleFonts.outfit()),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Got it!', style: GoogleFonts.outfit()),
-          ),
-        ],
       ),
     );
   }
