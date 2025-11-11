@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:camera/camera.dart';
 import '../providers/themeprovider.dart';
-import '../providers/web3provider.dart';
 import '../providers/platform_provider.dart';
+import '../services/ar_service.dart';
+import '../widgets/ar_view.dart';
+import 'download_app_screen.dart';
 
+/// AR Screen with seamless Android and iOS support
+/// On web, redirects to download app screen
 class ARScreen extends StatefulWidget {
   const ARScreen({super.key});
 
@@ -18,13 +21,20 @@ class _ARScreenState extends State<ARScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   
-  CameraController? _cameraController;
-  bool _isCameraInitialized = false;
-  bool _isScanning = false;
-  bool _artworkDetected = false;
+  final ARService _arService = ARService();
+  final ARController _arController = ARController();
   
-  final List<String> _arModes = ['Scan', 'Create', 'View', 'Collection'];
-  int _selectedMode = 0;
+  bool _isARReady = false;
+  bool _isLoading = true;
+  bool _showControls = true;
+  String _currentMode = 'scan'; // scan, place, view
+  
+  final List<Map<String, dynamic>> _arModes = [
+    {'id': 'scan', 'name': 'Scan', 'icon': Icons.qr_code_scanner, 'description': 'Discover AR artworks'},
+    {'id': 'place', 'name': 'Place', 'icon': Icons.add_location, 'description': 'Position new artwork'},
+    {'id': 'view', 'name': 'View', 'icon': Icons.visibility, 'description': 'View placed artworks'},
+    {'id': 'create', 'name': 'Create', 'icon': Icons.create, 'description': 'Create AR artwork'},
+  ];
 
   @override
   void initState() {
@@ -43,634 +53,123 @@ class _ARScreenState extends State<ARScreen>
       curve: Curves.easeInOut,
     ));
     
-    _animationController.forward();
+    _initializeAR();
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    
-    // Only initialize camera on platforms that support AR
-    final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
-    if (platformProvider.supportsARFeatures && !_isCameraInitialized) {
-      _initializeCamera();
-    }
-  }
+  Future<void> _initializeAR() async {
+    setState(() => _isLoading = true);
 
-  Future<void> _initializeCamera() async {
     try {
-      final cameras = await availableCameras();
-      if (cameras.isNotEmpty) {
-        _cameraController = CameraController(
-          cameras.first,
-          ResolutionPreset.high,
-        );
-        await _cameraController!.initialize();
-        if (mounted) {
-          setState(() {
-            _isCameraInitialized = true;
-          });
-        }
+      final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
+      
+      if (!platformProvider.supportsARFeatures) {
+        _showARNotSupportedDialog();
+        return;
+      }
+
+      final initialized = await _arService.initialize();
+      
+      if (initialized) {
+        await _arController.startSession();
+        setState(() {
+          _isARReady = true;
+          _isLoading = false;
+        });
+        _animationController.forward();
+      } else {
+        _showARInitializationErrorDialog();
       }
     } catch (e) {
-      debugPrint('Camera initialization error: $e');
+      debugPrint('AR initialization error: $e');
+      _showARInitializationErrorDialog();
     }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    _cameraController?.dispose();
+    _arController.dispose();
+    _arService.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<PlatformProvider>(
-      builder: (context, platformProvider, child) {
-        return Scaffold(
-          backgroundColor: Colors.black,
-          body: AnimatedBuilder(
-            animation: _animationController,
-            builder: (context, child) {
-              return FadeTransition(
-                opacity: _fadeAnimation,
-                child: platformProvider.supportsARFeatures
-                    ? Stack(
-                        children: [
-                          _buildCameraView(),
-                          _buildOverlay(),
-                          _buildTopBar(),
-                          _buildBottomControls(),
-                          if (_artworkDetected) _buildArtworkInfo(),
-                        ],
-                      )
-                    : _buildUnsupportedPlatform(platformProvider),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCameraView() {
-    if (!_isCameraInitialized || _cameraController == null) {
-      return Container(
-        color: Colors.black,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                color: Provider.of<ThemeProvider>(context).accentColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Initializing Camera...',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final platformProvider = Provider.of<PlatformProvider>(context);
+    
+    // If on web, show download app screen instead
+    if (platformProvider.isWeb) {
+      return const DownloadAppScreen(
+        feature: 'AR Experience',
+        description: 'Augmented Reality features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.',
       );
     }
-
-    return SizedBox.expand(
-      child: CameraPreview(_cameraController!),
-    );
-  }
-
-  Widget _buildOverlay() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     
-    return Positioned.fill(
-      child: CustomPaint(
-        painter: AROverlayPainter(
-          accentColor: themeProvider.accentColor,
-          isScanning: _isScanning,
-          artworkDetected: _artworkDetected,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopBar() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 16,
-      left: 24,
-      right: 24,
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_back,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: themeProvider.accentColor.withOpacity(0.5),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.view_in_ar,
-                  color: themeProvider.accentColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'AR Mode',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Spacer(),
-          IconButton(
-            onPressed: () {
-              // TODO: Toggle flash
-            },
-            icon: const Icon(
-              Icons.flash_off,
-              color: Colors.white,
-              size: 28,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomControls() {
-    return Positioned(
-      bottom: MediaQuery.of(context).padding.bottom + 32,
-      left: 24,
-      right: 24,
-      child: Column(
-        children: [
-          _buildModeSelector(),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _buildActionButton(
-                Icons.photo_library,
-                'Gallery',
-                () {
-                  // TODO: Open gallery
-                },
-              ),
-              _buildMainActionButton(),
-              _buildActionButton(
-                Icons.settings,
-                'Settings',
-                () {
-                  // TODO: Open AR settings
-                },
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildModeSelector() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(25),
-        border: Border.all(
-          color: themeProvider.accentColor.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: _arModes.asMap().entries.map((entry) {
-          final index = entry.key;
-          final mode = entry.value;
-          final isSelected = _selectedMode == index;
-          
-          return GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedMode = index;
-                _isScanning = index == 0;
-              });
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? themeProvider.accentColor
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                mode,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected 
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.7),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildMainActionButton() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (_selectedMode == 0) { // Scan mode
-            _isScanning = !_isScanning;
-            if (_isScanning) {
-              _simulateArtworkDetection();
-            }
-          } else if (_selectedMode == 1) { // Create mode
-            // TODO: Start AR creation
-          } else if (_selectedMode == 2) { // View mode
-            // TODO: View AR artworks
-          } else if (_selectedMode == 3) { // Collection mode
-            // TODO: View collection
-          }
-        });
-      },
-      child: Container(
-        width: 80,
-        height: 80,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              themeProvider.accentColor,
-              themeProvider.accentColor.withOpacity(0.8),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(40),
-          boxShadow: [
-            BoxShadow(
-              color: themeProvider.accentColor.withOpacity(0.4),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Icon(
-          _getMainActionIcon(),
-          color: Colors.white,
-          size: 32,
-        ),
-      ),
-    );
-  }
-
-  IconData _getMainActionIcon() {
-    switch (_selectedMode) {
-      case 0: // Scan
-        return _isScanning ? Icons.stop : Icons.search;
-      case 1: // Create
-        return Icons.add;
-      case 2: // View
-        return Icons.visibility;
-      case 3: // Collection
-        return Icons.collections;
-      default:
-        return Icons.search;
-    }
-  }
-
-  Widget _buildActionButton(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 60,
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.3),
-          ),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(
+        child: Stack(
           children: [
-            Icon(
-              icon,
-              color: Colors.white,
-              size: 24,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildArtworkInfo() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final web3Provider = Provider.of<Web3Provider>(context);
-    
-    return Positioned(
-      top: MediaQuery.of(context).size.height * 0.3,
-      left: 24,
-      right: 24,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              themeProvider.accentColor.withOpacity(0.9),
-              themeProvider.accentColor.withOpacity(0.7),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: themeProvider.accentColor.withOpacity(0.3),
-              blurRadius: 20,
-              spreadRadius: 0,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.view_in_ar,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Digital Convergence #42',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        'by CryptoArtist',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  onPressed: () {
-                    setState(() {
-                      _artworkDetected = false;
-                    });
-                  },
-                  icon: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'An immersive AR experience exploring the fusion of digital and physical reality through interactive geometric forms.',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                height: 1.4,
-                color: Colors.white.withOpacity(0.9),
+            // AR View
+            if (_isARReady)
+              ARView(
+                onARViewCreated: _onARViewCreated,
+                onObjectPlaced: _onObjectPlaced,
+                onObjectTapped: _onObjectTapped,
+                showPlanes: true,
+                showFeaturePoints: false,
               ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.currency_bitcoin,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '150 KUB8',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    '1/1 Edition',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Row(
+            
+            // Loading overlay
+            if (_isLoading)
+              _buildLoadingOverlay(),
+            
+            // AR Controls overlay
+            if (_isARReady && _showControls)
+              FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
                   children: [
-                    const Icon(
-                      Icons.favorite,
-                      size: 16,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '234',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
-                    ),
+                    _buildTopBar(themeProvider),
+                    const Spacer(),
+                    _buildBottomControls(themeProvider),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: View in AR
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: themeProvider.accentColor,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      'View in AR',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: web3Provider.isConnected ? () {
-                      // TODO: Purchase NFT
-                    } : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: Colors.white),
-                      ),
-                    ),
-                    child: Text(
-                      'Purchase',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
           ],
         ),
       ),
     );
   }
 
-  void _simulateArtworkDetection() {
-    // Simulate artwork detection after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted && _isScanning) {
-        setState(() {
-          _artworkDetected = true;
-          _isScanning = false;
-        });
-      }
-    });
-  }
-
-  Widget _buildUnsupportedPlatform(PlatformProvider platformProvider) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
+  Widget _buildLoadingOverlay() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              platformProvider.getARIcon(),
-              size: 80,
-              color: platformProvider.getUnsupportedFeatureColor(context),
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
             ),
             const SizedBox(height: 24),
             Text(
-              'AR Features Not Available',
+              'Initializing AR...',
               style: GoogleFonts.inter(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              platformProvider.getUnsupportedFeatureMessage('AR functionality'),
-              style: GoogleFonts.inter(
-                color: Colors.grey[400],
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            Text(
-              'Available AR features:',
-              style: GoogleFonts.inter(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            const SizedBox(height: 16),
-            Column(
-              children: [
-                _buildFeatureItem('📱', 'Scan art markers to view AR artworks in real space'),
-                _buildFeatureItem('🎨', 'View digital collections in augmented reality'),
-                _buildFeatureItem('💎', 'Contribute to artists and buy NFT series'),
-                _buildFeatureItem('🔗', 'Earn POAP achievements and rewards'),
-              ],
+            const SizedBox(height: 8),
+            Text(
+              _arService.platformInfo,
+              style: GoogleFonts.inter(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                fontSize: 14,
+              ),
             ),
           ],
         ),
@@ -678,166 +177,432 @@ class _ARScreenState extends State<ARScreen>
     );
   }
 
-  Widget _buildFeatureItem(String icon, String description) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+  Widget _buildTopBar(ThemeProvider themeProvider) {
+    final isDark = themeProvider.isDarkMode;
+    final overlayColor = isDark 
+        ? Theme.of(context).colorScheme.surface.withOpacity(0.8)
+        : Theme.of(context).colorScheme.surface.withOpacity(0.95);
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            overlayColor,
+            overlayColor.withOpacity(0.0),
+          ],
+        ),
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(icon, style: const TextStyle(fontSize: 16)),
+          // Back button
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
           const SizedBox(width: 12),
+          // Mode indicator
           Expanded(
-            child: Text(
-              description,
-              style: GoogleFonts.inter(
-                color: Colors.grey[300],
-                fontSize: 14,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(20),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _arModes.firstWhere((mode) => mode['id'] == _currentMode)['icon'],
+                    color: themeProvider.accentColor,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _arModes.firstWhere((mode) => mode['id'] == _currentMode)['name'],
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Settings button
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface, size: 20),
+              onPressed: _showARSettings,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class AROverlayPainter extends CustomPainter {
-  final Color accentColor;
-  final bool isScanning;
-  final bool artworkDetected;
+  Widget _buildBottomControls(ThemeProvider themeProvider) {
+    final isDark = themeProvider.isDarkMode;
+    final overlayColor = isDark 
+        ? Theme.of(context).colorScheme.surface.withOpacity(0.8)
+        : Theme.of(context).colorScheme.surface.withOpacity(0.95);
+    
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+          colors: [
+            overlayColor,
+            overlayColor.withOpacity(0.0),
+          ],
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // AR Mode selector
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: _arModes.map((mode) {
+                final isSelected = mode['id'] == _currentMode;
+                return GestureDetector(
+                  onTap: () => _changeMode(mode['id']),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? themeProvider.accentColor.withOpacity(0.3)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? themeProvider.accentColor
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          mode['icon'],
+                          color: isSelected 
+                              ? Theme.of(context).colorScheme.onSurface 
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          size: 24,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          mode['name'],
+                          style: GoogleFonts.inter(
+                            color: isSelected 
+                                ? Theme.of(context).colorScheme.onSurface 
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            fontSize: 12,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Action button based on mode
+          _buildActionButton(themeProvider),
+        ],
+      ),
+    );
+  }
 
-  AROverlayPainter({
-    required this.accentColor,
-    required this.isScanning,
-    required this.artworkDetected,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final centerX = size.width / 2;
-    final centerY = size.height / 2;
-    final scanAreaSize = size.width * 0.6;
-
-    if (isScanning) {
-      // Draw scanning frame
-      final rect = Rect.fromCenter(
-        center: Offset(centerX, centerY),
-        width: scanAreaSize,
-        height: scanAreaSize,
-      );
-
-      // Draw corner brackets
-      const cornerLength = 30.0;
-      final cornerPaint = Paint()
-        ..color = accentColor
-        ..strokeWidth = 4.0
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-
-      // Top-left corner
-      canvas.drawLine(
-        Offset(rect.left, rect.top + cornerLength),
-        Offset(rect.left, rect.top),
-        cornerPaint,
-      );
-      canvas.drawLine(
-        Offset(rect.left, rect.top),
-        Offset(rect.left + cornerLength, rect.top),
-        cornerPaint,
-      );
-
-      // Top-right corner
-      canvas.drawLine(
-        Offset(rect.right - cornerLength, rect.top),
-        Offset(rect.right, rect.top),
-        cornerPaint,
-      );
-      canvas.drawLine(
-        Offset(rect.right, rect.top),
-        Offset(rect.right, rect.top + cornerLength),
-        cornerPaint,
-      );
-
-      // Bottom-left corner
-      canvas.drawLine(
-        Offset(rect.left, rect.bottom - cornerLength),
-        Offset(rect.left, rect.bottom),
-        cornerPaint,
-      );
-      canvas.drawLine(
-        Offset(rect.left, rect.bottom),
-        Offset(rect.left + cornerLength, rect.bottom),
-        cornerPaint,
-      );
-
-      // Bottom-right corner
-      canvas.drawLine(
-        Offset(rect.right - cornerLength, rect.bottom),
-        Offset(rect.right, rect.bottom),
-        cornerPaint,
-      );
-      canvas.drawLine(
-        Offset(rect.right, rect.bottom),
-        Offset(rect.right, rect.bottom - cornerLength),
-        cornerPaint,
-      );
-
-      // Draw scanning line (animated)
-      final scanLinePaint = Paint()
-        ..color = accentColor.withOpacity(0.8)
-        ..strokeWidth = 2.0;
-
-      canvas.drawLine(
-        Offset(rect.left, centerY),
-        Offset(rect.right, centerY),
-        scanLinePaint,
-      );
+  Widget _buildActionButton(ThemeProvider themeProvider) {
+    String buttonText = '';
+    IconData buttonIcon = Icons.check;
+    
+    switch (_currentMode) {
+      case 'scan':
+        buttonText = 'Scan for Artwork';
+        buttonIcon = Icons.qr_code_scanner;
+        break;
+      case 'place':
+        buttonText = 'Place Artwork Here';
+        buttonIcon = Icons.add_location;
+        break;
+      case 'view':
+        buttonText = 'View Details';
+        buttonIcon = Icons.info_outline;
+        break;
+      case 'create':
+        buttonText = 'Create AR Artwork';
+        buttonIcon = Icons.create;
+        break;
     }
 
-    if (artworkDetected) {
-      // Draw detection outline
-      final detectionPaint = Paint()
-        ..color = Colors.green
-        ..strokeWidth = 4.0
-        ..style = PaintingStyle.stroke;
+    final buttonTextColor = themeProvider.isDarkMode ? Colors.white : Colors.white;
+    
+    return ElevatedButton.icon(
+      onPressed: _handleAction,
+      icon: Icon(buttonIcon, color: buttonTextColor),
+      label: Text(
+        buttonText,
+        style: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: buttonTextColor,
+        ),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: themeProvider.accentColor,
+        foregroundColor: buttonTextColor,
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 8,
+        shadowColor: themeProvider.accentColor.withOpacity(0.4),
+      ),
+    );
+  }
 
-      final detectionRect = Rect.fromCenter(
-        center: Offset(centerX, centerY * 0.8),
-        width: scanAreaSize * 0.8,
-        height: scanAreaSize * 0.6,
-      );
+  // Event handlers
+  void _onARViewCreated(Map<String, dynamic> info) {
+    debugPrint('AR View created: $info');
+  }
 
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(detectionRect, const Radius.circular(12)),
-        detectionPaint,
-      );
+  void _onObjectPlaced(String objectId) {
+    debugPrint('Object placed: $objectId');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Artwork placed successfully!'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
 
-      // Draw detection points
-      final pointPaint = Paint()
-        ..color = Colors.green
-        ..style = PaintingStyle.fill;
+  void _onObjectTapped(String objectId) {
+    debugPrint('Object tapped: $objectId');
+    _showArtworkDetails(objectId);
+  }
 
-      final points = [
-        detectionRect.topLeft,
-        detectionRect.topRight,
-        detectionRect.bottomLeft,
-        detectionRect.bottomRight,
-        Offset(detectionRect.center.dx, detectionRect.top),
-        Offset(detectionRect.center.dx, detectionRect.bottom),
-        Offset(detectionRect.left, detectionRect.center.dy),
-        Offset(detectionRect.right, detectionRect.center.dy),
-      ];
+  void _changeMode(String modeId) {
+    setState(() {
+      _currentMode = modeId;
+    });
+  }
 
-      for (final point in points) {
-        canvas.drawCircle(point, 6, pointPaint);
-      }
+  void _handleAction() {
+    switch (_currentMode) {
+      case 'scan':
+        _startScanning();
+        break;
+      case 'place':
+        _placeArtwork();
+        break;
+      case 'view':
+        _viewArtworkDetails();
+        break;
+      case 'create':
+        _createArtwork();
+        break;
     }
   }
 
-  @override
-  bool shouldRepaint(AROverlayPainter oldDelegate) {
-    return oldDelegate.isScanning != isScanning ||
-        oldDelegate.artworkDetected != artworkDetected ||
-        oldDelegate.accentColor != accentColor;
+  void _startScanning() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Scanning for artworks...')),
+    );
+  }
+
+  void _placeArtwork() {
+    // Create a new AR object node
+    final node = ARObjectNode(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      modelPath: 'assets/models/default_artwork.glb',
+      position: const Vector3(0, 0, -1.5),
+    );
+    
+    _arController.addNode(node);
+    _onObjectPlaced(node.id);
+  }
+
+  void _viewArtworkDetails() {
+    if (_arController.nodes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No artworks placed yet')),
+      );
+      return;
+    }
+    
+    _showArtworkDetails(_arController.nodes.first.id);
+  }
+
+  void _createArtwork() {
+    // Navigate to artwork creation screen
+    Navigator.pushNamed(context, '/create_artwork');
+  }
+
+  void _showArtworkDetails(String artworkId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.5,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AR Artwork Details',
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Artwork ID: $artworkId',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                ),
+              ),
+              // Add more artwork details here
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showARSettings() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.4,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AR Settings',
+                style: GoogleFonts.inter(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SwitchListTile(
+                title: Text('Show Feature Points'),
+                value: false,
+                onChanged: (value) {},
+              ),
+              SwitchListTile(
+                title: Text('Show Planes'),
+                value: true,
+                onChanged: (value) {},
+              ),
+              SwitchListTile(
+                title: Text('Auto-detect Surfaces'),
+                value: true,
+                onChanged: (value) {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showARNotSupportedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('AR Not Supported'),
+        content: const Text(
+          'Your device does not support AR features. AR requires ARCore (Android) or ARKit (iOS).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showARInitializationErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('AR Initialization Failed'),
+        content: const Text(
+          'Could not initialize AR. Please check camera permissions and try again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _initializeAR();
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
   }
 }

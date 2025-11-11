@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:art_kubus/providers/themeprovider.dart';
 
 class NFTGallery extends StatelessWidget {
   const NFTGallery({super.key});
@@ -7,20 +9,20 @@ class NFTGallery extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         title: Text(
           'NFT Gallery',
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -39,7 +41,7 @@ class NFTGallery extends StatelessWidget {
             ),
             itemCount: 8,
             itemBuilder: (context, index) {
-              return _buildNFTCard(index, constraints.maxWidth < 600);
+              return _buildNFTCard(context, index, constraints.maxWidth < 600);
             },
           );
         },
@@ -47,12 +49,12 @@ class NFTGallery extends StatelessWidget {
     );
   }
 
-  Widget _buildNFTCard(int index, bool isSmallScreen) {
+  Widget _buildNFTCard(BuildContext context, int index, bool isSmallScreen) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,16 +68,16 @@ class NFTGallery extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF8B5CF6).withOpacity(0.4),
-                    const Color(0xFF7C3AED).withOpacity(0.4),
+                    Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.4),
+                    Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.9).withOpacity(0.4),
                   ],
                 ),
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(
                   Icons.image,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   size: 48,
                 ),
               ),
@@ -98,7 +100,7 @@ class NFTGallery extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 12 : 14,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -108,7 +110,7 @@ class NFTGallery extends StatelessWidget {
                           'art.kubus',
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 10 : 12,
-                            color: Colors.white.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -125,14 +127,14 @@ class NFTGallery extends StatelessWidget {
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 10 : 12,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF8B5CF6),
+                            color: Provider.of<ThemeProvider>(context).accentColor,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       Icon(
                         Icons.more_vert,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         size: 16,
                       ),
                     ],
@@ -146,3 +148,8 @@ class NFTGallery extends StatelessWidget {
     );
   }
 }
+
+
+
+
+

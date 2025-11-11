@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_logo.dart';
 
 class FirstStartDialog extends StatelessWidget {
   const FirstStartDialog({super.key});
@@ -10,7 +11,7 @@ class FirstStartDialog extends StatelessWidget {
       icon: UnconstrainedBox(
         child: SizedBox.square(
           dimension: 64,
-          child: Image.asset('assets/images/logo.png', fit: BoxFit.fill),
+          child: AppLogo(width: 64, height: 64),
         ),
       ),
       title: const Text('flutter_map Live Web Demo'),

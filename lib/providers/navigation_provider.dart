@@ -3,8 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class NavigationProvider with ChangeNotifier {
   static const String _visitCountKey = 'screen_visit_counts';
+  static const String _lastVisitKey = 'screen_last_visit_times';
   
   Map<String, int> _visitCounts = {};
+  Map<String, DateTime> _lastVisitTimes = {};
   List<String> _frequentScreens = [];
 
   Map<String, int> get visitCounts => _visitCounts;
@@ -94,10 +96,10 @@ class NavigationProvider with ChangeNotifier {
   Future<void> _loadVisitCounts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final visitCountsJson = prefs.getString(_visitCountKey);
       
+      // Load visit counts
+      final visitCountsJson = prefs.getString(_visitCountKey);
       if (visitCountsJson != null) {
-        // Parse JSON string to Map<String, int>
         final Map<String, dynamic> decoded = {};
         visitCountsJson.split(',').forEach((entry) {
           final parts = entry.split(':');
@@ -107,19 +109,43 @@ class NavigationProvider with ChangeNotifier {
         });
         _visitCounts = decoded.cast<String, int>();
       }
+      
+      // Load last visit times
+      final lastVisitJson = prefs.getString(_lastVisitKey);
+      if (lastVisitJson != null) {
+        final Map<String, DateTime> decoded = {};
+        lastVisitJson.split(',').forEach((entry) {
+          final parts = entry.split(':');
+          if (parts.length == 2) {
+            final timestamp = int.tryParse(parts[1]);
+            if (timestamp != null) {
+              decoded[parts[0]] = DateTime.fromMillisecondsSinceEpoch(timestamp);
+            }
+          }
+        });
+        _lastVisitTimes = decoded;
+      }
     } catch (e) {
       _visitCounts = {};
+      _lastVisitTimes = {};
     }
   }
 
   Future<void> _saveVisitCounts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      // Convert Map to simple string format
+      
+      // Save visit counts
       final visitCountsString = _visitCounts.entries
           .map((entry) => '${entry.key}:${entry.value}')
           .join(',');
       await prefs.setString(_visitCountKey, visitCountsString);
+      
+      // Save last visit times
+      final lastVisitString = _lastVisitTimes.entries
+          .map((entry) => '${entry.key}:${entry.value.millisecondsSinceEpoch}')
+          .join(',');
+      await prefs.setString(_lastVisitKey, lastVisitString);
     } catch (e) {
       // Handle error silently
     }
@@ -128,6 +154,7 @@ class NavigationProvider with ChangeNotifier {
   void trackScreenVisit(String screenKey) {
     if (screenDefinitions.containsKey(screenKey)) {
       _visitCounts[screenKey] = (_visitCounts[screenKey] ?? 0) + 1;
+      _lastVisitTimes[screenKey] = DateTime.now();
       _updateFrequentScreens();
       _saveVisitCounts();
       notifyListeners();
@@ -135,9 +162,9 @@ class NavigationProvider with ChangeNotifier {
   }
 
   void _updateFrequentScreens() {
-    // Sort screens by visit count and take top 4
-    final sortedEntries = _visitCounts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    // Sort screens by MOST RECENT visit time (not by count)
+    final sortedEntries = _lastVisitTimes.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value)); // Most recent first
     
     _frequentScreens = sortedEntries
         .take(4)
@@ -145,7 +172,7 @@ class NavigationProvider with ChangeNotifier {
         .where((key) => screenDefinitions.containsKey(key))
         .toList();
     
-    // If we don't have enough frequent screens, fill with defaults
+    // If we don't have enough recent screens, fill with defaults
     final defaultScreens = ['ar', 'map', 'community', 'profile'];
     for (String defaultScreen in defaultScreens) {
       if (_frequentScreens.length < 4 && !_frequentScreens.contains(defaultScreen)) {
@@ -179,16 +206,15 @@ class NavigationProvider with ChangeNotifier {
     if (definition.containsKey('route')) {
       Navigator.pushNamed(context, definition['route']);
     } else if (definition.containsKey('tabIndex')) {
-      // Switch to specific tab in main app
-      final mainAppState = context.findAncestorStateOfType<State>();
-      if (mainAppState != null && mainAppState.widget.runtimeType.toString().contains('MainApp')) {
-        // Use callback to switch tabs
-        final mainApp = mainAppState as dynamic;
-        if (mainApp.mounted) {
-          mainApp.setState(() {
-            mainApp._currentIndex = definition['tabIndex'];
-          });
-        }
+      // Switch to specific tab using DefaultTabController
+      try {
+        final tabController = DefaultTabController.of(context);
+        tabController.animateTo(definition['tabIndex'] as int);
+      } catch (e) {
+        // If DefaultTabController is not available, show a message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to navigate to ${definition['name']}')),
+        );
       }
     } else if (definition.containsKey('action')) {
       // Handle custom actions

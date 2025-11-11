@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/institution_provider.dart';
+import '../../providers/mockup_data_provider.dart';
 
 class InstitutionAnalytics extends StatefulWidget {
   const InstitutionAnalytics({super.key});
@@ -47,7 +48,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: const Color(0xFF0A0A0A),
+        color: Theme.of(context).scaffoldBackgroundColor,
         padding: const EdgeInsets.all(16),
         child: SingleChildScrollView(
           child: Column(
@@ -82,7 +83,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           style: GoogleFonts.inter(
             fontSize: 22,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -90,7 +91,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           'Track your institution\'s performance and engagement',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.white.withValues(alpha: 0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 12),
@@ -98,11 +99,11 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           children: [
             IconButton(
               onPressed: () => _showExportDialog(),
-              icon: const Icon(Icons.download, color: Colors.white, size: 20),
+              icon: Icon(Icons.download, color: Theme.of(context).colorScheme.onSurface, size: 20),
             ),
             IconButton(
               onPressed: () => _showSettingsDialog(),
-              icon: const Icon(Icons.settings, color: Colors.white, size: 20),
+              icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface, size: 20),
             ),
           ],
         ),
@@ -116,9 +117,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -128,7 +129,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -138,18 +139,18 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            dropdownColor: const Color(0xFF1A1A1A),
+            dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             items: periods.map((period) => DropdownMenuItem<String>(
               value: period,
@@ -169,10 +170,43 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildStatsOverview() {
-    return Consumer<InstitutionProvider>(
-      builder: (context, institutionProvider, child) {
-        if (institutionProvider.institutions.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
+    return Consumer2<InstitutionProvider, MockupDataProvider>(
+      builder: (context, institutionProvider, mockupProvider, child) {
+        // Only show data if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled || institutionProvider.institutions.isEmpty) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Overview',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.analytics_outlined, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No analytics data available',
+                        style: GoogleFonts.inter(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
         }
         
         // Get analytics data from the provider
@@ -214,7 +248,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -251,9 +285,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -263,7 +297,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               stat['title'],
               style: GoogleFonts.inter(
                 fontSize: 10,
-                color: Colors.white.withValues(alpha: 0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -276,7 +310,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -312,39 +346,48 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildVisitorAnalytics() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Visitor Analytics',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              IconButton(
-                onPressed: () => _showVisitorDetails(),
-                icon: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
-              ),
-            ],
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show visitor analytics if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Visitor Analytics',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _showVisitorDetails(),
+                    icon: Icon(Icons.arrow_forward_ios, color: Theme.of(context).colorScheme.onSurface, size: 16),
+                  ),
+                ],
+              ),
           const SizedBox(height: 16),
           _buildVisitorChart(),
           const SizedBox(height: 16),
           _buildVisitorMetrics(),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -377,7 +420,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                           value.toString(),
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            color: Colors.white.withValues(alpha: 0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -394,7 +437,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                           ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index],
                           style: GoogleFonts.inter(
                             fontSize: 8,
-                            color: Colors.white.withValues(alpha: 0.5),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -432,14 +475,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     Text(
                       metric['label']!,
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -454,30 +497,37 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildEventPerformance() {
-    final events = [
-      {'name': 'Digital Dreams Exhibition', 'visitors': '2,340', 'rating': '4.8'},
-      {'name': 'Modern Art Workshop', 'visitors': '156', 'rating': '4.6'},
-      {'name': 'Artist Talk Series', 'visitors': '890', 'rating': '4.9'},
-    ];
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show event performance if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink();
+        }
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Event Performance',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+        final events = [
+          {'name': 'Digital Dreams Exhibition', 'visitors': '2,340', 'rating': '4.8'},
+          {'name': 'Modern Art Workshop', 'visitors': '156', 'rating': '4.6'},
+          {'name': 'Artist Talk Series', 'visitors': '890', 'rating': '4.9'},
+        ];
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Event Performance',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
           const SizedBox(height: 16),
           ...events.map((event) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -492,14 +542,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '${event['visitors']} visitors',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -507,13 +557,13 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 ),
                 Row(
                   children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 16),
+                    Icon(Icons.star, color: Colors.amber, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       event['rating']!,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -525,16 +575,25 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         ],
       ),
     );
+      },
+    );
   }
 
   Widget _buildRevenueAnalytics() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show revenue analytics if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+          ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -543,7 +602,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -552,6 +611,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           _buildRevenueItem('Memberships', '\$2,250', 0.12),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -570,7 +631,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 category,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
@@ -578,7 +639,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -586,7 +647,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: percentage,
-            backgroundColor: Colors.white.withOpacity(0.1),
+            backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
           ),
         ],
@@ -595,13 +656,20 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildArtworkAnalytics() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show artwork analytics if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+          ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -610,15 +678,17 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
           _buildArtworkItem('Neon Dreams', '5,240 views', '4.9 rating'),
           _buildArtworkItem('Digital Visions', '4,180 views', '4.7 rating'),
-          _buildArtworkItem('Abstract Reality', '3,920 views', '4.8 rating'),
+          _buildArtworkItem('AR Installation', '8.9K views', '4.7'),
         ],
       ),
+    );
+      },
     );
   }
 
@@ -634,9 +704,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.image,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 20,
             ),
           ),
@@ -650,14 +720,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   '$views • $rating',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -672,16 +742,16 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Export Analytics', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Export Analytics', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Export your analytics data to PDF or Excel format.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -690,7 +760,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 const SnackBar(content: Text('Analytics exported successfully!')),
               );
             },
-            child: const Text('Export'),
+            child: Text('Export'),
           ),
         ],
       ),
@@ -701,16 +771,16 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Analytics Settings', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Analytics Settings', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Configure your analytics tracking preferences.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('Close'),
           ),
         ],
       ),
@@ -721,8 +791,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Visitor Details', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Visitor Details', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: SizedBox(
           width: double.maxFinite,
           child: Column(
@@ -739,7 +809,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('Close'),
           ),
         ],
       ),
@@ -764,7 +834,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -772,3 +842,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     );
   }
 }
+
+
+
+
+
+

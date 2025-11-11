@@ -14,6 +14,7 @@ import '../web3/marketplace/marketplace.dart';
 import '../web3/wallet.dart';
 import '../web3/connectwallet.dart';
 import '../web3/onboarding/web3_onboarding.dart' as web3;
+import '../widgets/app_logo.dart';
 
 import '../widgets/enhanced_stats_chart.dart';
 import 'advanced_analytics_screen.dart';
@@ -84,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen>
     
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
+          ? Theme.of(context).scaffoldBackgroundColor 
           : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: AnimatedBuilder(
@@ -135,7 +136,6 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildAppBar() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     
     return SliverAppBar(
@@ -159,30 +159,9 @@ class _HomeScreenState extends State<HomeScreen>
               child: Row(
                 children: [
                   // Logo and app name
-                  Container(
+                  AppLogo(
                     width: isSmallScreen ? 36 : 40,
                     height: isSmallScreen ? 36 : 40,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          themeProvider.accentColor,
-                          themeProvider.accentColor.withValues(alpha: 0.7),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: themeProvider.accentColor.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.auto_awesome,
-                      color: Colors.white,
-                      size: isSmallScreen ? 18 : 20,
-                    ),
                   ),
                   SizedBox(width: isSmallScreen ? 8 : 12),
                   Expanded(
@@ -434,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen>
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF6C63FF),
+                    color: Provider.of<ThemeProvider>(context).accentColor,
                   ),
                 ),
               ),
@@ -476,7 +455,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 Text(
-                  'Most Visited',
+                  'Recently Used',
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 12 : 14,
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -881,6 +860,9 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildWeb3Section() {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, child) {
+        // Show as connected if wallet is connected (mock or real)
+        final bool isEffectivelyConnected = web3Provider.isConnected;
+        
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -895,7 +877,7 @@ class _HomeScreenState extends State<HomeScreen>
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                if (!web3Provider.isConnected)
+                if (!isEffectivelyConnected)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
@@ -930,13 +912,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'Governance',
                     Icons.how_to_vote,
                     const Color(0xFF4ECDC4),
-                    web3Provider.isConnected 
+                    isEffectivelyConnected 
                       ? () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const GovernanceHub()),
                         )
                       : () => _showWalletOnboarding(context),
-                    isLocked: !web3Provider.isConnected,
+                    isLocked: !isEffectivelyConnected,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -946,13 +928,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'Studio',
                     Icons.palette,
                     const Color(0xFFFF9A8B),
-                    web3Provider.isConnected 
+                    isEffectivelyConnected 
                       ? () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const ArtistStudio()),
                         )
                       : () => _showWalletOnboarding(context),
-                    isLocked: !web3Provider.isConnected,
+                    isLocked: !isEffectivelyConnected,
                   ),
                 ),
               ],
@@ -966,13 +948,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'Hub',
                     Icons.museum,
                     const Color(0xFF667eea),
-                    web3Provider.isConnected 
+                    isEffectivelyConnected 
                       ? () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const InstitutionHub()),
                         )
                       : () => _showWalletOnboarding(context),
-                    isLocked: !web3Provider.isConnected,
+                    isLocked: !isEffectivelyConnected,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -982,13 +964,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'NFTs',
                     Icons.store,
                     const Color(0xFFFF6B6B),
-                    web3Provider.isConnected 
+                    isEffectivelyConnected 
                       ? () => Navigator.push(
                           context,
                           MaterialPageRoute(builder: (context) => const Marketplace()),
                         )
                       : () => _showWalletOnboarding(context),
-                    isLocked: !web3Provider.isConnected,
+                    isLocked: !isEffectivelyConnected,
                   ),
                 ),
               ],
@@ -1443,6 +1425,8 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Navigation and interaction methods
   void _showNotificationsBottomSheet(BuildContext context) {
+    final config = Provider.of<ConfigProvider>(context, listen: false);
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1477,25 +1461,60 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const Spacer(),
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(
-                      'Mark all read',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Provider.of<ThemeProvider>(context).accentColor,
+                  if (config.useMockData)
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Mark all read',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Provider.of<ThemeProvider>(context).accentColor,
+                        ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: 8,
-                itemBuilder: (context, index) => _buildNotificationItem(index),
-              ),
+              child: config.useMockData
+                ? ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: 8,
+                    itemBuilder: (context, index) => _buildNotificationItem(index),
+                  )
+                : Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.notifications_off_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No Notifications',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'You\'re all caught up!',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Colors.grey[500],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
             ),
           ],
         ),
@@ -1643,7 +1662,7 @@ class _HomeScreenState extends State<HomeScreen>
         description: 'Connect your wallet to unlock decentralized features powered by blockchain technology.',
         icon: Icons.account_balance_wallet,
         gradientColors: [
-          Color(0xFF6C63FF),
+          Colors.white,
           Color(0xFF3F51B5),
         ],
         features: [
@@ -2179,3 +2198,5 @@ class ActivityScreen extends StatelessWidget {
     );
   }
 }
+
+

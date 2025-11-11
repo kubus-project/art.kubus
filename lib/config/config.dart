@@ -71,6 +71,8 @@ class AppConfig {
   
   /// Welcome and onboarding
   static const bool showWelcomeScreen = true;
+  static const bool skipOnboardingForReturningUsers = true; // Skip welcome/onboarding for users who have launched the app before
+  static const bool skipWeb3OnboardingForReturningUsers = true; // Skip Web3 feature onboarding for returning users
   static const bool forceWalletOnboarding = true; // Prompt wallet for non-explore features
   static const bool enableGuestMode = true; // Allow explore without wallet
   

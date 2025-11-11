@@ -28,31 +28,31 @@ class _WalletHomeState extends State<WalletHome> {
         // Show loading indicator while wallet is loading
         if (isLoading) {
           return Scaffold(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: AppBar(
-              backgroundColor: const Color(0xFF121212),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               elevation: 0,
               title: Text(
                 'My Wallet',
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ),
-            body: const Center(
+            body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    color: Color(0xFF8B5CF6),
+                    color: Provider.of<ThemeProvider>(context).accentColor,
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Loading your wallet...',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                       fontSize: 16,
                     ),
                   ),
@@ -65,21 +65,21 @@ class _WalletHomeState extends State<WalletHome> {
         // Show empty state if no wallet data
         if (wallet == null) {
           return Scaffold(
-            backgroundColor: const Color(0xFF121212),
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             appBar: AppBar(
-              backgroundColor: const Color(0xFF121212),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               elevation: 0,
               title: Text(
                 'My Wallet',
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.settings, color: Colors.white),
+                  icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
                   onPressed: _showWalletSettings,
                 ),
               ],
@@ -88,25 +88,25 @@ class _WalletHomeState extends State<WalletHome> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.account_balance_wallet,
                     size: 64,
-                    color: Colors.white38,
+                    color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.38),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'No wallet connected',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Connect a wallet to get started',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.7),
                       fontSize: 14,
                     ),
                   ),
@@ -121,8 +121,8 @@ class _WalletHomeState extends State<WalletHome> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF8B5CF6),
-                      foregroundColor: Colors.white,
+                      backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -141,21 +141,21 @@ class _WalletHomeState extends State<WalletHome> {
             bool isSmallScreen = constraints.maxWidth < 600;
             
             return Scaffold(
-              backgroundColor: const Color(0xFF121212),
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               appBar: AppBar(
-                backgroundColor: const Color(0xFF121212),
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
                 elevation: 0,
                 title: Text(
                   'My Wallet',
                   style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.settings, color: Colors.white),
+                    icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
                     onPressed: _showWalletSettings,
                   ),
                 ],
@@ -170,15 +170,18 @@ class _WalletHomeState extends State<WalletHome> {
                       width: double.infinity,
                       padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
+                        gradient: LinearGradient(
+                          colors: [
+                            Provider.of<ThemeProvider>(context).accentColor,
+                            Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.8),
+                          ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF8B5CF6).withOpacity(0.3),
+                            color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -194,7 +197,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 'Total Balance',
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
                                 ),
                               ),
                               GestureDetector(
@@ -215,14 +218,14 @@ class _WalletHomeState extends State<WalletHome> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
                                     wallet.shortAddress,
                                     style: GoogleFonts.inter(
                                       fontSize: isSmallScreen ? 12 : 14,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
@@ -241,7 +244,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 36 : 48,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -250,7 +253,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 16 : 20,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
                                 ),
                               ),
                             ],
@@ -264,7 +267,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -273,7 +276,7 @@ class _WalletHomeState extends State<WalletHome> {
                                 style: GoogleFonts.inter(
                                   fontSize: isSmallScreen ? 14 : 16,
                                   fontWeight: FontWeight.w500,
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                               ),
                             ],
@@ -288,9 +291,9 @@ class _WalletHomeState extends State<WalletHome> {
                     Container(
                       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
@@ -360,7 +363,7 @@ class _WalletHomeState extends State<WalletHome> {
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 18 : 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         TextButton(
@@ -384,9 +387,9 @@ class _WalletHomeState extends State<WalletHome> {
                         margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
                         padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
                         ),
                         child: Row(
                           children: [
@@ -403,7 +406,7 @@ class _WalletHomeState extends State<WalletHome> {
                                   style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -418,14 +421,14 @@ class _WalletHomeState extends State<WalletHome> {
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
-                                      color: Colors.white,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                     ),
                                   ),
                                   Text(
                                     token.symbol,
                                     style: GoogleFonts.inter(
                                       fontSize: 14,
-                                      color: Colors.white.withOpacity(0.7),
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                     ),
                                   ),
                                 ],
@@ -439,14 +442,14 @@ class _WalletHomeState extends State<WalletHome> {
                                   style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 Text(
                                   '\$${token.value.toStringAsFixed(2)}',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                   ),
                                 ),
                               ],
@@ -473,7 +476,7 @@ class _WalletHomeState extends State<WalletHome> {
   Widget _buildActionButton(String title, IconData icon, Color color, VoidCallback onPressed, bool isSmallScreen) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: color, width: 1.5),
       ),
@@ -500,7 +503,7 @@ class _WalletHomeState extends State<WalletHome> {
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 10 : 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -561,7 +564,7 @@ class _WalletHomeState extends State<WalletHome> {
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 18 : 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -583,16 +586,16 @@ class _WalletHomeState extends State<WalletHome> {
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
             ),
             child: Center(
               child: Column(
                 children: [
                   Icon(
                     Icons.history,
-                    color: Colors.white.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     size: 48,
                   ),
                   const SizedBox(height: 16),
@@ -600,7 +603,7 @@ class _WalletHomeState extends State<WalletHome> {
                     'No transactions yet',
                     style: GoogleFonts.inter(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -612,9 +615,9 @@ class _WalletHomeState extends State<WalletHome> {
             margin: EdgeInsets.only(bottom: isSmallScreen ? 8 : 12),
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
             ),
             child: Row(
               children: [
@@ -641,14 +644,14 @@ class _WalletHomeState extends State<WalletHome> {
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '${transaction.txHash.substring(0, 10)}...',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -664,14 +667,14 @@ class _WalletHomeState extends State<WalletHome> {
                         fontWeight: FontWeight.w600,
                         color: transaction.type == TransactionType.receive 
                             ? Colors.green 
-                            : Colors.white,
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     Text(
                       _formatTime(transaction.timestamp),
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                   ],
@@ -733,7 +736,7 @@ class _WalletHomeState extends State<WalletHome> {
   void _showWalletSettings() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -747,7 +750,7 @@ class _WalletHomeState extends State<WalletHome> {
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 24),
@@ -764,12 +767,12 @@ class _WalletHomeState extends State<WalletHome> {
 
   Widget _buildSettingsItem(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
       title: Text(
         title,
-        style: GoogleFonts.inter(color: Colors.white),
+        style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
       ),
-      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+      trailing: Icon(Icons.arrow_forward_ios, color: Theme.of(context).colorScheme.onSurface, size: 16),
       onTap: onTap,
     );
   }
@@ -787,3 +790,5 @@ class _WalletHomeState extends State<WalletHome> {
     );
   }
 }
+
+

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
+import '../providers/mockup_data_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../screens/welcome_intro_screen.dart';
@@ -28,6 +29,11 @@ class _AppInitializerState extends State<AppInitializer> {
     final configProvider = Provider.of<ConfigProvider>(context, listen: false);
     await configProvider.initialize();
     
+    // Initialize MockupDataProvider to load saved mock data state
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+    await mockupProvider.initialize();
+    print('AppInitializer: MockupDataProvider initialized, isMockDataEnabled = ${mockupProvider.isMockDataEnabled}');
+    
     // Initialize ProfileProvider
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.initialize();
@@ -41,8 +47,13 @@ class _AppInitializerState extends State<AppInitializer> {
     
     final prefs = await SharedPreferences.getInstance();
     
-    // Check if it's the first time opening the app
+    // Check user state using standardized preference keys
     final isFirstTime = prefs.getBool('first_time') ?? true;
+    final hasSeenWelcome = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
+    final isFirstLaunch = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
+    
+    // Check user preference for skipping onboarding (defaults to config setting)
+    final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
     
     // Check wallet connection status
     final hasWallet = prefs.getBool('has_wallet') ?? false;
@@ -50,9 +61,24 @@ class _AppInitializerState extends State<AppInitializer> {
     
     if (!mounted) return;
     
-    // Navigate based on user state
-    if (isFirstTime) {
-      // First time user - show welcome screen
+    // Navigate based on user state and configuration
+    final shouldSkipOnboarding = userSkipOnboarding && 
+                                 (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
+    
+    if (shouldSkipOnboarding) {
+      // Returning user - skip onboarding and go directly to main app
+      // Mark as no longer first time if not already set
+      if (isFirstTime) {
+        await prefs.setBool('first_time', false);
+        await prefs.setBool(PreferenceKeys.hasSeenWelcome, true);
+        await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
+      }
+      
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainApp()),
+      );
+    } else if (isFirstTime && AppConfig.showWelcomeScreen) {
+      // First time user - show welcome screen if enabled
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const WelcomeIntroScreen()),
       );
@@ -298,5 +324,49 @@ class WalletPromptScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+/// Utility functions for managing user onboarding state
+class OnboardingManager {
+  /// Mark user as a returning user to skip onboarding screens
+  static Future<void> markAsReturningUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('first_time', false);
+    await prefs.setBool(PreferenceKeys.hasSeenWelcome, true);
+    await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
+  }
+  
+  /// Reset user state to trigger onboarding again (useful for testing)
+  static Future<void> resetOnboardingState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('first_time', true);
+    await prefs.setBool(PreferenceKeys.hasSeenWelcome, false);
+    await prefs.setBool(PreferenceKeys.isFirstLaunch, true);
+    await prefs.remove('has_wallet');
+    await prefs.remove('completed_onboarding');
+    
+    // Reset all Web3 feature onboarding
+    final keys = prefs.getKeys();
+    for (final key in keys) {
+      if (key.endsWith('_onboarding_completed')) {
+        await prefs.remove(key);
+      }
+    }
+  }
+  
+  /// Check if user should skip onboarding
+  static Future<bool> shouldSkipOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Check user preference (defaults to config setting)
+    final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
+    if (!userSkipOnboarding) return false;
+    
+    final isFirstTime = prefs.getBool('first_time') ?? true;
+    final hasSeenWelcome = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
+    final isFirstLaunch = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
+    
+    return (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
   }
 }

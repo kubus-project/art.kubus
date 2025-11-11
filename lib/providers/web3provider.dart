@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
+import 'mockup_data_provider.dart';
 
 // Solana wallet connection models
 class SolanaWallet {
@@ -15,8 +15,8 @@ class SolanaWallet {
 }
 
 class Web3Provider extends ChangeNotifier {
-  late Client _httpClient;
   bool _isConnected = false;
+  MockupDataProvider? _mockupProvider;
   SolanaWallet? _wallet;
   
   // Solana network configuration
@@ -29,9 +29,14 @@ class Web3Provider extends ChangeNotifier {
   // Transaction history
   List<Map<String, dynamic>> _transactions = [];
 
-  Web3Provider() {
-    _httpClient = Client();
+  Web3Provider({MockupDataProvider? mockupProvider}) : _mockupProvider = mockupProvider {
     _initializeNetwork();
+  }
+
+  // Set mockup provider after construction if needed
+  void setMockupProvider(MockupDataProvider provider) {
+    _mockupProvider = provider;
+    notifyListeners();
   }
 
   // Initialize network from stored preferences
@@ -79,7 +84,15 @@ class Web3Provider extends ChangeNotifier {
   }
 
   // Wallet connection
-  Future<void> connectWallet() async {
+  Future<void> connectWallet({bool isRealConnection = true}) async {
+    // Only block if it's NOT a real connection (i.e., mock) and mock data is disabled
+    if (!isRealConnection && _mockupProvider != null && !_mockupProvider!.isMockDataEnabled) {
+      _isConnected = false;
+      _wallet = null;
+      notifyListeners();
+      throw Exception('Mock data is disabled. Please enable mock data in settings or use a real wallet.');
+    }
+    
     try {
       // Simulate wallet connection - in real app would use Phantom, Solflare, etc.
       await Future.delayed(const Duration(seconds: 1));
@@ -109,6 +122,13 @@ class Web3Provider extends ChangeNotifier {
     _wallet = null;
     _transactions.clear();
     notifyListeners();
+  }
+  
+  // Check connection status with mock data provider
+  bool get isActuallyConnected {
+    // Always return true if connected, regardless of mock data setting
+    // Real Solana wallets should work even when mock data is off
+    return _isConnected;
   }
 
   // Balance updates

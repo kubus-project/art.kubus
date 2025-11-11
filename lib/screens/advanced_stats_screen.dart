@@ -45,8 +45,6 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -152,7 +150,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   _selectedTimeframe,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -192,7 +190,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 'Current Value',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
               Text(
@@ -213,7 +211,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 'Change ($_selectedTimeframe)',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Colors.grey[600],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
               Row(
@@ -439,7 +437,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               target,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ],
@@ -447,7 +445,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         const SizedBox(height: 6),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: Colors.grey[300],
+          backgroundColor: Theme.of(context).colorScheme.outline,
           valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
         ),
         const SizedBox(height: 4),
@@ -455,7 +453,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           '${(progress * 100).toInt()}% complete',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
           ),
         ),
       ],

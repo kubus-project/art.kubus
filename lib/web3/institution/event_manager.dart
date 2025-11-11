@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/mockup_data_provider.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -44,6 +45,14 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _loadEvents() {
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+    
+    // Only load mock events if mock data is enabled
+    if (!mockupProvider.isMockDataEnabled) {
+      _events = [];
+      return;
+    }
+    
     // Simulate loading events
     _events = [
       Event(
@@ -108,7 +117,7 @@ class _EventManagerState extends State<EventManager>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: const Color(0xFF0A0A0A),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
             _buildHeader(),
@@ -132,7 +141,7 @@ class _EventManagerState extends State<EventManager>
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
@@ -140,18 +149,18 @@ class _EventManagerState extends State<EventManager>
             'Manage your institution\'s events',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications, color: Colors.white, size: 20),
+                icon: Icon(Icons.notifications, color: Theme.of(context).colorScheme.onSurface, size: 20),
                 onPressed: () => _showNotifications(),
               ),
               IconButton(
-                icon: const Icon(Icons.search, color: Colors.white, size: 20),
+                icon: Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface, size: 20),
                 onPressed: () => _showSearchDialog(),
               ),
             ],
@@ -178,7 +187,7 @@ class _EventManagerState extends State<EventManager>
                 label: Text(
                   filter,
                   style: TextStyle(
-                    color: isSelected ? Colors.black : Colors.white,
+                    color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                     fontSize: 12,
                   ),
                 ),
@@ -219,9 +228,9 @@ class _EventManagerState extends State<EventManager>
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(right: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -230,7 +239,7 @@ class _EventManagerState extends State<EventManager>
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 2),
@@ -238,7 +247,7 @@ class _EventManagerState extends State<EventManager>
             label,
             style: GoogleFonts.inter(
               fontSize: 9,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
@@ -258,21 +267,21 @@ class _EventManagerState extends State<EventManager>
             Icon(
               Icons.event_busy,
               size: 48,
-              color: Colors.white.withOpacity(0.3),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 12),
             Text(
               'No events found',
               style: GoogleFonts.inter(
                 fontSize: 16,
-                color: Colors.white.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             Text(
               'Create your first event to get started',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -298,9 +307,9 @@ class _EventManagerState extends State<EventManager>
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,7 +322,7 @@ class _EventManagerState extends State<EventManager>
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
@@ -343,7 +352,7 @@ class _EventManagerState extends State<EventManager>
             event.description,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -351,27 +360,27 @@ class _EventManagerState extends State<EventManager>
           const SizedBox(height: 8),
           Row(
             children: [
-              Icon(Icons.location_on, color: Colors.white.withOpacity(0.6), size: 14),
+              Icon(Icons.location_on, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), size: 14),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
                   event.location,
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(width: 12),
-              Icon(Icons.schedule, color: Colors.white.withOpacity(0.6), size: 14),
+              Icon(Icons.schedule, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6), size: 14),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
                   _formatDate(event.startDate),
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -389,13 +398,13 @@ class _EventManagerState extends State<EventManager>
                       'Occupancy: ${event.registeredCount}/${event.capacity}',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 4),
                     LinearProgressIndicator(
                       value: occupancyPercentage,
-                      backgroundColor: Colors.white.withOpacity(0.1),
+                      backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
                       valueColor: AlwaysStoppedAnimation<Color>(
                         occupancyPercentage > 0.8 ? Colors.red : themeProvider.accentColor,
                       ),
@@ -433,12 +442,12 @@ class _EventManagerState extends State<EventManager>
   Widget _buildActionButton(String label, IconData icon, VoidCallback onPressed) {
     return TextButton.icon(
       onPressed: onPressed,
-      icon: Icon(icon, color: Colors.white.withOpacity(0.7), size: 16),
+      icon: Icon(icon, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 16),
       label: Text(
         label,
         style: GoogleFonts.inter(
           fontSize: 12,
-          color: Colors.white.withOpacity(0.7),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
         ),
       ),
     );
@@ -478,8 +487,8 @@ class _EventManagerState extends State<EventManager>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Notifications', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Notifications', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -491,7 +500,7 @@ class _EventManagerState extends State<EventManager>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text('Close'),
           ),
         ],
       ),
@@ -520,14 +529,14 @@ class _EventManagerState extends State<EventManager>
                   message,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   time,
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -542,15 +551,15 @@ class _EventManagerState extends State<EventManager>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Search Events', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Search Events', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Enter event name or keyword...',
-            hintStyle: TextStyle(color: Colors.white54),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54)),
             border: OutlineInputBorder(),
           ),
-          style: const TextStyle(color: Colors.white),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           onChanged: (value) {
             // Implement search functionality
           },
@@ -558,11 +567,11 @@ class _EventManagerState extends State<EventManager>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Search'),
+            child: Text('Search'),
           ),
         ],
       ),
@@ -591,16 +600,16 @@ class _EventManagerState extends State<EventManager>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Delete Event', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title: Text('Delete Event', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -613,7 +622,7 @@ class _EventManagerState extends State<EventManager>
                 SnackBar(content: Text('${event.title} deleted')),
               );
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
@@ -656,3 +665,9 @@ enum EventStatus {
   completed,
   cancelled,
 }
+
+
+
+
+
+

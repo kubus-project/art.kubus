@@ -70,7 +70,11 @@ dependencies:
   # Camera and AR
   camera: ^0.11.1
   flutter_compass: ^0.8.1
-  # ar_flutter_plugin_flutterflow: ^0.7.47  # Removed: Package has compatibility issues
+  # AR functionality framework - packages will be added based on platform needs
+  # arcore_flutter_plugin: ^0.1.0  # ARCore for Android
+  # arkit_plugin: ^1.0.7  # ARKit for iOS
+  # Note: AR packages require platform-specific configuration
+  # See AR_IMPLEMENTATION.md for setup instructions
   
   # Crypto and Security
   crypto: ^3.0.3

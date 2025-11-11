@@ -111,12 +111,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? const Color(0xFF0A0A0A) 
-          : const Color(0xFFF8F9FA),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: AnimatedBuilder(
           animation: _animationController,
@@ -226,7 +222,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
             indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: Colors.white,
+            labelColor: Theme.of(context).colorScheme.onPrimary,
             unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             labelStyle: GoogleFonts.inter(
               fontSize: isSmallScreen ? 9 : 10,
@@ -254,7 +250,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 Icon(
                   Icons.feed,
                   size: 64,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -262,7 +258,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -270,7 +266,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   'Community posts will appear here when available',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.grey[500],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -299,7 +295,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 Icon(
                   Icons.explore,
                   size: 64,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -307,7 +303,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -315,7 +311,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   'Discover new artworks and artists when content is available',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.grey[500],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -360,7 +356,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 Icon(
                   Icons.people,
                   size: 64,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -368,7 +364,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -376,7 +372,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   'Follow artists to see their updates here',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.grey[500],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -405,7 +401,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 Icon(
                   Icons.collections,
                   size: 64,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -413,7 +409,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -421,7 +417,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   'Curated collections will appear here when available',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.grey[500],
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -442,9 +438,9 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildPostCard(int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final posts = [
-      ('Maya Digital', '@maya_3d', 'Just discovered an amazing AR sculpture in Central Park! The way it responds to lighting is incredible 🎨', '2 hours ago'),
+      ('Maya Digital', '@maya_3d', 'Just discovered an amazing AR sculpture in Central Park! The way it responds to lighting is incredible', '2 hours ago'),
       ('Alex Creator', '@alex_nft', 'New collection "Urban Dreams" is now live on the marketplace. Each piece tells a story of city life through AR.', '4 hours ago'),
-      ('Sam Artist', '@sam_ar', 'Working on a collaborative piece that changes based on viewer interaction. AR art is the future! 🚀', '6 hours ago'),
+      ('Sam Artist', '@sam_ar', 'Working on a collaborative piece that changes based on viewer interaction. AR art is the future!', '6 hours ago'),
       ('Luna Vision', '@luna_viz', 'The intersection of blockchain and creativity opens so many possibilities. Love this community!', '1 day ago'),
     ];
     
@@ -484,7 +480,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 20),
+                  child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                 ),
               ),
               const SizedBox(width: 12),
@@ -549,8 +545,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
-                child: Icon(Icons.view_in_ar, color: Colors.white, size: 60),
+              child: Center(
+                child: Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.onPrimary, size: 60),
               ),
             ),
           ],
@@ -717,8 +713,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
                 child: Stack(
                   children: [
-                    const Center(
-                      child: Icon(Icons.view_in_ar, color: Colors.white, size: 40),
+                    Center(
+                      child: Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.onPrimary, size: 40),
                     ),
                     Positioned(
                       top: 8,
@@ -733,7 +729,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           '🔥 ${12 + index}',
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         ),
                       ),
@@ -770,7 +766,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           ),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(Icons.person, color: Colors.white, size: 10),
+                        child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 10),
                       ),
                       const SizedBox(width: 6),
                       Expanded(
@@ -827,7 +823,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
               borderRadius: BorderRadius.circular(25),
             ),
-            child: const Icon(Icons.person, color: Colors.white, size: 25),
+            child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 25),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -922,7 +918,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.collections, color: Colors.white, size: 30),
+            child: Icon(Icons.collections, color: Theme.of(context).colorScheme.onPrimary, size: 30),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -988,9 +984,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         _createNewPost();
       },
       backgroundColor: themeProvider.accentColor,
-      child: const Icon(
+      child: Icon(
         Icons.add,
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.onPrimary,
         size: 28,
       ),
     );
@@ -1070,7 +1066,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               'No search results available',
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
               ),
               textAlign: TextAlign.center,
             ),
@@ -1565,7 +1561,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             ),
                           ),
@@ -1637,11 +1633,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Text(
                           'U',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -1753,9 +1749,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                             }
                           }
                         },
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.send,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           size: 20,
                         ),
                         padding: const EdgeInsets.all(8),
@@ -1858,9 +1854,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       context: context,
       builder: (BuildContext context) {
         final posts = [
-          ('Maya Digital', '@maya_3d', 'Just discovered an amazing AR sculpture in Central Park! The way it responds to lighting is incredible 🎨', '2 hours ago'),
+          ('Maya Digital', '@maya_3d', 'Just discovered an amazing AR sculpture in Central Park! The way it responds to lighting is incredible', '2 hours ago'),
           ('Alex Creator', '@alex_nft', 'New collection "Urban Dreams" is now live on the marketplace. Each piece tells a story of city life through AR.', '4 hours ago'),
-          ('Sam Artist', '@sam_ar', 'Working on a collaborative piece that changes based on viewer interaction. AR art is the future! 🚀', '6 hours ago'),
+          ('Sam Artist', '@sam_ar', 'Working on a collaborative piece that changes based on viewer interaction. AR art is the future!', '6 hours ago'),
           ('Luna Vision', '@luna_viz', 'The intersection of blockchain and creativity opens so many possibilities. Love this community!', '1 day ago'),
         ];
         
@@ -1894,7 +1890,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               ),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Icon(Icons.person, color: Colors.white, size: 20),
+                            child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                           ),
                         ),
                         const SizedBox(width: 12),

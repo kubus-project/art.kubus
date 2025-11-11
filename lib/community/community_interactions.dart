@@ -268,7 +268,7 @@ class CommunityService {
         id: 'post_1',
         authorId: 'artist_1',
         authorName: 'Elena Rodriguez',
-        content: 'Just finished my latest NFT collection "Digital Dreams"! 🎨 The intersection of AI and traditional art continues to amaze me. What do you think about the future of AI-generated art?',
+        content: 'Just finished my latest NFT collection "Digital Dreams"! The intersection of AI and traditional art continues to amaze me. What do you think about the future of AI-generated art?',
         imageUrl: 'https://picsum.photos/400/300?random=1',
         timestamp: DateTime.now().subtract(const Duration(hours: 2)),
         tags: ['#NFT', '#DigitalArt', '#AI'],

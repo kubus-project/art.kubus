@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
-import '../../providers/config_provider.dart';
+import '../../providers/mockup_data_provider.dart';
 import '../../models/artwork.dart';
 
 class ArtistAnalytics extends StatefulWidget {
@@ -51,7 +51,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: const Color(0xFF0A0A0A),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -84,7 +84,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -92,7 +92,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           'Track your artwork performance',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 12),
@@ -106,20 +106,20 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
       ),
       child: DropdownButton<String>(
         value: _selectedPeriod,
         underline: const SizedBox(),
         isExpanded: true,
-        dropdownColor: const Color(0xFF1A1A1A),
+        dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
         style: GoogleFonts.inter(
           fontSize: 12,
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
-        icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 20),
+        icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).colorScheme.onSurface, size: 20),
         items: ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last Year'].map((period) {
           return DropdownMenuItem<String>(
             value: period,
@@ -136,51 +136,95 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildOverviewCards() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.3,
-      children: [
-        _buildMetricCard(
-          'Total Revenue', 
-          '125.5 KUB8', 
-          '\$2,510', 
-          Icons.account_balance_wallet, 
-          const Color(0xFF00D4AA),
-          '+12.5%',
-          true,
-        ),
-        _buildMetricCard(
-          'Active Markers', 
-          '8', 
-          '+2 this week', 
-          Icons.location_on, 
-          const Color(0xFF6C63FF),
-          '+25%',
-          true,
-        ),
-        _buildMetricCard(
-          'Total Visitors', 
-          '1,234', 
-          '+156 this week', 
-          Icons.people, 
-          const Color(0xFFFFD93D),
-          '+14.2%',
-          true,
-        ),
-        _buildMetricCard(
-          'NFTs Sold', 
-          '23', 
-          '+5 this month', 
-          Icons.token, 
-          const Color(0xFF9C27B0),
-          '+38.5%',
-          true,
-        ),
-      ],
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show analytics data if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.analytics_outlined,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No analytics data available',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Enable mock data to view analytics',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: 1.3,
+          children: [
+            _buildMetricCard(
+              'Total Revenue', 
+              '125.5 KUB8', 
+              '\$2,510', 
+              Icons.account_balance_wallet, 
+              const Color(0xFF00D4AA),
+              '+12.5%',
+              true,
+            ),
+            _buildMetricCard(
+              'Active Markers', 
+              '8', 
+              '+2 this week', 
+              Icons.location_on, 
+              Provider.of<ThemeProvider>(context).accentColor,
+              '+25%',
+              true,
+            ),
+            _buildMetricCard(
+              'Total Visitors', 
+              '1,234', 
+              '+156 this week', 
+              Icons.people, 
+              const Color(0xFFFFD93D),
+              '+14.2%',
+              true,
+            ),
+            _buildMetricCard(
+              'NFTs Sold', 
+              '23', 
+              '+5 this month', 
+              Icons.token, 
+              const Color(0xFF9C27B0),
+              '+38.5%',
+              true,
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -196,9 +240,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,7 +282,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -248,7 +292,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               title,
               style: GoogleFonts.inter(
                 fontSize: 10,
-                color: Colors.white.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -259,7 +303,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               subtitle,
               style: GoogleFonts.inter(
                 fontSize: 9,
-                color: Colors.white.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -270,66 +314,75 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildChartSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isSmallScreen = constraints.maxWidth < 400;
-              
-              if (isSmallScreen) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Performance Overview',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _buildChartSelector(),
-                  ],
-                );
-              } else {
-                return Row(
-                  children: [
-                    Text(
-                      'Performance Overview',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Spacer(),
-                    _buildChartSelector(),
-                  ],
-                );
-              }
-            },
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show chart if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink(); // Hide this section when mock data is off
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
           ),
-          const SizedBox(height: 20),
-          SizedBox(
-            height: 200,
-            child: CustomPaint(
-              painter: LineChartPainter(_currentChartIndex),
-              size: const Size(double.infinity, 200),
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isSmallScreen = constraints.maxWidth < 400;
+                  
+                  if (isSmallScreen) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Performance Overview',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildChartSelector(),
+                      ],
+                    );
+                  } else {
+                    return Row(
+                      children: [
+                        Text(
+                          'Performance Overview',
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        _buildChartSelector(),
+                      ],
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 200,
+                child: CustomPaint(
+                  painter: LineChartPainter(_currentChartIndex, Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+                  size: const Size(double.infinity, 200),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildChartLegend(),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildChartLegend(),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -362,14 +415,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     border: Border.all(
                       color: isSelected 
                           ? Provider.of<ThemeProvider>(context).accentColor 
-                          : Colors.white.withOpacity(0.3),
+                          : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Text(
                     option,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+                      color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -399,14 +452,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       border: Border.all(
                         color: isSelected 
                             ? Provider.of<ThemeProvider>(context).accentColor 
-                            : Colors.white.withOpacity(0.3),
+                            : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
                       option,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: isSelected ? Colors.white : Colors.white.withOpacity(0.7),
+                        color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -454,7 +507,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     label,
                     style: GoogleFonts.inter(
                       fontSize: 9,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -486,7 +539,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       label,
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.white.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -500,34 +553,43 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildDetailedMetrics() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Detailed Metrics',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 16),
-        Row(
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        // Only show detailed metrics if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink(); // Hide this section when mock data is off
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _buildMetricItem('Avg. View Time', '2m 34s', Icons.schedule)),
-            const SizedBox(width: 16),
-            Expanded(child: _buildMetricItem('Engagement Rate', '8.2%', Icons.thumb_up)),
+            Text(
+              'Detailed Metrics',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _buildMetricItem('Avg. View Time', '2m 34s', Icons.schedule)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildMetricItem('Engagement Rate', '8.2%', Icons.thumb_up)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(child: _buildMetricItem('Conversion Rate', '3.1%', Icons.trending_up)),
+                const SizedBox(width: 16),
+                Expanded(child: _buildMetricItem('Return Visitors', '45%', Icons.refresh)),
+              ],
+            ),
           ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _buildMetricItem('Conversion Rate', '3.1%', Icons.trending_up)),
-            const SizedBox(width: 16),
-            Expanded(child: _buildMetricItem('Return Visitors', '45%', Icons.refresh)),
-          ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -535,13 +597,13 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.7), size: 20),
+          Icon(icon, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 20),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -551,14 +613,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 10,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -569,23 +631,23 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildTopArtworks() {
-    return Consumer2<ArtworkProvider, ConfigProvider>(
-      builder: (context, artworkProvider, configProvider, child) {
+    return Consumer2<ArtworkProvider, MockupDataProvider>(
+      builder: (context, artworkProvider, mockupProvider, child) {
         // Get top performing artworks (show analytics data based on config)
         final topArtworks = artworkProvider.artworks.take(4).map((artwork) {
           String viewsText;
           String revenueText;
           
-          if (configProvider.useMockData) {
+          if (mockupProvider.isMockDataEnabled) {
             // Generate mock analytics for each artwork
             final mockViews = (artwork.likesCount * 10 + artwork.viewsCount).toString();
             final mockRevenue = (artwork.rewards * 0.5).toStringAsFixed(1);
             viewsText = mockViews;
             revenueText = '$mockRevenue KUB8';
           } else {
-            // Use real analytics data when available
-            viewsText = artwork.viewsCount.toString();
-            revenueText = '${artwork.rewards.toStringAsFixed(1)} KUB8';
+            // No mock data - show zeros
+            viewsText = '0';
+            revenueText = '0.0 KUB8';
           }
           
           return {
@@ -604,7 +666,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -617,9 +679,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   children: [
@@ -636,7 +698,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -651,14 +713,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             '${artworkData['views']} views',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.white.withOpacity(0.7),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -684,15 +746,20 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildRecentActivity() {
-    final activities = [
-      {'action': 'New visitor from Gallery A', 'time': '2 minutes ago', 'icon': Icons.visibility},
-      {'action': 'Artwork "Digital Dreams" liked', 'time': '15 minutes ago', 'icon': Icons.favorite},
-      {'action': 'NFT sale completed', 'time': '1 hour ago', 'icon': Icons.attach_money},
-      {'action': 'New AR marker created', 'time': '3 hours ago', 'icon': Icons.add_location},
-    ];
+    return Consumer2<ThemeProvider, MockupDataProvider>(
+      builder: (context, themeProvider, mockupProvider, child) {
+        // Only show recent activity if mock data is enabled
+        if (!mockupProvider.isMockDataEnabled) {
+          return const SizedBox.shrink(); // Hide this section when mock data is off
+        }
 
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
+        final activities = [
+          {'action': 'New visitor from Gallery A', 'time': '2 minutes ago', 'icon': Icons.visibility},
+          {'action': 'Artwork "Digital Dreams" liked', 'time': '15 minutes ago', 'icon': Icons.favorite},
+          {'action': 'NFT sale completed', 'time': '1 hour ago', 'icon': Icons.attach_money},
+          {'action': 'New AR marker created', 'time': '3 hours ago', 'icon': Icons.add_location},
+        ];
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -701,15 +768,15 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
               ),
               child: Column(
                 children: activities.map((activity) {
@@ -718,7 +785,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
                           width: 0.5,
                         ),
                       ),
@@ -746,14 +813,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                 activity['action'] as String,
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               Text(
                                 activity['time'] as String,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             ],
@@ -774,8 +841,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 // Custom painter for line chart
 class LineChartPainter extends CustomPainter {
   final int chartType;
+  final Color gridColor;
 
-  LineChartPainter(this.chartType);
+  LineChartPainter(this.chartType, this.gridColor);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -785,7 +853,7 @@ class LineChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = gridColor
       ..strokeWidth = 0.5;
 
     // Draw grid
@@ -852,3 +920,7 @@ class LineChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
+
+
+
+

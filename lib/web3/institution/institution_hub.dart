@@ -54,7 +54,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -63,17 +63,17 @@ class _InstitutionHubState extends State<InstitutionHub> {
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showOnboarding,
           ),
           IconButton(
-            icon: const Icon(Icons.notifications, color: Colors.white),
+            icon: Icon(Icons.notifications, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showNotifications,
           ),
         ],
@@ -114,7 +114,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(25),
             ),
             child: const Icon(
@@ -141,7 +141,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   'Host events, exhibitions, and AR experiences for your visitors',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.9),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -158,7 +158,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -187,7 +187,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.grey[400],
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -196,7 +196,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[400],
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -213,8 +213,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -225,7 +225,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 24),
@@ -236,3 +236,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 }
+
+
+
+
+

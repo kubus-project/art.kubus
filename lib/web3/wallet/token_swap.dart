@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../../providers/themeprovider.dart';
 
 class TokenSwap extends StatefulWidget {
   const TokenSwap({super.key});
@@ -17,20 +19,20 @@ class _TokenSwapState extends State<TokenSwap> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF121212),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF121212),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         title: Text(
           'Token Swap',
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -55,9 +57,9 @@ class _TokenSwapState extends State<TokenSwap> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -68,13 +70,13 @@ class _TokenSwapState extends State<TokenSwap> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFF8B5CF6)),
+                border: Border.all(color: Provider.of<ThemeProvider>(context).accentColor),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.swap_vert,
-                color: Color(0xFF8B5CF6),
+                color: Provider.of<ThemeProvider>(context).accentColor,
                 size: 20,
               ),
             ),
@@ -90,9 +92,9 @@ class _TokenSwapState extends State<TokenSwap> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.03),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,7 +103,7 @@ class _TokenSwapState extends State<TokenSwap> {
             label,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -113,14 +115,14 @@ class _TokenSwapState extends State<TokenSwap> {
                   style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   decoration: InputDecoration(
                     hintText: '0.0',
                     hintStyle: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.3),
                     ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
@@ -131,7 +133,7 @@ class _TokenSwapState extends State<TokenSwap> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -141,7 +143,7 @@ class _TokenSwapState extends State<TokenSwap> {
                       width: 24,
                       height: 24,
                       decoration: BoxDecoration(
-                        color: token == 'KUB8' ? const Color(0xFF8B5CF6) : const Color(0xFF45B7D1),
+                        color: token == 'KUB8' ? Provider.of<ThemeProvider>(context).accentColor : const Color(0xFF45B7D1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
@@ -150,7 +152,7 @@ class _TokenSwapState extends State<TokenSwap> {
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -161,13 +163,13 @@ class _TokenSwapState extends State<TokenSwap> {
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(width: 4),
                     Icon(
                       Icons.keyboard_arrow_down,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       size: 20,
                     ),
                   ],
@@ -189,8 +191,8 @@ class _TokenSwapState extends State<TokenSwap> {
           _showSwapConfirmation();
         },
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF8B5CF6),
-          foregroundColor: Colors.white,
+          backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+          foregroundColor: Theme.of(context).colorScheme.onSurface,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -202,7 +204,7 @@ class _TokenSwapState extends State<TokenSwap> {
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -213,18 +215,18 @@ class _TokenSwapState extends State<TokenSwap> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         title: Text(
           'Confirm Swap',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'Swap feature is coming soon! This will allow you to exchange tokens within the art.kubus ecosystem.',
           style: GoogleFonts.inter(
-            color: Colors.white.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
           ),
         ),
         actions: [
@@ -233,7 +235,7 @@ class _TokenSwapState extends State<TokenSwap> {
             child: Text(
               'OK',
               style: GoogleFonts.inter(
-                color: const Color(0xFF8B5CF6),
+                color: Provider.of<ThemeProvider>(context).accentColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -252,7 +254,7 @@ class _TokenSwapState extends State<TokenSwap> {
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 16),
@@ -264,9 +266,9 @@ class _TokenSwapState extends State<TokenSwap> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   children: [
@@ -274,12 +276,12 @@ class _TokenSwapState extends State<TokenSwap> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                        color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.swap_horiz,
-                        color: Color(0xFF8B5CF6),
+                        color: Provider.of<ThemeProvider>(context).accentColor,
                         size: 20,
                       ),
                     ),
@@ -293,7 +295,7 @@ class _TokenSwapState extends State<TokenSwap> {
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -301,7 +303,7 @@ class _TokenSwapState extends State<TokenSwap> {
                             '${index + 1}h ago',
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Colors.white.withOpacity(0.7),
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -312,7 +314,7 @@ class _TokenSwapState extends State<TokenSwap> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -325,3 +327,9 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 }
+
+
+
+
+
+

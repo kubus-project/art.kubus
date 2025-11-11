@@ -75,7 +75,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
       child: SlideTransition(
         position: _slideAnimation,
         child: Container(
-          color: const Color(0xFF0A0A0A),
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: Column(
             children: [
               _buildHeader(),
@@ -102,21 +102,21 @@ class _MarkerCreatorState extends State<MarkerCreator>
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               Text(
                 'Step ${_currentStep + 1} of 4',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon:  Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () => _showHelp(),
           ),
         ],
@@ -138,7 +138,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
               decoration: BoxDecoration(
                 color: index <= _currentStep 
                     ? themeProvider.accentColor 
-                    : Colors.white.withOpacity(0.2),
+                    : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -319,7 +319,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
                     'Your artwork will be processed and the AR marker generated within a few minutes.',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.8),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -338,12 +338,12 @@ class _MarkerCreatorState extends State<MarkerCreator>
         width: double.infinity,
         height: 200,
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _selectedImagePath != null 
                 ? Provider.of<ThemeProvider>(context).accentColor 
-                : const Color(0xFF6C63FF),
+                : Provider.of<ThemeProvider>(context).accentColor,
             width: 2,
             style: BorderStyle.solid,
           ),
@@ -371,9 +371,9 @@ class _MarkerCreatorState extends State<MarkerCreator>
                           color: Colors.red,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.close,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           size: 16,
                         ),
                       ),
@@ -388,12 +388,12 @@ class _MarkerCreatorState extends State<MarkerCreator>
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF6C63FF).withOpacity(0.1),
+                      color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(32),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.cloud_upload,
-                      color: Color(0xFF6C63FF),
+                      color: Provider.of<ThemeProvider>(context).accentColor,
                       size: 32,
                     ),
                   ),
@@ -403,7 +403,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -429,7 +429,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -438,7 +438,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
@@ -485,7 +485,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
             '• Supported formats: JPG, PNG, WebP',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -497,9 +497,9 @@ class _MarkerCreatorState extends State<MarkerCreator>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -520,7 +520,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),
@@ -528,7 +528,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
             _descriptionController.text.isNotEmpty ? _descriptionController.text : 'Artwork Description',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 16),
@@ -555,7 +555,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.white.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -563,7 +563,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
             value,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -577,7 +577,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
       style: GoogleFonts.inter(
         fontSize: 18,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }
@@ -598,7 +598,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -607,19 +607,19 @@ class _MarkerCreatorState extends State<MarkerCreator>
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: validator,
-          style: const TextStyle(color: Colors.white),
+          style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+              borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -647,23 +647,23 @@ class _MarkerCreatorState extends State<MarkerCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
+            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
           ),
           child: DropdownButton<String>(
             value: value,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: const Color(0xFF1A1A1A),
-            style: const TextStyle(color: Colors.white),
+            dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+            style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
             items: options.map((option) {
               return DropdownMenuItem<String>(
                 value: option,
@@ -686,9 +686,9 @@ class _MarkerCreatorState extends State<MarkerCreator>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -701,14 +701,14 @@ class _MarkerCreatorState extends State<MarkerCreator>
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -733,7 +733,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -754,7 +754,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
           'Royalty you\'ll earn on secondary sales',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -773,7 +773,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
               child: ElevatedButton(
                 onPressed: () => setState(() => _currentStep--),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.1),
+                  backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -782,7 +782,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
                 child: Text(
                   'Previous',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -802,7 +802,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
               child: Text(
                 _currentStep < 3 ? 'Next' : 'Create Artwork',
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -854,23 +854,23 @@ class _MarkerCreatorState extends State<MarkerCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Success!', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title:  Text('Success!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 64),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Your artwork has been created successfully!',
-              style: TextStyle(color: Colors.white70),
+              style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             if (_enableNFT)
-              const Text(
+              Text(
                 'NFT minting process has been initiated.',
-                style: TextStyle(color: Colors.white54),
+                style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54)),
                 textAlign: TextAlign.center,
               ),
           ],
@@ -916,15 +916,15 @@ class _MarkerCreatorState extends State<MarkerCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('AR Marker Creation', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title:  Text('AR Marker Creation', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Follow the 4-step process to create your AR artwork:\n\n'
           '1. Upload: Select your artwork image\n'
           '2. Details: Enter title, description, and pricing\n'
           '3. Settings: Configure location and features\n'
           '4. Review: Confirm and publish your artwork',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
@@ -936,3 +936,9 @@ class _MarkerCreatorState extends State<MarkerCreator>
     );
   }
 }
+
+
+
+
+
+

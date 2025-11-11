@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/mockup_data_provider.dart';
 
 class ArtworkGallery extends StatefulWidget {
   const ArtworkGallery({super.key});
@@ -46,6 +47,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _loadArtworks() {
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+    
+    // Only load mock artworks if mock data is enabled
+    if (!mockupProvider.isMockDataEnabled) {
+      _artworks = [];
+      return;
+    }
+    
     // Simulate loading artworks
     _artworks = [
       Artwork(
@@ -110,7 +119,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Container(
-        color: const Color(0xFF0A0A0A),
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
             _buildHeader(),
@@ -138,7 +147,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
@@ -146,22 +155,22 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             '${_artworks.length} artworks',
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.sort, color: Colors.white, size: 20),
+                icon:  Icon(Icons.sort, color: Theme.of(context).colorScheme.onSurface, size: 20),
                 onPressed: () => _showSortDialog(),
               ),
               IconButton(
-                icon: const Icon(Icons.search, color: Colors.white, size: 20),
+                icon:  Icon(Icons.search, color: Theme.of(context).colorScheme.onSurface, size: 20),
                 onPressed: () => _showSearchDialog(),
               ),
               IconButton(
-                icon: const Icon(Icons.add, color: Colors.white, size: 20),
+                icon:  Icon(Icons.add, color: Theme.of(context).colorScheme.onSurface, size: 20),
                 onPressed: () => _showCreateArtworkDialog(),
               ),
             ],
@@ -194,27 +203,27 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.7), size: 16),
+          Icon(icon, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 16),
           const SizedBox(height: 4),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           Text(
             label,
             style: GoogleFonts.inter(
               fontSize: 8,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -237,7 +246,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               label: Text(
                 filter,
                 style: TextStyle(
-                  color: isSelected ? Colors.black : Colors.white,
+                  color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               backgroundColor: Colors.transparent,
@@ -277,9 +286,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
       onTap: () => _showArtworkDetails(artwork),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
+          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,18 +321,18 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                         style: GoogleFonts.inter(
                           fontSize: 8,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
                   ),
                   if (artwork.hasARMarker)
-                    const Positioned(
+                     Positioned(
                       top: 8,
                       left: 8,
                       child: Icon(
                         Icons.view_in_ar,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         size: 20,
                       ),
                     ),
@@ -343,7 +352,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -361,27 +370,27 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     const Spacer(),
                     Row(
                       children: [
-                        Icon(Icons.remove_red_eye, size: 10, color: Colors.white.withOpacity(0.6)),
+                        Icon(Icons.remove_red_eye, size: 10, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
                             artwork.views.toString(),
                             style: GoogleFonts.inter(
                               fontSize: 8,
-                              color: Colors.white.withOpacity(0.6),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Icon(Icons.favorite, size: 10, color: Colors.white.withOpacity(0.6)),
+                        Icon(Icons.favorite, size: 10, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
                             artwork.likes.toString(),
                             style: GoogleFonts.inter(
                               fontSize: 8,
-                              color: Colors.white.withOpacity(0.6),
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -390,7 +399,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                         PopupMenuButton<String>(
                           icon: Icon(
                             Icons.more_vert,
-                            color: Colors.white.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             size: 14,
                           ),
                           onSelected: (value) => _handleArtworkAction(artwork, value),
@@ -420,14 +429,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           Icon(
             Icons.palette,
             size: 64,
-            color: Colors.white.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 16),
           Text(
             'No artworks yet',
             style: GoogleFonts.inter(
               fontSize: 18,
-              color: Colors.white.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 8),
@@ -435,7 +444,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             'Create your first artwork to get started',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
           const SizedBox(height: 24),
@@ -504,13 +513,13 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Sort by', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title:  Text('Sort by', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: ['Newest', 'Oldest', 'Most Views', 'Most Likes'].map((option) {
             return RadioListTile<String>(
-              title: Text(option, style: const TextStyle(color: Colors.white)),
+              title: Text(option, style:  TextStyle(color: Theme.of(context).colorScheme.onSurface)),
               value: option,
               groupValue: _sortBy,
               onChanged: (value) {
@@ -530,15 +539,15 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Search Artworks', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title:  Text('Search Artworks', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             hintText: 'Enter artwork title...',
-            hintStyle: TextStyle(color: Colors.white54),
+            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54)),
             border: OutlineInputBorder(),
           ),
-          style: const TextStyle(color: Colors.white),
+          style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
           onChanged: (value) {
             // Implement search functionality
           },
@@ -561,11 +570,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Create New Artwork', style: TextStyle(color: Colors.white)),
-        content: const Text(
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title:  Text('Create New Artwork', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'Navigate to the Create tab to upload and create your new artwork.',
-          style: TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
@@ -588,7 +597,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
         child: Container(
           width: MediaQuery.of(context).size.width * 0.8,
           padding: const EdgeInsets.all(24),
@@ -610,7 +619,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 8),
@@ -618,7 +627,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                 artwork.description,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -638,9 +647,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.1),
+                        backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
                       ),
-                      child: const Text('Close', style: TextStyle(color: Colors.white)),
+                      child:  Text('Close', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -653,7 +662,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
                       ),
-                      child: const Text('Edit', style: TextStyle(color: Colors.white)),
+                      child:  Text('Edit', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
                     ),
                   ),
                 ],
@@ -673,14 +682,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         Text(
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Colors.white.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -709,11 +718,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Delete Artwork', style: TextStyle(color: Colors.white)),
+        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        title:  Text('Delete Artwork', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to delete "${artwork.title}"? This action cannot be undone.',
-          style: const TextStyle(color: Colors.white70),
+          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
@@ -731,7 +740,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                 SnackBar(content: Text('${artwork.title} deleted')),
               );
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child:  Text('Delete', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
@@ -773,3 +782,7 @@ enum ArtworkStatus {
   draft,
   sold,
 }
+
+
+
+

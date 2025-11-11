@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
+import '../providers/mockup_data_provider.dart';
 import '../config/config.dart';
 import 'wallet/wallet_home.dart';
 import 'marketplace/marketplace.dart';
@@ -65,22 +66,27 @@ class _Web3DashboardState extends State<Web3Dashboard>
               ),
             ],
           ),
-          body: TabBarView(
-            controller: _tabController,
-            children: [
-              // Wallet Tab
-              web3Provider.isConnected
-                ? const WalletHome()
-                : _buildConnectWalletPrompt(context, web3Provider),
-              
-              // Marketplace Tab
-              AppConfig.enableMarketplace
-                ? const Marketplace()
-                : _buildFeatureDisabled('Marketplace'),
-              
-              // Analytics Tab
-              _buildAnalyticsTab(context, web3Provider),
-            ],
+          body: Consumer<MockupDataProvider>(
+            builder: (context, mockupProvider, child) {
+              print('Web3Dashboard - isConnected: ${web3Provider.isConnected}, isMockDataEnabled: ${mockupProvider.isMockDataEnabled}');
+              return TabBarView(
+                controller: _tabController,
+                children: [
+                  // Wallet Tab - show if connected OR mock data enabled
+                  (web3Provider.isConnected || mockupProvider.isMockDataEnabled)
+                    ? const WalletHome()
+                    : _buildConnectWalletPrompt(context, web3Provider),
+                  
+                  // Marketplace Tab
+                  AppConfig.enableMarketplace
+                    ? const Marketplace()
+                    : _buildFeatureDisabled('Marketplace'),
+                  
+                  // Analytics Tab
+                  _buildAnalyticsTab(context, web3Provider),
+                ],
+              );
+            },
           ),
         );
       },
@@ -161,49 +167,53 @@ class _Web3DashboardState extends State<Web3Dashboard>
   }
 
   Widget _buildAnalyticsTab(BuildContext context, Web3Provider web3Provider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Web3 Analytics',
-            style: Theme.of(context).textTheme.headlineSmall,
+    return Consumer<MockupDataProvider>(
+      builder: (context, mockupProvider, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Web3 Analytics',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 16),
+              _buildAnalyticsCard(
+                context,
+                'Portfolio Value',
+                web3Provider.isConnected || mockupProvider.isMockDataEnabled ? '\$${_calculatePortfolioValue()}' : '--',
+                Icons.account_balance,
+                Colors.green,
+              ),
+              const SizedBox(height: 12),
+              _buildAnalyticsCard(
+                context,
+                'NFTs Owned',
+                (web3Provider.isConnected || mockupProvider.isMockDataEnabled) ? '${_getNFTCount()}' : '--',
+                Icons.image,
+                Colors.blue,
+              ),
+              const SizedBox(height: 12),
+              _buildAnalyticsCard(
+                context,
+                'Transactions',
+                (web3Provider.isConnected || mockupProvider.isMockDataEnabled) ? '${_getTransactionCount()}' : '--',
+                Icons.swap_horiz,
+                Colors.orange,
+              ),
+              const SizedBox(height: 12),
+              _buildAnalyticsCard(
+                context,
+                'Network',
+                (web3Provider.isConnected || mockupProvider.isMockDataEnabled) ? _getCurrentNetwork() : '--',
+                Icons.network_cell,
+                Colors.purple,
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildAnalyticsCard(
-            context,
-            'Portfolio Value',
-            web3Provider.isConnected || AppConfig.useMockData ? '\$${_calculatePortfolioValue()}' : '--',
-            Icons.account_balance,
-            Colors.green,
-          ),
-          const SizedBox(height: 12),
-          _buildAnalyticsCard(
-            context,
-            'NFTs Owned',
-            web3Provider.isConnected ? '${_getNFTCount()}' : '--',
-            Icons.image,
-            Colors.blue,
-          ),
-          const SizedBox(height: 12),
-          _buildAnalyticsCard(
-            context,
-            'Transactions',
-            web3Provider.isConnected ? '${_getTransactionCount()}' : '--',
-            Icons.swap_horiz,
-            Colors.orange,
-          ),
-          const SizedBox(height: 12),
-          _buildAnalyticsCard(
-            context,
-            'Network',
-            web3Provider.isConnected ? _getCurrentNetwork() : '--',
-            Icons.network_cell,
-            Colors.purple,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -253,8 +263,9 @@ class _Web3DashboardState extends State<Web3Dashboard>
   }
 
   void _connectWallet(BuildContext context, Web3Provider web3Provider) {
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
     // Simulate wallet connection for now
-    if (AppConfig.useMockData) {
+    if (mockupProvider.isMockDataEnabled) {
       web3Provider.connectWallet();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mock wallet connected!')),
@@ -317,8 +328,9 @@ class _Web3DashboardState extends State<Web3Dashboard>
   String _calculatePortfolioValue() {
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
     
-    if (AppConfig.useMockData || web3Provider.isConnected) {
+    if (mockupProvider.isMockDataEnabled || web3Provider.isConnected) {
       // Get KUB8 balance
       final kub8Balance = walletProvider.tokens
           .where((token) => token.symbol.toUpperCase() == 'KUB8')
@@ -346,21 +358,24 @@ class _Web3DashboardState extends State<Web3Dashboard>
   }
 
   int _getNFTCount() {
-    if (AppConfig.useMockData) {
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+    if (mockupProvider.isMockDataEnabled) {
       return 12;
     }
     return 0;
   }
 
   int _getTransactionCount() {
-    if (AppConfig.useMockData) {
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+    if (mockupProvider.isMockDataEnabled) {
       return 34;
     }
     return 0;
   }
 
   String _getCurrentNetwork() {
-    if (AppConfig.useMockData) {
+    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+    if (mockupProvider.isMockDataEnabled) {
       return 'Polygon';
     }
     return 'Unknown';

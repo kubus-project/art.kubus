@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../config/config.dart';
 import '../main_app.dart';
+import '../widgets/app_logo.dart';
 
 class WelcomeIntroScreen extends StatefulWidget {
   const WelcomeIntroScreen({super.key});
@@ -29,7 +30,7 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
       subtitle: 'Discover and create augmented reality art in the real world',
       description: 'Transform your surroundings with immersive AR artworks and join a global community of digital artists.',
       icon: Icons.view_in_ar,
-      gradient: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+      gradient: [Color(0xFF6366F1), Colors.white],
     ),
     const WelcomePageData(
       title: 'Explore AR Artworks',
@@ -235,36 +236,60 @@ class _WelcomeIntroScreenState extends State<WelcomeIntroScreen>
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
                   // Reduced top spacing to ensure content fits better
                   SizedBox(height: MediaQuery.of(context).size.height * 0.08),
                   
-                  // Icon with gradient background
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: page.gradient,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(50),
-                      boxShadow: [
-                        BoxShadow(
-                          color: page.gradient.first.withOpacity(0.3),
-                          blurRadius: 20,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 10),
+                  // Icon with gradient background or AppLogo for welcome page
+                  page.title == 'Welcome to art.kubus' 
+                    ? Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.grey[900] 
+                              : Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                    child: Icon(
-                      page.icon,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: AppLogo(width: 60, height: 60),
+                        ),
+                      )
+                    : Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: page.gradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(50),
+                          boxShadow: [
+                            BoxShadow(
+                              color: page.gradient.first.withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                              offset: const Offset(0, 10),
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          page.icon,
+                          size: 50,
+                          color: Colors.white,
+                        ),
+                      ),
                   
                   const SizedBox(height: 32),
                   
@@ -394,3 +419,5 @@ class WelcomePageData {
     required this.gradient,
   });
 }
+
+

@@ -18,29 +18,29 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
+          icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Scan QR Code',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.flash_on, color: Colors.white),
+            icon: Icon(Icons.flash_on, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () => controller.toggleTorch(),
           ),
           IconButton(
-            icon: const Icon(Icons.flip_camera_ios, color: Colors.white),
+            icon: Icon(Icons.flip_camera_ios, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () => controller.switchCamera(),
           ),
         ],
@@ -56,7 +56,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.qr_code_scanner,
               size: 80,
               color: Colors.grey,
@@ -65,7 +65,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Text(
               'QR Scanner Not Available',
               style: GoogleFonts.inter(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 24,
                 fontWeight: FontWeight.w600,
               ),
@@ -84,7 +84,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -196,7 +196,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 Text(
                   'Position the QR code within the frame',
                   style: GoogleFonts.inter(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
@@ -212,7 +212,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.check_circle,
                           color: Colors.green,
                           size: 24,
@@ -271,3 +271,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     super.dispose();
   }
 }
+
+
+

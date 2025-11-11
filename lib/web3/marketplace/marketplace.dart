@@ -5,9 +5,9 @@ import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/collectibles_provider.dart';
+import '../../providers/mockup_data_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/collectible.dart';
-import '../../config/config.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -58,7 +58,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -67,17 +67,17 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.help_outline, color: Colors.white),
+            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showOnboarding,
           ),
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
+            icon: Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showSettings,
           ),
         ],
@@ -125,12 +125,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.storefront,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 22,
             ),
           ),
@@ -144,7 +144,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -152,7 +152,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   'Discover, buy, and sell unique digital artworks',
                   style: GoogleFonts.inter(
                     fontSize: 10,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -169,7 +169,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -198,7 +198,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           children: [
             Icon(
               icon,
-              color: isSelected ? Colors.white : Colors.grey[400],
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -207,7 +207,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Colors.white : Colors.grey[400],
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -219,16 +219,19 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildFeaturedNFTs() {
-    return Consumer2<CollectiblesProvider, ArtworkProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, child) {
-        // Initialize mock data if empty and config allows it
-        if (collectiblesProvider.allSeries.isEmpty && AppConfig.useMockData) {
+    return Consumer3<CollectiblesProvider, ArtworkProvider, MockupDataProvider>(
+      builder: (context, collectiblesProvider, artworkProvider, mockupProvider, child) {
+        // Initialize mock data if empty and mockup data is enabled
+        if (collectiblesProvider.allSeries.isEmpty && mockupProvider.isMockDataEnabled) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             collectiblesProvider.initializeMockData();
           });
         }
 
-        final featuredSeries = collectiblesProvider.getFeaturedSeries();
+        // Only show data if mock data is enabled OR if we have real blockchain data
+        final featuredSeries = mockupProvider.isMockDataEnabled 
+            ? collectiblesProvider.getFeaturedSeries()
+            : <dynamic>[];  // Empty list when mock data is disabled
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -243,7 +246,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -259,7 +262,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.visibility,
                           size: 12,
                           color: Color(0xFF00D4AA),
@@ -293,14 +296,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       Icon(
                         Icons.collections_outlined,
                         size: 48,
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'No NFT collections available yet',
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -309,7 +312,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.4),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
                     ],
@@ -347,9 +350,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildTrendingNFTs() {
-    return Consumer2<CollectiblesProvider, ArtworkProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, child) {
-        final trendingSeries = collectiblesProvider.getTrendingSeries();
+    return Consumer3<CollectiblesProvider, ArtworkProvider, MockupDataProvider>(
+      builder: (context, collectiblesProvider, artworkProvider, mockupProvider, child) {
+        // Only show data if mock data is enabled OR if we have real blockchain data
+        final trendingSeries = mockupProvider.isMockDataEnabled
+            ? collectiblesProvider.getTrendingSeries()
+            : <dynamic>[];  // Empty list when mock data is disabled
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -361,7 +367,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
@@ -373,14 +379,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       Icon(
                         Icons.trending_up,
                         size: 48,
-                        color: Colors.white.withValues(alpha: 0.3),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         'No trending collections yet',
                         style: GoogleFonts.inter(
                           fontSize: 16,
-                          color: Colors.white.withValues(alpha: 0.6),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -418,11 +424,15 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildMyListings() {
-    return Consumer2<CollectiblesProvider, ArtworkProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, child) {
-        // Show user's collectibles (owned NFTs)
-        final myCollectibles = collectiblesProvider.getCollectiblesByOwner('0xuser1...1234'); // In real app, get from wallet
-        final myCollectiblesForSale = collectiblesProvider.getCollectiblesForSale();
+    return Consumer3<CollectiblesProvider, ArtworkProvider, MockupDataProvider>(
+      builder: (context, collectiblesProvider, artworkProvider, mockupProvider, child) {
+        // Show user's collectibles (owned NFTs) only if mock data is enabled OR real blockchain data exists
+        final myCollectibles = mockupProvider.isMockDataEnabled
+            ? collectiblesProvider.getCollectiblesByOwner('0xuser1...1234') // In real app, get from wallet
+            : <dynamic>[];  // Empty list when mock data is disabled
+        final myCollectiblesForSale = mockupProvider.isMockDataEnabled
+            ? collectiblesProvider.getCollectiblesForSale()
+            : <dynamic>[];  // Empty list when mock data is disabled
 
         if (myCollectibles.isEmpty) {
           return Center(
@@ -432,7 +442,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 Icon(
                   Icons.inventory_2_outlined,
                   size: 80,
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -440,7 +450,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -448,7 +458,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   'Mint NFTs from AR artworks to build your collection',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -459,7 +469,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF00D4AA),
-                    foregroundColor: Colors.white,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
                   child: Text(
@@ -487,7 +497,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -520,7 +530,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -581,12 +591,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       onTap: () => _showCollectibleDetails(collectible, series, artwork),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isForSale 
                 ? Colors.orange 
-                : Colors.grey[800]!,
+                : Theme.of(context).colorScheme.outline,
             width: isForSale ? 2 : 1,
           ),
         ),
@@ -638,7 +648,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -651,7 +661,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -659,7 +669,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -681,7 +691,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -691,7 +701,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       'Token #${collectible.tokenId}',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Colors.grey[400],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -710,7 +720,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                   'Listed for',
                                   style: GoogleFonts.inter(
                                     fontSize: 9,
-                                    color: Colors.grey[500],
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                   ),
                                 ),
                                 Text(
@@ -727,7 +737,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           ),
                           IconButton(
                             onPressed: () => _removeFromSale(collectible),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.remove_circle,
                               color: Colors.red,
                               size: 16,
@@ -754,7 +764,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           ),
                           IconButton(
                             onPressed: () => _listForSale(collectible, series),
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.sell,
                               color: Colors.orange,
                               size: 16,
@@ -784,9 +794,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       isScrollControlled: true,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -798,7 +807,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -808,7 +817,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -817,7 +826,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.grey[400],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -836,7 +845,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -847,7 +856,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           return Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2A2A2A),
+                              color: Theme.of(context).colorScheme.secondaryContainer,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Column(
@@ -857,7 +866,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                   entry.key.replaceAll('_', ' ').toUpperCase(),
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
-                                    color: Colors.grey[400],
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -866,7 +875,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ],
@@ -883,7 +892,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -914,7 +923,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             label,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
           Text(
@@ -922,7 +931,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ],
@@ -940,14 +949,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
           'List NFT for Sale',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -964,12 +973,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             const SizedBox(height: 16),
             TextField(
               controller: priceController,
-              style: GoogleFonts.inter(color: Colors.white),
+              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
               decoration: InputDecoration(
                 labelText: 'Price (KUB8)',
-                labelStyle: GoogleFonts.inter(color: Colors.grey[400]),
+                labelStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey[600]!),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 focusedBorder: const OutlineInputBorder(
@@ -987,7 +996,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Colors.grey[400],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ),
@@ -1000,7 +1009,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.orange,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(
               'List for Sale',
@@ -1044,14 +1053,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
           'Remove from Sale',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1067,7 +1076,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Colors.grey[400],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ),
@@ -1084,7 +1093,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(
               'Remove',
@@ -1107,12 +1116,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       onTap: () => _showNFTSeriesDetails(series, artwork),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: hasARFeature 
                 ? const Color(0xFF00D4AA) 
-                : Colors.grey[800]!,
+                : Theme.of(context).colorScheme.outline,
             width: hasARFeature ? 2 : 1,
           ),
         ),
@@ -1162,10 +1171,10 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.view_in_ar,
                                 size: 12,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -1173,7 +1182,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 style: GoogleFonts.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -1197,7 +1206,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -1210,7 +1219,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -1240,7 +1249,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1250,7 +1259,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       'by ${artwork?.artist ?? 'Unknown Artist'}',
                       style: GoogleFonts.inter(
                         fontSize: 9,
-                        color: Colors.grey[400],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1269,7 +1278,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 '${series.mintedCount}/${series.totalSupply}',
                                 style: GoogleFonts.inter(
                                   fontSize: 8,
-                                  color: Colors.grey[400],
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1309,7 +1318,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 'Price',
                                 style: GoogleFonts.inter(
                                   fontSize: 7,
-                                  color: Colors.grey[500],
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                 ),
                               ),
                               Text(
@@ -1317,7 +1326,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 style: GoogleFonts.inter(
                                   fontSize: 9,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1328,7 +1337,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
                             color: series.isSoldOut 
-                                ? Colors.grey[700] 
+                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3) 
                                 : const Color(0xFF00D4AA),
                             borderRadius: BorderRadius.circular(4),
                           ),
@@ -1337,7 +1346,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             style: GoogleFonts.inter(
                               fontSize: 8,
                               fontWeight: FontWeight.w600,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -1361,7 +1370,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           Icon(
             series.requiresARInteraction ? Icons.view_in_ar : Icons.collections,
             size: 48,
-            color: Colors.white.withValues(alpha: 0.5),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 8),
           Text(
@@ -1369,7 +1378,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.white.withValues(alpha: 0.7),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -1439,9 +1448,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       isScrollControlled: true,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -1453,7 +1461,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey[600],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1463,7 +1471,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1472,7 +1480,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Colors.grey[400],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -1489,7 +1497,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1545,7 +1553,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF00D4AA),
-                              foregroundColor: Colors.white,
+                              foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
@@ -1571,9 +1579,9 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                               color: Colors.grey[800],
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.share,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ),
@@ -1594,7 +1602,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A2A2A),
+        color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -1604,7 +1612,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
@@ -1612,7 +1620,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.grey[400],
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
             ),
           ),
         ],
@@ -1625,13 +1633,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.view_in_ar,
                 color: Color(0xFF00D4AA),
               ),
@@ -1639,7 +1647,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               Text(
                 'AR Required',
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1658,7 +1666,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               child: Text(
                 'Cancel',
                 style: GoogleFonts.inter(
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
             ),
@@ -1670,7 +1678,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00D4AA),
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
                 'Go to AR',
@@ -1692,14 +1700,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
           'Mint NFT',
           style: GoogleFonts.inter(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1718,7 +1726,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
+                color: Theme.of(context).colorScheme.secondaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1727,13 +1735,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   Text(
                     'Mint Price:',
                     style: GoogleFonts.inter(
-                      color: Colors.grey[400],
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   Text(
                     '${series.mintPrice.toInt()} KUB8',
                     style: GoogleFonts.inter(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -1748,7 +1756,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Colors.grey[400],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ),
@@ -1759,7 +1767,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF00D4AA),
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(
               'Confirm Mint',
@@ -1809,13 +1817,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.check_circle,
                 color: Colors.green,
               ),
@@ -1823,7 +1831,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               Text(
                 'Mint Successful!',
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1841,7 +1849,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00D4AA),
-                foregroundColor: Colors.white,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
                 'View in Wallet',
@@ -1861,13 +1869,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
+          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           title: Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.error,
                 color: Colors.red,
               ),
@@ -1875,7 +1883,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               Text(
                 'Mint Failed',
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -1892,8 +1900,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey[700],
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
                 'Close',
@@ -1921,12 +1929,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       onTap: () => _showNFTDetails(artwork),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isFeatured 
                 ? const Color(0xFF00D4AA) 
-                : Colors.grey[800]!,
+                : Theme.of(context).colorScheme.outline,
             width: isFeatured ? 2 : 1,
           ),
         ),
@@ -1957,12 +1965,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.view_in_ar,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             size: 16,
                           ),
                         ),
@@ -1980,7 +1988,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           child: Text(
                             'FEATURED',
                             style: GoogleFonts.inter(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2000,7 +2008,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           child: Text(
                             change,
                             style: GoogleFonts.inter(
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                             ),
@@ -2017,9 +2025,9 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                             color: const Color(0xFF9C27B0).withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.verified,
-                            color: Colors.white,
+                            color: Theme.of(context).colorScheme.onSurface,
                             size: 16,
                           ),
                         ),
@@ -2027,7 +2035,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     Center(
                       child: Icon(
                         artwork.arEnabled ? Icons.view_in_ar : Icons.palette,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                         size: 48,
                       ),
                     ),
@@ -2046,7 +2054,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     Text(
                       artwork.title,
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -2057,7 +2065,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     Text(
                       'by ${artwork.artist}',
                       style: GoogleFonts.inter(
-                        color: Colors.grey[400],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                         fontSize: 10,
                       ),
                       maxLines: 1,
@@ -2106,6 +2114,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
   */
 
+  /* Unused - keeping for reference
   void _showNFTDetails(Artwork artwork) {
     showModalBottomSheet(
       context: context,
@@ -2113,9 +2122,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       isScrollControlled: true,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
@@ -2124,7 +2132,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               width: 40,
               margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.grey[600],
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -2151,7 +2159,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       child: Center(
                         child: Icon(
                           artwork.arEnabled ? Icons.view_in_ar : Icons.palette,
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                           size: 80,
                         ),
                       ),
@@ -2162,7 +2170,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       style: GoogleFonts.inter(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -2170,7 +2178,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       'by ${artwork.artist}',
                       style: GoogleFonts.inter(
                         fontSize: 16,
-                        color: Colors.grey[400],
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -2178,7 +2186,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       artwork.description,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                         height: 1.5,
                       ),
                     ),
@@ -2193,7 +2201,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 'Price',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Colors.grey[400],
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               Text(
@@ -2233,4 +2241,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       ),
     );
   }
+  */
 }
+
+
+
+
+
+
+
+

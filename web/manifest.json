@@ -1,11 +1,11 @@
 {
-    "name": "art_kubus",
-    "short_name": "art_kubus",
+    "name": "art.kubus - AR Art Discovery Platform",
+    "short_name": "art.kubus",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Discover, create, and trade augmented reality art with blockchain technology. Experience immersive AR artworks in the real world.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

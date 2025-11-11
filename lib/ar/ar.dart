@@ -194,7 +194,7 @@ class _AugmentedState extends State<Augmented> {
       appBar: AppBar(
         title: const Text('AR Experience'),
         backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -224,20 +224,20 @@ class _AugmentedState extends State<Augmented> {
       return Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.black,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.error_outline,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.error,
                 size: 64,
               ),
               const SizedBox(height: 16),
               Text(
                 _errorMessage!,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -260,26 +260,26 @@ class _AugmentedState extends State<Augmented> {
       return Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.black,
+        color: Theme.of(context).scaffoldBackgroundColor,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.camera_alt,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onSurface,
                 size: 64,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Ready to explore AR art?',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Tap Start AR to begin your augmented reality experience',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -302,16 +302,16 @@ class _AugmentedState extends State<Augmented> {
       return Container(
         width: double.infinity,
         height: double.infinity,
-        color: Colors.black,
-        child: const Center(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(color: Colors.white),
-              SizedBox(height: 16),
+              CircularProgressIndicator(color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 16),
               Text(
                 'Initializing AR Camera...',
-                style: TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
               ),
             ],
           ),
@@ -327,7 +327,10 @@ class _AugmentedState extends State<Augmented> {
       width: double.infinity,
       height: double.infinity,
       child: CustomPaint(
-        painter: AROverlayPainter(activeModels.length),
+        painter: AROverlayPainter(
+          activeModels.length, 
+          overlayColor: Theme.of(context).colorScheme.onSurface,
+        ),
       ),
     );
   }
@@ -403,13 +406,25 @@ class _AugmentedState extends State<Augmented> {
                 Text('• Use the list button to manage objects'),
                 Text('• Tap auto-place for quick demo'),
                 SizedBox(height: 16),
-                Text('📱 Platform Support:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Icon(Icons.smartphone, size: 16),
+                    SizedBox(width: 6),
+                    Text('Platform Support:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
                 SizedBox(height: 8),
                 Text('• Full AR on mobile devices'),
                 Text('• Camera preview on desktop'),
                 Text('• Object simulation available'),
                 SizedBox(height: 16),
-                Text('⚡ Features:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Icon(Icons.flash_on, size: 16),
+                    SizedBox(width: 6),
+                    Text('Features:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ],
+                ),
                 SizedBox(height: 8),
                 Text('• Real-time camera feed'),
                 Text('• Virtual object placement'),
@@ -546,13 +561,14 @@ class _AugmentedState extends State<Augmented> {
 // Custom painter for AR overlay
 class AROverlayPainter extends CustomPainter {
   final int objectCount;
+  final Color overlayColor;
 
-  AROverlayPainter(this.objectCount);
+  AROverlayPainter(this.objectCount, {this.overlayColor = Colors.white});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.8)
+      ..color = overlayColor.withValues(alpha: 0.8)
       ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
 
@@ -583,8 +599,8 @@ class AROverlayPainter extends CustomPainter {
       final textPainter = TextPainter(
         text: TextSpan(
           text: 'Objects: $objectCount',
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: overlayColor,
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),

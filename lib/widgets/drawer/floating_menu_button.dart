@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_logo.dart';
 
 class FloatingMenuButton extends StatelessWidget {
   const FloatingMenuButton({super.key});
@@ -11,7 +12,7 @@ class FloatingMenuButton extends StatelessWidget {
       child: SafeArea(
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.black,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(999),
           ),
           padding: const EdgeInsets.all(8),
@@ -22,7 +23,7 @@ class FloatingMenuButton extends StatelessWidget {
                 icon: const Icon(Icons.menu),
               ),
               const SizedBox(width: 8),
-              Image.asset('assets/images/logo.png', height: 32, width: 32),
+              AppLogo(width: 32, height: 32),
               const SizedBox(width: 8),
             ],
           ),
