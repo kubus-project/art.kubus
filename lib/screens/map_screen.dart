@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -12,9 +13,16 @@ import '../providers/themeprovider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/tile_providers.dart';
+import '../providers/wallet_provider.dart';
 import '../models/artwork.dart';
-import '../models/task.dart';
+import '../services/task_service.dart';
+import '../services/ar_integration_service.dart';
+import '../services/backend_api_service.dart';
+import '../services/push_notification_service.dart';
+import '../services/achievement_service.dart';
+import '../models/ar_marker.dart';
 import 'art_detail_screen.dart';
+import 'ar_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -38,6 +46,14 @@ class _MapScreenState extends State<MapScreen>
   
   // Animation
   late AnimationController _animationController;
+  
+  // AR Integration
+  final ARIntegrationService _arIntegrationService = ARIntegrationService();
+  final BackendApiService _backendApi = BackendApiService();
+  final PushNotificationService _pushNotificationService = PushNotificationService();
+  List<ARMarker> _arMarkers = [];
+  final Set<String> _notifiedMarkers = {}; // Track which markers we've notified about
+  Timer? _proximityCheckTimer;
 
   // UI State
   bool _isSearching = false;
@@ -56,14 +72,25 @@ class _MapScreenState extends State<MapScreen>
   void initState() {
     super.initState();
     _initializeMap();
-    _calculateProgress();
     
-    // Initialize providers
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Initialize providers and calculate progress after build completes
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       context.read<ArtworkProvider>().loadArtworks();
       final taskProvider = context.read<TaskProvider>();
+      final walletProvider = context.read<WalletProvider>();
+      
       taskProvider.initializeProgress(); // Ensure proper initialization
-      taskProvider.loadMockProgress(); // Then load mock data
+      
+      // Load real progress from backend if wallet is connected
+      if (walletProvider.currentWalletAddress != null && 
+          walletProvider.currentWalletAddress!.isNotEmpty) {
+        debugPrint('MapScreen: Loading progress from backend for wallet: ${walletProvider.currentWalletAddress}');
+        await taskProvider.loadProgressFromBackend(walletProvider.currentWalletAddress!);
+      } else {
+        debugPrint('MapScreen: No wallet connected, using default empty progress');
+      }
+      
+      _calculateProgress(); // Calculate progress after providers are ready
     });
   }
 
@@ -94,6 +121,292 @@ class _MapScreenState extends State<MapScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
+    
+    // Initialize AR integration
+    _initializeARIntegration();
+  }
+  
+  Future<void> _initializeARIntegration() async {
+    try {
+      await _arIntegrationService.initialize();
+      await _pushNotificationService.initialize();
+      
+      // Set up notification tap handler
+      _pushNotificationService.onNotificationTap = _handleNotificationTap;
+      
+      // Load AR markers from backend
+      await _loadARMarkers();
+      
+      // Start proximity checking timer (every 10 seconds)
+      _proximityCheckTimer = Timer.periodic(
+        const Duration(seconds: 10),
+        (_) => _checkProximityNotifications(),
+      );
+      
+    } catch (e) {
+      debugPrint('Error initializing AR integration: $e');
+    }
+  }
+  
+  Future<void> _loadARMarkers() async {
+    if (_currentLocation == null) return;
+    
+    try {
+      // Load from backend API
+      final markers = await _backendApi.getNearbyMarkers(
+        latitude: _currentLocation!.latitude!,
+        longitude: _currentLocation!.longitude!,
+        radiusKm: 5.0,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _arMarkers = markers;
+        });
+      }
+      
+      debugPrint('Loaded ${markers.length} AR markers from backend');
+    } catch (e) {
+      debugPrint('Error loading AR markers from backend: $e');
+      // Fallback to local service if backend fails
+      try {
+        final markers = _arIntegrationService.getActiveMarkers();
+        if (mounted) {
+          setState(() {
+            _arMarkers = markers;
+          });
+        }
+      } catch (e2) {
+        debugPrint('Error loading AR markers from local service: $e2');
+      }
+    }
+  }
+  
+  void _handleNotificationTap(String payload) {
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      final type = data['type'] as String?;
+      
+      if (type == 'ar_proximity') {
+        final markerId = data['markerId'] as String?;
+        if (markerId != null) {
+          final marker = _arMarkers.firstWhere(
+            (m) => m.id == markerId,
+            orElse: () => _arMarkers.first,
+          );
+          _showARMarkerDialog(marker);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error handling notification tap: $e');
+    }
+  }
+  
+  void _checkProximityNotifications() {
+    if (_currentLocation == null) return;
+    
+    const Distance distanceCalculator = Distance();
+    final currentLatLng = LatLng(
+      _currentLocation!.latitude!,
+      _currentLocation!.longitude!,
+    );
+    
+    for (final marker in _arMarkers) {
+      // Check if already notified
+      if (_notifiedMarkers.contains(marker.id)) continue;
+      
+      // Calculate distance
+      final distance = distanceCalculator.as(
+        LengthUnit.Meter,
+        currentLatLng,
+        marker.position,
+      );
+      
+      // Notify if within 50 meters
+      if (distance <= 50) {
+        _showProximityNotification(marker, distance);
+        _notifiedMarkers.add(marker.id);
+      }
+    }
+    
+    // Clean up notifications for markers we've moved away from (>100m)
+    _notifiedMarkers.removeWhere((markerId) {
+      final marker = _arMarkers.firstWhere(
+        (m) => m.id == markerId,
+        orElse: () => _arMarkers.first,
+      );
+      
+      final distance = distanceCalculator.as(
+        LengthUnit.Meter,
+        currentLatLng,
+        marker.position,
+      );
+      
+      return distance > 100; // Reset notification if moved far away
+    });
+  }
+  
+  void _showProximityNotification(ARMarker marker, double distance) {
+    if (!mounted) return;
+    
+    // Show push notification
+    _pushNotificationService.showARProximityNotification(
+      marker: marker,
+      distance: distance,
+    );
+    
+    // Also show in-app SnackBar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.view_in_ar,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'AR Artwork Nearby!',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    '${marker.name} - ${distance.round()}m away',
+                    style: GoogleFonts.outfit(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'View',
+          textColor: Colors.white,
+          onPressed: () => _launchARExperience(marker),
+        ),
+      ),
+    );
+  }
+  
+  void _showARMarkerDialog(ARMarker marker) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(
+              Icons.view_in_ar,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                marker.name,
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (marker.description.isNotEmpty)
+              Text(
+                marker.description,
+                style: GoogleFonts.outfit(),
+              ),
+            const SizedBox(height: 12),
+            if (_currentLocation != null) ...[
+              Builder(
+                builder: (context) {
+                  const Distance distanceCalculator = Distance();
+                  final distance = distanceCalculator.as(
+                    LengthUnit.Meter,
+                    LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                    marker.position,
+                  );
+                  return Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${distance.round()}m away',
+                        style: GoogleFonts.outfit(
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close', style: GoogleFonts.outfit()),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _launchARExperience(marker);
+            },
+            icon: const Icon(Icons.view_in_ar),
+            label: Text('View in AR', style: GoogleFonts.outfit()),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _launchARExperience(ARMarker marker) async {
+    try {
+      // Navigate to AR screen
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ARScreen(),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error launching AR experience: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to launch AR: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _getLocation() async {
@@ -258,16 +571,41 @@ class _MapScreenState extends State<MapScreen>
     return sorted;
   }
 
-  void _markAsDiscoveredFromArtwork(Artwork artwork) {
+  Future<void> _markAsDiscoveredFromArtwork(Artwork artwork) async {
     context.read<ArtworkProvider>().discoverArtwork(artwork.id, 'current_user_id');
     
-    // Update achievement progress
-    final taskProvider = context.read<TaskProvider>();
-    taskProvider.incrementAchievementProgress('local_guide'); // Increment local art discovery
+    // Get user ID
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id') ?? 'demo_user';
+    if (!mounted) return;
     
+    // Get discovered artwork count
+    final artworkProvider = context.read<ArtworkProvider>();
+    final discoveredCount = artworkProvider.artworks.where((a) => a.isDiscovered).length;
+    
+    // Check achievements with new service
+    await AchievementService().checkAchievements(
+      userId: userId,
+      action: 'artwork_discovered',
+      data: {'discoverCount': discoveredCount},
+    );
+    
+    // If AR artwork, also check AR view achievements
     if (artwork.arEnabled) {
-      taskProvider.incrementAchievementProgress('first_ar_visit'); // AR artwork discovered
-      taskProvider.incrementAchievementProgress('ar_collector'); // AR collection progress
+      await AchievementService().checkAchievements(
+        userId: userId,
+        action: 'ar_viewed',
+        data: {'viewCount': discoveredCount},
+      );
+    }
+    if (!mounted) return;
+    
+    // Legacy achievement system (for backward compatibility)
+    final taskProvider = context.read<TaskProvider>();
+    taskProvider.incrementAchievementProgress('local_guide');
+    if (artwork.arEnabled) {
+      taskProvider.incrementAchievementProgress('first_ar_visit');
+      taskProvider.incrementAchievementProgress('ar_collector');
     }
     
     setState(() {
@@ -389,7 +727,7 @@ class _MapScreenState extends State<MapScreen>
             children: [
               // Map
               Transform.scale(
-                scale: 1.0,
+                scale: 1.5,
                 child: Transform.rotate(
                   angle: _autoCenter ? rotationRadians : 0,
                   child: FlutterMap(
@@ -398,7 +736,7 @@ class _MapScreenState extends State<MapScreen>
                       initialCenter: _currentLocation != null
                           ? LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
                           : const LatLng(46.0569, 14.5058),
-                      initialZoom: 15.0,
+                      initialZoom: 16.0,
                       minZoom: 3.0,
                       maxZoom: 18.0,
                     ),
@@ -413,13 +751,13 @@ class _MapScreenState extends State<MapScreen>
                           if (_currentLocation != null)
                             Marker(
                               point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              width: 20,
-                              height: 20,
+                              width: 15,
+                              height: 15,
                               child: Container(
                                 decoration: BoxDecoration(
                                   color: Theme.of(context).colorScheme.primary,
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 3),
+                                  border: Border.all(color: Colors.white, width: 2),
                                   boxShadow: [
                                     BoxShadow(
                                       color: Colors.black.withValues(alpha: 0.3),
@@ -520,6 +858,88 @@ class _MapScreenState extends State<MapScreen>
                                           ),
                                         ),
                                       ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }),
+                          // AR Markers from ARIntegrationService
+                          ..._arMarkers.map((arMarker) {
+                            double distance = 0;
+                            bool isNearby = false;
+                            
+                            if (_currentLocation != null) {
+                              const Distance distanceCalculator = Distance();
+                              distance = distanceCalculator.as(LengthUnit.Meter,
+                                LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                                arMarker.position,
+                              );
+                              isNearby = distance < 50;
+                            }
+                            
+                            return Marker(
+                              point: arMarker.position,
+                              width: 50,
+                              height: 50,
+                              child: GestureDetector(
+                                onTap: () => _showARMarkerDialog(arMarker),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    if (isNearby)
+                                      Container(
+                                        width: 50,
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            Theme.of(context).colorScheme.tertiary,
+                                            Theme.of(context).colorScheme.primary,
+                                          ],
+                                        ),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 3),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(alpha: 0.3),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                        Icons.view_in_ar,
+                                        color: Colors.white,
+                                        size: 22,
+                                      ),
+                                    ),
+                                    // AR badge
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: isNearby ? Colors.green : Colors.orange,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(color: Colors.white, width: 1),
+                                        ),
+                                        child: Icon(
+                                          isNearby ? Icons.wifi_tethering : Icons.location_on,
+                                          color: Colors.white,
+                                          size: 10,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -1310,7 +1730,7 @@ class _MapScreenState extends State<MapScreen>
                         ),
                         child: Column(
                           children: activeProgress.map((progress) {
-                            final task = TaskService.getTaskById(progress.taskId);
+                            final task = TaskService().getTaskById(progress.taskId);
                             if (task == null) return const SizedBox.shrink();
                             
                             return Container(
@@ -1387,9 +1807,18 @@ class _MapScreenState extends State<MapScreen>
                         spacing: 8,
                         children: [
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               final taskProvider = context.read<TaskProvider>();
                               taskProvider.incrementAchievementProgress('gallery_explorer');
+                              
+                              // Trigger new achievement system
+                              final prefs = await SharedPreferences.getInstance();
+                              final userId = prefs.getString('user_id') ?? 'demo_user';
+                              await AchievementService().checkAchievements(
+                                userId: userId,
+                                action: 'event_attended',
+                                data: {'eventType': 'gallery'},
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
@@ -1399,9 +1828,18 @@ class _MapScreenState extends State<MapScreen>
                             child: const Text('Visit Museum', style: TextStyle(fontSize: 10)),
                           ),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               final taskProvider = context.read<TaskProvider>();
                               taskProvider.incrementAchievementProgress('first_favorite');
+                              
+                              // Trigger new achievement system
+                              final prefs = await SharedPreferences.getInstance();
+                              final userId = prefs.getString('user_id') ?? 'demo_user';
+                              await AchievementService().checkAchievements(
+                                userId: userId,
+                                action: 'like_given',
+                                data: {'likeCount': 1},
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.pink,
@@ -1411,9 +1849,18 @@ class _MapScreenState extends State<MapScreen>
                             child: const Text('Add Favorite', style: TextStyle(fontSize: 10)),
                           ),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               final taskProvider = context.read<TaskProvider>();
                               taskProvider.incrementAchievementProgress('art_critic');
+                              
+                              // Trigger new achievement system
+                              final prefs = await SharedPreferences.getInstance();
+                              final userId = prefs.getString('user_id') ?? 'demo_user';
+                              await AchievementService().checkAchievements(
+                                userId: userId,
+                                action: 'comment_posted',
+                                data: {'commentCount': 1},
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.orange,
@@ -1438,11 +1885,13 @@ class _MapScreenState extends State<MapScreen>
   @override
   void dispose() {
     _timer?.cancel();
+    _proximityCheckTimer?.cancel();
     _compassSubscription?.cancel();
     _animationController.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _sheetController.dispose();
+    _arIntegrationService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     tileProviders?.dispose();
     super.dispose();

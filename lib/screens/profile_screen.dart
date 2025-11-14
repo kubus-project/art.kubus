@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/task_provider.dart';
+import '../services/backend_api_service.dart';
+import '../community/community_interactions.dart';
 import '../web3/wallet.dart';
 import '../web3/achievements/achievements_page.dart';
 import 'settings_screen.dart';
+import 'saved_items_screen.dart';
 import 'profile_screen_methods.dart';
 import '../models/achievements.dart';
+import 'profile_edit_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -28,6 +33,12 @@ class _ProfileScreenState extends State<ProfileScreen>
   
   late TabController _tabController;
   final List<String> _tabs = ['Activity', 'Stats'];
+  
+  // Privacy settings state
+  bool _privateProfile = false;
+  bool _showActivityStatus = true;
+  bool _showCollection = true;
+  bool _allowMessages = true;
 
   @override
   void initState() {
@@ -56,6 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     ));
     
     _animationController.forward();
+    _loadPrivacySettings();
   }
 
   @override
@@ -114,6 +126,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildProfileHeader() {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
     
     return SliverToBoxAdapter(
       child: LayoutBuilder(
@@ -174,14 +187,22 @@ class _ProfileScreenState extends State<ProfileScreen>
                   width: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
                   height: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        themeProvider.accentColor,
-                        themeProvider.accentColor.withValues(alpha: 0.7),
-                      ],
-                    ),
+                    gradient: profileProvider.currentUser?.avatar == null || profileProvider.currentUser!.avatar.isEmpty
+                        ? LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              themeProvider.accentColor,
+                              themeProvider.accentColor.withValues(alpha: 0.7),
+                            ],
+                          )
+                        : null,
+                    image: profileProvider.currentUser?.avatar != null && profileProvider.currentUser!.avatar.isNotEmpty
+                        ? DecorationImage(
+                            image: NetworkImage(profileProvider.currentUser!.avatar),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
                     borderRadius: BorderRadius.circular(isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60),
                     boxShadow: [
                       BoxShadow(
@@ -192,15 +213,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                       ),
                     ],
                   ),
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
-                  ),
+                  child: profileProvider.currentUser?.avatar == null || profileProvider.currentUser!.avatar.isEmpty
+                      ? Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
+                        )
+                      : null,
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 20),
                 Text(
-                  'Anonymous Artist',
+                  profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username ?? 'Anonymous Artist',
                   style: GoogleFonts.inter(
                     fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 22 : 24,
                     fontWeight: FontWeight.bold,
@@ -209,6 +232,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (profileProvider.currentUser?.username != null && profileProvider.currentUser?.displayName != null) ...[  
+                  SizedBox(height: isSmallScreen ? 4 : 6),
+                  Text(
+                    '@${profileProvider.currentUser!.username}',
+                    style: GoogleFonts.inter(
+                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
                 SizedBox(height: isSmallScreen ? 6 : 8),
                 if (web3Provider.isConnected) ...[
                   Container(
@@ -217,10 +251,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       vertical: isSmallScreen ? 6 : 8
                     ),
                     decoration: BoxDecoration(
-                      color: themeProvider.accentColor.withOpacity(0.1),
+                      color: themeProvider.accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: themeProvider.accentColor.withOpacity(0.3),
+                        color: themeProvider.accentColor.withValues(alpha: 0.3),
                       ),
                     ),
                     child: Text(
@@ -237,23 +271,35 @@ class _ProfileScreenState extends State<ProfileScreen>
                     'Connect wallet to see profile',
                     style: GoogleFonts.inter(
                       fontSize: isSmallScreen ? 14 : 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ],
                 SizedBox(height: isSmallScreen ? 12 : 16),
-                Text(
-                  'Digital artist exploring the intersection of AR, blockchain, and creativity. Creating immersive experiences that blur the line between digital and physical worlds.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
-                    height: 1.5,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                if (profileProvider.currentUser?.bio != null && profileProvider.currentUser!.bio.isNotEmpty)
+                  Text(
+                    profileProvider.currentUser!.bio,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
+                    maxLines: isSmallScreen ? 3 : 4,
+                    overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Text(
+                    'No bio yet. Tap "Edit Profile" to add one.',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
+                      height: 1.5,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
-                  maxLines: isSmallScreen ? 3 : 4,
-                  overflow: TextOverflow.ellipsis,
-                ),
                 SizedBox(height: isSmallScreen ? 20 : 24),
                 isSmallScreen 
                   ? Column(
@@ -593,10 +639,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Container(
         padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         decoration: BoxDecoration(
-          color: themeProvider.accentColor.withOpacity(0.1),
+          color: themeProvider.accentColor.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
           border: Border.all(
-            color: themeProvider.accentColor.withOpacity(0.3),
+            color: themeProvider.accentColor.withValues(alpha: 0.3),
           ),
         ),
         child: Column(
@@ -619,7 +665,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               title,
               style: GoogleFonts.inter(
                 fontSize: isSmallScreen ? 8 : 10,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -663,7 +709,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               title,
               style: GoogleFonts.inter(
                 fontSize: isSmallScreen ? 7 : 8,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 1,
@@ -735,42 +781,77 @@ class _ProfileScreenState extends State<ProfileScreen>
         
         return Padding(
           padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-          child: Consumer<ConfigProvider>(
-            builder: (context, config, child) {
-              return config.useMockData 
-                ? ListView.builder(
-                    itemCount: 15,
-                    itemBuilder: (context, index) => _buildActivityItem(index),
-                  )
-                : Center(
-                    child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.timeline,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No Activity Yet',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+          child: FutureBuilder<Map<String, List<dynamic>>>(
+            future: _loadUserActivity(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
                         color: Colors.grey[400],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Start creating and interacting to see your activity here',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[500],
+                      const SizedBox(height: 16),
+                      Text(
+                        'Error Loading Activity',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[400],
+                        ),
                       ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ));
+                    ],
+                  ),
+                );
+              }
+              
+              final activityData = snapshot.data ?? {};
+              final activities = _buildActivityList(activityData);
+              
+              if (activities.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.timeline,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No Activity Yet',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Start creating and interacting to see your activity here',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                );
+              }
+              
+              return ListView.builder(
+                itemCount: activities.length,
+                itemBuilder: (context, index) => _buildRealActivityItem(activities[index]),
+              );
             },
           ),
         );
@@ -791,16 +872,113 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildActivityItem(int index) {
-    final activities = [
-      ('Created new artwork', 'Digital Dreams #1 was uploaded to your portfolio', Icons.add_box, '2 hours ago'),
-      ('Artwork liked', 'Someone liked your "AR Portal" creation', Icons.favorite, '5 hours ago'),
-      ('Earned KUB8', 'Received 15 KUB8 tokens for artwork discovery', Icons.account_balance_wallet, '1 day ago'),
-      ('New follower', '@digital_artist started following you', Icons.person_add, '2 days ago'),
-      ('Collection updated', 'Added 3 new items to Urban AR collection', Icons.collections, '3 days ago'),
-    ];
+  /// Load user activity from backend (posts, likes, comments, saved items)
+  Future<Map<String, List<dynamic>>> _loadUserActivity() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final walletAddress = prefs.getString('wallet_address');
+      
+      if (walletAddress == null || walletAddress.isEmpty) {
+        return {};
+      }
+
+      // Load user's posts (filtered by wallet address)
+      final posts = await BackendApiService().getCommunityPosts(
+        page: 1,
+        limit: 50,
+        authorWallet: walletAddress,
+      );
+
+      // Load liked posts (from local storage)
+      final likedPostIds = prefs.getStringList('liked_posts') ?? [];
+      
+      // Load bookmarked posts
+      final bookmarkedPostIds = prefs.getStringList('bookmarked_posts') ?? [];
+      
+      // Load saved artworks
+      final savedArtworkIds = prefs.getStringList('saved_artwork_ids') ?? [];
+
+      return {
+        'posts': posts,
+        'likes': likedPostIds,
+        'bookmarks': bookmarkedPostIds,
+        'savedArtworks': savedArtworkIds,
+      };
+    } catch (e) {
+      debugPrint('Error loading user activity: $e');
+      return {};
+    }
+  }
+
+  /// Build activity list from backend data
+  List<Map<String, dynamic>> _buildActivityList(Map<String, List<dynamic>> activityData) {
+    final activities = <Map<String, dynamic>>[];
     
-    final activity = activities[index % activities.length];
+    // Add posts
+    final posts = activityData['posts'] as List<dynamic>? ?? [];
+    for (final post in posts) {
+      if (post is CommunityPost) {
+        activities.add({
+          'type': 'post',
+          'icon': Icons.create,
+          'title': 'Created a post',
+          'description': post.content.length > 50 
+              ? '${post.content.substring(0, 50)}...' 
+              : post.content,
+          'timestamp': post.timestamp,
+        });
+      }
+    }
+    
+    // Add likes
+    final likes = activityData['likes'] as List<dynamic>? ?? [];
+    if (likes.isNotEmpty) {
+      activities.add({
+        'type': 'likes',
+        'icon': Icons.favorite,
+        'title': 'Liked ${likes.length} posts',
+        'description': 'You\'ve been active in the community',
+        'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
+      });
+    }
+    
+    // Add bookmarks
+    final bookmarks = activityData['bookmarks'] as List<dynamic>? ?? [];
+    if (bookmarks.isNotEmpty) {
+      activities.add({
+        'type': 'bookmarks',
+        'icon': Icons.bookmark,
+        'title': 'Saved ${bookmarks.length} posts',
+        'description': 'Building your collection',
+        'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
+      });
+    }
+    
+    // Add saved artworks
+    final savedArtworks = activityData['savedArtworks'] as List<dynamic>? ?? [];
+    if (savedArtworks.isNotEmpty) {
+      activities.add({
+        'type': 'saved',
+        'icon': Icons.collections,
+        'title': 'Saved ${savedArtworks.length} artworks',
+        'description': 'Curating your favorites',
+        'timestamp': DateTime.now().subtract(const Duration(hours: 3)),
+      });
+    }
+    
+    // Sort by timestamp (newest first)
+    activities.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+    
+    return activities;
+  }
+
+  /// Build activity item widget from real data
+  Widget _buildRealActivityItem(Map<String, dynamic> activity) {
+    final icon = activity['icon'] as IconData;
+    final title = activity['title'] as String;
+    final description = activity['description'] as String;
+    final timestamp = activity['timestamp'] as DateTime;
+    final timeAgo = _getTimeAgo(timestamp);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -816,11 +994,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              activity.$3,
+              icon,
               color: Provider.of<ThemeProvider>(context).accentColor,
               size: 20,
             ),
@@ -831,7 +1009,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  activity.$1,
+                  title,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -840,26 +1018,45 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  activity.$2,
+                  description,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  activity.$4,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            timeAgo,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _getTimeAgo(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays > 7) {
+      return '${(difference.inDays / 7).floor()}w ago';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   Widget _buildAchievementsSection() {
@@ -870,7 +1067,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final achievements = taskProvider.achievementProgress;
           
           // Get the first 6 achievements to display
-          final displayAchievements = AchievementService.allAchievements.take(6).toList();
+          final displayAchievements = allAchievements.take(6).toList();
           
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -898,7 +1095,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF9C27B0).withOpacity(0.1),
+                        color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: const Color(0xFF9C27B0), width: 1),
                       ),
@@ -923,7 +1120,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         Icon(
                           Icons.emoji_events,
                           size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -931,7 +1128,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -939,7 +1136,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           'Start exploring to unlock achievements',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -994,7 +1191,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF9C27B0).withOpacity(0.1),
+                        color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(color: const Color(0xFF9C27B0), width: 1),
                       ),
@@ -1037,12 +1234,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: unlocked 
-            ? themeProvider.accentColor.withOpacity(0.1)
+            ? themeProvider.accentColor.withValues(alpha: 0.1)
             : Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: unlocked 
-              ? themeProvider.accentColor.withOpacity(0.3)
+              ? themeProvider.accentColor.withValues(alpha: 0.3)
               : Theme.of(context).colorScheme.outline,
         ),
       ),
@@ -1052,7 +1249,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             icon,
             color: unlocked 
                 ? themeProvider.accentColor
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 8),
@@ -1063,7 +1260,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               fontWeight: FontWeight.w600,
               color: unlocked
                   ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -1161,7 +1358,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -1179,7 +1376,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   title,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
@@ -1196,7 +1393,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -1284,7 +1481,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(30),
             ),
             child: Icon(
@@ -1306,13 +1503,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _editProfile() {
-    Navigator.push(
+  void _editProfile() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const EditProfileScreen(),
+        builder: (context) => const ProfileEditScreen(),
       ),
     );
+    
+    // Reload profile if changes were saved
+    if (result == true && mounted) {
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+      if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
+        await profileProvider.loadProfile(web3Provider.walletAddress);
+      }
+    }
   }
 
   void _showMoreOptions() {
@@ -1337,10 +1543,22 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
             ),
             const SizedBox(height: 24),
-            _buildOptionItem(Icons.bookmark, 'Saved Items', () {}),
-            _buildOptionItem(Icons.history, 'View History', () {}),
-            _buildOptionItem(Icons.security, 'Privacy Settings', () {}),
-            _buildOptionItem(Icons.help, 'Help & Support', () {}),
+            _buildOptionItem(Icons.bookmark, 'Saved Items', () {
+              Navigator.pop(context);
+              _navigateToSavedItems();
+            }),
+            _buildOptionItem(Icons.history, 'View History', () {
+              Navigator.pop(context);
+              _navigateToViewHistory();
+            }),
+            _buildOptionItem(Icons.security, 'Privacy Settings', () {
+              Navigator.pop(context);
+              _navigateToPrivacySettings();
+            }),
+            _buildOptionItem(Icons.help, 'Help & Support', () {
+              Navigator.pop(context);
+              _navigateToHelpSupport();
+            }),
             const SizedBox(height: 24),
           ],
         ),
@@ -1364,9 +1582,406 @@ class _ProfileScreenState extends State<ProfileScreen>
       trailing: Icon(
         Icons.arrow_forward_ios,
         size: 16,
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
       ),
       onTap: onTap,
+    );
+  }
+
+  // Navigation methods for menu options
+  void _navigateToSavedItems() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SavedItemsScreen()),
+    );
+  }
+
+  void _navigateToViewHistory() {
+    // Show history dialog for now
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'View History',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.history,
+              size: 64,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Your viewing history will appear here',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.inter()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToPrivacySettings() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            'Privacy Settings',
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPrivacyOptionStateful('Private Profile', _privateProfile, (val) {
+                setDialogState(() => _privateProfile = val);
+                setState(() {});
+                _savePrivacySettings();
+              }),
+              _buildPrivacyOptionStateful('Show Activity Status', _showActivityStatus, (val) {
+                setDialogState(() => _showActivityStatus = val);
+                setState(() {});
+                _savePrivacySettings();
+              }),
+              _buildPrivacyOptionStateful('Show Collection', _showCollection, (val) {
+                setDialogState(() => _showCollection = val);
+                setState(() {});
+                _savePrivacySettings();
+              }),
+              _buildPrivacyOptionStateful('Allow Messages', _allowMessages, (val) {
+                setDialogState(() => _allowMessages = val);
+                setState(() {});
+                _savePrivacySettings();
+              }),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Close', style: GoogleFonts.inter()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrivacyOptionStateful(String title, bool value, Function(bool) onChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Flexible(
+            child: Text(
+              title,
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Future<void> _savePrivacySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('private_profile', _privateProfile);
+    await prefs.setBool('show_activity_status', _showActivityStatus);
+    await prefs.setBool('show_collection', _showCollection);
+    await prefs.setBool('allow_messages', _allowMessages);
+  }
+  
+  Future<void> _loadPrivacySettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _privateProfile = prefs.getBool('private_profile') ?? false;
+      _showActivityStatus = prefs.getBool('show_activity_status') ?? true;
+      _showCollection = prefs.getBool('show_collection') ?? true;
+      _allowMessages = prefs.getBool('allow_messages') ?? true;
+    });
+  }
+
+  void _navigateToHelpSupport() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Help & Support',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHelpOption(Icons.description, 'Documentation'),
+            _buildHelpOption(Icons.chat_bubble_outline, 'Contact Support'),
+            _buildHelpOption(Icons.bug_report, 'Report a Bug'),
+            _buildHelpOption(Icons.info_outline, 'About art.kubus'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.inter()),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpOption(IconData icon, String title) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.inter(fontSize: 14),
+      ),
+      dense: true,
+      onTap: () {
+        Navigator.pop(context);
+        _handleHelpOptionTap(title);
+      },
+    );
+  }
+  
+  void _handleHelpOptionTap(String option) {
+    switch (option) {
+      case 'Documentation':
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Opening documentation...'),
+            duration: const Duration(seconds: 2),
+            action: SnackBarAction(
+              label: 'Visit',
+              onPressed: () {
+                // In production, open https://docs.art-kubus.io
+              },
+            ),
+          ),
+        );
+        break;
+      case 'Contact Support':
+        _showContactSupportDialog();
+        break;
+      case 'Report a Bug':
+        _showReportBugDialog();
+        break;
+      case 'About art.kubus':
+        _showAboutDialog();
+        break;
+    }
+  }
+  
+  void _showContactSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Contact Support',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Get help from our support team:',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            _buildContactOption(Icons.email, 'Email', 'support@art-kubus.io'),
+            const SizedBox(height: 12),
+            _buildContactOption(Icons.chat, 'Live Chat', 'Available Mon-Fri 9AM-5PM'),
+            const SizedBox(height: 12),
+            _buildContactOption(Icons.public, 'Website', 'https://art.kubus.site'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.inter()),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildContactOption(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Provider.of<ThemeProvider>(context).accentColor),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  void _showReportBugDialog() {
+    final bugController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Report a Bug',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Describe the issue you encountered:',
+              style: GoogleFonts.inter(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: bugController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Enter bug description...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.inter()),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Bug report submitted. Thank you!'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Text('Submit', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'About art.kubus',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.palette,
+                size: 40,
+                color: Provider.of<ThemeProvider>(context).accentColor,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'art.kubus',
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Version 1.0.0+1',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'AR art platform connecting artists and institutions through blockchain technology.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.5,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '© 2024 Kubus Project',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: GoogleFonts.inter()),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1426,7 +2041,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     gradient: LinearGradient(
                       colors: [
                         Provider.of<ThemeProvider>(context).accentColor,
-                        Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.7),
+                        Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(60),

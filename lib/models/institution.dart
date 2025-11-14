@@ -107,8 +107,8 @@ class InstitutionStats {
   }
 }
 
-enum EventType { exhibition, workshop, conference, performance, gallery_opening, auction }
-enum EventCategory { art, photography, sculpture, digital, mixed_media, installation }
+enum EventType { exhibition, workshop, conference, performance, galleryOpening, auction }
+enum EventCategory { art, photography, sculpture, digital, mixedMedia, installation }
 
 class Event {
   final String id;

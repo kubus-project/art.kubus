@@ -47,5 +47,7 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSFaceIDUsageDescription</key>
+		<string>Use Face ID to unlock the app and reveal your recovery phrase securely.</string>
 	</dict>
 </plist>

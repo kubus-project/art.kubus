@@ -2,8 +2,9 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/achievements.dart';
-import '../../providers/mockup_data_provider.dart';
+import '../../services/achievement_service.dart' as new_service;
 
 class AchievementsPage extends StatefulWidget {
   const AchievementsPage({super.key});
@@ -14,6 +15,8 @@ class AchievementsPage extends StatefulWidget {
 
 class _AchievementsPageState extends State<AchievementsPage> {
   late List<AchievementProgress> _userProgress;
+  int _totalTokens = 0;
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -21,63 +24,81 @@ class _AchievementsPageState extends State<AchievementsPage> {
     _initializeUserProgress();
   }
 
-  void _initializeUserProgress() {
-    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
+  Future<void> _initializeUserProgress() async {
+    setState(() => _isLoading = true);
     
-    if (mockupProvider.isMockDataEnabled) {
-      // Enhanced mock data for testing
-      _userProgress = [
-        const AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
-        const AchievementProgress(achievementId: 'ar_collector', currentProgress: 12, isCompleted: true),
-        const AchievementProgress(achievementId: 'gallery_explorer', currentProgress: 8, isCompleted: true),
-        const AchievementProgress(achievementId: 'community_member', currentProgress: 1, isCompleted: true),
-        const AchievementProgress(achievementId: 'first_favorite', currentProgress: 1, isCompleted: true),
-        const AchievementProgress(achievementId: 'art_critic', currentProgress: 25, isCompleted: true),
-        const AchievementProgress(achievementId: 'social_butterfly', currentProgress: 50, isCompleted: true),
-        const AchievementProgress(achievementId: 'early_adopter', currentProgress: 1, isCompleted: true),
-      ];
-    } else {
-      // No mock data - empty achievements when disabled
+    // Get token balance from new achievement service
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id') ?? 'demo_user';
+    
+    try {
+      // Get actual unlocked achievements from new service
+      final unlockedAchievements = await new_service.AchievementService().getUnlockedAchievements(userId);
+      _totalTokens = await new_service.AchievementService().getTotalEarnedTokens(userId);
+      
+      // Convert new service achievements to old format for UI compatibility
+      _userProgress = unlockedAchievements.map((achievement) {
+        return AchievementProgress(
+          achievementId: _mapNewToOldAchievementId(achievement.id),
+          currentProgress: 1,
+          isCompleted: true,
+          completedDate: DateTime.now(),
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('Error loading achievements: $e');
       _userProgress = [];
+      _totalTokens = 0;
     }
+    
+    setState(() => _isLoading = false);
+  }
+  
+  // Map new achievement IDs to old UI format
+  String _mapNewToOldAchievementId(String newId) {
+    final mapping = {
+      'first_discovery': 'first_ar_visit',
+      'art_explorer': 'ar_collector',
+      'first_ar_view': 'first_ar_visit',
+      'ar_enthusiast': 'ar_collector',
+      'first_post': 'community_member',
+      'first_like': 'first_favorite',
+      'first_comment': 'art_critic',
+    };
+    return mapping[newId] ?? newId;
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Reinitialize when mock data setting changes
-        _initializeUserProgress();
-        
-        return Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: Text(
-              'Achievements & POAPs',
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          'Achievements & POAPs',
+          style: GoogleFonts.inter(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+      ),
+      body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  _buildStatsHeader(),
+                  Expanded(child: _buildAchievementsList()),
+                ],
               ),
-            ),
-          ),
-          body: Column(
-            children: [
-              _buildStatsHeader(),
-              Expanded(child: _buildAchievementsList()),
-            ],
-          ),
-        );
-      },
     );
   }
 
   Widget _buildStatsHeader() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final completedCount = _userProgress.where((p) => p.isCompleted).length;
-    final totalPoints = AchievementService.calculateTotalPoints(_userProgress);
-    final completionPercentage = AchievementService.getOverallCompletionPercentage(_userProgress);
+    final completionPercentage = completedCount / allAchievements.length * 100;
 
     return Container(
       margin: const EdgeInsets.all(24),
@@ -86,7 +107,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF9C27B0), Provider.of<ThemeProvider>(context).accentColor],
+          colors: [themeProvider.accentColor, themeProvider.accentColor.withValues(alpha: 0.7)],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -122,7 +143,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Collect POAPs and unlock rewards for your AR art journey',
+                      'Collect POAPs and unlock KUB8 token rewards',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Colors.white.withValues(alpha: 0.8),
@@ -137,10 +158,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
           Row(
             children: [
               Expanded(
-                child: _buildStatItem('Completed', '$completedCount/${AchievementService.allAchievements.length}'),
+                child: _buildStatItem('Completed', '$completedCount/${allAchievements.length}'),
               ),
               Expanded(
-                child: _buildStatItem('Points', '$totalPoints'),
+                child: _buildStatItem('KUB8 Tokens', '$_totalTokens'),
               ),
               Expanded(
                 child: _buildStatItem('Progress', '${completionPercentage.toInt()}%'),
@@ -186,7 +207,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
       itemCount: _userProgress.length,
       itemBuilder: (context, index) {
         final progress = _userProgress[index];
-        final achievement = AchievementService.getAchievementById(progress.achievementId);
+        final achievement = getAchievementById(progress.achievementId);
         if (achievement != null) {
           return _buildAchievementCard(achievement, progress);
         }
@@ -238,7 +259,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isUnlocked ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: isUnlocked ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
@@ -251,7 +272,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
               achievement.description,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: isUnlocked ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.8) : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: isUnlocked ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8) : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
@@ -318,6 +339,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
     );
   }
 }
+
 
 
 

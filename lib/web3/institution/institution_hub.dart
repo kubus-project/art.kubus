@@ -104,7 +104,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF00D4AA), Color(0xFF4CAF50)],
+          colors: [Colors.green, Colors.green],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -158,7 +158,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -179,7 +179,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00D4AA) : Colors.transparent,
+          color: isSelected ? Colors.green : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -187,7 +187,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -196,7 +196,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -214,7 +214,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -236,6 +236,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 }
+
 
 
 

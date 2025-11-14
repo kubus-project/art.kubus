@@ -28,6 +28,15 @@ class Artwork {
   final DateTime? discoveredAt;
   final String? discoveryUserId;
   
+  // AR-specific fields
+  final String? arMarkerId;      // Reference to ARMarker
+  final String? model3DCID;      // IPFS CID for 3D model
+  final String? model3DURL;      // HTTP URL for 3D model
+  final double? arScale;         // Scale for AR display
+  final Map<String, double>? arRotation; // AR rotation {x, y, z}
+  final bool? arEnableAnimation;
+  final String? arAnimationName;
+  
   // Social metrics
   final int likesCount;
   final int commentsCount;
@@ -57,6 +66,13 @@ class Artwork {
     required this.createdAt,
     this.discoveredAt,
     this.discoveryUserId,
+    this.arMarkerId,
+    this.model3DCID,
+    this.model3DURL,
+    this.arScale,
+    this.arRotation,
+    this.arEnableAnimation,
+    this.arAnimationName,
     this.likesCount = 0,
     this.commentsCount = 0,
     this.viewsCount = 0,
@@ -135,6 +151,13 @@ class Artwork {
       'createdAt': createdAt.toIso8601String(),
       'discoveredAt': discoveredAt?.toIso8601String(),
       'discoveryUserId': discoveryUserId,
+      'arMarkerId': arMarkerId,
+      'model3DCID': model3DCID,
+      'model3DURL': model3DURL,
+      'arScale': arScale,
+      'arRotation': arRotation,
+      'arEnableAnimation': arEnableAnimation,
+      'arAnimationName': arAnimationName,
       'likesCount': likesCount,
       'commentsCount': commentsCount,
       'viewsCount': viewsCount,
@@ -176,6 +199,15 @@ class Artwork {
           ? DateTime.tryParse(map['discoveredAt']) 
           : null,
       discoveryUserId: map['discoveryUserId'],
+      arMarkerId: map['arMarkerId'],
+      model3DCID: map['model3DCID'],
+      model3DURL: map['model3DURL'],
+      arScale: map['arScale']?.toDouble(),
+      arRotation: map['arRotation'] != null 
+          ? Map<String, double>.from(map['arRotation'])
+          : null,
+      arEnableAnimation: map['arEnableAnimation'],
+      arAnimationName: map['arAnimationName'],
       likesCount: map['likesCount']?.toInt() ?? 0,
       commentsCount: map['commentsCount']?.toInt() ?? 0,
       viewsCount: map['viewsCount']?.toInt() ?? 0,
@@ -205,6 +237,13 @@ class Artwork {
     DateTime? createdAt,
     DateTime? discoveredAt,
     String? discoveryUserId,
+    String? arMarkerId,
+    String? model3DCID,
+    String? model3DURL,
+    double? arScale,
+    Map<String, double>? arRotation,
+    bool? arEnableAnimation,
+    String? arAnimationName,
     int? likesCount,
     int? commentsCount,
     int? viewsCount,
@@ -231,6 +270,13 @@ class Artwork {
       createdAt: createdAt ?? this.createdAt,
       discoveredAt: discoveredAt ?? this.discoveredAt,
       discoveryUserId: discoveryUserId ?? this.discoveryUserId,
+      arMarkerId: arMarkerId ?? this.arMarkerId,
+      model3DCID: model3DCID ?? this.model3DCID,
+      model3DURL: model3DURL ?? this.model3DURL,
+      arScale: arScale ?? this.arScale,
+      arRotation: arRotation ?? this.arRotation,
+      arEnableAnimation: arEnableAnimation ?? this.arEnableAnimation,
+      arAnimationName: arAnimationName ?? this.arAnimationName,
       likesCount: likesCount ?? this.likesCount,
       commentsCount: commentsCount ?? this.commentsCount,
       viewsCount: viewsCount ?? this.viewsCount,

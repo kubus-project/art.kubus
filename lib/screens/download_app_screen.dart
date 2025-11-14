@@ -246,7 +246,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
       spacing: isLargeScreen ? 32 : 16,
       runSpacing: isLargeScreen ? 24 : 16,
       children: features.map((feature) {
-        return Container(
+        return SizedBox(
           width: isLargeScreen ? 200 : 150,
           child: Column(
             children: [

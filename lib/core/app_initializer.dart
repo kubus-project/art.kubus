@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
-import '../providers/mockup_data_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/artwork_provider.dart';
-import '../screens/welcome_intro_screen.dart';
+import '../providers/saved_items_provider.dart';
+import '../providers/wallet_provider.dart';
+import '../providers/web3provider.dart';
+import '../services/backend_api_service.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
 
@@ -25,25 +27,58 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Future<void> _initializeApp() async {
+    // Load JWT token for backend authentication
+    await BackendApiService().loadAuthToken();
+    if (!mounted) return;
+    
     // Initialize ConfigProvider first
     final configProvider = Provider.of<ConfigProvider>(context, listen: false);
     await configProvider.initialize();
+    if (!mounted) return;
     
-    // Initialize MockupDataProvider to load saved mock data state
-    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
-    await mockupProvider.initialize();
-    print('AppInitializer: MockupDataProvider initialized, isMockDataEnabled = ${mockupProvider.isMockDataEnabled}');
+    // Initialize WalletProvider early to restore cached wallet
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    // WalletProvider already calls _init() in constructor, but let's ensure it's complete
+    await Future.delayed(const Duration(milliseconds: 500)); // Give it time to complete async loading
+    final walletAddress = walletProvider.currentWalletAddress;
+    debugPrint('🔐 WalletProvider initialization complete. Has wallet: ${walletAddress != null}');
+    if (!mounted) return;
     
-    // Initialize ProfileProvider
+    // Sync Web3Provider with WalletProvider if wallet was restored
+    if (walletAddress != null) {
+      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+      try {
+        await web3Provider.connectExistingWallet(walletAddress);
+        debugPrint('✅ Web3Provider synced with restored wallet: $walletAddress');
+      } catch (e) {
+        debugPrint('⚠️ Web3Provider sync failed: $e');
+      }
+    }
+    if (!mounted) return;
+    
+    // Initialize ProfileProvider and load profile if wallet exists
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     await profileProvider.initialize();
+    if (walletAddress != null && walletAddress.isNotEmpty) {
+      try {
+        await profileProvider.loadProfile(walletAddress);
+        debugPrint('✅ ProfileProvider loaded for wallet: $walletAddress');
+      } catch (e) {
+        debugPrint('⚠️ ProfileProvider load failed: $e');
+      }
+    }
+    if (!mounted) return;
     
-    // Initialize ArtworkProvider and connect to ConfigProvider
+    // Initialize SavedItemsProvider
+    final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
+    await savedItemsProvider.initialize();
+    if (!mounted) return;
+    
+    // Initialize ArtworkProvider (no mock data needed)
     final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
-    artworkProvider.setUseMockData(configProvider.useMockData);
+    artworkProvider.setUseMockData(false); // Always use backend data
     
-    // Connect ProfileProvider to ConfigProvider for mock data sync
-    profileProvider.setUseMockData(configProvider.useMockData);
+    // ProfileProvider always uses backend data (no setUseMockData method)
     
     final prefs = await SharedPreferences.getInstance();
     
@@ -59,14 +94,28 @@ class _AppInitializerState extends State<AppInitializer> {
     final hasWallet = prefs.getBool('has_wallet') ?? false;
     final hasCompletedOnboarding = prefs.getBool('completed_onboarding') ?? false;
     
+    // DEBUG: Print all flags
+    debugPrint('🔍 AppInitializer DEBUG:');
+    debugPrint('  isFirstTime: $isFirstTime');
+    debugPrint('  hasSeenWelcome: $hasSeenWelcome');
+    debugPrint('  isFirstLaunch: $isFirstLaunch');
+    debugPrint('  userSkipOnboarding: $userSkipOnboarding');
+    debugPrint('  hasWallet: $hasWallet');
+    debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
+    debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
+    debugPrint('  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
+    
     if (!mounted) return;
     
     // Navigate based on user state and configuration
     final shouldSkipOnboarding = userSkipOnboarding && 
                                  (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
     
+    debugPrint('  shouldSkipOnboarding: $shouldSkipOnboarding');
+    
     if (shouldSkipOnboarding) {
       // Returning user - skip onboarding and go directly to main app
+      debugPrint('📍 Route: Skipping onboarding → MainApp');
       // Mark as no longer first time if not already set
       if (isFirstTime) {
         await prefs.setBool('first_time', false);
@@ -74,28 +123,19 @@ class _AppInitializerState extends State<AppInitializer> {
         await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
       }
       
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const MainApp()),
       );
-    } else if (isFirstTime && AppConfig.showWelcomeScreen) {
-      // First time user - show welcome screen if enabled
+    } else if (!hasCompletedOnboarding) {
+      // First-time user - show onboarding (no wallet required)
+      debugPrint('📍 Route: First-time user → OnboardingScreen (wallet optional, setup when needed)');
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const WelcomeIntroScreen()),
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
-    } else if (!hasWallet || !hasCompletedOnboarding) {
-      // User needs wallet setup or onboarding
-      if (AppConfig.enforceWalletOnboarding) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-        );
-      } else {
-        // Show explore-only mode
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const ExploreOnlyApp()),
-        );
-      }
     } else {
-      // Existing user with wallet - go to main app
+      // Returning user who completed onboarding - go to main app (wallet optional)
+      debugPrint('📍 Route: Returning user → MainApp (wallet optional)');
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const MainApp()),
       );
@@ -134,7 +174,7 @@ class ExploreOnlyApp extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
             child: Text(
               'You\'re in explore-only mode. Connect a wallet to access all features.',
               style: Theme.of(context).textTheme.bodyMedium,
@@ -216,7 +256,7 @@ class ExploreOnlyApp extends StatelessWidget {
   }
 
   void _showWalletPrompt(BuildContext context) {
-    print('DEBUG: Wallet prompt triggered'); // Debug print
+    debugPrint('DEBUG: Wallet prompt triggered'); // Debug print
     showDialog(
       context: context,
       builder: (context) => const WalletPromptScreen(),
@@ -250,8 +290,8 @@ class WalletPromptScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               Icons.security,
@@ -310,7 +350,7 @@ class WalletPromptScreen extends StatelessWidget {
         ),
         ElevatedButton.icon(
           onPressed: () {
-            print('DEBUG: Set Up Wallet button pressed'); // Debug print
+            debugPrint('DEBUG: Set Up Wallet button pressed'); // Debug print
             Navigator.of(context).pop();
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const OnboardingScreen()),
@@ -370,3 +410,4 @@ class OnboardingManager {
     return (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
   }
 }
+

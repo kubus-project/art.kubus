@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/user.dart';
@@ -173,13 +174,13 @@ class UserService {
   static Future<void> updateAchievementProgress(String userId, String achievementId, int newProgress) async {
     // In a real app, this would make an API call to update the server
     // For now, this is just an example of how you might handle achievement updates
-    print('Updating achievement $achievementId for user $userId to progress $newProgress');
+    debugPrint('Updating achievement $achievementId for user $userId to progress $newProgress');
   }
 
   /// Increment achievement progress for a user
   static Future<void> incrementAchievementProgress(String userId, String achievementId, {int increment = 1}) async {
     // In a real app, this would make an API call to increment the server-side progress
-    print('Incrementing achievement $achievementId for user $userId by $increment');
+    debugPrint('Incrementing achievement $achievementId for user $userId by $increment');
   }
 
   /// Trigger achievement events (call when user performs actions)

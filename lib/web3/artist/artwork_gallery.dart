@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
-import '../../providers/mockup_data_provider.dart';
+import '../../providers/artwork_provider.dart';
+import '../../models/artwork.dart' as art_model;
 
 class ArtworkGallery extends StatefulWidget {
   const ArtworkGallery({super.key});
@@ -18,7 +19,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   
   String _selectedFilter = 'All';
   String _sortBy = 'Newest';
-  List<Artwork> _artworks = [];
+  List<art_model.Artwork> _artworks = [];
 
   @override
   void initState() {
@@ -47,69 +48,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _loadArtworks() {
-    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
-    
-    // Only load mock artworks if mock data is enabled
-    if (!mockupProvider.isMockDataEnabled) {
-      _artworks = [];
-      return;
-    }
-    
-    // Simulate loading artworks
-    _artworks = [
-      Artwork(
-        id: '1',
-        title: 'Digital Dreams',
-        description: 'A vibrant digital artwork exploring the intersection of technology and creativity',
-        imageUrl: 'https://picsum.photos/400/600?random=1',
-        status: ArtworkStatus.active,
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-        price: 0.5,
-        views: 156,
-        likes: 23,
-        hasARMarker: true,
-        location: 'Gallery A',
-      ),
-      Artwork(
-        id: '2',
-        title: 'Urban Landscapes',
-        description: 'Contemporary cityscapes captured through digital media',
-        imageUrl: 'https://picsum.photos/400/600?random=2',
-        status: ArtworkStatus.draft,
-        createdAt: DateTime.now().subtract(const Duration(days: 5)),
-        price: 0.8,
-        views: 89,
-        likes: 12,
-        hasARMarker: false,
-        location: null,
-      ),
-      Artwork(
-        id: '3',
-        title: 'Abstract Emotions',
-        description: 'An exploration of human emotions through abstract forms',
-        imageUrl: 'https://picsum.photos/400/600?random=3',
-        status: ArtworkStatus.active,
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        price: 1.2,
-        views: 234,
-        likes: 45,
-        hasARMarker: true,
-        location: 'Main Hall',
-      ),
-      Artwork(
-        id: '4',
-        title: 'Nature\'s Code',
-        description: 'Digital representation of natural patterns and algorithms',
-        imageUrl: 'https://picsum.photos/400/600?random=4',
-        status: ArtworkStatus.sold,
-        createdAt: DateTime.now().subtract(const Duration(days: 10)),
-        price: 2.0,
-        views: 567,
-        likes: 89,
-        hasARMarker: true,
-        location: 'Sold Collection',
-      ),
-    ];
+    // Load artworks from provider
+    final provider = Provider.of<ArtworkProvider>(context, listen: false);
+    _artworks = List<art_model.Artwork>.from(provider.artworks);
   }
 
   @override
@@ -181,9 +122,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Widget _buildStatsRow() {
-    final totalViews = _artworks.fold<int>(0, (sum, artwork) => sum + artwork.views);
-    final totalLikes = _artworks.fold<int>(0, (sum, artwork) => sum + artwork.likes);
-    final activeCount = _artworks.where((a) => a.status == ArtworkStatus.active).length;
+    final totalViews = _artworks.fold<int>(0, (sum, artwork) => sum + artwork.viewsCount);
+    final totalLikes = _artworks.fold<int>(0, (sum, artwork) => sum + artwork.likesCount);
+    final activeCount = _artworks.where((a) => 
+      a.status == art_model.ArtworkStatus.discovered || 
+      a.status == art_model.ArtworkStatus.favorite).length;
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -263,7 +206,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 
-  Widget _buildArtworkGrid(List<Artwork> artworks) {
+  Widget _buildArtworkGrid(List<art_model.Artwork> artworks) {
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -279,8 +222,8 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 
-  Widget _buildArtworkCard(Artwork artwork) {
-    final statusColor = _getStatusColor(artwork.status);
+  Widget _buildArtworkCard(art_model.Artwork artwork) {
+    final statusColor = _getStatusColor(artwork);
     
     return GestureDetector(
       onTap: () => _showArtworkDetails(artwork),
@@ -302,7 +245,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                       image: DecorationImage(
-                        image: NetworkImage(artwork.imageUrl),
+                        image: NetworkImage(artwork.imageUrl ?? 'https://picsum.photos/400/600?blur=2'),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -313,7 +256,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.8),
+                        color: statusColor.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -326,7 +269,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                       ),
                     ),
                   ),
-                  if (artwork.hasARMarker)
+                  if (artwork.arEnabled)
                      Positioned(
                       top: 8,
                       left: 8,
@@ -360,7 +303,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${artwork.price} KUB8',
+                      '${artwork.actualRewards} KUB8',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         color: Provider.of<ThemeProvider>(context).accentColor,
@@ -374,7 +317,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
-                            artwork.views.toString(),
+                            artwork.viewsCount.toString(),
                             style: GoogleFonts.inter(
                               fontSize: 8,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -387,7 +330,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                         const SizedBox(width: 2),
                         Flexible(
                           child: Text(
-                            artwork.likes.toString(),
+                            artwork.likesCount.toString(),
                             style: GoogleFonts.inter(
                               fontSize: 8,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -461,29 +404,30 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 
-  Color _getStatusColor(ArtworkStatus status) {
-    switch (status) {
-      case ArtworkStatus.active:
-        return Colors.green;
-      case ArtworkStatus.draft:
-        return Colors.orange;
-      case ArtworkStatus.sold:
-        return Colors.blue;
+  Color _getStatusColor(art_model.Artwork artwork) {
+    // Map ArtworkStatus to colors
+    switch (artwork.status) {
+      case art_model.ArtworkStatus.discovered:
+      case art_model.ArtworkStatus.favorite:
+        return Theme.of(context).colorScheme.primary;
+      case art_model.ArtworkStatus.undiscovered:
+        return Theme.of(context).colorScheme.tertiary;
     }
   }
 
-  List<Artwork> _getFilteredArtworks() {
-    List<Artwork> filtered = _artworks;
+  List<art_model.Artwork> _getFilteredArtworks() {
+    List<art_model.Artwork> filtered = _artworks;
     
     if (_selectedFilter != 'All') {
       filtered = filtered.where((artwork) {
         switch (_selectedFilter) {
           case 'Active':
-            return artwork.status == ArtworkStatus.active;
+            return artwork.status == art_model.ArtworkStatus.discovered || 
+                   artwork.status == art_model.ArtworkStatus.favorite;
           case 'Draft':
-            return artwork.status == ArtworkStatus.draft;
+            return artwork.status == art_model.ArtworkStatus.undiscovered;
           case 'Sold':
-            return artwork.status == ArtworkStatus.sold;
+            return false; // No sold status in current model
           default:
             return true;
         }
@@ -499,10 +443,10 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         break;
       case 'Most Views':
-        filtered.sort((a, b) => b.views.compareTo(a.views));
+        filtered.sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
         break;
       case 'Most Likes':
-        filtered.sort((a, b) => b.likes.compareTo(a.likes));
+        filtered.sort((a, b) => b.likesCount.compareTo(a.likesCount));
         break;
     }
     
@@ -513,7 +457,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title:  Text('Sort by', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -539,7 +483,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title:  Text('Search Artworks', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
           decoration: InputDecoration(
@@ -570,7 +514,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title:  Text('Create New Artwork', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Navigate to the Create tab to upload and create your new artwork.',
@@ -593,11 +537,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 
-  void _showArtworkDetails(Artwork artwork) {
+  void _showArtworkDetails(art_model.Artwork artwork) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: Container(
           width: MediaQuery.of(context).size.width * 0.8,
           padding: const EdgeInsets.all(24),
@@ -607,7 +551,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  artwork.imageUrl,
+                  artwork.imageUrl ?? 'https://picsum.photos/400/600?blur=2',
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -635,9 +579,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildDetailItem('Price', '${artwork.price} KUB8'),
-                  _buildDetailItem('Views', artwork.views.toString()),
-                  _buildDetailItem('Likes', artwork.likes.toString()),
+                  _buildDetailItem('Price', '${artwork.actualRewards} KUB8'),
+                  _buildDetailItem('Views', artwork.viewsCount.toString()),
+                  _buildDetailItem('Likes', artwork.likesCount.toString()),
                 ],
               ),
               const SizedBox(height: 24),
@@ -696,7 +640,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 
-  void _handleArtworkAction(Artwork artwork, String action) {
+  void _handleArtworkAction(art_model.Artwork artwork, String action) {
     switch (action) {
       case 'edit':
         ScaffoldMessenger.of(context).showSnackBar(
@@ -714,11 +658,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     }
   }
 
-  void _confirmDelete(Artwork artwork) {
+  void _confirmDelete(art_model.Artwork artwork) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title:  Text('Delete Artwork', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to delete "${artwork.title}"? This action cannot be undone.',
@@ -730,7 +674,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () {
               setState(() {
                 _artworks.removeWhere((a) => a.id == artwork.id);
@@ -748,40 +692,6 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 }
 
-// Artwork model
-class Artwork {
-  final String id;
-  final String title;
-  final String description;
-  final String imageUrl;
-  final ArtworkStatus status;
-  final DateTime createdAt;
-  final double price;
-  final int views;
-  final int likes;
-  final bool hasARMarker;
-  final String? location;
-
-  Artwork({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.imageUrl,
-    required this.status,
-    required this.createdAt,
-    required this.price,
-    required this.views,
-    required this.likes,
-    required this.hasARMarker,
-    this.location,
-  });
-}
-
-enum ArtworkStatus {
-  active,
-  draft,
-  sold,
-}
 
 
 

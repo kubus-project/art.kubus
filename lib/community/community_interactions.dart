@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
+import '../services/backend_api_service.dart';
+import '../services/push_notification_service.dart';
 
 // Enhanced community interaction models
 class CommunityPost {
@@ -115,13 +118,19 @@ class CommunityService {
   static const String _viewsKey = 'community_views';
   static const String _likeCountsKey = 'community_like_counts';
 
-  // Like/Unlike post
-  static Future<void> togglePostLike(CommunityPost post) async {
+  // Like/Unlike post (with backend sync)
+  static Future<void> togglePostLike(CommunityPost post, {String? currentUserId, String? currentUserName}) async {
     if (!AppConfig.enableLiking) return;
 
     final prefs = await SharedPreferences.getInstance();
     final likedPosts = prefs.getStringList(_likesKey) ?? [];
     final likeCounts = prefs.getStringList(_likeCountsKey) ?? [];
+    final backendApi = BackendApiService();
+    final notificationService = PushNotificationService();
+
+    // Store original state for rollback
+    final originalIsLiked = post.isLiked;
+    final originalLikeCount = post.likeCount;
 
     // The post object state has already been updated by the UI
     // We just need to persist the current state
@@ -143,7 +152,47 @@ class CommunityService {
     await prefs.setStringList(_likeCountsKey, likeCounts);
     
     if (AppConfig.enableDebugPrints) {
-      print('Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
+      debugPrint('Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
+    }
+
+    // Sync with backend (optimistic update)
+    try {
+      if (post.isLiked) {
+        await backendApi.likePost(post.id);
+        // Send notification to post author
+        if (currentUserId != null && currentUserId != post.authorId) {
+          // Get username from profile provider or use wallet address
+          final userName = currentUserName ?? 'User ${currentUserId.substring(0, 6)}...';
+          await notificationService.showCommunityInteractionNotification(
+            postId: post.id,
+            type: 'like',
+            userName: userName,
+          );
+        }
+      } else {
+        await backendApi.unlikePost(post.id);
+      }
+    } catch (e) {
+      // Rollback on error
+      if (AppConfig.enableDebugPrints) {
+        debugPrint('Failed to sync like with backend: $e. Rolling back.');
+      }
+      
+      post.isLiked = originalIsLiked;
+      post.likeCount = originalLikeCount;
+      
+      // Rollback local storage
+      if (originalIsLiked) {
+        if (!likedPosts.contains(post.id)) likedPosts.add(post.id);
+      } else {
+        likedPosts.remove(post.id);
+      }
+      
+      likeCounts.removeWhere((item) => item.startsWith('${post.id}|'));
+      likeCounts.add('${post.id}|$originalLikeCount');
+      
+      await prefs.setStringList(_likesKey, likedPosts);
+      await prefs.setStringList(_likeCountsKey, likeCounts);
     }
   }
 
@@ -170,32 +219,74 @@ class CommunityService {
     await prefs.setStringList('${_likesKey}_comments', likedComments);
   }
 
-  // Add comment to post
-  static Future<Comment> addComment(CommunityPost post, String content, String authorName) async {
+  // Add comment to post (with backend sync)
+  static Future<Comment> addComment(
+    CommunityPost post,
+    String content,
+    String authorName, {
+    String? currentUserId,
+  }) async {
     if (!AppConfig.enableCommenting) throw Exception('Commenting is disabled');
 
-    final comment = Comment(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      authorId: 'current_user', // In real app, get from auth
+    final backendApi = BackendApiService();
+    final notificationService = PushNotificationService();
+
+    // Optimistic UI update
+    final tempComment = Comment(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      authorId: currentUserId ?? 'current_user',
       authorName: authorName,
       content: content,
       timestamp: DateTime.now(),
     );
 
-    post.comments = [...post.comments, comment];
+    post.comments = [...post.comments, tempComment];
     post.commentCount = post.comments.length;
 
-    // Save to preferences for persistence
-    final prefs = await SharedPreferences.getInstance();
-    final commentsData = prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
-    commentsData.add('${comment.id}|${comment.authorName}|${comment.content}|${comment.timestamp.millisecondsSinceEpoch}');
-    await prefs.setStringList('${_commentsKey}_${post.id}', commentsData);
+    try {
+      // Create comment on backend
+      final backendComment = await backendApi.createComment(
+        postId: post.id,
+        content: content,
+      );
 
-    if (AppConfig.enableDebugPrints) {
-      print('Comment added to post ${post.id}. Total comments: ${post.commentCount}');
+      // Replace temp comment with real comment from backend
+      post.comments = post.comments.map((c) {
+        return c.id == tempComment.id ? backendComment : c;
+      }).toList();
+
+      // Save to local preferences for persistence
+      final prefs = await SharedPreferences.getInstance();
+      final commentsData = prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
+      commentsData.add('${backendComment.id}|${backendComment.authorName}|${backendComment.content}|${backendComment.timestamp.millisecondsSinceEpoch}');
+      await prefs.setStringList('${_commentsKey}_${post.id}', commentsData);
+
+      if (AppConfig.enableDebugPrints) {
+        debugPrint('Comment added to post ${post.id}. Total comments: ${post.commentCount}');
+      }
+
+      // Send notification to post author
+      if (currentUserId != null && currentUserId != post.authorId) {
+        await notificationService.showCommunityInteractionNotification(
+          postId: post.id,
+          type: 'comment',
+          userName: authorName,
+          comment: content,
+        );
+      }
+
+      return backendComment;
+    } catch (e) {
+      // Rollback on error
+      if (AppConfig.enableDebugPrints) {
+        debugPrint('Failed to create comment on backend: $e. Rolling back.');
+      }
+      
+      post.comments = post.comments.where((c) => c.id != tempComment.id).toList();
+      post.commentCount = post.comments.length;
+      
+      rethrow;
     }
-
-    return comment;
   }
 
   // Load saved interactions
@@ -259,219 +350,7 @@ class CommunityService {
     }
   }
 
-  // Generate mock posts with enhanced features
-  static List<CommunityPost> getMockPosts({bool useMockData = true}) {
-    if (!useMockData) return [];
-
-    return [
-      CommunityPost(
-        id: 'post_1',
-        authorId: 'artist_1',
-        authorName: 'Elena Rodriguez',
-        content: 'Just finished my latest NFT collection "Digital Dreams"! The intersection of AI and traditional art continues to amaze me. What do you think about the future of AI-generated art?',
-        imageUrl: 'https://picsum.photos/400/300?random=1',
-        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
-        tags: ['#NFT', '#DigitalArt', '#AI'],
-        likeCount: 42,
-        commentCount: 8,
-        shareCount: 15,
-        viewCount: 324,
-        comments: [
-          Comment(
-            id: 'comment_1_1',
-            authorId: 'user_2',
-            authorName: 'Marcus Chen',
-            content: 'Absolutely stunning work! The blend of organic and digital elements is perfect.',
-            timestamp: DateTime.now().subtract(const Duration(hours: 1)),
-            likeCount: 5,
-          ),
-          Comment(
-            id: 'comment_1_2',
-            authorId: 'user_3',
-            authorName: 'Sarah Kim',
-            content: 'AI art is controversial but this shows real artistic vision. Love it!',
-            timestamp: DateTime.now().subtract(const Duration(minutes: 45)),
-            likeCount: 3,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_2',
-        authorId: 'collector_1',
-        authorName: 'James Wilson',
-        content: 'Amazing AR experience at the Museum of Digital Arts today! Walking through virtual galleries and seeing how artworks transform in real space. The future is here! 🚀',
-        timestamp: DateTime.now().subtract(const Duration(hours: 5)),
-        tags: ['#AR', '#Museum', '#DigitalExperience'],
-        likeCount: 67,
-        commentCount: 12,
-        shareCount: 28,
-        viewCount: 456,
-        comments: [
-          Comment(
-            id: 'comment_2_1',
-            authorId: 'user_4',
-            authorName: 'Maya Patel',
-            content: 'I was there too! The holographic sculptures were mind-blowing.',
-            timestamp: DateTime.now().subtract(const Duration(hours: 4)),
-            likeCount: 8,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_3',
-        authorId: 'artist_2',
-        authorName: 'Viktor Petrov',
-        content: 'New drop alert! 🔥 "Cyber Renaissance" collection goes live tomorrow at 3 PM UTC. Only 100 pieces available. Each artwork tells a story of classical art meeting futuristic technology.',
-        imageUrl: 'https://picsum.photos/400/300?random=2',
-        timestamp: DateTime.now().subtract(const Duration(hours: 8)),
-        tags: ['#NewDrop', '#CyberRenaissance', '#LimitedEdition'],
-        likeCount: 89,
-        commentCount: 15,
-        shareCount: 34,
-        viewCount: 623,
-        comments: [
-          Comment(
-            id: 'comment_3_1',
-            authorId: 'user_5',
-            authorName: 'Lisa Park',
-            content: 'Your art style is so unique! Definitely setting a reminder for tomorrow.',
-            timestamp: DateTime.now().subtract(const Duration(hours: 7)),
-            likeCount: 4,
-          ),
-          Comment(
-            id: 'comment_3_2',
-            authorId: 'user_6',
-            authorName: 'David Thompson',
-            content: 'Will there be any special utility for holders?',
-            timestamp: DateTime.now().subtract(const Duration(hours: 6)),
-            likeCount: 2,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_4',
-        authorId: 'community_manager',
-        authorName: 'art.kubus Team',
-        content: 'Community Update 📢 We\'re excited to announce the launch of our new Web3 marketplace! Trade, discover, and collect digital art with zero gas fees. Beta testing starts next week!',
-        timestamp: DateTime.now().subtract(const Duration(days: 1)),
-        tags: ['#CommunityUpdate', '#Marketplace', '#Web3'],
-        likeCount: 156,
-        commentCount: 23,
-        shareCount: 78,
-        viewCount: 1205,
-        comments: [
-          Comment(
-            id: 'comment_4_1',
-            authorId: 'user_7',
-            authorName: 'Alex Rodriguez',
-            content: 'Finally! Been waiting for this feature. How do I sign up for beta?',
-            timestamp: DateTime.now().subtract(const Duration(hours: 20)),
-            likeCount: 12,
-          ),
-          Comment(
-            id: 'comment_4_2',
-            authorId: 'user_8',
-            authorName: 'Emma Johnson',
-            content: 'Zero gas fees? That\'s a game changer for small artists!',
-            timestamp: DateTime.now().subtract(const Duration(hours: 18)),
-            likeCount: 9,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_5',
-        authorId: 'artist_5',
-        authorName: 'David Kim',
-        content: 'Experimenting with AR sculptures in public spaces 🏛️ The way people interact with invisible art is fascinating. Check out this piece I installed at Central Park!',
-        imageUrl: 'https://picsum.photos/400/300?random=5',
-        timestamp: DateTime.now().subtract(const Duration(hours: 8)),
-        tags: ['#AR', '#PublicArt', '#Sculpture'],
-        likeCount: 73,
-        commentCount: 12,
-        shareCount: 31,
-        viewCount: 892,
-        comments: [
-          Comment(
-            id: 'comment_5_1',
-            authorId: 'user_9',
-            authorName: 'Sarah Wilson',
-            content: 'I saw this yesterday! Amazing how it changes with the lighting.',
-            timestamp: DateTime.now().subtract(const Duration(hours: 6)),
-            likeCount: 8,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_6',
-        authorId: 'artist_6',
-        authorName: 'Maya Patel',
-        content: 'New NFT drop: "Digital Landscapes" 🌄 Inspired by climate change and our digital transformation. Each piece tells a story of adaptation.',
-        imageUrl: 'https://picsum.photos/400/300?random=6',
-        timestamp: DateTime.now().subtract(const Duration(hours: 12)),
-        tags: ['#NFT', '#ClimateArt', '#Digital'],
-        likeCount: 95,
-        commentCount: 18,
-        shareCount: 44,
-        viewCount: 567,
-        comments: [
-          Comment(
-            id: 'comment_6_1',
-            authorId: 'user_10',
-            authorName: 'Tom Anderson',
-            content: 'Powerful message and beautiful execution. When is the drop?',
-            timestamp: DateTime.now().subtract(const Duration(hours: 10)),
-            likeCount: 6,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_7',
-        authorId: 'artist_7',
-        authorName: 'Lisa Chen',
-        content: 'Interactive art meets blockchain! 🎮 My latest piece responds to viewer emotions detected through AR. The more engagement, the more the artwork evolves.',
-        imageUrl: 'https://picsum.photos/400/300?random=7',
-        timestamp: DateTime.now().subtract(const Duration(hours: 16)),
-        tags: ['#Interactive', '#AR', '#Blockchain'],
-        likeCount: 128,
-        commentCount: 24,
-        shareCount: 67,
-        viewCount: 1234,
-        comments: [
-          Comment(
-            id: 'comment_7_1',
-            authorId: 'user_11',
-            authorName: 'Alex Johnson',
-            content: 'This is the future of art! How does the emotion detection work?',
-            timestamp: DateTime.now().subtract(const Duration(hours: 14)),
-            likeCount: 11,
-          ),
-        ],
-      ),
-      CommunityPost(
-        id: 'post_8',
-        authorId: 'artist_8',
-        authorName: 'Roberto Silva',
-        content: 'Community collaboration project: "Digital Dreams" 🌟 Looking for 10 artists to contribute to this massive AR installation. DM me if interested!',
-        imageUrl: 'https://picsum.photos/400/300?random=8',
-        timestamp: DateTime.now().subtract(const Duration(days: 2)),
-        tags: ['#Collaboration', '#Community', '#AR'],
-        likeCount: 187,
-        commentCount: 45,
-        shareCount: 93,
-        viewCount: 2156,
-        comments: [
-          Comment(
-            id: 'comment_8_1',
-            authorId: 'user_12',
-            authorName: 'Jennifer Lee',
-            content: 'Count me in! This sounds amazing. Checking DMs now.',
-            timestamp: DateTime.now().subtract(const Duration(days: 1)),
-            likeCount: 15,
-          ),
-        ],
-      ),
-    ];
-  }
+  // Note: Mock post generator removed. Use BackendApiService.getCommunityPosts instead.
 
   // Report post (community moderation)
   static Future<void> reportPost(CommunityPost post, String reason) async {
@@ -486,7 +365,7 @@ class CommunityService {
       await prefs.setStringList('reported_posts', reports);
       
       if (AppConfig.enableDebugPrints) {
-        print('Post ${post.id} reported for: $reason');
+        debugPrint('Post ${post.id} reported for: $reason');
       }
     }
   }
@@ -509,17 +388,25 @@ class CommunityService {
     await prefs.setStringList(_bookmarksKey, bookmarkedPosts);
     
     if (AppConfig.enableDebugPrints) {
-      print('Post ${post.id} ${post.isBookmarked ? "bookmarked" : "unbookmarked"}');
+      debugPrint('Post ${post.id} ${post.isBookmarked ? "bookmarked" : "unbookmarked"}');
     }
   }
 
-  // Follow/Unfollow user
-  static Future<void> toggleFollow(String userId, CommunityPost? post) async {
+  // Follow/Unfollow user (with backend sync)
+  static Future<void> toggleFollow(
+    String userId,
+    CommunityPost? post, {
+    String? currentUserName,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
+    final backendApi = BackendApiService();
+    final notificationService = PushNotificationService();
 
     bool isFollowing = followedUsers.contains(userId);
+    bool originalFollowState = isFollowing;
 
+    // Optimistic update
     if (isFollowing) {
       // Unfollow
       followedUsers.remove(userId);
@@ -533,7 +420,40 @@ class CommunityService {
     await prefs.setStringList(_followsKey, followedUsers);
     
     if (AppConfig.enableDebugPrints) {
-      print('User $userId ${!isFollowing ? "followed" : "unfollowed"}');
+      debugPrint('User $userId ${!isFollowing ? "followed" : "unfollowed"}');
+    }
+
+    // Sync with backend
+    try {
+      if (!originalFollowState) {
+        // Was unfollowed, now following
+        await backendApi.followUser(userId);
+        // Send follower notification
+        await notificationService.showFollowerNotification(
+          userId: userId,
+          userName: currentUserName ?? 'Someone',
+        );
+      } else {
+        // Was following, now unfollowing
+        await backendApi.unfollowUser(userId);
+      }
+    } catch (e) {
+      // Rollback on error
+      if (AppConfig.enableDebugPrints) {
+        debugPrint('Failed to sync follow with backend: $e. Rolling back.');
+      }
+      
+      if (originalFollowState) {
+        // Restore to following
+        if (!followedUsers.contains(userId)) followedUsers.add(userId);
+        if (post != null) post.isFollowing = true;
+      } else {
+        // Restore to not following
+        followedUsers.remove(userId);
+        if (post != null) post.isFollowing = false;
+      }
+      
+      await prefs.setStringList(_followsKey, followedUsers);
     }
   }
 
@@ -556,7 +476,7 @@ class CommunityService {
       await prefs.setStringList(_viewsKey, viewedPosts);
       
       if (AppConfig.enableDebugPrints) {
-        print('Post ${post.id} viewed. Total views: ${post.viewCount}');
+        debugPrint('Post ${post.id} viewed. Total views: ${post.viewCount}');
       }
     }
   }
@@ -573,16 +493,19 @@ class CommunityService {
     return prefs.getStringList(_followsKey) ?? [];
   }
 
-  // Share post functionality (enhanced)
-  static Future<void> sharePost(CommunityPost post) async {
+  // Share post functionality (enhanced with backend sync)
+  static Future<void> sharePost(CommunityPost post, {String? currentUserName}) async {
     if (!AppConfig.enableSharing) return;
 
-    // Track shares
     final prefs = await SharedPreferences.getInstance();
     final sharedPosts = prefs.getStringList(_sharesKey) ?? [];
     final shareKey = '${post.id}_${DateTime.now().millisecondsSinceEpoch}';
+    final backendApi = BackendApiService();
+    final notificationService = PushNotificationService();
     
+    // Optimistic update
     sharedPosts.add(shareKey);
+    final originalShareCount = post.shareCount;
     post.shareCount++;
     await prefs.setStringList(_sharesKey, sharedPosts);
 
@@ -590,8 +513,29 @@ class CommunityService {
     final shareText = '${post.content}\n\n- ${post.authorName} on art.kubus';
     
     if (AppConfig.enableDebugPrints) {
-      print('Sharing post: $shareText');
-      print('Post ${post.id} shared. Total shares: ${post.shareCount}');
+      debugPrint('Sharing post: $shareText');
+      debugPrint('Post ${post.id} shared. Total shares: ${post.shareCount}');
+    }
+
+    // Sync with backend
+    try {
+      await backendApi.sharePost(post.id);
+      
+      // Send notification to post author
+      await notificationService.showCommunityInteractionNotification(
+        postId: post.id,
+        type: 'share',
+        userName: currentUserName ?? 'Someone',
+      );
+    } catch (e) {
+      // Rollback on error
+      if (AppConfig.enableDebugPrints) {
+        debugPrint('Failed to sync share with backend: $e. Rolling back.');
+      }
+      
+      sharedPosts.remove(shareKey);
+      post.shareCount = originalShareCount;
+      await prefs.setStringList(_sharesKey, sharedPosts);
     }
     
     // Mock sharing action
@@ -610,7 +554,7 @@ class CommunityService {
     await prefs.setStringList('${_commentsKey}_${post.id}', commentsData);
 
     if (AppConfig.enableDebugPrints) {
-      print('Comment $commentId deleted from post ${post.id}');
+      debugPrint('Comment $commentId deleted from post ${post.id}');
     }
   }
 
@@ -620,7 +564,7 @@ class CommunityService {
     comment.content = newContent;
     
     if (AppConfig.enableDebugPrints) {
-      print('Comment ${comment.id} edited');
+      debugPrint('Comment ${comment.id} edited');
     }
   }
 

@@ -45,10 +45,20 @@ app.*.map.json
 
 # Environment and API keys - SECURITY CRITICAL
 .env
+.env.*
+!.env.example
 /lib/config/api_keys.dart
 /lib/config/secrets.dart
 /assets/config/
 /assets/keys/
+
+# Backend environment files
+/backend/.env
+/backend/.env.*
+!backend/.env.example
+/backend/logs/*.log
+/backend/uploads/*
+!backend/uploads/.gitkeep
 
 # Firebase configuration files
 /android/app/google-services.json
@@ -62,6 +72,13 @@ app.*.map.json
 *.key
 *.p12
 *.keystore
+*.jks
+
+# Android signing
+/android/key.properties
+/android/app/*.keystore
+/android/app/*.jks
+/android/local.properties
 
 # Local configuration
 /config/local.dart
@@ -70,3 +87,28 @@ app.*.map.json
 # Test files with sensitive data
 /test_keys/
 /test_config/
+
+# Database files and backups
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.backup
+/backend/backups/
+
+# Certificates and SSL
+/backend/ssl/*.key
+/backend/ssl/*.crt
+/backend/ssl/*.pem
+/backend/certbot/
+*.csr
+
+# Docker secrets
+docker-compose.override.yml
+/backend/.dockerignore
+
+# PM2 and process managers
+.pm2/
+pm2-logs/
+ecosystem.config.js

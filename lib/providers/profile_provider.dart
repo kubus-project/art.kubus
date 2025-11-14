@@ -1,43 +1,197 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
-import 'dart:math';
+import '../services/backend_api_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   UserProfile? _currentUser;
-  List<UserProfile> _followingUsers = [];
+  final List<UserProfile> _followingUsers = [];
   final List<UserProfile> _followers = [];
   bool _isSignedIn = false;
-  bool _useMockData = false;
+  bool _isLoading = false;
+  String? _error;
   
-  // Mock data storage for collections
-  int _mockCollectionsCount = 8;
+  // Real data from backend
+  int _collectionsCount = 0;
+  int _realFollowersCount = 0;
+  int _realFollowingCount = 0;
   late SharedPreferences _prefs;
-  final Random _random = Random();
+  final BackendApiService _apiService = BackendApiService();
+  Map<String, dynamic>? _lastUploadDebug;
+
+  /// Debug info for last upload attempt (raw server response + extraction + verification)
+  Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
+
+  // Normalize returned URLs (make absolute if backend returns relative paths or IPFS links)
+  String _resolveUrl(String? url) {
+    if (url == null || url.isEmpty) {
+      return '';
+    }
+
+    // IPFS handling
+    if (url.startsWith('ipfs://')) {
+      final cid = url.replaceFirst('ipfs://', '');
+      return 'https://ipfs.io/ipfs/$cid';
+    }
+
+    // Already absolute
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+
+    // If backend returned a relative path like /uploads/..., prefix with baseUrl
+    try {
+      final base = _apiService.baseUrl;
+      if (url.startsWith('/')) {
+        return base.replaceAll(RegExp(r'/$'), '') + url;
+      }
+      // Otherwise, just prefix
+      return base.replaceAll(RegExp(r'/$'), '') + '/' + url;
+    } catch (_) {
+      return url;
+    }
+  }
+
+  // Convert known SVG avatar providers to raster (PNG) so the app renders images only
+  String _convertSvgToRaster(String url) {
+    if (url.isEmpty) return url;
+    final lower = url.toLowerCase();
+
+    // DiceBear: convert /svg? to /png? or .svg extension to .png
+    if (lower.contains('dicebear') && (lower.contains('/svg') || lower.endsWith('.svg') || lower.contains('format=svg') || lower.contains('type=svg'))) {
+      try {
+        // Replace '/svg' with '/png' in path segments
+        final replaced = url.replaceAll(RegExp(r'/svg(?=/|\?|$)', caseSensitive: false), '/png')
+            .replaceAll(RegExp(r'\.svg(\?|$)', caseSensitive: false), '.png');
+        // Also replace query params format=svg -> format=png
+        return replaced.replaceAll(RegExp(r'format=svg', caseSensitive: false), 'format=png')
+            .replaceAll(RegExp(r'type=svg', caseSensitive: false), 'type=png');
+      } catch (_) {
+        return url;
+      }
+    }
+
+    // Generic .svg -> .png conversion (best-effort)
+    if (lower.endsWith('.svg') || lower.contains('.svg?')) {
+      return url.replaceAll(RegExp(r'\.svg', caseSensitive: false), '.png');
+    }
+
+    return url;
+  }
+
+  // Try to extract a usable URL from various upload response shapes
+  String? _extractUrlFromUploadResult(Map<String, dynamic> resultMap) {
+    try {
+      debugPrint('_extractUrlFromUploadResult: resultMap keys = ${resultMap.keys}');
+      
+      // Direct normalized field from BackendApiService
+      if (resultMap.containsKey('uploadedUrl') && resultMap['uploadedUrl'] != null && resultMap['uploadedUrl'].toString().isNotEmpty) {
+        final url = resultMap['uploadedUrl'].toString();
+        debugPrint('Found uploadedUrl: $url');
+        return url;
+      }
+
+      // Common: top-level data.avatar (our backend response)
+      if (resultMap.containsKey('data') && resultMap['data'] is Map<String, dynamic>) {
+        final data = Map<String, dynamic>.from(resultMap['data'] as Map<String, dynamic>);
+        debugPrint('data keys: ${data.keys}');
+        
+        // Check for avatar field first (our backend returns this)
+        if (data.containsKey('avatar') && data['avatar'] != null && (data['avatar'] as String).isNotEmpty) {
+          final url = data['avatar'] as String;
+          debugPrint('Found data.avatar: $url');
+          return url;
+        }
+        
+        if (data.containsKey('url') && (data['url'] as String).isNotEmpty) return data['url'] as String;
+        if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) return data['ipfsUrl'] as String;
+        if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) return data['httpUrl'] as String;
+        if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) return data['fileUrl'] as String;
+        if (data.containsKey('path') && (data['path'] as String).isNotEmpty) return data['path'] as String;
+        if (data.containsKey('result') && data['result'] is Map<String, dynamic>) {
+          final r = Map<String, dynamic>.from(data['result'] as Map<String, dynamic>);
+          if (r.containsKey('url') && (r['url'] as String).isNotEmpty) return r['url'] as String;
+        }
+        // IPFS cid
+        if (data.containsKey('cid') && (data['cid'] as String).isNotEmpty) return 'ipfs://${data['cid']}';
+      }
+
+      // Some responses may embed raw body under 'raw'
+      if (resultMap.containsKey('raw') && resultMap['raw'] is Map<String, dynamic>) {
+        final raw = Map<String, dynamic>.from(resultMap['raw'] as Map<String, dynamic>);
+        debugPrint('raw keys: ${raw.keys}');
+        if (raw.containsKey('data') && raw['data'] is Map<String, dynamic>) {
+          final d = Map<String, dynamic>.from(raw['data'] as Map<String, dynamic>);
+          if (d.containsKey('avatar') && (d['avatar'] as String).isNotEmpty) return d['avatar'] as String;
+          if (d.containsKey('url') && (d['url'] as String).isNotEmpty) return d['url'] as String;
+          if (d.containsKey('cid') && (d['cid'] as String).isNotEmpty) return 'ipfs://${d['cid']}';
+        }
+        if (raw.containsKey('url') && (raw['url'] as String).isNotEmpty) return raw['url'] as String;
+      }
+
+      // Top-level url or path
+      if (resultMap.containsKey('url') && (resultMap['url'] as String).isNotEmpty) return resultMap['url'] as String;
+      if (resultMap.containsKey('path') && (resultMap['path'] as String).isNotEmpty) return resultMap['path'] as String;
+
+      return null;
+    } catch (e) {
+      debugPrint('Error extracting upload URL: $e');
+      return null;
+    }
+  }
+
+  // Verify that a URL is reachable and points to an image (HEAD then GET fallback)
+  Future<bool> _verifyImageUrl(String url) async {
+    try {
+      final uri = Uri.tryParse(url);
+      if (uri == null) return false;
+
+      // Try HEAD first
+      try {
+        final headResp = await http.head(uri).timeout(const Duration(seconds: 5));
+        if (headResp.statusCode == 200) {
+          final ct = headResp.headers['content-type'] ?? '';
+          if (ct.toLowerCase().startsWith('image/')) return true;
+          // Some hosts don't set content-type correctly; if content-length present and >0, accept
+          final cl = headResp.headers['content-length'];
+          if (cl != null && int.tryParse(cl) != null && int.parse(cl) > 0) return true;
+        }
+      } catch (_) {
+        // ignore and fallback to GET
+      }
+
+      // Fallback to GET with small timeout
+      final getResp = await http.get(uri).timeout(const Duration(seconds: 7));
+      if (getResp.statusCode == 200) {
+        final ct = getResp.headers['content-type'] ?? '';
+        if (ct.toLowerCase().startsWith('image/')) return true;
+        if (getResp.bodyBytes.isNotEmpty) return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error verifying image URL $url: $e');
+      return false;
+    }
+  }
   
   UserProfile? get currentUser => _currentUser;
   UserProfile? get profile => _currentUser; // Alias for compatibility
   List<UserProfile> get followingUsers => _followingUsers;
   List<UserProfile> get followers => _followers;
   bool get isSignedIn => _isSignedIn;
-  bool get useMockData => _useMockData;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get hasProfile => _currentUser != null;
   
-  // Dynamic getters for profile stats
-  int get artworksCount => _useMockData ? 
-    (_currentUser?.artworksCount ?? _random.nextInt(50) + 5) : 
-    (_currentUser?.artworksCount ?? 0);
+  // Dynamic getters for profile stats (from backend)
+  int get artworksCount => _currentUser?.stats?.artworksDiscovered ?? 0;
     
-  int get collectionsCount => _useMockData ? 
-    _mockCollectionsCount : 
-    (_currentUser?.collectionsCount ?? 0);
+  int get collectionsCount => _collectionsCount;
     
-  int get followersCount => _useMockData ?
-    (_currentUser?.followersCount ?? _random.nextInt(5000) + 100) :
-    (_followers.length);
+  int get followersCount => _realFollowersCount;
     
-  int get followingCount => _useMockData ?
-    (_currentUser?.followingCount ?? _random.nextInt(500) + 50) :
-    (_followingUsers.length);
+  int get followingCount => _realFollowingCount;
     
   String get formattedFollowersCount => _formatCount(followersCount);
   String get formattedFollowingCount => _formatCount(followingCount);
@@ -53,29 +207,430 @@ class ProfileProvider extends ChangeNotifier {
   // Initialize SharedPreferences and settings
   Future<void> initialize() async {
     _prefs = await SharedPreferences.getInstance();
-    _useMockData = _prefs.getBool('use_mock_data') ?? false;
-    _mockCollectionsCount = _prefs.getInt('mock_collections_count') ?? 8;
-    notifyListeners();
-  }
-  
-  // Mock data management
-  void setUseMockData(bool useMock) {
-    _useMockData = useMock;
-    _prefs.setBool('use_mock_data', useMock);
     
-    // Generate new random values when enabling mock data
-    if (useMock) {
-      _mockCollectionsCount = _random.nextInt(20) + 2;
-      _prefs.setInt('mock_collections_count', _mockCollectionsCount);
+    // Try to load existing profile
+    final walletAddress = _prefs.getString('wallet_address');
+    if (walletAddress != null && walletAddress.isNotEmpty) {
+      await loadProfile(walletAddress);
+      // Load additional stats from backend
+      await _loadBackendStats(walletAddress);
     }
     
     notifyListeners();
   }
   
-  // Sync with ConfigProvider
-  void syncWithConfigProvider(bool useMockData) {
-    if (_useMockData != useMockData) {
-      setUseMockData(useMockData);
+  /// Load additional stats from backend (collections, followers, following)
+  Future<void> _loadBackendStats(String walletAddress) async {
+    try {
+      // Load collections count
+      final collections = await _apiService.getCollections(
+        walletAddress: walletAddress,
+        page: 1,
+        limit: 1, // Just need count
+      );
+      _collectionsCount = collections.length;
+      
+      // Load followers
+      try {
+        final followers = await _apiService.getFollowers(
+          userId: walletAddress,
+          page: 1,
+          limit: 100,
+        );
+        _followers.clear();
+        for (final followerData in followers) {
+          try {
+            _followers.add(UserProfile.fromJson(followerData));
+          } catch (e) {
+            debugPrint('Error parsing follower: $e');
+          }
+        }
+        _realFollowersCount = _followers.length;
+      } catch (e) {
+        debugPrint('Error loading followers: $e');
+        _realFollowersCount = 0;
+      }
+      
+      // Load following
+      try {
+        final following = await _apiService.getFollowing(
+          userId: walletAddress,
+          page: 1,
+          limit: 100,
+        );
+        _followingUsers.clear();
+        for (final followingData in following) {
+          try {
+            _followingUsers.add(UserProfile.fromJson(followingData));
+          } catch (e) {
+            debugPrint('Error parsing following user: $e');
+          }
+        }
+        _realFollowingCount = _followingUsers.length;
+      } catch (e) {
+        debugPrint('Error loading following: $e');
+        _realFollowingCount = 0;
+      }
+      
+      debugPrint('ProfileProvider: Stats loaded - Collections: $_collectionsCount, Followers: $_realFollowersCount, Following: $_realFollowingCount');
+    } catch (e) {
+      debugPrint('Error loading backend stats: $e');
+    }
+  }
+  
+  /// Load profile by wallet address
+  Future<void> loadProfile(String walletAddress) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      debugPrint('ProfileProvider: Loading profile for wallet: $walletAddress');
+      
+      // Always try to load from backend
+      try {
+        final profileData = await _apiService.getProfileByWallet(walletAddress);
+        _currentUser = UserProfile.fromJson(profileData);
+        // Ensure avatar URL is rasterized and absolute
+        try {
+          final av = _currentUser?.avatar ?? '';
+          final resolved = _resolveUrl(av);
+          _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+        } catch (_) {}
+        _isSignedIn = true;
+        debugPrint('ProfileProvider: Profile loaded from backend: ${_currentUser?.username}');
+        
+        // Load additional stats (collections, followers, following)
+        await _loadBackendStats(walletAddress);
+      } catch (e) {
+        debugPrint('ProfileProvider: Profile not found on backend, auto-registering: $e');
+        // Profile doesn't exist, register with backend to get JWT token
+        try {
+          await _apiService.saveProfile({
+            'walletAddress': walletAddress,
+            'username': 'user_${walletAddress.substring(0, 8)}',
+            'displayName': 'User ${walletAddress.substring(0, 8)}',
+            'bio': '',
+            'isArtist': false,
+          });
+          debugPrint('ProfileProvider: Auto-registration successful, JWT token received');
+          
+          // Load the newly created profile
+          final profileData = await _apiService.getProfileByWallet(walletAddress);
+          _currentUser = UserProfile.fromJson(profileData);
+          try {
+            final av = _currentUser?.avatar ?? '';
+            final resolved = _resolveUrl(av);
+            _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+          } catch (_) {}
+          _isSignedIn = true;
+        } catch (regError) {
+          debugPrint('ProfileProvider: Auto-registration failed: $regError, creating local default');
+          // If registration also fails, create local default
+          _currentUser = _createDefaultProfile(walletAddress);
+          _isSignedIn = true;
+        }
+      }
+      
+      // Save wallet address
+      await _prefs.setString('wallet_address', walletAddress);
+      debugPrint('ProfileProvider: Wallet address saved and profile loaded');
+
+      _isLoading = false;
+      notifyListeners();
+    } catch (e) {
+      _error = 'Failed to load profile: $e';
+      _isLoading = false;
+      debugPrint('Error loading profile: $e');
+      notifyListeners();
+    }
+  }
+  
+  /// Create or update profile
+  Future<bool> saveProfile({
+    required String walletAddress,
+    String? username,
+    String? displayName,
+    String? bio,
+    String? avatar,
+    String? coverImage,
+    Map<String, String>? social,
+    bool? isArtist,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // If caller omitted profile fields, prefer existing in-memory values
+      final effectiveUsername = username ?? _currentUser?.username;
+      final effectiveDisplayName = displayName ?? _currentUser?.displayName;
+      final effectiveBio = bio ?? _currentUser?.bio;
+      final effectiveAvatar = avatar ?? _currentUser?.avatar;
+      final effectiveCover = coverImage ?? _currentUser?.coverImage;
+      final effectiveSocial = social ?? _currentUser?.social;
+      final effectiveIsArtist = isArtist ?? _currentUser?.isArtist;
+
+      final profileData = {
+        'walletAddress': walletAddress,
+        if (effectiveUsername != null) 'username': effectiveUsername,
+        if (effectiveDisplayName != null) 'displayName': effectiveDisplayName,
+        if (effectiveBio != null) 'bio': effectiveBio,
+        if (effectiveAvatar != null) 'avatar': effectiveAvatar,
+        if (effectiveCover != null) 'coverImage': effectiveCover,
+        if (effectiveSocial != null) 'social': effectiveSocial,
+        if (effectiveIsArtist != null) 'isArtist': effectiveIsArtist,
+      };
+
+      // Always save to backend
+      final savedProfileRaw = await _apiService.saveProfile(profileData);
+
+      debugPrint('ProfileProvider: raw saveProfile response: $savedProfileRaw');
+
+      // savedProfileRaw is expected to be a Map<String,dynamic> (backend returns data.payload).
+      // Defensively try to convert it; if parsing fails, fall back to merging submitted values.
+      Map<String, dynamic> profileJson;
+      try {
+        // backend usually returns the profile map directly
+        profileJson = Map<String, dynamic>.from(savedProfileRaw);
+      } catch (e) {
+        debugPrint('ProfileProvider: failed to parse saveProfile response: $e');
+        profileJson = {
+          'id': _currentUser?.id ?? 'profile_${walletAddress.substring(0, 8)}',
+          'walletAddress': walletAddress,
+          'username': profileData['username'] ?? _currentUser?.username ?? '',
+          'displayName': profileData['displayName'] ?? _currentUser?.displayName ?? '',
+          'bio': profileData['bio'] ?? _currentUser?.bio ?? '',
+          'avatar': profileData['avatar'] ?? _currentUser?.avatar ?? '',
+          'social': profileData['social'] ?? _currentUser?.social ?? {},
+          'isArtist': profileData['isArtist'] ?? _currentUser?.isArtist ?? false,
+          'createdAt': _currentUser?.createdAt.toIso8601String() ?? DateTime.now().toIso8601String(),
+          'updatedAt': DateTime.now().toIso8601String(),
+        };
+      }
+
+      _currentUser = UserProfile.fromJson(profileJson);
+      try {
+        final av = _currentUser?.avatar ?? '';
+        final resolved = _resolveUrl(av);
+        _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
+      } catch (_) {}
+      
+      // Reload stats after profile update
+      await _loadBackendStats(walletAddress);
+      
+      // Update sign-in state
+      _isSignedIn = true;
+
+      // Save to SharedPreferences
+      await _prefs.setString('wallet_address', walletAddress);
+      await _prefs.setString('username', _currentUser!.username);
+      debugPrint('ProfileProvider: Profile saved successfully for wallet: $walletAddress');
+      
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      // Detect 429 response message and provide a friendly error
+      final errMsg = e.toString();
+      if (errMsg.contains('429') || errMsg.toLowerCase().contains('too many requests')) {
+        _error = 'Too many requests. Please wait a moment and try again.';
+      } else {
+        _error = 'Failed to save profile: $e';
+      }
+      _isLoading = false;
+      debugPrint('Error saving profile: $e');
+      notifyListeners();
+      return false;
+    }
+  }
+  
+  /// Upload avatar image to backend
+  Future<String> uploadAvatar({
+    required String imagePath,
+    required String walletAddress,
+  }) async {
+    try {
+      // Read file bytes
+      final file = File(imagePath);
+      final fileBytes = await file.readAsBytes();
+      final fileName = path.basename(imagePath);
+      
+      final result = await _apiService.uploadAvatarToProfile(
+        fileBytes: fileBytes,
+        fileName: fileName,
+        fileType: 'avatar',
+        metadata: {'walletAddress': walletAddress},
+      );
+      
+      // Normalize response: backend may wrap in { data: { url: ... } }
+      final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
+      debugPrint('ProfileProvider.uploadAvatar: raw upload result: $resultMap');
+
+      // Store debug info early so UI can inspect it on failure
+      _lastUploadDebug = {'result': resultMap};
+      notifyListeners();
+
+      // Prefer a normalized uploadedUrl if provided by BackendApiService
+      // Try to extract URL from the upload result using helper
+      String? rawUrl = _extractUrlFromUploadResult(resultMap);
+      _lastUploadDebug ??= {};
+      _lastUploadDebug!['extractedUrl'] = rawUrl;
+      final url = rawUrl == null ? null : rawUrl.toString();
+      final resolved = _resolveUrl(url);
+
+      final raster = resolved.isNotEmpty ? _convertSvgToRaster(resolved) : '';
+
+      // Verify the raster URL is reachable and points to an image
+      final verified = await _verifyImageUrl(raster);
+      _lastUploadDebug!['resolved'] = resolved;
+      _lastUploadDebug!['raster'] = raster;
+      _lastUploadDebug!['verified'] = verified;
+      notifyListeners();
+      if (!verified) {
+        debugPrint('ProfileProvider.uploadAvatar: uploaded URL not verified as image: $raster');
+        // Don't fail the upload if remote verification fails. Accept the URL
+        // returned by backend so clients can use backend-hosted avatars even
+        // when the URL is not directly reachable from the client (private
+        // networks, proxy, or timing). Keep verification result in debug info.
+      }
+
+      if (raster.isNotEmpty && _currentUser != null) {
+        try {
+          _currentUser = _currentUser!.copyWith(avatar: raster);
+          notifyListeners();
+        } catch (_) {}
+      }
+
+      return raster;
+    } catch (e) {
+      debugPrint('Error uploading avatar: $e');
+      // Fallback to dicebear avatar
+      return '';
+    }
+  }
+
+  /// Upload avatar using raw bytes (works with Android content:// URIs from image_picker)
+  Future<String> uploadAvatarBytes({
+    required List<int> fileBytes,
+    required String fileName,
+    required String walletAddress,
+    String? mimeType,
+  }) async {
+    try {
+      debugPrint('📸 ProfileProvider.uploadAvatarBytes START');
+      debugPrint('   fileName: $fileName');
+      debugPrint('   mimeType: $mimeType');
+      debugPrint('   fileBytes length: ${fileBytes.length}');
+      debugPrint('   walletAddress: $walletAddress');
+      
+      // Determine MIME type from file extension if not provided
+      String fileType = mimeType ?? 'image/jpeg';
+      if (mimeType == null) {
+        final ext = fileName.toLowerCase().split('.').last;
+        if (ext == 'png') fileType = 'image/png';
+        else if (ext == 'jpg' || ext == 'jpeg') fileType = 'image/jpeg';
+        else if (ext == 'webp') fileType = 'image/webp';
+      }
+      
+      debugPrint('   determined fileType: $fileType');
+      debugPrint('   calling API uploadAvatarToProfile...');
+      
+      final result = await _apiService.uploadAvatarToProfile(
+        fileBytes: fileBytes,
+        fileName: fileName,
+        fileType: fileType,
+        metadata: {'walletAddress': walletAddress},
+      );
+      
+      debugPrint('   API call completed successfully');
+
+      final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
+      debugPrint('ProfileProvider.uploadAvatarBytes: raw upload result: $resultMap');
+      _lastUploadDebug = {'result': resultMap};
+      notifyListeners();
+
+      // Extract and normalize URL
+      String? rawUrl = _extractUrlFromUploadResult(resultMap);
+      _lastUploadDebug ??= {};
+      _lastUploadDebug!['extractedUrl'] = rawUrl;
+      final url = rawUrl == null ? null : rawUrl.toString();
+      final resolved = _resolveUrl(url);
+      final raster = resolved.isNotEmpty ? _convertSvgToRaster(resolved) : '';
+
+      // Verify reachable image
+      final verified = await _verifyImageUrl(raster);
+      _lastUploadDebug!['resolved'] = resolved;
+      _lastUploadDebug!['raster'] = raster;
+      _lastUploadDebug!['verified'] = verified;
+      notifyListeners();
+      if (!verified) {
+        debugPrint('ProfileProvider.uploadAvatarBytes: uploaded URL not verified as image: $raster');
+        // Do not throw here; accept the returned URL so the app can display
+        // backend-hosted images even if the quick HEAD/GET check fails.
+      }
+
+      if (raster.isNotEmpty && _currentUser != null) {
+        try {
+          _currentUser = _currentUser!.copyWith(avatar: raster);
+          notifyListeners();
+        } catch (_) {}
+      }
+
+      return raster;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error uploading avatar bytes: $e');
+      debugPrint('Stack trace: $stackTrace');
+      _lastUploadDebug = {'error': e.toString(), 'stackTrace': stackTrace.toString()};
+      notifyListeners();
+      return '';
+    }
+  }
+  
+  /// Create profile when wallet is created
+  Future<bool> createProfileFromWallet({
+    required String walletAddress,
+    String? username,
+  }) async {
+    debugPrint('ProfileProvider: Creating profile from wallet: $walletAddress');
+    debugPrint('ProfileProvider: Username: ${username ?? _generateUsername(walletAddress)}');
+    
+    final result = await saveProfile(
+      walletAddress: walletAddress,
+      username: username ?? _generateUsername(walletAddress),
+      displayName: username ?? 'Art Enthusiast',
+      bio: 'Exploring the world of AR art',
+      avatar: '',
+    );
+    
+    debugPrint('ProfileProvider: Profile creation result: $result');
+    return result;
+  }
+  
+  /// Helper: Create default profile
+  UserProfile _createDefaultProfile(String walletAddress) {
+    return UserProfile(
+      id: 'profile_${walletAddress.substring(0, 8)}',
+      walletAddress: walletAddress,
+      username: _generateUsername(walletAddress),
+      displayName: 'Art Enthusiast',
+      bio: 'Exploring the world of AR art',
+      avatar: '',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+  
+  /// Helper: Generate username from wallet
+  String _generateUsername(String walletAddress) {
+    return 'user_${walletAddress.substring(0, 8)}';
+  }
+  
+  // Refresh stats from backend
+  Future<void> refreshStats() async {
+    if (_currentUser?.walletAddress != null) {
+      await _loadBackendStats(_currentUser!.walletAddress);
+      notifyListeners();
     }
   }
   
@@ -97,20 +652,43 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  void followUser(UserProfile user) {
-    if (!_followingUsers.any((u) => u.id == user.id)) {
-      _followingUsers.add(user);
-      notifyListeners();
+  Future<void> followUser(UserProfile user) async {
+    try {
+      await _apiService.followUser(user.walletAddress);
+      if (!_followingUsers.any((u) => u.id == user.id)) {
+        _followingUsers.add(user);
+        _realFollowingCount++;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error following user: $e');
+      rethrow;
     }
   }
   
-  void unfollowUser(String userId) {
-    _followingUsers.removeWhere((user) => user.id == userId);
-    notifyListeners();
+  Future<void> unfollowUser(String userId) async {
+    try {
+      await _apiService.unfollowUser(userId);
+      _followingUsers.removeWhere((user) => user.id == userId);
+      _realFollowingCount = _followingUsers.length;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error unfollowing user: $e');
+      rethrow;
+    }
   }
   
   bool isFollowing(String userId) {
-    return _followingUsers.any((user) => user.id == userId);
+    return _followingUsers.any((user) => user.id == userId || user.walletAddress == userId);
+  }
+  
+  Future<bool> checkIsFollowing(String userId) async {
+    try {
+      return await _apiService.isFollowing(userId);
+    } catch (e) {
+      debugPrint('Error checking follow status: $e');
+      return isFollowing(userId);
+    }
   }
   
   void addFollower(UserProfile user) {
@@ -125,25 +703,24 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
   
-  // Initialize with sample data
+  // Initialize with sample data (deprecated - use loadProfile instead)
   void initializeSampleData() {
-    _followingUsers = UserProfile.getSampleUsers().where((user) => user.isFollowing).toList();
-    
-    // Set a default current user
+    // Create a sample current user with new model
     _currentUser = UserProfile(
       id: 'current_user',
-      name: 'Current User',
-      username: '@current_user',
+      walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+      username: 'current_user',
+      displayName: 'Current User',
       bio: 'Digital artist exploring the intersection of AR, blockchain, and creativity.',
-      profileImageUrl: '',
-      followersCount: 1250,
-      followingCount: _followingUsers.length,
-      artworksCount: 45,
-      collectionsCount: 8,
-      isFollowing: false,
-      isVerified: true,
-      joinDate: DateTime.now().subtract(const Duration(days: 365)),
-      badges: ['Creator', 'Early Adopter'],
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=current',
+      stats: UserStats(
+        followersCount: 1250,
+        followingCount: 340,
+        artworksDiscovered: 45,
+        artworksCreated: 12,
+      ),
+      createdAt: DateTime.now().subtract(const Duration(days: 365)),
+      updatedAt: DateTime.now(),
     );
     _isSignedIn = true;
     

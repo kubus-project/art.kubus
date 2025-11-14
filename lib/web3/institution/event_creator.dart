@@ -351,10 +351,10 @@ class _EventCreatorState extends State<EventCreator>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.3),
+                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -541,7 +541,7 @@ class _EventCreatorState extends State<EventCreator>
             value: value,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+            dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             items: items.map((item) {
               return DropdownMenuItem<String>(
@@ -591,7 +591,7 @@ class _EventCreatorState extends State<EventCreator>
                       ? '${date.day}/${date.month}/${date.year}'
                       : 'Select date',
                   style: TextStyle(
-                    color: date != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: date != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -637,7 +637,7 @@ class _EventCreatorState extends State<EventCreator>
                       ? time.format(context)
                       : 'Select time',
                   style: TextStyle(
-                    color: time != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: time != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -785,7 +785,7 @@ class _EventCreatorState extends State<EventCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Success!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Your event has been created successfully and is pending approval.',
@@ -874,7 +874,7 @@ class _EventCreatorState extends State<EventCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Event Creation Help', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Follow the 4-step process to create your event:\n\n'
@@ -894,6 +894,7 @@ class _EventCreatorState extends State<EventCreator>
     );
   }
 }
+
 
 
 

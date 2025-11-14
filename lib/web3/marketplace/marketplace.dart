@@ -5,7 +5,8 @@ import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/collectibles_provider.dart';
-import '../../providers/mockup_data_provider.dart';
+import '../../providers/web3provider.dart';
+import '../../providers/themeprovider.dart';
 import '../../models/artwork.dart';
 import '../../models/collectible.dart';
 
@@ -108,14 +109,18 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildMarketplaceHeader() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF00D4AA), Color(0xFF00BCD4)],
+          colors: [
+            themeProvider.accentColor,
+            themeProvider.accentColor.withValues(alpha: 0.8),
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -183,6 +188,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildTabButton(String label, IconData icon, int index) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
@@ -190,7 +196,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF00D4AA) : Colors.transparent,
+          color: isSelected ? themeProvider.accentColor : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -198,7 +204,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           children: [
             Icon(
               icon,
-              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -207,7 +213,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -218,20 +224,41 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     );
   }
 
+  // Helper method to load collectibles data from backend
+  Future<void> _loadCollectiblesData(CollectiblesProvider provider) async {
+    try {
+      // TODO: Load NFT series from backend when ready
+      // For now, we'll use mock data since backend series endpoints
+      // need to be populated. In production, you would:
+      // 1. Fetch all series: GET /api/nfts/series
+      // 2. Fetch user's NFTs: GET /api/nfts/user/:userId
+      // 3. Parse and populate the provider
+      
+      if (provider.allSeries.isEmpty) {
+        await provider.initializeMockData();
+        debugPrint('Marketplace: Loaded ${provider.allSeries.length} series from mock data');
+      }
+    } catch (e) {
+      debugPrint('Error loading collectibles: $e');
+      // Fallback to mock data on error
+      if (provider.allSeries.isEmpty) {
+        await provider.initializeMockData();
+      }
+    }
+  }
+
   Widget _buildFeaturedNFTs() {
-    return Consumer3<CollectiblesProvider, ArtworkProvider, MockupDataProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, mockupProvider, child) {
-        // Initialize mock data if empty and mockup data is enabled
-        if (collectiblesProvider.allSeries.isEmpty && mockupProvider.isMockDataEnabled) {
+    return Consumer4<CollectiblesProvider, ArtworkProvider, Web3Provider, ThemeProvider>(
+      builder: (context, collectiblesProvider, artworkProvider, web3Provider, themeProvider, child) {
+        // Initialize collectibles from backend/blockchain if connected
+        if (collectiblesProvider.allSeries.isEmpty && web3Provider.isConnected) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            collectiblesProvider.initializeMockData();
+            _loadCollectiblesData(collectiblesProvider);
           });
         }
 
-        // Only show data if mock data is enabled OR if we have real blockchain data
-        final featuredSeries = mockupProvider.isMockDataEnabled 
-            ? collectiblesProvider.getFeaturedSeries()
-            : <dynamic>[];  // Empty list when mock data is disabled
+        // Show data if we have series loaded (from backend or blockchain)
+        final featuredSeries = collectiblesProvider.getFeaturedSeries();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -255,9 +282,9 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00D4AA).withValues(alpha: 0.2),
+                      color: themeProvider.accentColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF00D4AA), width: 1),
+                      border: Border.all(color: themeProvider.accentColor, width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -265,7 +292,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         Icon(
                           Icons.visibility,
                           size: 12,
-                          color: Color(0xFF00D4AA),
+                          color: themeProvider.accentColor,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -273,7 +300,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w500,
-                            color: const Color(0xFF00D4AA),
+                            color: themeProvider.accentColor,
                           ),
                         ),
                       ],
@@ -283,9 +310,9 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               ),
               const SizedBox(height: 16),
               if (collectiblesProvider.isLoading)
-                const Center(
+                Center(
                   child: CircularProgressIndicator(
-                    color: Color(0xFF00D4AA),
+                    color: themeProvider.accentColor,
                   ),
                 )
               else if (featuredSeries.isEmpty)
@@ -350,12 +377,10 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildTrendingNFTs() {
-    return Consumer3<CollectiblesProvider, ArtworkProvider, MockupDataProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, mockupProvider, child) {
-        // Only show data if mock data is enabled OR if we have real blockchain data
-        final trendingSeries = mockupProvider.isMockDataEnabled
-            ? collectiblesProvider.getTrendingSeries()
-            : <dynamic>[];  // Empty list when mock data is disabled
+    return Consumer3<CollectiblesProvider, ArtworkProvider, ThemeProvider>(
+      builder: (context, collectiblesProvider, artworkProvider, themeProvider, child) {
+        // Show trending series from provider (loaded from backend/blockchain)
+        final trendingSeries = collectiblesProvider.getTrendingSeries();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -424,15 +449,61 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildMyListings() {
-    return Consumer3<CollectiblesProvider, ArtworkProvider, MockupDataProvider>(
-      builder: (context, collectiblesProvider, artworkProvider, mockupProvider, child) {
-        // Show user's collectibles (owned NFTs) only if mock data is enabled OR real blockchain data exists
-        final myCollectibles = mockupProvider.isMockDataEnabled
-            ? collectiblesProvider.getCollectiblesByOwner('0xuser1...1234') // In real app, get from wallet
-            : <dynamic>[];  // Empty list when mock data is disabled
-        final myCollectiblesForSale = mockupProvider.isMockDataEnabled
-            ? collectiblesProvider.getCollectiblesForSale()
-            : <dynamic>[];  // Empty list when mock data is disabled
+    return Consumer4<CollectiblesProvider, ArtworkProvider, Web3Provider, ThemeProvider>(
+      builder: (context, collectiblesProvider, artworkProvider, web3Provider, themeProvider, child) {
+        // Show user's collectibles using real wallet address
+        final walletAddress = web3Provider.walletAddress;
+        final myCollectibles = walletAddress.isNotEmpty
+            ? collectiblesProvider.getCollectiblesByOwner(walletAddress)
+            : <dynamic>[];
+        final myCollectiblesForSale = walletAddress.isNotEmpty
+            ? collectiblesProvider.getCollectiblesForSale().where((c) => c.ownerAddress == walletAddress).toList()
+            : <dynamic>[];
+
+        // Check if wallet is connected
+        if (!web3Provider.isConnected) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 100,
+                  color: themeProvider.accentColor.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Connect Your Wallet',
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Connect a Solana wallet to view your NFTs',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
+                  icon: const Icon(Icons.link),
+                  label: const Text('Connect Wallet'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeProvider.accentColor,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
 
         if (myCollectibles.isEmpty) {
           return Center(
@@ -468,7 +539,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     Navigator.of(context).pushNamed('/ar');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00D4AA),
+                    backgroundColor: themeProvider.accentColor,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   ),
@@ -506,16 +577,16 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF00D4AA).withValues(alpha: 0.2),
+                      color: themeProvider.accentColor.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFF00D4AA), width: 1),
+                      border: Border.all(color: themeProvider.accentColor, width: 1),
                     ),
                     child: Text(
                       '${myCollectibles.length} NFTs',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF00D4AA),
+                        color: themeProvider.accentColor,
                       ),
                     ),
                   ),
@@ -701,7 +772,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       'Token #${collectible.tokenId}',
                       style: GoogleFonts.inter(
                         fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -720,7 +791,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                   'Listed for',
                                   style: GoogleFonts.inter(
                                     fontSize: 9,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                   ),
                                 ),
                                 Text(
@@ -751,31 +822,33 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         ],
                       )
                     else
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Owned',
-                            style: GoogleFonts.inter(
-                              fontSize: 9,
-                              color: const Color(0xFF00D4AA),
-                              fontWeight: FontWeight.w500,
+                      Consumer<ThemeProvider>(
+                        builder: (context, themeProvider, _) => Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Owned',
+                              style: GoogleFonts.inter(
+                                fontSize: 9,
+                                color: themeProvider.accentColor,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                          IconButton(
-                            onPressed: () => _listForSale(collectible, series),
-                            icon: Icon(
-                              Icons.sell,
-                              color: Colors.orange,
-                              size: 16,
+                            IconButton(
+                              onPressed: () => _listForSale(collectible, series),
+                              icon: Icon(
+                                Icons.sell,
+                                color: Colors.orange,
+                                size: 16,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 32,
+                                minHeight: 32,
+                              ),
+                              padding: EdgeInsets.zero,
                             ),
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                            padding: EdgeInsets.zero,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                   ],
                 ),
@@ -807,7 +880,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -826,7 +899,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -866,7 +939,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                   entry.key.replaceAll('_', ' ').toUpperCase(),
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -923,7 +996,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             label,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           Text(
@@ -945,6 +1018,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
   void _listForSale(Collectible collectible, CollectibleSeries series) {
     final priceController = TextEditingController();
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     
     showDialog(
       context: context,
@@ -976,14 +1050,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
               decoration: InputDecoration(
                 labelText: 'Price (KUB8)',
-                labelStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                labelStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
+                  borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                focusedBorder: const OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF00D4AA)),
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: themeProvider.accentColor),
+                  borderRadius: const BorderRadius.all(Radius.circular(8)),
                 ),
               ),
               keyboardType: TextInputType.number,
@@ -996,7 +1070,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -1076,7 +1150,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -1108,6 +1182,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildNFTSeriesCard(CollectibleSeries series, Artwork? artwork) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final progressPercentage = (series.mintProgress * 100).toInt();
     final isNearSoldOut = series.mintProgress > 0.8;
     final hasARFeature = series.requiresARInteraction;
@@ -1120,7 +1195,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: hasARFeature 
-                ? const Color(0xFF00D4AA) 
+                ? themeProvider.accentColor
                 : Theme.of(context).colorScheme.outline,
             width: hasARFeature ? 2 : 1,
           ),
@@ -1165,7 +1240,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00D4AA),
+                            color: themeProvider.accentColor,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
@@ -1259,7 +1334,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                       'by ${artwork?.artist ?? 'Unknown Artist'}',
                       style: GoogleFonts.inter(
                         fontSize: 9,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1278,7 +1353,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 '${series.mintedCount}/${series.totalSupply}',
                                 style: GoogleFonts.inter(
                                   fontSize: 8,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -1288,7 +1363,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                               style: GoogleFonts.inter(
                                 fontSize: 8,
                                 fontWeight: FontWeight.w500,
-                                color: isNearSoldOut ? Colors.orange : const Color(0xFF00D4AA),
+                                color: isNearSoldOut ? Colors.orange : themeProvider.accentColor,
                               ),
                             ),
                           ],
@@ -1298,7 +1373,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           value: series.mintProgress,
                           backgroundColor: Colors.grey[800],
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            isNearSoldOut ? Colors.orange : const Color(0xFF00D4AA),
+                            isNearSoldOut ? Colors.orange : themeProvider.accentColor,
                           ),
                           minHeight: 2,
                         ),
@@ -1318,7 +1393,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                                 'Price',
                                 style: GoogleFonts.inter(
                                   fontSize: 7,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                 ),
                               ),
                               Text(
@@ -1337,8 +1412,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                           decoration: BoxDecoration(
                             color: series.isSoldOut 
-                                ? Theme.of(context).colorScheme.onSurface.withOpacity(0.3) 
-                                : const Color(0xFF00D4AA),
+                                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3) 
+                                : themeProvider.accentColor,
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -1442,6 +1517,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   void _showNFTSeriesDetails(CollectibleSeries series, Artwork? artwork) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1461,7 +1538,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1480,7 +1557,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -1552,7 +1629,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                               _mintNFT(series);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF00D4AA),
+                              backgroundColor: themeProvider.accentColor,
                               foregroundColor: Theme.of(context).colorScheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
@@ -1620,7 +1697,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -1629,6 +1706,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   void _mintNFT(CollectibleSeries series) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     if (series.requiresARInteraction) {
       showDialog(
         context: context,
@@ -1641,7 +1720,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             children: [
               Icon(
                 Icons.view_in_ar,
-                color: Color(0xFF00D4AA),
+                color: themeProvider.accentColor,
               ),
               const SizedBox(width: 8),
               Text(
@@ -1666,7 +1745,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               child: Text(
                 'Cancel',
                 style: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -1677,7 +1756,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 Navigator.of(context).pushNamed('/ar');
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00D4AA),
+                backgroundColor: themeProvider.accentColor,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
@@ -1735,7 +1814,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   Text(
                     'Mint Price:',
                     style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   Text(
@@ -1756,23 +1835,25 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _processMint(series);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00D4AA),
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            ),
-            child: Text(
-              'Confirm Mint',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) => ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _processMint(series);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.accentColor,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+              child: Text(
+                'Confirm Mint',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -1782,6 +1863,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Future<void> _processMint(CollectibleSeries series) async {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     try {
       final collectiblesProvider = context.read<CollectiblesProvider>();
       
@@ -1789,9 +1872,9 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
+        builder: (context) => Center(
           child: CircularProgressIndicator(
-            color: Color(0xFF00D4AA),
+            color: themeProvider.accentColor,
           ),
         ),
       );
@@ -1845,16 +1928,18 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             ),
           ),
           actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00D4AA),
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
-              ),
-              child: Text(
-                'View in Wallet',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, _) => ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeProvider.accentColor,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+                child: Text(
+                  'View in Wallet',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -1900,7 +1985,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
@@ -1918,6 +2003,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
   /*
   Widget _buildNFTCard(Artwork artwork, {bool isFeatured = false, bool isTrending = false, bool isOwned = false}) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     // Generate mock market data based on artwork properties
     final isPositive = artwork.rarity == ArtworkRarity.legendary || artwork.rarity == ArtworkRarity.epic;
     final change = isPositive 
@@ -1933,7 +2020,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isFeatured 
-                ? const Color(0xFF00D4AA) 
+                ? themeProvider.accentColor
                 : Theme.of(context).colorScheme.outline,
             width: isFeatured ? 2 : 1,
           ),
@@ -1982,7 +2069,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF00D4AA),
+                            color: themeProvider.accentColor,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
@@ -2065,7 +2152,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     Text(
                       'by ${artwork.artist}',
                       style: GoogleFonts.inter(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontSize: 10,
                       ),
                       maxLines: 1,
@@ -2079,7 +2166,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           child: Text(
                             '${artwork.rewards} KUB8',
                             style: GoogleFonts.inter(
-                              color: const Color(0xFF00D4AA),
+                              color: themeProvider.accentColor,
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2114,134 +2201,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
   */
 
-  /* Unused - keeping for reference
-  void _showNFTDetails(Artwork artwork) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              height: 4,
-              width: 40,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.3),
-                            Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.6),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          artwork.arEnabled ? Icons.view_in_ar : Icons.palette,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                          size: 80,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      artwork.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'by ${artwork.artist}',
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      artwork.description,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                        height: 1.5,
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Price',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
-                              ),
-                              Text(
-                                '${artwork.rewards} KUB8',
-                                style: GoogleFonts.inter(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: const Color(0xFF00D4AA),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            artwork.rarity.name.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              color: Color(Artwork.getRarityColor(artwork.rarity)),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  */
+
 }
 
 

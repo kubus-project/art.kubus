@@ -1,5 +1,5 @@
 // DAO and Governance Models
-enum ProposalType { platform_update, rewards, feature_request, governance, community }
+enum ProposalType { platformUpdate, rewards, featureRequest, governance, community }
 enum ProposalStatus { draft, active, voting, passed, failed, executed }
 enum VoteChoice { yes, no, abstain }
 

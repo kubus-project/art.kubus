@@ -98,7 +98,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
       child: DropdownButton<String>(
         value: _selectedPeriod,
         underline: const SizedBox(),
-        dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+        dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
         items: ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last Year'].map((period) {
           return DropdownMenuItem<String>(
@@ -188,7 +188,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 16),
@@ -197,7 +197,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isPositive ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
+                  color: isPositive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -510,7 +510,7 @@ class _DAOAnalyticsState extends State<DAOAnalytics>
           width: 16,
           height: 16,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: color, width: 2),
           ),
@@ -809,6 +809,7 @@ class ParticipationChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
 
 
 

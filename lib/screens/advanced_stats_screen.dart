@@ -116,7 +116,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       _selectedTimeframe = timeframe;
                     });
                   },
-                  selectedColor: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
+                  selectedColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
                 );
               }).toList(),
             ),
@@ -150,7 +150,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   _selectedTimeframe,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -190,7 +190,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 'Current Value',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
@@ -211,7 +211,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 'Change ($_selectedTimeframe)',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Row(
@@ -437,7 +437,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               target,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -453,7 +453,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           '${(progress * 100).toInt()}% complete',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -648,7 +648,7 @@ class LineChartPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final fillPaint = Paint()
-      ..color = accentColor.withOpacity(0.1)
+      ..color = accentColor.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     if (data.isEmpty) return;

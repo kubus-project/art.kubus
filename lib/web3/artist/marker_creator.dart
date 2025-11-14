@@ -301,10 +301,10 @@ class _MarkerCreatorState extends State<MarkerCreator>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.3),
+                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
@@ -338,7 +338,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
         width: double.infinity,
         height: 200,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: _selectedImagePath != null 
@@ -388,7 +388,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
                     width: 64,
                     height: 64,
                     decoration: BoxDecoration(
-                      color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+                      color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(32),
                     ),
                     child: Icon(
@@ -456,9 +456,9 @@ class _MarkerCreatorState extends State<MarkerCreator>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -662,7 +662,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
             value: value,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+            dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
             items: options.map((option) {
               return DropdownMenuItem<String>(
@@ -854,7 +854,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title:  Text('Success!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -916,7 +916,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title:  Text('AR Marker Creation', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Follow the 4-step process to create your AR artwork:\n\n'
@@ -936,6 +936,7 @@ class _MarkerCreatorState extends State<MarkerCreator>
     );
   }
 }
+
 
 
 

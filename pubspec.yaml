@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 0.0.1
 
 environment:
   sdk: '>=3.3.4 <4.0.0'
@@ -35,7 +35,8 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
   path_provider: ^2.1.5
-  permission_handler: ^11.4.0
+  # Permissions
+  permission_handler: ^11.4.0  # Restored to latest version
   flutter_native_splash: ^2.4.6
   url_launcher: ^6.3.1
   image_picker: ^1.1.1
@@ -46,6 +47,8 @@ dependencies:
   flutter_map_cancellable_tile_provider: ^3.0.2
   flutter_map_geojson: ^1.0.8
   shared_preferences: ^2.5.3
+  flutter_secure_storage: ^8.0.0
+  local_auth: ^2.1.5
   proj4dart: any
   
   # UI and Theming
@@ -56,9 +59,13 @@ dependencies:
   
   # Web3 and Blockchain (Solana-focused)
   http: ^1.4.0
+  http_parser: ^4.0.2
   pointycastle: ^3.9.1  # Compatible with reown_walletkit
   solana: ^0.31.2+1  # Updated Solana SDK for Dart
   bip39: ^1.0.6    # BIP39 mnemonic generation
+  
+  # Notifications
+  flutter_local_notifications: ^17.0.0
   
   # WalletConnect for real wallet connections (using new package)
   reown_walletkit: ^1.1.0  # Using a more stable version
@@ -70,11 +77,13 @@ dependencies:
   # Camera and AR
   camera: ^0.11.1
   flutter_compass: ^0.8.1
-  # AR functionality framework - packages will be added based on platform needs
-  # arcore_flutter_plugin: ^0.1.0  # ARCore for Android
-  # arkit_plugin: ^1.0.7  # ARKit for iOS
-  # Note: AR packages require platform-specific configuration
+  # Platform-specific AR plugins for best reliability and maintenance:
+  # arkit_plugin: ^1.2.0  # iOS ARKit - DISABLED due to vector_math 2.1.4 incompatibility
+  arcore_flutter_plugin: ^0.1.0  # Android ARCore (stable, 336 likes)
+  # Note: ARManager provides unified API for both platforms
+  # Features: Plane detection, object placement, hit testing, GLTF/GLB models
   # See AR_IMPLEMENTATION.md for setup instructions
+  # iOS AR support temporarily disabled until arkit_plugin is updated
   
   # Crypto and Security
   crypto: ^3.0.3
@@ -89,6 +98,14 @@ dependencies:
   filesystem_picker: ^4.1.0
   intl: ^0.19.0
   share_plus: ^11.0.0  # Updated to latest version
+
+
+# Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4
+# The scaleByVector3 method was removed in vector_math 2.1.4
+# This override uses a forked version or we handle it differently
+dependency_overrides:
+  # Override vector_math for all packages
+  vector_math: ^2.1.4
   
 dev_dependencies:
   flutter_test:

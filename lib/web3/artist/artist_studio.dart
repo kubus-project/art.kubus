@@ -106,7 +106,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Provider.of<ThemeProvider>(context).accentColor, Color(0xFF9C27B0)],
+          colors: [Provider.of<ThemeProvider>(context).accentColor, Theme.of(context).colorScheme.primary],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -160,7 +160,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -189,7 +189,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -198,7 +198,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -238,6 +238,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     );
   }
 }
+
 
 
 

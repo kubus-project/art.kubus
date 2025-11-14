@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_logo.dart';
-import 'wallet_creation_screen.dart';
+import 'permissions_screen.dart';
+import '../main_app.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -10,51 +12,87 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends State<OnboardingScreen> with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   final List<OnboardingPage> _pages = [
     OnboardingPage(
       title: 'Welcome to art.kubus',
-      subtitle: 'Discover, Create & Trade\nAR Art with KUB8',
-      description: 'Experience immersive augmented reality art in the real world. Create, discover, and trade unique digital artworks using blockchain technology.',
+      subtitle: 'Discover and create augmented reality art in the real world',
+      description: 'Transform your surroundings with immersive AR artworks and join a global community of digital artists.',
       iconData: Icons.view_in_ar,
-      gradient: LinearGradient(
-        colors: [Colors.white, Color(0xFF9C27B0)],
+      gradient: const LinearGradient(
+        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
     ),
     OnboardingPage(
-      title: 'Secure Wallet',
-      subtitle: 'Your Digital Assets\nSafe & Secure',
-      description: 'Get your own secure Solana wallet with automatic creation. Store SOL, KUB8 tokens, and NFTs with military-grade encryption.',
-      iconData: Icons.account_balance_wallet_outlined,
+      title: 'Explore AR Artworks',
+      subtitle: 'Find amazing artworks around you',
+      description: 'Use your device to discover hidden AR artworks in your neighborhood and beyond. Every location tells a story.',
+      iconData: Icons.explore,
       gradient: const LinearGradient(
-        colors: [Color(0xFF00D4AA), Color(0xFF4ECDC4)],
+        colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
     ),
     OnboardingPage(
-      title: 'Social Community',
-      subtitle: 'Connect with Artists\n& Collectors',
-      description: 'Join a vibrant community of artists and collectors. Share your work, discover new talent, and build lasting connections.',
-      iconData: Icons.people_outline,
+      title: 'Create & Share',
+      subtitle: 'Express your creativity',
+      description: 'Design stunning AR experiences with our intuitive creator tools and share them with the world.',
+      iconData: Icons.palette,
       gradient: const LinearGradient(
-        colors: [Color(0xFFFFD93D), Color(0xFFFFBE0B)],
+        colors: [Color(0xFF10B981), Color(0xFF059669)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
     ),
     OnboardingPage(
-      title: 'AR Experience',
-      subtitle: 'Art Comes to Life\nEverywhere',
-      description: 'Place and view stunning AR artworks in your environment. Transform any space into a gallery with cutting-edge technology.',
-      iconData: Icons.view_in_ar_outlined,
+      title: 'Join the Community',
+      subtitle: 'Connect with fellow artists',
+      description: 'Engage with a vibrant community of AR creators. Share ideas, collaborate on projects, and participate in exclusive events.',
+      iconData: Icons.people,
       gradient: const LinearGradient(
-        colors: [Color(0xFFFF6B6B), Color(0xFF9C27B0)],
+        colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    OnboardingPage(
+      title: 'Collect & Trade',
+      subtitle: 'Own unique digital assets',
+      description: 'Collect rare AR artworks as NFTs on Solana blockchain. Your creativity has real value in Web3.',
+      iconData: Icons.account_balance_wallet,
+      gradient: const LinearGradient(
+        colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
     ),
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+    _fadeController.forward();
+  }
+
+  @override
   void dispose() {
+    _fadeController.dispose();
     _pageController.dispose();
     super.dispose();
   }
@@ -135,83 +173,86 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildPage(OnboardingPage page, [bool isSmallScreen = false]) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final constraintSmallScreen = constraints.maxHeight < 700;
-        final isVerySmallScreen = constraints.maxHeight < 600;
-        final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
-        
-        return SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: effectiveSmallScreen ? 20 : 24),
-              child: Column(
-                children: [
-                  SizedBox(height: isVerySmallScreen ? 20 : effectiveSmallScreen ? 40 : 60),
-                  // Icon with gradient background
-                  Container(
-                    width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                    height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                    decoration: BoxDecoration(
-                      gradient: page.gradient,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: [
-                        BoxShadow(
-                          color: page.gradient.colors.first.withValues(alpha: 0.3),
-                          blurRadius: 30,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final constraintSmallScreen = constraints.maxHeight < 700;
+          final isVerySmallScreen = constraints.maxHeight < 600;
+          final effectiveSmallScreen = isSmallScreen || constraintSmallScreen;
+          
+          return SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: effectiveSmallScreen ? 20 : 24),
+                child: Column(
+                  children: [
+                    SizedBox(height: isVerySmallScreen ? 20 : effectiveSmallScreen ? 40 : 60),
+                    // Icon with gradient background
+                    Container(
+                      width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
+                      height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
+                      decoration: BoxDecoration(
+                        gradient: page.gradient,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: page.gradient.colors.first.withValues(alpha: 0.3),
+                            blurRadius: 30,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 15),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        page.iconData,
+                        size: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: Icon(
-                      page.iconData,
-                      size: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
-                      color: Colors.white,
+                    SizedBox(height: isVerySmallScreen ? 30 : effectiveSmallScreen ? 40 : 48),
+                    // Title
+                    Text(
+                      page.title,
+                      style: GoogleFonts.inter(
+                        fontSize: isVerySmallScreen ? 26 : effectiveSmallScreen ? 28 : 32,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 30 : effectiveSmallScreen ? 40 : 48),
-                  // Title
-                  Text(
-                    page.title,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 26 : effectiveSmallScreen ? 28 : 32,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                    SizedBox(height: isVerySmallScreen ? 12 : 16),
+                    // Subtitle
+                    Text(
+                      page.subtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: isVerySmallScreen ? 20 : effectiveSmallScreen ? 22 : 24,
+                        fontWeight: FontWeight.w600,
+                        color: page.gradient.colors.first,
+                        height: 1.3,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 12 : 16),
-                  // Subtitle
-                  Text(
-                    page.subtitle,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 20 : effectiveSmallScreen ? 22 : 24,
-                      fontWeight: FontWeight.w600,
-                      color: page.gradient.colors.first,
-                      height: 1.3,
+                    SizedBox(height: isVerySmallScreen ? 16 : isSmallScreen ? 20 : 24),
+                    // Description
+                    Text(
+                      page.description,
+                      style: GoogleFonts.inter(
+                        fontSize: isVerySmallScreen ? 14 : 16,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        height: 1.5,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 16 : isSmallScreen ? 20 : 24),
-                  // Description
-                  Text(
-                    page.description,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 14 : 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: isVerySmallScreen ? 40 : isSmallScreen ? 60 : 80),
-                ],
+                    SizedBox(height: isVerySmallScreen ? 40 : isSmallScreen ? 60 : 80),
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -240,7 +281,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 height: effectiveSmallScreen ? 50 : 56,
                 child: ElevatedButton(
                   onPressed: _currentPage == _pages.length - 1 
-                      ? _startWalletCreation 
+                      ? _goToPermissions
                       : _nextPage,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
@@ -251,7 +292,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                   ),
                   child: Text(
-                    _currentPage == _pages.length - 1 ? 'Create Wallet' : 'Continue',
+                    _currentPage == _pages.length - 1 ? 'Grant Permissions' : 'Continue',
                     style: GoogleFonts.inter(
                       fontSize: effectiveSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.w600,
@@ -263,9 +304,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               // Alternative action
               if (_currentPage == _pages.length - 1)
                 TextButton(
-                  onPressed: _importExistingWallet,
+                  onPressed: _startWalletCreation,
                   child: Text(
-                    'Import Existing Wallet',
+                    'Skip Permissions',
                     style: GoogleFonts.inter(
                       fontSize: effectiveSmallScreen ? 14 : 16,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -312,20 +353,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _startWalletCreation() {
+  void _goToPermissions() {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (context) => const WalletCreationScreen(),
+        builder: (context) => const PermissionsScreen(),
       ),
     );
   }
 
-  void _importExistingWallet() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (context) => const WalletCreationScreen(isImporting: true),
-      ),
-    );
+  void _startWalletCreation() async {
+    // Mark onboarding as completed but don't force wallet creation
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('completed_onboarding', true);
+    await prefs.setBool('has_seen_onboarding', true);
+    
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => const MainApp(),
+        ),
+      );
+    }
   }
 }
 

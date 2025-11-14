@@ -95,10 +95,8 @@ class TaskProgress {
   }
 }
 
-/// Service class for managing tasks
-class TaskService {
-  /// All available tasks in the app
-  static const List<Task> allTasks = [
+/// All available tasks in the app
+const List<Task> allTasks = [
     // Initial 5 tasks
     Task(
       id: 'discover_local_art',
@@ -212,46 +210,4 @@ class TaskService {
       isUnlocked: false,
       unlockedByTaskId: 'discover_local_art',
     ),
-  ];
-  
-  /// Get task by ID
-  static Task? getTaskById(String id) {
-    try {
-      return allTasks.firstWhere((task) => task.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
-  
-  /// Get tasks by category
-  static List<Task> getTasksByCategory(String category) {
-    return allTasks.where((task) => task.category == category).toList();
-  }
-  
-  /// Get the first 5 priority tasks (initial tasks)
-  static List<Task> getInitialTasks() {
-    return allTasks.where((task) => task.priority <= 5).toList()
-      ..sort((a, b) => a.priority.compareTo(b.priority));
-  }
-  
-  /// Get unlockable tasks
-  static List<Task> getUnlockableTasks() {
-    return allTasks.where((task) => !task.isUnlocked).toList();
-  }
-  
-  /// Get currently available tasks (unlocked)
-  static List<Task> getAvailableTasks(List<TaskProgress> completedTasks) {
-    final completedTaskIds = completedTasks
-        .where((progress) => progress.isCompleted)
-        .map((progress) => progress.taskId)
-        .toSet();
-    
-    return allTasks.where((task) {
-      if (task.isUnlocked) return true;
-      if (task.unlockedByTaskId != null) {
-        return completedTaskIds.contains(task.unlockedByTaskId);
-      }
-      return false;
-    }).toList();
-  }
-}
+];

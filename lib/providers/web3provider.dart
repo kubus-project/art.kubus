@@ -1,119 +1,82 @@
 import 'package:flutter/material.dart';
-import 'mockup_data_provider.dart';
-
-// Solana wallet connection models
-class SolanaWallet {
-  final String address;
-  final double balance;
-  final double kub8Balance;
-
-  SolanaWallet({
-    required this.address,
-    required this.balance,
-    required this.kub8Balance,
-  });
-}
+import '../services/solana_wallet_service.dart';
+import 'package:solana/solana.dart' hide Wallet; // Hide solana Wallet to avoid name clash with app model
+import '../services/backend_api_service.dart';
+import '../models/wallet.dart';
 
 class Web3Provider extends ChangeNotifier {
+  final SolanaWalletService _solanaService = SolanaWalletService();
+  final BackendApiService _apiService = BackendApiService();
+
   bool _isConnected = false;
-  MockupDataProvider? _mockupProvider;
-  SolanaWallet? _wallet;
-  
-  // Solana network configuration
-  String _networkEndpoint = 'https://api.mainnet-beta.solana.com';
-  String _currentNetwork = 'Mainnet';
-  final String _kub8TokenAddress = 'YOUR_KUB8_TOKEN_ADDRESS'; // Replace with actual token address
-  final String _kub8Symbol = 'KUB8';
-  final String _kub8Name = 'Kubit';
-  
-  // Transaction history
-  List<Map<String, dynamic>> _transactions = [];
+  Wallet? _wallet; // Use unified Wallet model
+  List<WalletTransaction> _transactions = [];
+  Map<String, dynamic>? _backendProfile;
+  int _collectionsCount = 0;
+  int _achievementsUnlocked = 0;
+  double _achievementTokenTotal = 0.0;
 
-  Web3Provider({MockupDataProvider? mockupProvider}) : _mockupProvider = mockupProvider {
-    _initializeNetwork();
-  }
+  // Configurable constants (replace with actual KUB8 mint/address)
+  final String _kub8TokenAddress = 'KUB8_TOKEN_MINT_PLACEHOLDER';
 
-  // Set mockup provider after construction if needed
-  void setMockupProvider(MockupDataProvider provider) {
-    _mockupProvider = provider;
-    notifyListeners();
-  }
-
-  // Initialize network from stored preferences
-  Future<void> _initializeNetwork() async {
-    try {
-      // We'll import SharedPreferences if needed
-      // For now, default to devnet for testing
-      switchNetwork('devnet');
-    } catch (e) {
-      // Default to devnet if there's any issue
-      switchNetwork('devnet');
-    }
-  }
+  Web3Provider();
 
   // Getters
   bool get isConnected => _isConnected;
-  SolanaWallet? get wallet => _wallet;
-  double get solBalance => _wallet?.balance ?? 0.0;
-  double get kub8Balance => _wallet?.kub8Balance ?? 0.0;
+  Wallet? get wallet => _wallet;
   String get walletAddress => _wallet?.address ?? '';
-  String get networkEndpoint => _networkEndpoint;
-  String get currentNetwork => _currentNetwork;
+  double get solBalance => _wallet?.getTokenBySymbol('SOL')?.balance ?? 0.0;
+  double get kub8Balance => _wallet?.getTokenBySymbol('KUB8')?.balance ?? 0.0;
+  String get currentNetwork => _solanaService.currentNetwork;
+  List<WalletTransaction> get transactions => List.unmodifiable(_transactions);
+  Map<String, dynamic>? get backendProfile => _backendProfile;
+  int get collectionsCount => _collectionsCount;
+  int get achievementsUnlocked => _achievementsUnlocked;
+  double get achievementTokenTotal => _achievementTokenTotal;
   String get kub8TokenAddress => _kub8TokenAddress;
-  String get kub8Symbol => _kub8Symbol;
-  String get kub8Name => _kub8Name;
-  List<Map<String, dynamic>> get transactions => _transactions;
 
   // Network management
   void switchNetwork(String network) {
-    switch (network.toLowerCase()) {
-      case 'mainnet':
-        _networkEndpoint = 'https://api.mainnet-beta.solana.com';
-        _currentNetwork = 'Mainnet';
-        break;
-      case 'devnet':
-        _networkEndpoint = 'https://api.devnet.solana.com';
-        _currentNetwork = 'Devnet';
-        break;
-      case 'testnet':
-        _networkEndpoint = 'https://api.testnet.solana.com';
-        _currentNetwork = 'Testnet';
-        break;
+    _solanaService.switchNetwork(network);
+    if (_isConnected && walletAddress.isNotEmpty) {
+      _reloadWallet();
     }
     notifyListeners();
   }
 
-  // Wallet connection
-  Future<void> connectWallet({bool isRealConnection = true}) async {
-    // Only block if it's NOT a real connection (i.e., mock) and mock data is disabled
-    if (!isRealConnection && _mockupProvider != null && !_mockupProvider!.isMockDataEnabled) {
-      _isConnected = false;
-      _wallet = null;
-      notifyListeners();
-      throw Exception('Mock data is disabled. Please enable mock data in settings or use a real wallet.');
-    }
-    
+  // Wallet connection (mnemonic based for now)
+  Future<String> createWallet() async {
+    final mnemonic = _solanaService.generateMnemonic();
+    final keyPair = await _solanaService.generateKeyPairFromMnemonic(mnemonic);
+    // Store keypair in service for signing
+    final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(mnemonic);
+    _solanaService.setActiveKeyPair(hdKeyPair);
+    await _initializeWallet(keyPair.publicKey, mnemonic: mnemonic);
+    return keyPair.publicKey;
+  }
+
+  Future<void> importWallet(String mnemonic) async {
+    final keyPair = await _solanaService.generateKeyPairFromMnemonic(mnemonic);
+    final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(mnemonic);
+    _solanaService.setActiveKeyPair(hdKeyPair);
+    await _initializeWallet(keyPair.publicKey, mnemonic: mnemonic);
+  }
+
+  Future<void> connectExistingWallet(String publicKey) async {
+    // Existing wallet without mnemonic cannot sign (read-only mode)
+    await _initializeWallet(publicKey);
+  }
+
+  Future<void> _initializeWallet(String publicKey, {String? mnemonic}) async {
     try {
-      // Simulate wallet connection - in real app would use Phantom, Solflare, etc.
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Generate a testnet-like address
-      final addressSuffix = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
-      final networkPrefix = _networkEndpoint.contains('devnet') ? 'DEV' : 'MAIN';
-      
-      _wallet = SolanaWallet(
-        address: '${networkPrefix}_ArtKubus$addressSuffix',
-        balance: _networkEndpoint.contains('devnet') ? 10.0 : 2.5, // More SOL on devnet for testing
-        kub8Balance: _networkEndpoint.contains('devnet') ? 1000.0 : 125.5, // More KUB8 on devnet for testing
-      );
-      
       _isConnected = true;
-      await _loadTransactions();
+      await _reloadWallet(address: publicKey);
+      await _syncBackend(publicKey);
       notifyListeners();
     } catch (e) {
       _isConnected = false;
-      notifyListeners();
-      throw Exception('Failed to connect wallet: $e');
+      debugPrint('Web3Provider: wallet init failed: $e');
+      rethrow;
     }
   }
 
@@ -121,240 +84,191 @@ class Web3Provider extends ChangeNotifier {
     _isConnected = false;
     _wallet = null;
     _transactions.clear();
+    _backendProfile = null;
+    _collectionsCount = 0;
+    _achievementsUnlocked = 0;
+    _achievementTokenTotal = 0.0;
     notifyListeners();
   }
-  
-  // Check connection status with mock data provider
-  bool get isActuallyConnected {
-    // Always return true if connected, regardless of mock data setting
-    // Real Solana wallets should work even when mock data is off
-    return _isConnected;
-  }
 
-  // Balance updates
   Future<void> updateBalances() async {
-    if (_wallet != null) {
-      try {
-        // Simulate balance fetching from Solana RPC
-        await Future.delayed(const Duration(milliseconds: 500));
-        
-        // In real implementation, would call Solana RPC endpoints
-        final updatedWallet = SolanaWallet(
-          address: _wallet!.address,
-          balance: _wallet!.balance + (DateTime.now().millisecond % 10) * 0.001,
-          kub8Balance: _wallet!.kub8Balance + (DateTime.now().millisecond % 100) * 0.01,
-        );
-        
-        _wallet = updatedWallet;
-        notifyListeners();
-      } catch (e) {
-        // Handle error
-        debugPrint('Error updating balances: $e');
-      }
-    }
+    if (!_isConnected || walletAddress.isEmpty) return;
+    await _reloadWallet();
+    notifyListeners();
   }
 
   // KUB8 token operations
-  Future<void> sendKub8(String toAddress, double amount) async {
-    if (!_isConnected || _wallet == null) {
+  Future<String> sendKub8(String toAddress, double amount) async {
+    if (!_isConnected || walletAddress.isEmpty) {
       throw Exception('Wallet not connected');
     }
-
-    if (amount > _wallet!.kub8Balance) {
-      throw Exception('Insufficient KUB8 balance');
-    }
-
+    // Attempt SPL transfer via service (currently placeholder throws)
     try {
-      // Simulate transaction
-      await Future.delayed(const Duration(seconds: 2));
-      
-      final newBalance = _wallet!.kub8Balance - amount;
-      _wallet = SolanaWallet(
-        address: _wallet!.address,
-        balance: _wallet!.balance,
-        kub8Balance: newBalance,
+      final signature = await _solanaService.transferSplToken(
+        mint: _kub8TokenAddress,
+        toAddress: toAddress,
+        amount: amount,
+        decimals: 6,
       );
-
-      // Add transaction to history
-      _transactions.insert(0, {
-        'type': 'send',
-        'token': 'KUB8',
-        'amount': amount,
-        'to': toAddress,
-        'timestamp': DateTime.now(),
-        'status': 'completed',
-        'txHash': 'kub8_tx_${DateTime.now().millisecondsSinceEpoch}',
-      });
-
+      // Refresh balances after transfer
+      await _reloadWallet();
       notifyListeners();
+      return signature;
+    } on UnimplementedError catch (e) {
+      debugPrint('KUB8 transfer pending implementation: $e');
+      rethrow; // Surface unimplemented state to UI
     } catch (e) {
-      throw Exception('Failed to send KUB8: $e');
+      debugPrint('KUB8 transfer failed: $e');
+      rethrow;
     }
   }
 
-  Future<void> swapSolToKub8(double solAmount) async {
-    if (!_isConnected || _wallet == null) {
+  Future<String> swapSolToKub8(double solAmount) async {
+    if (!_isConnected || walletAddress.isEmpty) {
       throw Exception('Wallet not connected');
     }
-
-    if (solAmount > _wallet!.balance) {
-      throw Exception('Insufficient SOL balance');
-    }
-
     try {
-      // Simulate swap (1 SOL = 20 KUB8)
-      const double exchangeRate = 20.0;
-      final kub8Amount = solAmount * exchangeRate;
-      
-      await Future.delayed(const Duration(seconds: 2));
-      
-      _wallet = SolanaWallet(
-        address: _wallet!.address,
-        balance: _wallet!.balance - solAmount,
-        kub8Balance: _wallet!.kub8Balance + kub8Amount,
-      );
-
-      // Add swap transaction
-      _transactions.insert(0, {
-        'type': 'swap',
-        'fromToken': 'SOL',
-        'toToken': 'KUB8',
-        'fromAmount': solAmount,
-        'toAmount': kub8Amount,
-        'timestamp': DateTime.now(),
-        'status': 'completed',
-        'txHash': 'swap_tx_${DateTime.now().millisecondsSinceEpoch}',
-      });
-
+      final signature = await _solanaService.swapSolToSpl(mint: _kub8TokenAddress, solAmount: solAmount);
+      await _reloadWallet();
       notifyListeners();
+      return signature;
+    } on UnimplementedError catch (e) {
+      debugPrint('Swap not yet implemented: $e');
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to swap: $e');
+      debugPrint('Swap failed: $e');
+      rethrow;
     }
   }
 
   // Governance functions
-  Future<void> voteOnProposal(String proposalId, bool support) async {
-    if (!_isConnected || _wallet == null) {
-      throw Exception('Wallet not connected');
-    }
-
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // Add voting transaction
-      _transactions.insert(0, {
-        'type': 'vote',
-        'proposalId': proposalId,
-        'support': support,
-        'votingPower': _wallet!.kub8Balance,
-        'timestamp': DateTime.now(),
-        'status': 'completed',
-        'txHash': 'vote_tx_${DateTime.now().millisecondsSinceEpoch}',
-      });
-
-      notifyListeners();
-    } catch (e) {
-      throw Exception('Failed to vote: $e');
-    }
+  Future<String> voteOnProposal(String proposalId, bool support) async {
+    // Placeholder: integrate governance program or backend endpoint
+    throw UnimplementedError('Governance voting integration pending');
   }
 
   // NFT functions
-  Future<void> mintArtworkNFT(String artworkData) async {
-    if (!_isConnected || _wallet == null) {
-      throw Exception('Wallet not connected');
-    }
-
+  Future<String> mintArtworkNFT(String artworkData) async {
+    // Placeholder call into service
     try {
-      await Future.delayed(const Duration(seconds: 3));
-      
-      // Add minting transaction
-      _transactions.insert(0, {
-        'type': 'mint',
-        'token': 'NFT',
-        'artwork': artworkData,
-        'timestamp': DateTime.now(),
-        'status': 'completed',
-        'txHash': 'nft_tx_${DateTime.now().millisecondsSinceEpoch}',
-      });
-
-      notifyListeners();
-    } catch (e) {
-      throw Exception('Failed to mint NFT: $e');
+      final signature = await _solanaService.mintNft(metadata: {'artwork': artworkData});
+      return signature;
+    } on UnimplementedError catch (e) {
+      debugPrint('NFT mint pending integration: $e');
+      rethrow;
     }
   }
 
   // Transaction loading
-  Future<void> _loadTransactions() async {
-    // Simulate loading transaction history
-    _transactions = [
-      {
-        'type': 'receive',
-        'token': 'KUB8',
-        'amount': 25.0,
-        'from': 'ArtKubus_Official',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-        'status': 'completed',
-        'txHash': 'kub8_tx_received_001',
-      },
-      {
-        'type': 'mint',
-        'token': 'NFT',
-        'artwork': 'Digital Sculpture #001',
-        'timestamp': DateTime.now().subtract(const Duration(days: 1)),
-        'status': 'completed',
-        'txHash': 'nft_tx_mint_001',
-      },
-      {
-        'type': 'swap',
-        'fromToken': 'SOL',
-        'toToken': 'KUB8',
-        'fromAmount': 1.0,
-        'toAmount': 20.0,
-        'timestamp': DateTime.now().subtract(const Duration(days: 3)),
-        'status': 'completed',
-        'txHash': 'swap_tx_001',
-      },
+  Future<void> _reloadWallet({String? address}) async {
+    final pubKey = address ?? walletAddress;
+    if (pubKey.isEmpty) return;
+    final solBalance = await _solanaService.getBalance(pubKey);
+    final splBalances = await _solanaService.getTokenBalances(pubKey);
+    final txHistory = await _solanaService.getTransactionHistory(pubKey);
+
+    // Build token list (SOL first)
+    final tokens = <Token>[
+      Token(
+        id: 'sol_native',
+        name: 'Solana',
+        symbol: 'SOL',
+        type: TokenType.native,
+        balance: solBalance,
+        value: solBalance * 50.0,
+        changePercentage: 0.0,
+        contractAddress: 'native',
+        decimals: 9,
+        logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+        network: 'Solana',
+      ),
     ];
+    for (final b in splBalances) {
+      tokens.add(Token(
+        id: 'spl_${b.mint}',
+        name: b.name,
+        symbol: b.symbol,
+        type: TokenType.erc20,
+        balance: b.balance,
+        value: b.balance * 1.0,
+        changePercentage: 0.0,
+        contractAddress: b.mint,
+        decimals: b.decimals,
+        logoUrl: null,
+        network: 'Solana',
+      ));
+    }
+
+    _transactions = txHistory.map((tx) => WalletTransaction(
+      id: tx.signature,
+      type: TransactionType.receive,
+      token: 'SOL',
+      amount: 0.0,
+      fromAddress: null,
+      toAddress: pubKey,
+      timestamp: tx.blockTime,
+      status: tx.status == 'success' ? TransactionStatus.confirmed : TransactionStatus.failed,
+      txHash: tx.signature,
+      gasUsed: tx.fee,
+      gasFee: tx.fee,
+      metadata: {'slot': tx.slot},
+    )).toList();
+
+    _wallet = Wallet(
+      id: 'wallet_${pubKey.substring(0,8)}',
+      address: pubKey,
+      name: 'Solana Wallet',
+      network: 'Solana',
+      tokens: tokens,
+      transactions: _transactions,
+      totalValue: tokens.fold(0.0, (sum, t) => sum + t.value),
+      lastUpdated: DateTime.now(),
+    );
   }
 
   // Add mock transaction for demo purposes
-  void addMockTransaction() {
-    if (!_isConnected) return;
-    
-    final currencies = ['SOL', 'KUB8'];
-    final random = DateTime.now().millisecondsSinceEpoch;
-    final isReceived = random % 2 == 0;
-    final currency = currencies[random % 2];
-    final amount = (random % 1000) / 100.0;
-    
-    _transactions.insert(0, {
-      'type': isReceived ? 'received' : 'sent',
-      'currency': currency,
-      'amount': amount,
-      'from': isReceived ? 'DEV_MockSender$random' : _wallet?.address ?? 'Unknown',
-      'to': isReceived ? _wallet?.address ?? 'Unknown' : 'DEV_MockReceiver$random',
-      'timestamp': _formatTimestamp(DateTime.now()),
-      'status': 'completed',
-      'txHash': 'mock_tx_$random',
-    });
-    
-    notifyListeners();
-  }
+  // Backend sync
+  Future<void> _syncBackend(String address) async {
+    try {
+      try {
+        _backendProfile = await _apiService.getProfileByWallet(address);
+      } catch (e) {
+        if (e.toString().contains('Profile not found')) {
+          _backendProfile = await _apiService.saveProfile({
+            'walletAddress': address,
+            'username': 'user_${address.substring(0,6)}',
+            'displayName': 'New User',
+            'bio': '',
+          });
+        } else {
+          rethrow;
+        }
+      }
 
-  String _formatTimestamp(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-    
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
+      // Collections count
+      try {
+        final collections = await _apiService.getCollections(walletAddress: address);
+        _collectionsCount = collections.length;
+      } catch (e) {
+        debugPrint('Web3Provider: collections fetch failed: $e');
+      }
+
+      // Achievement stats
+      try {
+        final stats = await _apiService.getAchievementStats(address);
+        _achievementsUnlocked = (stats['unlocked'] as int?) ?? 0;
+        _achievementTokenTotal = (stats['totalTokens'] as num?)?.toDouble() ?? 0.0;
+      } catch (e) {
+        debugPrint('Web3Provider: achievement stats fetch failed: $e');
+      }
+
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Web3Provider: backend sync error: $e');
     }
   }
+
+  // Placeholder: formatting utilities retained for potential UI usage
 
   // Utility functions
   String formatBalance(double balance, {int decimals = 2}) {

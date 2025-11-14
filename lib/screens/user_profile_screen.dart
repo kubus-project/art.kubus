@@ -192,13 +192,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               gradient: LinearGradient(
                 colors: [
                   themeProvider.accentColor,
-                  themeProvider.accentColor.withOpacity(0.7),
+                  themeProvider.accentColor.withValues(alpha: 0.7),
                 ],
               ),
               borderRadius: BorderRadius.circular(50),
               boxShadow: [
                 BoxShadow(
-                  color: themeProvider.accentColor.withOpacity(0.3),
+                  color: themeProvider.accentColor.withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -239,7 +239,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             user!.username,
             style: GoogleFonts.inter(
               fontSize: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
           const SizedBox(height: 16),
@@ -261,7 +261,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             user!.joinedDate,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -279,13 +279,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           Container(
             width: 1,
             height: 40,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
           ),
           _buildStatItem('Followers', _formatCount(user!.followersCount)),
           Container(
             width: 1,
             height: 40,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
           ),
           _buildStatItem('Following', _formatCount(user!.followingCount)),
         ],
@@ -309,7 +309,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           label,
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -335,7 +335,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                       : Colors.white,
                   side: user!.isFollowing 
                       ? BorderSide(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
                         )
                       : null,
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -368,7 +368,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               backgroundColor: Theme.of(context).colorScheme.surface,
               foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
               ),
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               shape: RoundedRectangleBorder(
@@ -388,7 +388,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     // Get only completed achievements
     final completedAchievements = user!.achievementProgress
         .where((progress) => progress.isCompleted)
-        .map((progress) => AchievementService.getAchievementById(progress.achievementId))
+        .map((progress) => getAchievementById(progress.achievementId))
         .where((achievement) => achievement != null)
         .cast<Achievement>()
         .toList();
@@ -412,7 +412,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 ),
               ),
               Text(
-                '${completedAchievements.length}/${AchievementService.allAchievements.length}',
+                '${completedAchievements.length}/${allAchievements.length}',
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: themeProvider.accentColor,
@@ -431,13 +431,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      achievement.color.withOpacity(0.2),
-                      achievement.color.withOpacity(0.1),
+                      achievement.color.withValues(alpha: 0.2),
+                      achievement.color.withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: achievement.color.withOpacity(0.3),
+                    color: achievement.color.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -505,7 +505,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
               ),
             ),
             child: Center(
@@ -515,14 +515,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   Icon(
                     Icons.photo,
                     size: 48,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     'User posts will appear here',
                     style: GoogleFonts.inter(
                       fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -551,7 +551,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),

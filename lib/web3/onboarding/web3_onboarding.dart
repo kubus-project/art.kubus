@@ -163,7 +163,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   'Skip',
                   style: GoogleFonts.inter(
                     fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ),
@@ -236,7 +236,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     page.description,
                     style: GoogleFonts.inter(
                       fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : isTablet ? 18 : isWideScreen ? 20 : 16,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                       height: 1.5,
                     ),
                     textAlign: TextAlign.center,
@@ -277,7 +277,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
               feature,
               style: GoogleFonts.inter(
                 fontSize: isSmallScreen ? 13 : isTablet ? 16 : isWideScreen ? 18 : 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.9),
               ),
             ),
           ),
@@ -311,7 +311,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     decoration: BoxDecoration(
                       color: index == _currentPage
                           ? Provider.of<ThemeProvider>(context).accentColor
-                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -417,6 +417,7 @@ Future<bool> isOnboardingNeeded(String featureName) async {
   // Otherwise, check if this specific feature onboarding was completed
   return !(prefs.getBool('${featureName}_onboarding_completed') ?? false);
 }
+
 
 
 

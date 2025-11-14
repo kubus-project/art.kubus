@@ -154,7 +154,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: isSelected 
-                        ? Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2)
+                        ? Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2)
                         : Theme.of(context).colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
@@ -223,7 +223,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                   version: QrVersions.auto,
                   size: 184.0,
                   backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                  foregroundColor: Colors.black,
+                  eyeStyle: const QrEyeStyle(color: Colors.black),
+                  dataModuleStyle: const QrDataModuleStyle(color: Colors.black),
                   errorStateBuilder: (cxt, err) {
                     return const Center(
                       child: Text(
@@ -253,7 +254,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               'Anyone can send $_selectedToken to this address',
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
             ),
@@ -289,7 +290,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 onPressed: () => _copyAddress(_walletAddress),
                 icon: Icon(
                   Icons.copy,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   size: 20,
                 ),
               ),
@@ -302,7 +303,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             decoration: BoxDecoration(
               color: const Color(0xFF0F0F0F),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             ),
             child: Text(
               _walletAddress,
@@ -393,9 +394,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
@@ -458,7 +459,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 description,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   height: 1.4,
                 ),
               ),

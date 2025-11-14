@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
-import '../../providers/mockup_data_provider.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -45,14 +44,6 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _loadEvents() {
-    final mockupProvider = Provider.of<MockupDataProvider>(context, listen: false);
-    
-    // Only load mock events if mock data is enabled
-    if (!mockupProvider.isMockDataEnabled) {
-      _events = [];
-      return;
-    }
-    
     // Simulate loading events
     _events = [
       Event(
@@ -332,7 +323,7 @@ class _EventManagerState extends State<EventManager>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.2),
+                  color: statusColor.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: statusColor),
                 ),
@@ -487,7 +478,7 @@ class _EventManagerState extends State<EventManager>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Notifications', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -551,7 +542,7 @@ class _EventManagerState extends State<EventManager>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Search Events', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
           decoration: InputDecoration(
@@ -600,7 +591,7 @@ class _EventManagerState extends State<EventManager>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Delete Event', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Are you sure you want to delete "${event.title}"? This action cannot be undone.',
@@ -665,6 +656,7 @@ enum EventStatus {
   completed,
   cancelled,
 }
+
 
 
 
