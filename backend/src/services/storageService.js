@@ -104,6 +104,8 @@ class StorageService {
     const uploadFolder = metadata.uploadFolder ? String(metadata.uploadFolder).replace(/^\/+|\/+$/g, '') : '';
     const storageFolder = uploadFolder ? path.join(this.httpStoragePath, uploadFolder) : this.httpStoragePath;
     const filePath = uploadFolder ? path.join(storageFolder, uniqueFilename) : path.join(this.httpStoragePath, uniqueFilename);
+    
+    logger.info(`StorageService.uploadToHTTP: uploadFolder="${uploadFolder}", storageFolder="${storageFolder}", filePath="${filePath}"`);
 
     try {
       // Ensure upload directory exists

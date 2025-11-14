@@ -121,6 +121,7 @@ const path = require('path');
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/profiles/avatars', express.static(path.join(__dirname, '../uploads/profiles/avatars')));
 app.use('/profiles/media', express.static(path.join(__dirname, '../uploads/profiles/media')));
+app.use('/profiles/posts', express.static(path.join(__dirname, '../uploads/profiles/posts')));
 
 // Health check (no auth required)
 app.use('/health', healthRouter);

@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/user.dart';
 import '../models/achievements.dart';
+import 'backend_api_service.dart';
 
 class UserService {
   static const String _followingKey = 'following_users';
@@ -83,15 +84,32 @@ class UserService {
 
   static Future<User?> getUserById(String userId) async {
     try {
+      // Fetch profile from backend using wallet address
+      final profile = await BackendApiService().getProfileByWallet(userId);
+      
       final followingList = await getFollowingUsers();
+      final isFollowing = followingList.contains(userId);
       
-      final user = _sampleUsers.firstWhere(
-        (user) => user.id == userId,
-        orElse: () => _sampleUsers.first,
+      // Convert backend profile to User model
+      return User(
+        id: profile['walletAddress'] ?? userId,
+        name: profile['displayName'] ?? profile['username'] ?? 'Anonymous',
+        username: '@${profile['username'] ?? userId.substring(0, 8)}',
+        bio: profile['bio'] ?? '',
+        followersCount: 0, // TODO: Get from backend followers API
+        followingCount: 0, // TODO: Get from backend following API
+        postsCount: 0, // TODO: Get from backend posts count
+        isFollowing: isFollowing,
+        isVerified: profile['isVerified'] ?? false,
+        joinedDate: profile['createdAt'] != null 
+            ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
+            : 'Joined recently',
+        achievementProgress: [], // TODO: Load achievements from backend
+        profileImageUrl: profile['avatar'],
       );
-      
-      return user.copyWith(isFollowing: followingList.contains(userId));
     } catch (e) {
+      debugPrint('Error loading user profile for $userId: $e');
+      // Return null if profile not found
       return null;
     }
   }

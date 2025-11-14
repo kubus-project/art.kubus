@@ -75,11 +75,15 @@ router.post(
     let uploadFolder = '';
     if (fileType === 'avatar') {
       uploadFolder = 'profiles/avatars';
+    } else if (fileType === 'post-image' || fileType === 'post-video') {
+      uploadFolder = 'profiles/posts';
     } else if (fileType === 'image' || fileType === 'video') {
       uploadFolder = 'profiles/media';
     } else if (fileType === 'model') {
       uploadFolder = 'ar/models';
     }
+
+    logger.info(`Determined uploadFolder: "${uploadFolder}" for fileType: "${fileType}"`);
 
     // Add user info and folder to metadata
     metadata.uploadedBy = req.user.id;
@@ -90,6 +94,8 @@ router.post(
     if (uploadFolder) {
       metadata.uploadFolder = uploadFolder;
     }
+    
+    logger.info(`Metadata before upload:`, JSON.stringify(metadata));
 
     try {
       // Temporarily override storage provider if specified
@@ -105,10 +111,27 @@ router.post(
       // Restore original provider
       storageService.setProvider(originalProvider);
 
+      // Normalize URL like avatar upload does - ensure absolute HTTP URL
+      let finalUrl = result.url || result.ipfsUrl || result.path || null;
+      
+      if (finalUrl && !/^https?:\/\//i.test(finalUrl)) {
+        // If backend returned a filesystem path, convert to HTTP URL
+        const path = require('path');
+        const fileName = path.basename(String(finalUrl));
+        const httpBase = (storageService.httpBaseUrl || process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
+        
+        if (httpBase && uploadFolder) {
+          finalUrl = `${httpBase}/${uploadFolder}/${fileName}`;
+        } else if (httpBase) {
+          finalUrl = `${httpBase}/${fileName}`;
+        }
+      }
+
       // Emit WebSocket event
       const io = req.app.get('io');
       io.emit('upload:complete', {
         filename: originalname,
+        url: finalUrl,
         ...result,
       });
 
@@ -119,6 +142,7 @@ router.post(
           filename: originalname,
           size,
           mimetype,
+          url: finalUrl, // Return normalized URL
           ...result,
         },
       });
