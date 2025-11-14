@@ -656,52 +656,55 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           if (post.imageUrl != null) ...[
             const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                post.imageUrl!,
-                height: 200,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.3),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
-                        ],
+            GestureDetector(
+              onTap: () => _showImageLightbox(post.imageUrl!),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  post.imageUrl!,
+                  height: 200,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            themeProvider.accentColor.withValues(alpha: 0.3),
+                            themeProvider.accentColor.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.3),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
-                        ],
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            themeProvider.accentColor.withValues(alpha: 0.3),
+                            themeProvider.accentColor.withValues(alpha: 0.1),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Center(
-                      child: Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.onPrimary, size: 60),
-                    ),
-                  );
-                },
+                      child: Center(
+                        child: Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.onPrimary, size: 60),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ],
@@ -1325,21 +1328,29 @@ class _CommunityScreenState extends State<CommunityScreen>
                             List<String> mediaUrls = [];
                             
                             // Upload image if selected
-                            if (_selectedPostImage != null) {
+                            if (_selectedPostImage != null && _selectedPostImageBytes != null) {
                               try {
-                                final imageFile = File(_selectedPostImage!.path);
-                                final fileBytes = await imageFile.readAsBytes();
                                 final fileName = _selectedPostImage!.name;
                                 
                                 final uploadResult = await BackendApiService().uploadFile(
-                                  fileBytes: fileBytes,
+                                  fileBytes: _selectedPostImageBytes!,
                                   fileName: fileName,
-                                  fileType: 'image',
+                                  fileType: 'post-image', // Use post-image to store in profiles/posts folder
                                 );
-                                final url = uploadResult['url'] as String?;
-                                if (url != null) mediaUrls.add(url);
+                                final url = uploadResult['uploadedUrl'] as String?;
+                                if (url != null) {
+                                  mediaUrls.add(url);
+                                  debugPrint('Image uploaded successfully: $url');
+                                } else {
+                                  debugPrint('Warning: Upload succeeded but no URL returned. Result: $uploadResult');
+                                }
                               } catch (e) {
                                 debugPrint('Error uploading image: $e');
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Failed to upload image: $e')),
+                                  );
+                                }
                               }
                             }
                             
@@ -1353,9 +1364,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 final uploadResult = await BackendApiService().uploadFile(
                                   fileBytes: fileBytes,
                                   fileName: fileName,
-                                  fileType: 'video',
+                                  fileType: 'post-video', // Use post-video to store in profiles/posts folder
                                 );
-                                final url = uploadResult['url'] as String?;
+                                final url = uploadResult['uploadedUrl'] as String?;
                                 if (url != null) mediaUrls.add(url);
                               } catch (e) {
                                 debugPrint('Error uploading video: $e');
@@ -2279,6 +2290,59 @@ class _CommunityScreenState extends State<CommunityScreen>
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
+                    if (post.imageUrl != null) ...[
+                      const SizedBox(height: 16),
+                      GestureDetector(
+                        onTap: () => _showImageLightbox(post.imageUrl!),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            post.imageUrl!,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes != null
+                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                        : null,
+                                  ),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.onPrimary, size: 60),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Row(
                       children: [
@@ -2342,5 +2406,77 @@ class _CommunityScreenState extends State<CommunityScreen>
     } else {
       return 'Just now';
     }
+  }
+
+  void _showImageLightbox(String imageUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Stack(
+            children: [
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  color: Colors.transparent,
+                  width: double.infinity,
+                  height: double.infinity,
+                  child: InteractiveViewer(
+                    minScale: 0.5,
+                    maxScale: 4.0,
+                    child: Center(
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                  : null,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.white, size: 64),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Failed to load image',
+                                  style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 40,
+                right: 20,
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.black54,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

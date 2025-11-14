@@ -1464,6 +1464,7 @@ class BackendApiService {
         );
 
         request.fields['fileType'] = fileType;
+        request.fields['targetStorage'] = 'http'; // Use HTTP storage instead of hybrid/IPFS
         if (metadata != null) {
           request.fields['metadata'] = jsonEncode(metadata);
         }
