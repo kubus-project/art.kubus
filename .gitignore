@@ -106,6 +106,9 @@ app.*.map.json
 
 # Docker secrets
 docker-compose.override.yml
+docker-compose.yml
+/backend/docker-compose.yml
+/backend/docker-compose.*.yml
 /backend/.dockerignore
 
 # PM2 and process managers
