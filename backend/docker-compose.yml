@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: artkubus-postgres
+    environment:
+      POSTGRES_DB: artkubus
+      POSTGRES_USER: artkubus
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Rudi.Boss4502}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    ports:
+      - "5432:5432"
+    pull_policy: if_not_present
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artkubus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - artkubus-network
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: artkubus-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    pull_policy: if_not_present
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - artkubus-network
+
+  # IPFS Node (Optional - for direct IPFS integration)
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: artkubus-ipfs
+    environment:
+      - IPFS_PROFILE=server
+    volumes:
+      - ipfs_staging:/export
+      - ipfs_data:/data/ipfs
+    ports:
+      - "4001:4001"      # P2P
+      - "4001:4001/udp"  # P2P
+      - "5001:5001"      # API
+      - "8080:8080"      # Gateway
+    networks:
+      - artkubus-network
+    # Optional: only enable if you want local IPFS node
+    profiles:
+      - full
+
+  # Application Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: artkubus-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://artkubus:${DB_PASSWORD:-Rudi.Boss4502}@postgres:5432/artkubus
+      REDIS_URL: redis://redis:6379
+      IPFS_API_URL: http://ipfs:5001  # Use local IPFS or external service
+      IPFS_GATEWAY_URL: ${IPFS_GATEWAY_URL:-https://ipfs.io/ipfs/}
+      IPFS_PINATA_API_KEY: ${PINATA_API_KEY}
+      IPFS_PINATA_SECRET: ${PINATA_SECRET}
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET:-artkubus}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-*}
+      USE_MOCK_DATA: "false"
+    volumes:
+      - uploads_data:/app/uploads
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "healthcheck.js"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+    networks:
+      - artkubus-network
+    restart: unless-stopped
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: artkubus-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - artkubus-network
+    restart: unless-stopped
+
+  # Cloudflare Tunnel (for development/testing without port forwarding)
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: artkubus-cloudflared
+    command: tunnel --no-autoupdate run --token eyJhIjoiNTY5MzM1OGQ1YzRjOTFjOTQ2ZmNkZDIzZjdkOTA0YmIiLCJ0IjoiYTEwY2YxM2QtNGJmMS00ZWY2LTljNzktNTRkOTYzNTZiMTQxIiwicyI6Ik5EQTJOVFl3TnprdFl6bGhaaTAwTTJZNUxUbG1NRFV0WXpobE1UUTFNV1UwTlRjMSJ9
+    network_mode: host
+    restart: unless-stopped
+    profiles:
+      - tunnel
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  ipfs_staging:
+    driver: local
+  ipfs_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  artkubus-network:
+    driver: bridge
+
+# Usage Examples:
+# 
+# Development with Cloudflare Tunnel (no port forwarding needed):
+# docker-compose --profile tunnel up -d postgres redis backend cloudflared
+#
+# Full production stack with Nginx:
+# docker-compose up -d
+#
+# With local IPFS node:
+# docker-compose --profile full up -d
+#
+# Backend only for development:
+# docker-compose up postgres redis backend

@@ -20,6 +20,9 @@ class SolanaWalletService {
     switchNetwork(ApiKeys.defaultSolanaNetwork);
   }
 
+  // Active keypair (in-memory only for current session; DO NOT persist private key in plaintext)
+  Ed25519HDKeyPair? _activeKeyPair;
+
   // Network Management
   void switchNetwork(String network) {
     switch (network.toLowerCase()) {
@@ -82,6 +85,15 @@ class SolanaWalletService {
     }
   }
 
+  // Set active keypair for signing operations (store only in memory)
+  void setActiveKeyPair(Ed25519HDKeyPair keyPair) {
+    _activeKeyPair = keyPair;
+  }
+
+  bool get hasActiveKeyPair => _activeKeyPair != null;
+
+  String? get activePublicKey => _activeKeyPair?.address;
+
   // Get balance for a public key
   Future<double> getSolBalance(String publicKey) async {
     try {
@@ -90,7 +102,7 @@ class SolanaWalletService {
       return balance.value / 1000000000; // Convert lamports to SOL
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting balance: $e');
+        debugPrint('Error getting balance: $e');
       }
       return 0.0;
     }
@@ -111,7 +123,7 @@ class SolanaWalletService {
       return signature;
     } catch (e) {
       if (kDebugMode) {
-        print('Error requesting airdrop: $e');
+        debugPrint('Error requesting airdrop: $e');
       }
       throw Exception('Failed to request airdrop: $e');
     }
@@ -218,6 +230,51 @@ class SolanaWalletService {
       debugPrint('Error getting transaction history: $e');
       return [];
     }
+  }
+
+  // Transfer native SOL between accounts
+  Future<String> transferSol({required String toAddress, required double amount}) async {
+    if (!hasActiveKeyPair) {
+      throw Exception('No active keypair set for signing');
+    }
+    try {
+      final lamports = (amount * 1000000000).floor();
+      final message = Message.only(SystemInstruction.transfer(
+        fundingAccount: Ed25519HDPublicKey.fromBase58(_activeKeyPair!.address),
+        recipientAccount: Ed25519HDPublicKey.fromBase58(toAddress),
+        lamports: lamports,
+      ));
+      final signature = await _rpcClient.signAndSendTransaction(message, [_activeKeyPair!]);
+      return signature;
+    } catch (e) {
+      debugPrint('SOL transfer failed: $e');
+      rethrow;
+    }
+  }
+
+  // Transfer SPL token (KUB8 or others) - placeholder wiring
+  Future<String> transferSplToken({
+    required String mint,
+    required String toAddress,
+    required double amount,
+    required int decimals,
+  }) async {
+    // NOTE: Proper SPL token transfer requires resolving Associated Token Accounts (ATA),
+    // creating them if missing, and constructing Token Program instructions.
+    // This placeholder throws until full implementation is added.
+    throw UnimplementedError('SPL token transfer not yet implemented (mint: $mint, amount: $amount)');
+  }
+
+  // Swap SOL -> SPL token (e.g., SOL -> KUB8) via DEX aggregator (Jupiter/Raydium)
+  Future<String> swapSolToSpl({required String mint, required double solAmount}) async {
+    // Placeholder: integrate HTTP call to Jupiter quote + route, then build transaction.
+    throw UnimplementedError('Swap SOL->$mint not implemented. Integrate Jupiter API.');
+  }
+
+  // Mint NFT (Metaplex) placeholder
+  Future<String> mintNft({required Map<String, dynamic> metadata}) async {
+    // Placeholder: integrate Metaplex or custom program
+    throw UnimplementedError('NFT mint not implemented. Use Metaplex SDK flow.');
   }
 
   // Private helper methods

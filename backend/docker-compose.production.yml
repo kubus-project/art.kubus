@@ -1,0 +1,134 @@
+version: '3.8'
+
+# Production Docker Compose configuration for api.kubus.site
+# Use this configuration when deploying to production
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: artkubus-postgres
+    environment:
+      POSTGRES_DB: artkubus
+      POSTGRES_USER: artkubus
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    ports:
+      - "127.0.0.1:5432:5432"  # Only expose to localhost
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U artkubus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - artkubus-network
+    restart: always
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    container_name: artkubus-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"  # Only expose to localhost
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - artkubus-network
+    restart: always
+
+  # Application Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: artkubus-backend
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql://artkubus:${DB_PASSWORD}@postgres:5432/artkubus
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    volumes:
+      - uploads_data:/app/uploads
+      - ./logs:/app/logs
+    expose:
+      - "3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - artkubus-network
+    restart: always
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: artkubus-nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+      - ./certbot/www:/var/www/certbot:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - artkubus-network
+    restart: always
+
+  # Certbot for SSL certificates (Let's Encrypt)
+  certbot:
+    image: certbot/certbot
+    container_name: artkubus-certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot:rw
+      - ./ssl:/etc/letsencrypt:rw
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - artkubus-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+networks:
+  artkubus-network:
+    driver: bridge
+
+# Deployment Instructions:
+# 1. Set environment variables:
+#    export DB_PASSWORD="your_strong_password"
+#    export REDIS_PASSWORD="your_redis_password"
+# 
+# 2. Update .env.production with your production settings
+# 
+# 3. Get SSL certificate (first time):
+#    docker-compose -f docker-compose.production.yml run --rm certbot certonly \
+#      --webroot --webroot-path /var/www/certbot \
+#      -d api.kubus.site --email your-email@example.com --agree-tos --no-eff-email
+# 
+# 4. Start services:
+#    docker-compose -f docker-compose.production.yml up -d
+# 
+# 5. View logs:
+#    docker-compose -f docker-compose.production.yml logs -f

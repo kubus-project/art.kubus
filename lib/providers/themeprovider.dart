@@ -85,7 +85,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_themeKey, _themeMode.index);
-      await prefs.setInt(_accentColorKey, _accentColor.value);
+      await prefs.setInt(_accentColorKey, _accentColor.value); // Color value for persistence
     } catch (e) {
       debugPrint('Error saving theme preferences: $e');
     }
@@ -148,7 +148,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     brightness: Brightness.dark,
     colorScheme: ColorScheme.dark(
       primary: _accentColor,
-      secondary: _accentColor.withOpacity(0.8),
+      secondary: _accentColor.withValues(alpha: 0.8),
       surface: const Color(0xFF0A0A0A),
       onSurface: Colors.white,
       primaryContainer: const Color(0xFF1A1A1A),
@@ -218,7 +218,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     brightness: Brightness.light,
     colorScheme: ColorScheme.light(
       primary: _accentColor,
-      secondary: _accentColor.withOpacity(0.8),
+      secondary: _accentColor.withValues(alpha: 0.8),
       surface: Colors.white,
       onSurface: Colors.black,
       primaryContainer: const Color(0xFFF5F5F7),
@@ -239,7 +239,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     cardTheme: CardThemeData(
       color: Colors.white,
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: Colors.grey[200]!),

@@ -103,7 +103,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       margin: const EdgeInsets.symmetric(horizontal: 24),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -141,7 +141,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return TabBar(
       controller: _tabController,
       labelColor: Provider.of<ThemeProvider>(context).accentColor,
-      unselectedLabelColor: Colors.white.withOpacity(0.6),
+      unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
       indicatorColor: Provider.of<ThemeProvider>(context).accentColor,
       labelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       tabs: const [
@@ -232,13 +232,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
-            Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.05),
+            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.3),
+          color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -248,7 +248,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             'Current ${widget.statType}',
             style: GoogleFonts.inter(
               fontSize: 16,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 8),
@@ -266,7 +266,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: (isPositive ? Colors.green : Colors.red).withOpacity(0.2),
+                  color: (isPositive ? Colors.green : Colors.red).withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -296,7 +296,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             'vs previous $_selectedPeriod',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -309,9 +309,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       height: 300,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,9 +369,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: Colors.white.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -394,7 +394,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                     metric['label'] as String,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -412,9 +412,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -430,7 +430,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 16),
           LinearProgressIndicator(
             value: progress,
-            backgroundColor: Colors.white.withOpacity(0.1),
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(
               Provider.of<ThemeProvider>(context).accentColor,
             ),
@@ -452,7 +452,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 'Target: ${_getGoalTarget()}',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -466,9 +466,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,7 +503,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               label,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -525,9 +525,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       height: 200,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,9 +558,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -592,13 +592,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             period,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -623,12 +623,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.purple.withOpacity(0.1),
-            Colors.blue.withOpacity(0.1),
+            Colors.purple.withValues(alpha: 0.1),
+            Colors.blue.withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+        border: Border.all(color: Colors.purple.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,7 +681,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               text,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withValues(alpha: 0.9),
                 height: 1.4,
               ),
             ),
@@ -695,9 +695,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,7 +733,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 label,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
               Text(
@@ -749,7 +749,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 4),
           LinearProgressIndicator(
             value: value,
-            backgroundColor: Colors.white.withOpacity(0.1),
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 6,
           ),
@@ -762,9 +762,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -810,7 +810,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
+              color: color.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 16),
@@ -833,7 +833,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                   description,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     height: 1.3,
                   ),
                 ),
@@ -849,9 +849,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,7 +884,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               metric,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
             ),
           ),
@@ -903,7 +903,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               benchmarkValue,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.white.withOpacity(0.6),
+                color: Colors.white.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -921,9 +921,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -941,7 +941,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             'Your ranking among similar artists:',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 12),
@@ -964,7 +964,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                       'out of 1,247 artists',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                     Text(
@@ -989,9 +989,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1026,7 +1026,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 category,
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
               Text(
@@ -1042,7 +1042,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 4),
           LinearProgressIndicator(
             value: strength,
-            backgroundColor: Colors.white.withOpacity(0.1),
+            backgroundColor: Colors.white.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 4,
           ),
@@ -1141,11 +1141,11 @@ class AdvancedChartPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final fillPaint = Paint()
-      ..color = accentColor.withOpacity(0.1)
+      ..color = accentColor.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..strokeWidth = 1;
 
     // Draw grid lines
@@ -1230,7 +1230,7 @@ class SeasonalityChartPainter extends CustomPainter {
       final y = size.height - height;
 
       final paint = Paint()
-        ..color = accentColor.withOpacity(0.6 + 0.4 * data[i])
+        ..color = accentColor.withValues(alpha: 0.6 + 0.4 * data[i])
         ..style = PaintingStyle.fill;
 
       canvas.drawRRect(

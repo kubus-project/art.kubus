@@ -105,7 +105,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
@@ -120,7 +120,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -134,7 +134,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -186,7 +186,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 16),
@@ -211,7 +211,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
         color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       child: Row(
@@ -220,7 +220,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           Icon(
             icon,
             size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 6),
           Text(
@@ -228,7 +228,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
             style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w500,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -262,7 +262,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           style: GoogleFonts.inter(
             fontSize: 16,
             height: 1.5,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -319,8 +319,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      themeProvider.accentColor.withOpacity(0.3),
-                      themeProvider.accentColor.withOpacity(0.1),
+                      themeProvider.accentColor.withValues(alpha: 0.3),
+                      themeProvider.accentColor.withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
@@ -348,7 +348,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
                     '${20 + index * 3} views',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

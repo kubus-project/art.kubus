@@ -17,8 +17,8 @@ class AppConfig {
   // FEATURE FLAGS
   // ===========================================
   
-  /// Enable/disable mock data for development
-  static const bool useMockData = false; // Set to true only for UI testing
+  /// Use backend mock data endpoint (controlled by backend .env)
+  static const bool useBackendMockData = true; // Backend serves mock data when USE_MOCK_DATA=true
   
   /// Use real blockchain connections by default
   static const bool useRealBlockchain = true;
@@ -34,7 +34,7 @@ class AppConfig {
   static const bool enableMarketplace = true;
   static const bool enableNFTMinting = true;
   static const bool enableWalletConnect = true;
-  static const bool enforceWalletOnboarding = false; // Allow explore-only mode
+  static const bool enforceWalletOnboarding = false; // Don't force wallet during onboarding - let users set it up when needed
   
   /// AR and Camera features
   static const bool enableARViewer = true;
@@ -72,7 +72,7 @@ class AppConfig {
   /// Welcome and onboarding
   static const bool showWelcomeScreen = true;
   static const bool skipOnboardingForReturningUsers = true; // Skip welcome/onboarding for users who have launched the app before
-  static const bool skipWeb3OnboardingForReturningUsers = true; // Skip Web3 feature onboarding for returning users
+  static const bool skipWeb3OnboardingForReturningUsers = false; // Show Web3 feature onboarding even for returning users (first access per feature)
   static const bool forceWalletOnboarding = true; // Prompt wallet for non-explore features
   static const bool enableGuestMode = true; // Allow explore without wallet
   
@@ -92,8 +92,11 @@ class AppConfig {
   
   /// API endpoints
   static const String baseApiUrl = isDevelopment 
-    ? 'https://dev-api.artkubus.com' 
-    : 'https://api.artkubus.com';
+    ? 'https://api.kubus.site' 
+    : 'https://api.kubus.site';
+  
+  /// Mock data endpoint (when useBackendMockData is true)
+  static const String mockDataApiUrl = '$baseApiUrl/api/mock';
   
   /// IPFS configuration (future integration)
   static String get ipfsGateway => ApiKeys.ipfsGateway;
@@ -200,7 +203,7 @@ class AppConfig {
   /// Check if feature is enabled
   static bool isFeatureEnabled(String feature) {
     switch (feature) {
-      case 'mockData': return useMockData;
+      case 'backendMockData': return useBackendMockData;
       case 'liking': return enableLiking;
       case 'commenting': return enableCommenting;
       case 'web3': return enableWeb3;

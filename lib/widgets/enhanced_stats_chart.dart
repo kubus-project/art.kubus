@@ -55,9 +55,9 @@ class _EnhancedStatsChartState extends State<EnhancedStatsChart>
       height: 250,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,11 +117,11 @@ class StatsChartPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     final fillPaint = Paint()
-      ..color = accentColor.withOpacity(0.1)
+      ..color = accentColor.withValues(alpha: 0.1)
       ..style = PaintingStyle.fill;
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
+      ..color = Colors.white.withValues(alpha: 0.1)
       ..strokeWidth = 1;
 
     final textPainter = TextPainter(
@@ -161,7 +161,7 @@ class StatsChartPainter extends CustomPainter {
       textPainter.text = TextSpan(
         text: value.toStringAsFixed(0),
         style: TextStyle(
-          color: Colors.white.withOpacity(0.6),
+          color: Colors.white.withValues(alpha: 0.6),
           fontSize: 10,
         ),
       );
@@ -248,7 +248,7 @@ class StatsChartPainter extends CustomPainter {
         textPainter.text = TextSpan(
           text: labels![i],
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withValues(alpha: 0.6),
             fontSize: 10,
           ),
         );
@@ -266,7 +266,7 @@ class StatsChartPainter extends CustomPainter {
         textPainter.text = TextSpan(
           text: '${i + 1}d',
           style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
+            color: Colors.white.withValues(alpha: 0.6),
             fontSize: 10,
           ),
         );
@@ -338,7 +338,7 @@ class _EnhancedBarChartState extends State<EnhancedBarChart>
       height: 200,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -399,13 +399,13 @@ class _EnhancedBarChartState extends State<EnhancedBarChart>
                                       end: Alignment.topCenter,
                                       colors: [
                                         widget.accentColor,
-                                        widget.accentColor.withOpacity(0.7),
+                                        widget.accentColor.withValues(alpha: 0.7),
                                       ],
                                     ),
                                     borderRadius: BorderRadius.circular(2),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: widget.accentColor.withOpacity(0.3),
+                                        color: widget.accentColor.withValues(alpha: 0.3),
                                         blurRadius: 4,
                                         offset: const Offset(0, 2),
                                       ),
@@ -417,7 +417,7 @@ class _EnhancedBarChartState extends State<EnhancedBarChart>
                                   widget.labels?[index] ?? '${index + 1}d',
                                   style: GoogleFonts.inter(
                                     fontSize: 8,
-                                    color: Colors.white.withOpacity(0.7),
+                                    color: Colors.white.withValues(alpha: 0.7),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),

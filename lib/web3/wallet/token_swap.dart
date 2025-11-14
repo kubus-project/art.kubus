@@ -70,7 +70,7 @@ class _TokenSwapState extends State<TokenSwap> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
+                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Provider.of<ThemeProvider>(context).accentColor),
               ),
@@ -276,7 +276,7 @@ class _TokenSwapState extends State<TokenSwap> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
+                        color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
@@ -327,6 +327,7 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 }
+
 
 
 

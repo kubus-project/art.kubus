@@ -7,6 +7,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/config_provider.dart';
+import '../providers/profile_provider.dart';
 import '../web3/dao/governance_hub.dart';
 import '../web3/artist/artist_studio.dart';
 import '../web3/institution/institution_hub.dart';
@@ -247,6 +248,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildWelcomeSection() {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
     
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -288,7 +290,9 @@ class _HomeScreenState extends State<HomeScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Welcome Back!',
+                          profileProvider.currentUser?.displayName != null 
+                            ? 'Welcome back, ${profileProvider.currentUser!.displayName}!' 
+                            : 'Welcome Back!',
                           style: GoogleFonts.inter(
                             fontSize: titleSize,
                             fontWeight: FontWeight.bold,
@@ -458,7 +462,7 @@ class _HomeScreenState extends State<HomeScreen>
                   'Recently Used',
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 12 : 14,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -881,9 +885,9 @@ class _HomeScreenState extends State<HomeScreen>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1097,7 +1101,7 @@ class _HomeScreenState extends State<HomeScreen>
                 child: Container(
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.9),
+                    color: Colors.orange.withValues(alpha: 0.9),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: const Icon(
@@ -1322,14 +1326,14 @@ class _HomeScreenState extends State<HomeScreen>
                         Icon(
                           Icons.image_not_supported,
                           size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'No featured artworks',
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -1374,8 +1378,8 @@ class _HomeScreenState extends State<HomeScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      themeProvider.accentColor.withOpacity(0.3),
-                      themeProvider.accentColor.withOpacity(0.1),
+                      themeProvider.accentColor.withValues(alpha: 0.3),
+                      themeProvider.accentColor.withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -1409,7 +1413,7 @@ class _HomeScreenState extends State<HomeScreen>
                     'by ${artwork?.artist ?? '@artist'}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1548,7 +1552,7 @@ class _HomeScreenState extends State<HomeScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -1575,7 +1579,7 @@ class _HomeScreenState extends State<HomeScreen>
                   notification.$2,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1583,7 +1587,7 @@ class _HomeScreenState extends State<HomeScreen>
                   notification.$4,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -1635,7 +1639,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   // Show wallet onboarding for first-time users
   void _showWalletOnboarding(BuildContext context) {
-    print('DEBUG: Wallet onboarding triggered from home screen');
+    debugPrint('DEBUG: Wallet onboarding triggered from home screen');
     
     // Navigate directly to comprehensive Web3 onboarding
     Navigator.of(context).push(
@@ -1804,8 +1808,8 @@ class _HomeScreenState extends State<HomeScreen>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.3),
-                            Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(16),
@@ -1834,8 +1838,8 @@ class _HomeScreenState extends State<HomeScreen>
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.3),
-                                Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+                                Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                                Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(16),
@@ -1847,7 +1851,7 @@ class _HomeScreenState extends State<HomeScreen>
                           'by @artist_name',
                           style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -1868,7 +1872,7 @@ class _HomeScreenState extends State<HomeScreen>
                       'An immersive AR artwork that transforms your surroundings into a digital canvas. Experience the fusion of reality and imagination.',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         height: 1.5,
                       ),
                     ),
@@ -1951,14 +1955,14 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             icon,
             size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 4),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -2053,7 +2057,7 @@ class _HomeScreenState extends State<HomeScreen>
                   milestone,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                   ),
                 ),
               ),
@@ -2149,7 +2153,7 @@ class ActivityScreen extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
+                    color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
@@ -2176,7 +2180,7 @@ class ActivityScreen extends StatelessWidget {
                         activity.$2,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -2184,7 +2188,7 @@ class ActivityScreen extends StatelessWidget {
                         activity.$4,
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                     ],

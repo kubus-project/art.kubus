@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import '../models/task.dart';
 import '../models/achievements.dart';
+import '../services/task_service.dart';
+import '../services/achievement_service.dart' as achievement_svc;
 
 class TaskProvider extends ChangeNotifier {
   final List<TaskProgress> _taskProgress = [];
@@ -15,16 +17,16 @@ class TaskProvider extends ChangeNotifier {
 
   /// Initialize with default progress for new users
   void initializeProgress() {
-    _setLoading(true);
+    _isLoading = true;
     
     try {
       // Initialize achievement progress
       _achievementProgress.clear();
-      _achievementProgress.addAll(AchievementService.createDefaultProgress());
+      // Note: Achievement progress is initialized separately via AchievementService
       
       // Initialize task progress for initial 5 tasks
       _taskProgress.clear();
-      final initialTasks = TaskService.getInitialTasks();
+      final initialTasks = TaskService().getInitialTasks();
       
       for (final task in initialTasks) {
         _taskProgress.add(TaskProgress(
@@ -40,8 +42,11 @@ class TaskProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to initialize progress: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
     }
+    
+    // Notify listeners after initialization is complete
+    notifyListeners();
   }
 
   /// Get current task progress by ID
@@ -65,7 +70,7 @@ class TaskProvider extends ChangeNotifier {
   /// Get currently available tasks (including newly unlocked ones)
   List<Task> getAvailableTasks() {
     final completedTasks = _taskProgress.where((progress) => progress.isCompleted).toList();
-    return TaskService.getAvailableTasks(completedTasks);
+    return TaskService().getAvailableTasks(completedTasks);
   }
 
   /// Get active task progress (available tasks with their progress)
@@ -78,14 +83,11 @@ class TaskProvider extends ChangeNotifier {
 
   /// Update achievement progress and recalculate task progress
   void updateAchievementProgress(String achievementId, int newProgress) {
-    _setLoading(true);
+    _isLoading = true;
     
     try {
       // Update achievement progress
-      _achievementProgress.clear();
-      _achievementProgress.addAll(
-        AchievementService.updateProgress(_achievementProgress, achievementId, newProgress)
-      );
+      _updateAchievementProgress(achievementId, newProgress);
       
       // Recalculate task progress based on achievement progress
       _recalculateTaskProgress();
@@ -94,27 +96,26 @@ class TaskProvider extends ChangeNotifier {
       _checkForUnlockedTasks();
       
       _error = null;
-      notifyListeners();
     } catch (e) {
       _error = 'Failed to update achievement progress: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
     }
+    
+    // Notify listeners after all updates are complete
+    notifyListeners();
   }
 
   /// Increment achievement progress
   void incrementAchievementProgress(String achievementId, {int increment = 1}) {
-    print('DEBUG: Incrementing $achievementId by $increment');
-    _setLoading(true);
+    debugPrint('DEBUG: Incrementing $achievementId by $increment');
+    _isLoading = true;
     
     try {
       // Update achievement progress
-      _achievementProgress.clear();
-      _achievementProgress.addAll(
-        AchievementService.incrementProgress(_achievementProgress, achievementId, increment: increment)
-      );
+      _incrementAchievementProgress(achievementId, increment);
       
-      print('DEBUG: Achievement progress updated, recalculating tasks...');
+      debugPrint('DEBUG: Achievement progress updated, recalculating tasks...');
       // Recalculate task progress
       _recalculateTaskProgress();
       
@@ -122,14 +123,16 @@ class TaskProvider extends ChangeNotifier {
       _checkForUnlockedTasks();
       
       _error = null;
-      notifyListeners();
-      print('DEBUG: Task progress recalculated and listeners notified');
+    debugPrint('DEBUG: Task progress recalculated and listeners notified');
     } catch (e) {
-      print('DEBUG: Error incrementing achievement progress: $e');
+    debugPrint('DEBUG: Error incrementing achievement progress: $e');
       _error = 'Failed to increment achievement progress: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
     }
+    
+    // Notify listeners after all updates are complete
+    notifyListeners();
   }
 
   /// Track artwork visit/discovery
@@ -141,14 +144,14 @@ class TaskProvider extends ChangeNotifier {
 
   /// Track artwork like/favorite
   void trackArtworkLike(String artworkId) {
-    print('DEBUG: Tracking artwork like for $artworkId');
+    debugPrint('DEBUG: Tracking artwork like for $artworkId');
     incrementAchievementProgress('art_critic', increment: 1);
     incrementAchievementProgress('social_butterfly', increment: 1);
   }
 
   /// Track artwork favorite action
   void trackArtworkFavorite(String artworkId) {
-    print('DEBUG: Tracking artwork favorite for $artworkId');
+    debugPrint('DEBUG: Tracking artwork favorite for $artworkId');
     incrementAchievementProgress('first_favorite', increment: 1);
     incrementAchievementProgress('curator', increment: 1);
     incrementAchievementProgress('mega_collector', increment: 1);
@@ -156,7 +159,7 @@ class TaskProvider extends ChangeNotifier {
 
   /// Track comment on artwork
   void trackArtworkComment(String artworkId) {
-    print('DEBUG: Tracking artwork comment for $artworkId');
+    debugPrint('DEBUG: Tracking artwork comment for $artworkId');
     incrementAchievementProgress('art_critic', increment: 2);
     incrementAchievementProgress('social_butterfly', increment: 1);
   }
@@ -205,18 +208,14 @@ class TaskProvider extends ChangeNotifier {
   }
 
   /// Private methods
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    if (loading) notifyListeners();
-  }
-
+  
   /// Calculate total count for a task based on its achievements
   int _calculateTaskTotal(Task task) {
     int total = 0;
     for (final achievementId in task.achievementIds) {
-      final achievement = AchievementService.getAchievementById(achievementId);
+      final achievement = getAchievementById(achievementId);
       if (achievement != null) {
-        total += achievement.requiredProgress;
+        total += achievement.requiredProgress.toInt();
       }
     }
     return total > 0 ? total : 1; // Ensure at least 1
@@ -226,7 +225,7 @@ class TaskProvider extends ChangeNotifier {
   void _recalculateTaskProgress() {
     for (int i = 0; i < _taskProgress.length; i++) {
       final taskProgress = _taskProgress[i];
-      final task = TaskService.getTaskById(taskProgress.taskId);
+      final task = TaskService().getTaskById(taskProgress.taskId);
       
       if (task != null) {
         int completed = 0;
@@ -275,9 +274,104 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  /// Helper method to update achievement progress
+  void _updateAchievementProgress(String achievementId, int newProgress) {
+    final index = _achievementProgress.indexWhere((p) => p.achievementId == achievementId);
+    if (index != -1) {
+      final achievement = getAchievementById(achievementId);
+      if (achievement != null) {
+        final isCompleted = newProgress >= achievement.requiredProgress;
+        _achievementProgress[index] = AchievementProgress(
+          achievementId: achievementId,
+          currentProgress: newProgress,
+          isCompleted: isCompleted,
+          completedDate: isCompleted ? DateTime.now() : null,
+        );
+      }
+    }
+  }
+
+  /// Helper method to increment achievement progress
+  void _incrementAchievementProgress(String achievementId, int increment) {
+    final index = _achievementProgress.indexWhere((p) => p.achievementId == achievementId);
+    if (index != -1) {
+      final currentProgress = _achievementProgress[index].currentProgress + increment;
+      _updateAchievementProgress(achievementId, currentProgress);
+    } else {
+      // Create new progress if it doesn't exist
+      _achievementProgress.add(AchievementProgress(
+        achievementId: achievementId,
+        currentProgress: increment,
+        isCompleted: false,
+      ));
+    }
+  }
+
+  /// Load progress from backend achievements system
+  Future<void> loadProgressFromBackend(String walletAddress) async {
+    _isLoading = true;
+    notifyListeners();
+    
+    try {
+      // Only initialize if not already initialized
+      if (_taskProgress.isEmpty || _achievementProgress.isEmpty) {
+        initializeProgress();
+      }
+      
+      // Import AchievementService to fetch real data
+      final achievementService = achievement_svc.AchievementService();
+      final progressData = await achievementService.getAchievementProgress(walletAddress);
+      
+      debugPrint('TaskProvider: Loaded progress from backend: ${progressData.length} achievements');
+      
+      // Update achievement progress with real data
+      for (final entry in progressData.entries) {
+        final achievementId = entry.key;
+        final currentProgress = entry.value;
+        
+        // Update or add achievement progress
+        final existingIndex = _achievementProgress.indexWhere(
+          (ap) => ap.achievementId == achievementId
+        );
+        
+        if (existingIndex != -1) {
+          _achievementProgress[existingIndex] = AchievementProgress(
+            achievementId: achievementId,
+            currentProgress: currentProgress,
+            isCompleted: false, // Will be set by updateAchievementProgress
+          );
+        } else {
+          _achievementProgress.add(AchievementProgress(
+            achievementId: achievementId,
+            currentProgress: currentProgress,
+            isCompleted: false,
+          ));
+        }
+        
+        // Use the existing update method to properly calculate task progress
+        updateAchievementProgress(achievementId, currentProgress);
+      }
+      
+      _error = null;
+      debugPrint('TaskProvider: Progress loaded successfully');
+    } catch (e) {
+      debugPrint('TaskProvider: Failed to load progress from backend: $e');
+      _error = 'Failed to load progress: $e';
+      
+      // Fallback: Initialize with empty progress
+      if (_taskProgress.isEmpty || _achievementProgress.isEmpty) {
+        initializeProgress();
+      }
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+  
   /// Mock data for testing - simulate some progress
+  @Deprecated('Use loadProgressFromBackend instead')
   void loadMockProgress() {
-    _setLoading(true);
+    _isLoading = true;
     
     try {
       // Only initialize if not already initialized
@@ -296,7 +390,10 @@ class TaskProvider extends ChangeNotifier {
     } catch (e) {
       _error = 'Failed to load mock progress: $e';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
     }
+    
+    // Notify listeners after mock progress is loaded
+    notifyListeners();
   }
 }

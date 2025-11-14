@@ -3,9 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/artwork_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../services/nft_minting_service.dart';
+import '../models/collectible.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -547,6 +551,23 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           ],
         ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _showMintNFTDialog(artwork),
+            icon: const Icon(Icons.diamond),
+            label: Text(
+              'Mint as NFT',
+              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            ),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              backgroundColor: const Color(0xFFFFD93D),
+              foregroundColor: Colors.black,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -783,11 +804,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   void _submitComment(Artwork artwork, ArtworkProvider provider) async {
     if (_commentController.text.trim().isEmpty) return;
 
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final userId = walletProvider.currentWalletAddress ?? 'anonymous_user';
+    final userName = walletProvider.currentWalletAddress != null 
+        ? 'User ${walletProvider.currentWalletAddress!.substring(0, 8)}...' 
+        : 'Anonymous User';
+
     await provider.addComment(
       artwork.id,
       _commentController.text.trim(),
-      'current_user', // TODO: Get from user provider
-      'Current User', // TODO: Get from user provider
+      userId,
+      userName,
     );
 
     if (mounted) {
@@ -1017,24 +1044,396 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
           'Navigation Error',
-          style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         content: Text(
           message,
-          style: GoogleFonts.outfit(),
+          style: GoogleFonts.outfit(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
               'OK',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showMintNFTDialog(Artwork artwork) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('user_id');
+    final walletAddress = prefs.getString('wallet_address');
+    
+    if (userId == null || walletAddress == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Please connect your wallet first', style: GoogleFonts.outfit()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    final nameController = TextEditingController(text: artwork.title);
+    final descController = TextEditingController(text: artwork.description);
+    final supplyController = TextEditingController(text: '100');
+    final priceController = TextEditingController(text: '50.0');
+    final royaltyController = TextEditingController(text: '10');
+    
+    CollectibleType selectedType = CollectibleType.nft;
+    CollectibleRarity selectedRarity = _convertArtworkRarity(artwork.rarity);
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            'Mint NFT Series',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Create an NFT series for this artwork',
+                  style: GoogleFonts.outfit(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Series Name',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: GoogleFonts.outfit(),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descController,
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: GoogleFonts.outfit(),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: supplyController,
+                  decoration: InputDecoration(
+                    labelText: 'Total Supply',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: GoogleFonts.outfit(),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  decoration: InputDecoration(
+                    labelText: 'Mint Price (SOL)',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: GoogleFonts.outfit(),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: royaltyController,
+                  decoration: InputDecoration(
+                    labelText: 'Royalty %',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                    helperText: 'Creator royalty on secondary sales (0-100)',
+                    helperStyle: GoogleFonts.outfit(fontSize: 12),
+                  ),
+                  style: GoogleFonts.outfit(),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<CollectibleType>(
+                  value: selectedType,
+                  decoration: InputDecoration(
+                    labelText: 'NFT Type',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: GoogleFonts.outfit(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  items: CollectibleType.values.map((type) {
+                    return DropdownMenuItem(
+                      value: type,
+                      child: Text(
+                        type.toString().split('.').last.toUpperCase(),
+                        style: GoogleFonts.outfit(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedType = value);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<CollectibleRarity>(
+                  value: selectedRarity,
+                  decoration: InputDecoration(
+                    labelText: 'Rarity',
+                    labelStyle: GoogleFonts.outfit(),
+                    border: const OutlineInputBorder(),
+                  ),
+                  style: GoogleFonts.outfit(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  dropdownColor: Theme.of(context).colorScheme.surface,
+                  items: CollectibleRarity.values.map((rarity) {
+                    return DropdownMenuItem(
+                      value: rarity,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: _getRarityColor(rarity),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            rarity.toString().split('.').last.toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => selectedRarity = value);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.outfit(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD93D),
+                foregroundColor: Colors.black,
+              ),
+              onPressed: () async {
+                Navigator.pop(context);
+                await _mintNFT(
+                  artwork: artwork,
+                  name: nameController.text,
+                  description: descController.text,
+                  totalSupply: int.tryParse(supplyController.text) ?? 100,
+                  mintPrice: double.tryParse(priceController.text) ?? 0.1,
+                  royaltyPercentage: double.tryParse(royaltyController.text) ?? 10.0,
+                  type: selectedType,
+                  rarity: selectedRarity,
+                );
+              },
+              child: Text('Mint NFT', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _mintNFT({
+    required Artwork artwork,
+    required String name,
+    required String description,
+    required int totalSupply,
+    required double mintPrice,
+    required double royaltyPercentage,
+    required CollectibleType type,
+    required CollectibleRarity rarity,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final walletAddress = prefs.getString('wallet_address') ?? '';
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Minting NFT...',
+              style: GoogleFonts.outfit(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'This may take a few moments',
+              style: GoogleFonts.outfit(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final mintingService = NFTMintingService();
+      final result = await mintingService.mintNFT(
+        artworkId: artwork.id,
+        artworkTitle: artwork.title,
+        artistName: artwork.artist,
+        ownerAddress: walletAddress,
+        seriesName: name,
+        seriesDescription: description,
+        rarity: rarity,
+        requiresARInteraction: artwork.arEnabled,
+        type: type,
+        totalSupply: totalSupply,
+        mintPrice: mintPrice,
+        royaltyPercentage: royaltyPercentage,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog
+        
+        if (result.success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'NFT minted successfully!',
+                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to mint NFT: ${result.error}',
+                style: GoogleFonts.outfit(),
+              ),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close progress dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Error minting NFT: $e',
+              style: GoogleFonts.outfit(),
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  CollectibleRarity _convertArtworkRarity(ArtworkRarity artworkRarity) {
+    switch (artworkRarity) {
+      case ArtworkRarity.common:
+        return CollectibleRarity.common;
+      case ArtworkRarity.rare:
+        return CollectibleRarity.rare;
+      case ArtworkRarity.epic:
+        return CollectibleRarity.epic;
+      case ArtworkRarity.legendary:
+        return CollectibleRarity.legendary;
+    }
+  }
+
+  Color _getRarityColor(CollectibleRarity rarity) {
+    switch (rarity) {
+      case CollectibleRarity.common:
+        return Colors.grey;
+      case CollectibleRarity.uncommon:
+        return Colors.green;
+      case CollectibleRarity.rare:
+        return Colors.blue;
+      case CollectibleRarity.epic:
+        return Colors.purple;
+      case CollectibleRarity.legendary:
+        return Colors.orange;
+      case CollectibleRarity.mythic:
+        return Colors.red;
+    }
   }
 }

@@ -1,143 +1,286 @@
 class UserProfile {
   final String id;
-  final String name;
+  final String walletAddress;
   final String username;
+  final String displayName;
   final String bio;
-  final String profileImageUrl;
-  final int followersCount;
-  final int followingCount;
-  final int artworksCount;
-  final int collectionsCount;
-  final bool isFollowing;
-  final bool isVerified;
-  final DateTime joinDate;
-  final List<String> badges;
+  final String avatar;
+  final String? coverImage;
+  final Map<String, String> social;
+  final bool isArtist;
+  final ArtistInfo? artistInfo;
+  final ProfilePreferences? preferences;
+  final UserStats? stats;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   UserProfile({
     required this.id,
-    required this.name,
+    required this.walletAddress,
     required this.username,
+    required this.displayName,
     required this.bio,
-    required this.profileImageUrl,
-    required this.followersCount,
-    required this.followingCount,
-    required this.artworksCount,
-    required this.collectionsCount,
-    required this.isFollowing,
-    required this.isVerified,
-    required this.joinDate,
-    required this.badges,
+    required this.avatar,
+    this.coverImage,
+    this.social = const {},
+    this.isArtist = false,
+    this.artistInfo,
+    this.preferences,
+    this.stats,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   UserProfile copyWith({
     String? id,
-    String? name,
+    String? walletAddress,
     String? username,
+    String? displayName,
     String? bio,
-    String? profileImageUrl,
-    int? followersCount,
-    int? followingCount,
-    int? artworksCount,
-    int? collectionsCount,
-    bool? isFollowing,
-    bool? isVerified,
-    DateTime? joinDate,
-    List<String>? badges,
+    String? avatar,
+    String? coverImage,
+    Map<String, String>? social,
+    bool? isArtist,
+    ArtistInfo? artistInfo,
+    ProfilePreferences? preferences,
+    UserStats? stats,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return UserProfile(
       id: id ?? this.id,
-      name: name ?? this.name,
+      walletAddress: walletAddress ?? this.walletAddress,
       username: username ?? this.username,
+      displayName: displayName ?? this.displayName,
       bio: bio ?? this.bio,
-      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
-      followersCount: followersCount ?? this.followersCount,
-      followingCount: followingCount ?? this.followingCount,
-      artworksCount: artworksCount ?? this.artworksCount,
-      collectionsCount: collectionsCount ?? this.collectionsCount,
-      isFollowing: isFollowing ?? this.isFollowing,
-      isVerified: isVerified ?? this.isVerified,
-      joinDate: joinDate ?? this.joinDate,
-      badges: badges ?? this.badges,
+      avatar: avatar ?? this.avatar,
+      coverImage: coverImage ?? this.coverImage,
+      social: social ?? this.social,
+      isArtist: isArtist ?? this.isArtist,
+      artistInfo: artistInfo ?? this.artistInfo,
+      preferences: preferences ?? this.preferences,
+      stats: stats ?? this.stats,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  // Sample user data for demonstration
+  // JSON serialization
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    // Helper to safely parse date fields that might be null or already Date objects
+    DateTime _parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      try {
+        return DateTime.parse(value.toString());
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+
+    // Safely convert social map to Map<String, String>
+    final rawSocial = json['social'];
+    final Map<String, String> socialMap = {};
+    if (rawSocial is Map) {
+      rawSocial.forEach((k, v) {
+        socialMap[k.toString()] = v == null ? '' : v.toString();
+      });
+    }
+
+    final coverRaw = json['coverImage'] ?? json['cover_image_url'];
+
+    return UserProfile(
+      id: (json['id'] ?? '').toString(),
+      walletAddress: (json['walletAddress'] ?? json['wallet_address'] ?? '').toString(),
+      username: (json['username'] ?? '').toString(),
+      displayName: (json['displayName'] ?? json['display_name'] ?? '').toString(),
+      bio: (json['bio'] ?? '').toString(),
+      avatar: (json['avatar'] ?? json['avatar_url'] ?? '').toString(),
+      coverImage: coverRaw != null ? coverRaw.toString() : null,
+      social: socialMap,
+      isArtist: json['isArtist'] ?? json['is_artist'] ?? false,
+      artistInfo: json['artistInfo'] != null ? ArtistInfo.fromJson(json['artistInfo']) : null,
+      preferences: json['preferences'] != null ? ProfilePreferences.fromJson(json['preferences']) : null,
+      stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
+      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
+      updatedAt: _parseDate(json['updatedAt'] ?? json['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'walletAddress': walletAddress,
+      'username': username,
+      'displayName': displayName,
+      'bio': bio,
+      'avatar': avatar,
+      'coverImage': coverImage,
+      'social': social,
+      'isArtist': isArtist,
+      'artistInfo': artistInfo?.toJson(),
+      'preferences': preferences?.toJson(),
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+}
+
+class ArtistInfo {
+  final bool verified;
+  final String? verificationNFT;
+  final List<String> specialty;
+  final int yearsActive;
+  final bool featured;
+  final int artworksCount;
+  final int followersCount;
+
+  ArtistInfo({
+    this.verified = false,
+    this.verificationNFT,
+    this.specialty = const [],
+    this.yearsActive = 0,
+    this.featured = false,
+    this.artworksCount = 0,
+    this.followersCount = 0,
+  });
+
+  factory ArtistInfo.fromJson(Map<String, dynamic> json) {
+    return ArtistInfo(
+      verified: json['verified'] ?? false,
+      verificationNFT: json['verificationNFT'] ?? json['verification_nft'],
+      specialty: List<String>.from(json['specialty'] ?? []),
+      yearsActive: json['yearsActive'] ?? json['years_active'] ?? 0,
+      featured: json['featured'] ?? false,
+      artworksCount: json['artworksCount'] ?? json['artworks_count'] ?? 0,
+      followersCount: json['followersCount'] ?? json['followers_count'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'verified': verified,
+      'verificationNFT': verificationNFT,
+      'specialty': specialty,
+      'yearsActive': yearsActive,
+      'featured': featured,
+      'artworksCount': artworksCount,
+      'followersCount': followersCount,
+    };
+  }
+}
+
+class ProfilePreferences {
+  final String privacy;
+  final bool notifications;
+  final String theme;
+
+  ProfilePreferences({
+    this.privacy = 'public',
+    this.notifications = true,
+    this.theme = 'auto',
+  });
+
+  factory ProfilePreferences.fromJson(Map<String, dynamic> json) {
+    return ProfilePreferences(
+      privacy: json['privacy'] ?? 'public',
+      notifications: json['notifications'] ?? true,
+      theme: json['theme'] ?? 'auto',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'privacy': privacy,
+      'notifications': notifications,
+      'theme': theme,
+    };
+  }
+}
+
+class UserStats {
+  final int artworksDiscovered;
+  final int artworksCreated;
+  final int nftsOwned;
+  final double kub8Balance;
+  final int achievementsUnlocked;
+  final int followersCount;
+  final int followingCount;
+
+  UserStats({
+    this.artworksDiscovered = 0,
+    this.artworksCreated = 0,
+    this.nftsOwned = 0,
+    this.kub8Balance = 0.0,
+    this.achievementsUnlocked = 0,
+    this.followersCount = 0,
+    this.followingCount = 0,
+  });
+
+  factory UserStats.fromJson(Map<String, dynamic> json) {
+    return UserStats(
+      artworksDiscovered: json['artworksDiscovered'] ?? json['artworks_discovered'] ?? 0,
+      artworksCreated: json['artworksCreated'] ?? json['artworks_created'] ?? 0,
+      nftsOwned: json['nftsOwned'] ?? json['nfts_owned'] ?? 0,
+      kub8Balance: (json['kub8Balance'] ?? json['kub8_balance'] ?? 0.0).toDouble(),
+      achievementsUnlocked: json['achievementsUnlocked'] ?? json['achievements_unlocked'] ?? 0,
+      followersCount: json['followersCount'] ?? json['followers_count'] ?? 0,
+      followingCount: json['followingCount'] ?? json['following_count'] ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'artworksDiscovered': artworksDiscovered,
+      'artworksCreated': artworksCreated,
+      'nftsOwned': nftsOwned,
+      'kub8Balance': kub8Balance,
+      'achievementsUnlocked': achievementsUnlocked,
+      'followersCount': followersCount,
+      'followingCount': followingCount,
+    };
+  }
+}
+
+// Extension on UserProfile for sample data
+extension UserProfileSamples on UserProfile {
   static List<UserProfile> getSampleUsers() {
+    final now = DateTime.now();
     return [
       UserProfile(
-        id: '1',
-        name: 'Maya Digital',
-        username: '@maya_3d',
-        bio: 'AR artist exploring the intersection of digital and physical worlds. Creating immersive experiences.',
-        profileImageUrl: '',
-        followersCount: 1250,
-        followingCount: 340,
-        artworksCount: 45,
-        collectionsCount: 8,
-        isFollowing: true,
-        isVerified: true,
-        joinDate: DateTime(2024, 1, 15),
-        badges: ['Early Adopter', 'AR Pioneer'],
+        id: 'sample1',
+        walletAddress: '0xSample1',
+        username: 'crypto_artist',
+        displayName: 'Crypto Artist',
+        bio: 'Digital artist exploring blockchain',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto_artist',
+        isArtist: true,
+        stats: UserStats(followersCount: 1234, followingCount: 567),
+        createdAt: now,
+        updatedAt: now,
       ),
       UserProfile(
-        id: '2',
-        name: 'Alex Creator',
-        username: '@alex_nft',
-        bio: 'NFT artist and collector. Passionate about blockchain technology and digital ownership.',
-        profileImageUrl: '',
-        followersCount: 890,
-        followingCount: 120,
-        artworksCount: 32,
-        collectionsCount: 5,
-        isFollowing: false,
-        isVerified: false,
-        joinDate: DateTime(2024, 3, 8),
-        badges: ['Collector'],
+        id: 'sample2',
+        walletAddress: '0xSample2',
+        username: 'nft_collector',
+        displayName: 'NFT Collector',
+        bio: 'Collecting amazing digital art',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nft_collector',
+        stats: UserStats(followersCount: 890, followingCount: 432),
+        createdAt: now,
+        updatedAt: now,
       ),
       UserProfile(
-        id: '3',
-        name: 'Sam Artist',
-        username: '@sam_ar',
-        bio: 'Interactive AR installations and public art. Bringing art to the streets through technology.',
-        profileImageUrl: '',
-        followersCount: 2100,
-        followingCount: 580,
-        artworksCount: 78,
-        collectionsCount: 12,
-        isFollowing: true,
-        isVerified: true,
-        joinDate: DateTime(2023, 11, 22),
-        badges: ['Verified Artist', 'Community Leader'],
-      ),
-      UserProfile(
-        id: '4',
-        name: 'Luna Vision',
-        username: '@luna_viz',
-        bio: 'Digital sculptor and AR experience designer. Creating worlds that exist between reality and imagination.',
-        profileImageUrl: '',
-        followersCount: 1680,
-        followingCount: 290,
-        artworksCount: 56,
-        collectionsCount: 9,
-        isFollowing: false,
-        isVerified: true,
-        joinDate: DateTime(2024, 2, 3),
-        badges: ['Featured Artist'],
-      ),
-      UserProfile(
-        id: '5',
-        name: 'Pixel Master',
-        username: '@pixel_master',
-        bio: 'Generative art and algorithmic creativity. Code meets canvas in the digital realm.',
-        profileImageUrl: '',
-        followersCount: 750,
-        followingCount: 200,
-        artworksCount: 94,
-        collectionsCount: 15,
-        isFollowing: true,
-        isVerified: false,
-        joinDate: DateTime(2024, 4, 12),
-        badges: ['Code Artist'],
+        id: 'sample3',
+        walletAddress: '0xSample3',
+        username: 'ar_enthusiast',
+        displayName: 'AR Enthusiast',
+        bio: 'Love augmented reality art',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ar_enthusiast',
+        stats: UserStats(followersCount: 456, followingCount: 789),
+        createdAt: now,
+        updatedAt: now,
       ),
     ];
   }

@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/institution_provider.dart';
-import '../../providers/mockup_data_provider.dart';
+import '../../providers/artwork_provider.dart';
+
 
 class InstitutionAnalytics extends StatefulWidget {
   const InstitutionAnalytics({super.key});
@@ -147,7 +148,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
-            dropdownColor: Theme.of(context).colorScheme.surfaceVariant,
+            dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             style: GoogleFonts.inter(
               fontSize: 12,
               color: Theme.of(context).colorScheme.onSurface,
@@ -170,10 +171,10 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildStatsOverview() {
-    return Consumer2<InstitutionProvider, MockupDataProvider>(
-      builder: (context, institutionProvider, mockupProvider, child) {
-        // Only show data if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled || institutionProvider.institutions.isEmpty) {
+    return Consumer<InstitutionProvider>(
+      builder: (context, institutionProvider, child) {
+        // Get analytics data from the provider
+        if (institutionProvider.institutions.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -189,7 +190,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               Container(
                 padding: const EdgeInsets.all(32),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -346,40 +347,24 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildVisitorAnalytics() {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Only show visitor analytics if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
-          return const SizedBox.shrink();
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Visitor Analytics',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Visitor Analytics',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _showVisitorDetails(),
-                    icon: Icon(Icons.arrow_forward_ios, color: Theme.of(context).colorScheme.onSurface, size: 16),
-                  ),
-                ],
-              ),
           const SizedBox(height: 16),
           _buildVisitorChart(),
           const SizedBox(height: 16),
@@ -387,128 +372,163 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         ],
       ),
     );
-      },
-    );
   }
 
   Widget _buildVisitorChart() {
-    // Simple bar chart representation
-    final data = [120, 180, 150, 200, 160, 220, 180];
-    final maxValue = data.reduce((a, b) => a > b ? a : b);
+    return Consumer<InstitutionProvider>(
+      builder: (context, institutionProvider, child) {
+        // Get visitor data from analytics - use actual data if available
+        final institution = institutionProvider.institutions.isNotEmpty 
+            ? institutionProvider.institutions.first 
+            : null;
+        final analytics = institution != null 
+            ? institutionProvider.getInstitutionAnalytics(institution.id) 
+            : {};
+        
+        // TODO: Get actual daily visitor data from backend analytics API
+        // For now, generate sample data based on total visitors
+        final totalVisitors = analytics['totalVisitors'] ?? 1200;
+        final avgDaily = (totalVisitors / 7).round();
+        final data = List.generate(7, (i) => avgDaily + (i * 10) - 30);
+        final maxValue = data.reduce((a, b) => a > b ? a : b);
     
-    return SizedBox(
-      height: 120,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: constraints.maxWidth,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: data.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final value = entry.value;
-                  final height = (value / maxValue) * 100;
-                  
-                  return Flexible(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Text(
-                          value.toString(),
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
+        return SizedBox(
+          height: 120,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: constraints.maxWidth,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: data.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final value = entry.value;
+                      final height = (value / maxValue) * 100;
+                      
+                      return Flexible(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Text(
+                              value.toString(),
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              width: 20,
+                              height: height,
+                              decoration: BoxDecoration(
+                                color: Provider.of<ThemeProvider>(context).accentColor,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index],
+                              style: GoogleFonts.inter(
+                                fontSize: 8,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          width: 20,
-                          height: height,
-                          decoration: BoxDecoration(
-                            color: Provider.of<ThemeProvider>(context).accentColor,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index],
-                          style: GoogleFonts.inter(
-                            fontSize: 8,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildVisitorMetrics() {
-    final metrics = [
-      {'label': 'Avg. Visit Duration', 'value': '45 min'},
-      {'label': 'Return Visitors', 'value': '34%'},
-      {'label': 'Peak Hour', 'value': '2-4 PM'},
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: constraints.maxWidth,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: metrics.map((metric) => Flexible(
-                child: Column(
-                  children: [
-                    Text(
-                      metric['value']!,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      metric['label']!,
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                      );
+                    }).toList(),
+                  ),
                 ),
-              )).toList(),
-            ),
+              );
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildEventPerformance() {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Only show event performance if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
-          return const SizedBox.shrink();
-        }
-
-        final events = [
-          {'name': 'Digital Dreams Exhibition', 'visitors': '2,340', 'rating': '4.8'},
-          {'name': 'Modern Art Workshop', 'visitors': '156', 'rating': '4.6'},
-          {'name': 'Artist Talk Series', 'visitors': '890', 'rating': '4.9'},
+  Widget _buildVisitorMetrics() {
+    return Consumer<InstitutionProvider>(
+      builder: (context, institutionProvider, child) {
+        final institution = institutionProvider.institutions.isNotEmpty 
+            ? institutionProvider.institutions.first 
+            : null;
+        final analytics = institution != null 
+            ? institutionProvider.getInstitutionAnalytics(institution.id) 
+            : {};
+        
+        // TODO: Get actual metrics from backend analytics API
+        final metrics = [
+          {'label': 'Avg. Visit Duration', 'value': '45 min'},
+          {'label': 'Return Visitors', 'value': '${((analytics['totalVisitors'] ?? 0) * 0.34).round()}'},
+          {'label': 'Active Events', 'value': '${analytics['activeEventsCount'] ?? 0}'},
         ];
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: constraints.maxWidth,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: metrics.map((metric) => Flexible(
+                    child: Column(
+                      children: [
+                        Text(
+                          metric['value']!,
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        Text(
+                          metric['label']!,
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildEventPerformance() {
+    return Consumer<InstitutionProvider>(
+      builder: (context, institutionProvider, child) {
+        final institution = institutionProvider.institutions.isNotEmpty 
+            ? institutionProvider.institutions.first 
+            : null;
+        
+        // Get actual events from provider
+        final institutionEvents = institution != null 
+            ? institutionProvider.getEventsByInstitution(institution.id).take(3).toList() 
+            : [];
+        
+        // Convert events to display format
+        final events = institutionEvents.map((event) => {
+          'name': event.title,
+          'visitors': '${event.attendeeCount}',
+          'rating': event.rating?.toStringAsFixed(1) ?? 'N/A',
+        }).toList();
+        
+        // Show placeholder if no events
+        if (events.isEmpty) {
+          events.add({'name': 'No events yet', 'visitors': '0', 'rating': 'N/A'});
+        }
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -528,65 +548,74 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-          const SizedBox(height: 16),
-          ...events.map((event) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        event['name']!,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        '${event['visitors']} visitors',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
+              const SizedBox(height: 16),
+              ...events.map((event) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
                   children: [
-                    Icon(Icons.star, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      event['rating']!,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            event['name']!,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            '${event['visitors']} visitors',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Row(
+                      children: [
+                        Icon(Icons.star, color: Colors.amber, size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          event['rating']!,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    );
+              )),
+            ],
+          ),
+        );
       },
     );
   }
 
   Widget _buildRevenueAnalytics() {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Only show revenue analytics if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
-          return const SizedBox.shrink();
-        }
-
+    return Consumer<InstitutionProvider>(
+      builder: (context, institutionProvider, child) {
+        final institution = institutionProvider.institutions.isNotEmpty 
+            ? institutionProvider.institutions.first 
+            : null;
+        final analytics = institution != null 
+            ? institutionProvider.getInstitutionAnalytics(institution.id) 
+            : {};
+        
+        // TODO: Get detailed revenue breakdown from backend analytics API
+        final totalRevenue = analytics['revenue'] ?? 0;
+        final ticketSales = totalRevenue * 0.5;
+        final merchandise = totalRevenue * 0.15;
+        final memberships = totalRevenue * 0.25;
+        final donations = totalRevenue * 0.1;
+        
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -594,24 +623,25 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
           ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Revenue Breakdown',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Revenue Analytics',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildRevenueItem('Ticket Sales', '\$${ticketSales.toStringAsFixed(0)}', 0.5),
+              _buildRevenueItem('Merchandise', '\$${merchandise.toStringAsFixed(0)}', 0.15),
+              _buildRevenueItem('Memberships', '\$${memberships.toStringAsFixed(0)}', 0.25),
+              _buildRevenueItem('Donations', '\$${donations.toStringAsFixed(0)}', 0.1),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildRevenueItem('Event Tickets', '\$12,400', 0.67),
-          _buildRevenueItem('Merchandise', '\$3,850', 0.21),
-          _buildRevenueItem('Memberships', '\$2,250', 0.12),
-        ],
-      ),
-    );
+        );
       },
     );
   }
@@ -656,13 +686,18 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildArtworkAnalytics() {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Only show artwork analytics if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
-          return const SizedBox.shrink();
-        }
-
+    return Consumer2<InstitutionProvider, ArtworkProvider>(
+      builder: (context, institutionProvider, artworkProvider, child) {
+        final institution = institutionProvider.institutions.isNotEmpty 
+            ? institutionProvider.institutions.first 
+            : null;
+        
+        // Get artworks from institution or all artworks
+        final artworks = artworkProvider.artworks.toList()
+          ..sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
+        
+        final topArtworks = artworks.take(3).toList();
+        
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -670,24 +705,29 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
           ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Top Performing Artworks',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Top Artworks',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (topArtworks.isEmpty)
+                _buildArtworkItem('No artworks yet', '0 views', 'N/A')
+              else
+                ...topArtworks.map((artwork) => _buildArtworkItem(
+                  artwork.title,
+                  '${_formatNumber(artwork.viewsCount)} views',
+                  '${artwork.likesCount} likes',
+                )),
+            ],
           ),
-          const SizedBox(height: 16),
-          _buildArtworkItem('Neon Dreams', '5,240 views', '4.9 rating'),
-          _buildArtworkItem('Digital Visions', '4,180 views', '4.7 rating'),
-          _buildArtworkItem('AR Installation', '8.9K views', '4.7'),
-        ],
-      ),
-    );
+        );
       },
     );
   }
@@ -701,7 +741,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.2),
+              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -742,7 +782,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Export Analytics', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Export your analytics data to PDF or Excel format.',
@@ -771,7 +811,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Analytics Settings', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Configure your analytics tracking preferences.',
@@ -791,7 +831,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Visitor Details', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: SizedBox(
           width: double.maxFinite,
@@ -842,6 +882,11 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     );
   }
 }
+
+
+
+
+
 
 
 

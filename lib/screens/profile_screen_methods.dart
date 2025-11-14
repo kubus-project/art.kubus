@@ -1,358 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../providers/config_provider.dart';
-import '../providers/themeprovider.dart';
 import '../providers/artwork_provider.dart';
-import '../models/user_profile.dart';
+import '../providers/themeprovider.dart';
+import '../providers/wallet_provider.dart';
+import '../services/backend_api_service.dart';
 import 'user_profile_screen.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
-  static void showFollowers(BuildContext context) {
+  static void showFollowers(BuildContext context, {String? userId}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Consumer<ConfigProvider>(
-        builder: (context, configProvider, child) {
-          if (!configProvider.useMockData) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.5,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Icon(Icons.people_outline, size: 48, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Followers Data',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Connect your wallet to see real followers',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final followerUsers = UserProfile.getSampleUsers().take(8).toList();
-          
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Followers (${followerUsers.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: followerUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = followerUsers[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => UserProfileScreen(
-                                  userId: user.id,
-                                  username: user.username,
-                                ),
-                              ),
-                            );
-                          },
-                          leading: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Provider.of<ThemeProvider>(context).accentColor,
-                                  Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.7),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Text(
-                                user.name,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              if (user.isVerified) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.verified,
-                                  size: 16,
-                                  color: Provider.of<ThemeProvider>(context).accentColor,
-                                ),
-                              ],
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.username,
-                                style: GoogleFonts.inter(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
-                              ),
-                              if (user.badges.isNotEmpty)
-                                Text(
-                                  user.badges.join(' • '),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Provider.of<ThemeProvider>(context).accentColor,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      builder: (context) => _FollowersBottomSheet(userId: userId),
     );
   }
 
-  static void showFollowing(BuildContext context) {
+  static void showFollowing(BuildContext context, {String? userId}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Consumer<ConfigProvider>(
-        builder: (context, configProvider, child) {
-          if (!configProvider.useMockData) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.5,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Icon(Icons.people_outline, size: 48, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Following Data',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Connect your wallet to see who you\'re following',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final followingUsers = UserProfile.getSampleUsers().where((user) => user.isFollowing).toList();
-          
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Following (${followingUsers.length})',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: followingUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = followingUsers[index];
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => UserProfileScreen(
-                                  userId: user.id,
-                                  username: user.username,
-                                ),
-                              ),
-                            );
-                          },
-                          leading: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Provider.of<ThemeProvider>(context).accentColor,
-                                  Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.7),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Text(
-                                user.name,
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              if (user.isVerified) ...[
-                                const SizedBox(width: 4),
-                                Icon(
-                                  Icons.verified,
-                                  size: 16,
-                                  color: Provider.of<ThemeProvider>(context).accentColor,
-                                ),
-                              ],
-                            ],
-                          ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.username,
-                                style: GoogleFonts.inter(
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                ),
-                              ),
-                              if (user.badges.isNotEmpty)
-                                Text(
-                                  user.badges.join(' • '),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: Provider.of<ThemeProvider>(context).accentColor,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      builder: (context) => _FollowingBottomSheet(userId: userId),
     );
   }
 
@@ -360,152 +31,8 @@ class ProfileScreenMethods {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Consumer2<ArtworkProvider, ConfigProvider>(
-        builder: (context, artworkProvider, configProvider, child) {
-          if (!configProvider.useMockData) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.6,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.image_not_supported, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Artwork Data',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Connect your wallet to see your artworks',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
-
-          final userArtworks = artworkProvider.userArtworks;
-          
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'My Artworks (${userArtworks.length})',
-                      style: GoogleFonts.inter(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: userArtworks.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.image_not_supported,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No artworks yet',
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : GridView.builder(
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.8,
-                        ),
-                        itemCount: userArtworks.length,
-                        itemBuilder: (context, index) {
-                          final artwork = userArtworks[index];
-                          return Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                    ),
-                                    child: const Center(
-                                      child: Icon(Icons.image, size: 32),
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(8),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        artwork.title,
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 14,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        '${artwork.likesCount} likes',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _ArtworksBottomSheet(),
     );
   }
 
@@ -513,87 +40,716 @@ class ProfileScreenMethods {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => Consumer<ConfigProvider>(
-        builder: (context, configProvider, child) {
-          if (!configProvider.useMockData) {
-            return Container(
-              height: MediaQuery.of(context).size.height * 0.6,
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.collections_outlined, size: 64, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Collections Data',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Connect your wallet to see your collections',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            );
-          }
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _CollectionsBottomSheet(),
+    );
+  }
+}
 
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
+// ==================== Followers Bottom Sheet ====================
+class _FollowersBottomSheet extends StatefulWidget {
+  final String? userId;
+
+  const _FollowersBottomSheet({this.userId});
+
+  @override
+  State<_FollowersBottomSheet> createState() => _FollowersBottomSheetState();
+}
+
+class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
+  List<Map<String, dynamic>>? _followers;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowers();
+  }
+
+  Future<void> _loadFollowers() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final userId = widget.userId ?? walletProvider.currentWalletAddress;
+
+      if (userId == null || userId.isEmpty) {
+        setState(() {
+          _followers = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final followers = await BackendApiService().getFollowers(userId: userId);
+      
+      if (!mounted) return;
+      setState(() {
+        _followers = followers;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading followers: $e');
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load followers';
+        _isLoading = false;
+        _followers = [];
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          Padding(
             padding: const EdgeInsets.all(16),
-            child: Column(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                Text(
+                  'Followers${_followers != null ? ' (${_followers!.length})' : ''}',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: themeProvider.accentColor))
+                : _error != null
+                    ? _buildErrorState(theme, _error!)
+                    : _followers!.isEmpty
+                        ? _buildEmptyState(theme, 'No Followers Yet', 'Share your profile to gain followers')
+                        : _buildFollowersList(theme, themeProvider),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFollowersList(ThemeData theme, ThemeProvider themeProvider) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _followers!.length,
+      itemBuilder: (context, index) {
+        final follower = _followers![index];
+        final username = follower['username'] as String? ?? 'Anonymous';
+        final walletAddress = follower['walletAddress'] as String? ?? follower['id'] as String? ?? '';
+        final isVerified = follower['isVerified'] as bool? ?? false;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProfileScreen(
+                    userId: walletAddress,
+                    username: username,
+                  ),
+                ),
+              );
+            },
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeProvider.accentColor,
+                    themeProvider.accentColor.withValues(alpha: 0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 24),
+            ),
+            title: Row(
+              children: [
+                Text(
+                  username,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (isVerified) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.verified, size: 16, color: themeProvider.accentColor),
+                ],
+              ],
+            ),
+            subtitle: Text(
+              walletAddress.length > 20 
+                  ? '${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}'
+                  : walletAddress,
+              style: GoogleFonts.inter(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, String title, String subtitle) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme, String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text(
+              error,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: _loadFollowers,
+              child: Text(
+                'Retry',
+                style: GoogleFonts.inter(
+                  color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== Following Bottom Sheet ====================
+class _FollowingBottomSheet extends StatefulWidget {
+  final String? userId;
+
+  const _FollowingBottomSheet({this.userId});
+
+  @override
+  State<_FollowingBottomSheet> createState() => _FollowingBottomSheetState();
+}
+
+class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
+  List<Map<String, dynamic>>? _following;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFollowing();
+  }
+
+  Future<void> _loadFollowing() async {
+    if (!mounted) return;
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final userId = widget.userId ?? walletProvider.currentWalletAddress;
+
+      if (userId == null || userId.isEmpty) {
+        setState(() {
+          _following = [];
+          _isLoading = false;
+        });
+        return;
+      }
+
+      final following = await BackendApiService().getFollowing(userId: userId);
+      
+      if (!mounted) return;
+      setState(() {
+        _following = following;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading following: $e');
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load following';
+        _isLoading = false;
+        _following = [];
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Following${_following != null ? ' (${_following!.length})' : ''}',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: _isLoading
+                ? Center(child: CircularProgressIndicator(color: themeProvider.accentColor))
+                : _error != null
+                    ? _buildErrorState(theme, _error!)
+                    : _following!.isEmpty
+                        ? _buildEmptyState(theme, 'Not Following Anyone', 'Discover artists in the Community tab')
+                        : _buildFollowingList(theme, themeProvider),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFollowingList(ThemeData theme, ThemeProvider themeProvider) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: _following!.length,
+      itemBuilder: (context, index) {
+        final user = _following![index];
+        final username = user['username'] as String? ?? 'Anonymous';
+        final walletAddress = user['walletAddress'] as String? ?? user['id'] as String? ?? '';
+        final isVerified = user['isVerified'] as bool? ?? false;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserProfileScreen(
+                    userId: walletAddress,
+                    username: username,
+                  ),
+                ),
+              );
+            },
+            leading: Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeProvider.accentColor,
+                    themeProvider.accentColor.withValues(alpha: 0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(25),
+              ),
+              child: const Icon(Icons.person, color: Colors.white, size: 24),
+            ),
+            title: Row(
+              children: [
+                Text(
+                  username,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                if (isVerified) ...[
+                  const SizedBox(width: 4),
+                  Icon(Icons.verified, size: 16, color: themeProvider.accentColor),
+                ],
+              ],
+            ),
+            subtitle: Text(
+              walletAddress.length > 20 
+                  ? '${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}'
+                  : walletAddress,
+              style: GoogleFonts.inter(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                fontSize: 12,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme, String title, String subtitle) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.people_outline, size: 64, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(ThemeData theme, String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+            const SizedBox(height: 16),
+            Text(
+              error,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: _loadFollowing,
+              child: Text(
+                'Retry',
+                style: GoogleFonts.inter(
+                  color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== Artworks Bottom Sheet ====================
+class _ArtworksBottomSheet extends StatelessWidget {
+  const _ArtworksBottomSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Consumer<ArtworkProvider>(
+      builder: (context, artworkProvider, child) {
+        final userArtworks = artworkProvider.userArtworks;
+          
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'My Collections (8)',
+                      'My Artworks (${userArtworks.length})',
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: 8,
-                    itemBuilder: (context, index) => ListTile(
-                      leading: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          color: Provider.of<ThemeProvider>(context).accentColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.collections,
-                          color: Provider.of<ThemeProvider>(context).accentColor,
-                        ),
+              ),
+              
+              Expanded(
+                child: userArtworks.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.image_not_supported,
+                            size: 64,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No artworks yet',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ),
-                      title: Text('Collection ${index + 1}'),
-                      subtitle: Text('${(index + 1) * 3} items'),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.8,
+                      ),
+                      itemCount: userArtworks.length,
+                      itemBuilder: (context, index) {
+                        final artwork = userArtworks[index];
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                    color: theme.colorScheme.surfaceContainerHighest,
+                                  ),
+                                  child: Center(
+                                    child: Icon(
+                                      Icons.image,
+                                      size: 32,
+                                      color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(8),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      artwork.title,
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                        color: theme.colorScheme.onSurface,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      '${artwork.likesCount} likes',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                ),
-              ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ==================== Collections Bottom Sheet ====================
+class _CollectionsBottomSheet extends StatelessWidget {
+  const _CollectionsBottomSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(2),
             ),
-          );
-        },
+          ),
+          const SizedBox(height: 32),
+          Icon(
+            Icons.collections_outlined,
+            size: 64,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No Collections Yet',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your NFT collections will appear here',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

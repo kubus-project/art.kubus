@@ -57,11 +57,11 @@ class SolanaWalletConnectService {
       
       _isInitialized = true;
       if (kDebugMode) {
-        print('✅ WalletConnect initialized successfully');
+        debugPrint('✅ WalletConnect initialized successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ WalletConnect initialization failed: $e');
+        debugPrint('❌ WalletConnect initialization failed: $e');
       }
       onError?.call('Failed to initialize WalletConnect: $e');
       rethrow;
@@ -73,7 +73,7 @@ class SolanaWalletConnectService {
     // Session proposal event
     _walletKit.onSessionProposal.subscribe((args) async {
       if (kDebugMode) {
-        print('📨 Session proposal received');
+        debugPrint('📨 Session proposal received');
       }
       
       // Auto-approve Solana sessions for demo purposes
@@ -92,7 +92,7 @@ class SolanaWalletConnectService {
     // Session request event (for signing transactions/messages)
     _walletKit.onSessionRequest.subscribe((args) async {
       if (kDebugMode) {
-        print('📝 Session request received');
+        debugPrint('📝 Session request received');
       }
       await _handleSessionRequest(args);
     });
@@ -100,7 +100,7 @@ class SolanaWalletConnectService {
     // Session delete event
     _walletKit.onSessionDelete.subscribe((args) {
       if (kDebugMode) {
-        print('🗑️ Session deleted');
+        debugPrint('🗑️ Session deleted');
       }
       _currentSession = null;
       _connectedAddress = null;
@@ -110,7 +110,7 @@ class SolanaWalletConnectService {
     // Session expire event
     _walletKit.onSessionExpire.subscribe((args) {
       if (kDebugMode) {
-        print('⏰ Session expired');
+        debugPrint('⏰ Session expired');
       }
       _currentSession = null;
       _connectedAddress = null;
@@ -152,13 +152,13 @@ class SolanaWalletConnectService {
       _connectedAddress = solanaAddress;
       
       if (kDebugMode) {
-        print('✅ Session approved successfully');
+        debugPrint('✅ Session approved successfully');
       }
       
       onConnected?.call(solanaAddress);
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to approve session: $e');
+        debugPrint('❌ Failed to approve session: $e');
       }
       onError?.call('Failed to approve session: $e');
     }
@@ -176,11 +176,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        print('❌ Session rejected: $reason');
+        debugPrint('❌ Session rejected: $reason');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to reject session: $e');
+        debugPrint('❌ Failed to reject session: $e');
       }
     }
   }
@@ -215,7 +215,7 @@ class SolanaWalletConnectService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to handle session request: $e');
+        debugPrint('❌ Failed to handle session request: $e');
       }
       
       await _walletKit.respondSessionRequest(
@@ -238,7 +238,7 @@ class SolanaWalletConnectService {
       final message = params['message'] as String;
       
       if (kDebugMode) {
-        print('📝 Signing message: $message');
+        debugPrint('📝 Signing message: $message');
       }
       
       // For demo purposes, return a mock signature
@@ -256,11 +256,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        print('✅ Message signed successfully');
+        debugPrint('✅ Message signed successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to sign message: $e');
+        debugPrint('❌ Failed to sign message: $e');
       }
       rethrow;
     }
@@ -270,7 +270,7 @@ class SolanaWalletConnectService {
   Future<void> _handleSignTransaction(SessionRequestEvent args) async {
     try {
       if (kDebugMode) {
-        print('📝 Signing transaction');
+        debugPrint('📝 Signing transaction');
       }
       
       // For demo purposes, return a mock signed transaction
@@ -288,11 +288,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        print('✅ Transaction signed successfully');
+        debugPrint('✅ Transaction signed successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to sign transaction: $e');
+        debugPrint('❌ Failed to sign transaction: $e');
       }
       rethrow;
     }
@@ -302,7 +302,7 @@ class SolanaWalletConnectService {
   Future<void> _handleSignAndSendTransaction(SessionRequestEvent args) async {
     try {
       if (kDebugMode) {
-        print('📝 Signing and sending transaction');
+        debugPrint('📝 Signing and sending transaction');
       }
       
       // For demo purposes, return a mock transaction hash
@@ -320,11 +320,11 @@ class SolanaWalletConnectService {
       );
       
       if (kDebugMode) {
-        print('✅ Transaction signed and sent successfully');
+        debugPrint('✅ Transaction signed and sent successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to sign and send transaction: $e');
+        debugPrint('❌ Failed to sign and send transaction: $e');
       }
       rethrow;
     }
@@ -340,11 +340,11 @@ class SolanaWalletConnectService {
       await _walletKit.pair(uri: Uri.parse(uri));
       
       if (kDebugMode) {
-        print('🔗 Pairing initiated with URI');
+        debugPrint('🔗 Pairing initiated with URI');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to pair: $e');
+        debugPrint('❌ Failed to pair: $e');
       }
       onError?.call('Failed to pair: $e');
       rethrow;
@@ -370,13 +370,13 @@ class SolanaWalletConnectService {
       _connectedAddress = null;
       
       if (kDebugMode) {
-        print('✅ Disconnected successfully');
+        debugPrint('✅ Disconnected successfully');
       }
       
       onDisconnected?.call('User disconnected');
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Failed to disconnect: $e');
+        debugPrint('❌ Failed to disconnect: $e');
       }
       onError?.call('Failed to disconnect: $e');
     }

@@ -5,7 +5,6 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../providers/dao_provider.dart';
-import '../../providers/mockup_data_provider.dart';
 
 
 class GovernanceHub extends StatefulWidget {
@@ -140,12 +139,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildGovernanceHeader() {
-    return Consumer2<DAOProvider, MockupDataProvider>(
-      builder: (context, daoProvider, mockupProvider, child) {
-        // Get voting power and proposal count based on mock data setting
-        final votingPower = mockupProvider.isMockDataEnabled ? '125 KUB8' : '0 KUB8';
-        final activeProposals = mockupProvider.isMockDataEnabled ? '7' : '0';
-        final totalMembers = mockupProvider.isMockDataEnabled ? '2.4K' : '--';
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        // Get voting power and proposal count from DAO provider
+        final votingPower = '0 KUB8'; // TODO: Calculate from actual KUB8 balance
+        final activeProposals = daoProvider.getActiveProposals().length.toString();
+        final totalMembers = '--'; // TODO: Get from backend community stats
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -154,7 +153,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF4CAF50), Color(0xFF00D4AA)],
+              colors: [Colors.green, Colors.green],
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -289,7 +288,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF4CAF50) : Colors.transparent,
+          color: isSelected ? Colors.green : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -297,7 +296,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           children: [
             Icon(
               icon,
-              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               size: 22,
             ),
             const SizedBox(height: 4),
@@ -306,7 +305,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -318,13 +317,13 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildActiveProposals() {
-    return Consumer2<DAOProvider, MockupDataProvider>(
-      builder: (context, daoProvider, mockupProvider, child) {
-        // Debug: Print mock data state
-        print('DAO Proposals - isMockDataEnabled: ${mockupProvider.isMockDataEnabled}');
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        // Filter active proposals using DAOProvider method
+        final activeProposals = daoProvider.getActiveProposals();
         
-        // Only show proposals if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
+        // Show empty state if no proposals
+        if (activeProposals.isEmpty) {
           return Container(
             color: Theme.of(context).scaffoldBackgroundColor,
             child: Center(
@@ -434,16 +433,16 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50).withOpacity(0.1),
+                  color: Colors.green.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF4CAF50)),
+                  border: Border.all(color: Colors.green),
                 ),
                 child: Text(
                   proposal['type'] as String,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: const Color(0xFF4CAF50),
+                    color: Colors.green,
                   ),
                 ),
               ),
@@ -484,7 +483,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 child: ElevatedButton(
                   onPressed: () => _vote(true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
+                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -498,7 +497,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 child: ElevatedButton(
                   onPressed: () => _vote(false),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                     foregroundColor: Colors.white,
                     side: BorderSide(color: Colors.grey[600]!),
                     shape: RoundedRectangleBorder(
@@ -533,74 +532,51 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildVotingHistory() {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Only show voting history if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        // Get actual votes from provider - use user's votes if available
+        final userVotes = daoProvider.votes.take(10).toList();
+        
+        // Convert to display format
+        final votingHistory = userVotes.map((vote) {
+          final proposal = daoProvider.getProposalById(vote.proposalId);
+          return {
+            'title': proposal?.title ?? 'Unknown Proposal',
+            'date': vote.timestamp.toString().substring(0, 10),
+            'vote': vote.choice.name == 'yes' ? 'Yes' : vote.choice.name == 'no' ? 'No' : 'Abstain',
+            'result': proposal?.isPassing == true ? 'Passing' : 'Not Passing',
+            'participation': proposal != null && proposal.totalVotes > 0 
+                ? '${((proposal.totalVotes / 100000) * 100).toStringAsFixed(0)}%' 
+                : 'N/A',
+            'yourPower': '${vote.votingPower} KUB8',
+          };
+        }).toList();
+        
+        // Show placeholder if no voting history
+        if (votingHistory.isEmpty) {
           return Container(
             color: Theme.of(context).scaffoldBackgroundColor,
+            padding: const EdgeInsets.all(32),
             child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.history,
-                      size: 64,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No voting history',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Enable mock data to view voting history',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.how_to_vote, size: 64, color: Colors.grey[600]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No voting history yet',
+                    style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[500]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Cast your first vote on an active proposal',
+                    style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                ],
               ),
             ),
           );
         }
-
-        final votingHistory = [
-          {
-            'title': 'Artist Revenue Share Update',
-            'date': '2025-08-15',
-            'vote': 'Yes',
-            'result': 'Passed',
-            'participation': '78%',
-            'yourPower': '125 KUB8',
-          },
-      {
-        'title': 'New AR Feature Implementation',
-        'date': '2025-08-10',
-        'vote': 'No',
-        'result': 'Failed',
-        'participation': '65%',
-        'yourPower': '125 KUB8',
-      },
-      {
-        'title': 'Community Fund Allocation',
-        'date': '2025-08-05',
-        'vote': 'Yes',
-        'result': 'Passed',
-        'participation': '82%',
-        'yourPower': '125 KUB8',
-      },
-    ];
 
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
@@ -636,13 +612,13 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: vote['result'] == 'Passed' 
-                            ? const Color(0xFF4CAF50).withOpacity(0.1)
-                            : const Color(0xFFFF5252).withOpacity(0.1),
+                            ? Colors.green.withValues(alpha: 0.1)
+                            : Colors.red.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: vote['result'] == 'Passed' 
-                              ? const Color(0xFF4CAF50)
-                              : const Color(0xFFFF5252),
+                              ? Colors.green
+                              : Colors.red,
                         ),
                       ),
                       child: Text(
@@ -651,8 +627,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: vote['result'] == 'Passed' 
-                              ? const Color(0xFF4CAF50)
-                              : const Color(0xFFFF5252),
+                              ? Colors.green
+                              : Colors.red,
                         ),
                       ),
                     ),
@@ -757,7 +733,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               child: ElevatedButton(
                 onPressed: _submitProposal,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4CAF50),
+                  backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -818,7 +794,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF4CAF50)),
+              borderSide: const BorderSide(color: Colors.green),
             ),
           ),
         ),
@@ -891,7 +867,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 20),
+              Icon(Icons.info_outline, color: Colors.green, size: 20),
               const SizedBox(width: 8),
               Text(
                 'Proposal Requirements',
@@ -920,7 +896,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         children: [
           Icon(
             isMet ? Icons.check_circle : Icons.cancel,
-            color: isMet ? const Color(0xFF4CAF50) : const Color(0xFFFF5252),
+            color: isMet ? Colors.green : Colors.red,
             size: 16,
           ),
           const SizedBox(width: 8),
@@ -943,7 +919,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill in all required fields'),
-          backgroundColor: Color(0xFFFF5252),
+          backgroundColor: Colors.red,
         ),
       );
       return;
@@ -969,7 +945,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               _clearForm();
               setState(() => _selectedIndex = 0);
             },
-            child: const Text('OK', style: TextStyle(color: Color(0xFF4CAF50))),
+            child: const Text('OK', style: TextStyle(color: Colors.green)),
           ),
         ],
       ),
@@ -1022,55 +998,15 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTreasuryOverview() {
-    return Consumer<MockupDataProvider>(
-      builder: (context, mockupProvider, child) {
-        // Only show treasury data if mock data is enabled
-        if (!mockupProvider.isMockDataEnabled) {
-          return Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey[800]!),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.account_balance,
-                    size: 48,
-                    color: Colors.grey[600],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No treasury data available',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Enable mock data to view treasury information',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          );
-        }
-
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Provider.of<ThemeProvider>(context).accentColor, Color(0xFF4CAF50)],
+              colors: [Provider.of<ThemeProvider>(context).accentColor, Colors.green],
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1161,12 +1097,9 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildRecentTransactions() {
-    return Consumer2<DAOProvider, MockupDataProvider>(
-      builder: (context, daoProvider, mockupProvider, child) {
-        // Only show transactions if mock data is enabled
-        final transactions = mockupProvider.isMockDataEnabled 
-            ? daoProvider.getRecentTransactions(limit: 5)
-            : <dynamic>[];
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        final transactions = daoProvider.transactions.take(5).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1224,10 +1157,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                       height: 40,
                       decoration: BoxDecoration(
                         color: tx.type == 'allocation'
-                            ? Colors.blue.withOpacity(0.2)
+                            ? Colors.blue.withValues(alpha: 0.2)
                             : tx.type == 'reward'
-                                ? Colors.green.withOpacity(0.2)
-                                : Colors.purple.withOpacity(0.2),
+                                ? Colors.green.withValues(alpha: 0.2)
+                                : Colors.purple.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Icon(
@@ -1326,7 +1259,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             const Spacer(),
             TextButton(
               onPressed: () => setState(() => _selectedIndex = 2),
-              child: const Text('Create Proposal', style: TextStyle(color: Color(0xFF4CAF50))),
+              child: const Text('Create Proposal', style: TextStyle(color: Colors.green)),
             ),
           ],
         ),
@@ -1345,7 +1278,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD93D).withOpacity(0.1),
+                      color: const Color(0xFFFFD93D).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: const Color(0xFFFFD93D)),
                     ),
@@ -1389,7 +1322,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                     child: ElevatedButton(
                       onPressed: () => _vote(true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
+                        backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
                       ),
                       child: const Text('Approve'),
@@ -1465,7 +1398,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         children: [
           Row(
             children: [
-              Icon(Icons.person, color: Color(0xFF4CAF50), size: 24),
+              Icon(Icons.person, color: Colors.green, size: 24),
               const SizedBox(width: 12),
               Text(
                 'Your Delegation Status',
@@ -1521,12 +1454,9 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTopDelegates() {
-    return Consumer2<DAOProvider, MockupDataProvider>(
-      builder: (context, daoProvider, mockupProvider, child) {
-        // Only show delegates if mock data is enabled
-        final delegates = mockupProvider.isMockDataEnabled
-            ? daoProvider.getTopDelegates(limit: 5)
-            : <dynamic>[];
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        final delegates = daoProvider.delegates.take(5).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1636,7 +1566,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF4CAF50).withOpacity(0.2),
+                              color: Colors.green.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -1644,7 +1574,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                               style: GoogleFonts.inter(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
-                                color: const Color(0xFF4CAF50),
+                                color: Colors.green,
                               ),
                             ),
                           ),
@@ -1698,7 +1628,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             icon: Icon(Icons.people_outline, size: 20),
             label: const Text('Delegate to Trusted Members'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4CAF50),
+              backgroundColor: Colors.green,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -1716,7 +1646,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 icon: Icon(Icons.person_outline, size: 18),
                 label: const Text('Self Delegate'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1733,7 +1663,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 icon: Icon(Icons.cancel_outlined, size: 18),
                 label: const Text('Revoke'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -1760,7 +1690,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         minChildSize: 0.5,
         builder: (context, scrollController) => Container(
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
           ),
           child: Column(
@@ -1799,12 +1729,9 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 ),
               ),
               Expanded(
-                child: Consumer2<DAOProvider, MockupDataProvider>(
-                  builder: (context, daoProvider, mockupProvider, child) {
-                    // Only show delegates if mock data is enabled
-                    final delegates = mockupProvider.isMockDataEnabled
-                        ? daoProvider.getTopDelegates(limit: 10)
-                        : <dynamic>[];
+                child: Consumer<DAOProvider>(
+                  builder: (context, daoProvider, child) {
+                    final delegates = daoProvider.delegates.take(10).toList();
                     
                     return ListView.builder(
                       controller: scrollController,
@@ -1820,7 +1747,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                               _delegateVote(delegate.name);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.all(16),
                               shape: RoundedRectangleBorder(
@@ -1875,7 +1802,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF4CAF50),
+                                    color: Colors.green,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -1904,7 +1831,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         title: Text('Delegate Voting Power', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1918,23 +1845,23 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50).withOpacity(0.1),
+                color: Colors.green.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFF4CAF50)),
+                border: Border.all(color: Colors.green),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Color(0xFF4CAF50), size: 16),
+                      Icon(Icons.info_outline, color: Colors.green, size: 16),
                       const SizedBox(width: 8),
                       Text(
                         'Delegation Benefits',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF4CAF50),
+                          color: Colors.green,
                         ),
                       ),
                     ],
@@ -1963,7 +1890,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Navigator.of(context).pop();
               _completeDelegation(delegateName);
             },
-            child: const Text('Confirm Delegation', style: TextStyle(color: Color(0xFF4CAF50))),
+            child: const Text('Confirm Delegation', style: TextStyle(color: Colors.green)),
           ),
         ],
       ),
@@ -1977,7 +1904,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Voting power successfully delegated to $delegateName'),
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: Colors.green,
         action: SnackBarAction(
           label: 'View Details',
           textColor: Theme.of(context).colorScheme.onPrimary,
@@ -2002,7 +1929,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -2011,7 +1938,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           children: [
             Row(
               children: [
-                Icon(Icons.check_circle, color: Color(0xFF4CAF50), size: 24),
+                Icon(Icons.check_circle, color: Colors.green, size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'Delegation Active',
@@ -2037,7 +1964,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   _revokeDelegation();
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                  backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
@@ -2081,7 +2008,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Delegation revoked successfully'),
-        backgroundColor: Color(0xFF4CAF50),
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -2090,7 +2017,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Self-delegation enabled'),
-        backgroundColor: Color(0xFF4CAF50),
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -2099,7 +2026,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Vote ${isYes ? 'Yes' : 'No'} cast successfully!'),
-        backgroundColor: const Color(0xFF4CAF50),
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -2111,7 +2038,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       builder: (context) => Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceVariant,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
@@ -2140,6 +2067,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 }
+
 
 
 

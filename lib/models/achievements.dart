@@ -40,7 +40,7 @@ class AchievementProgress {
   });
   
   double get progressPercentage {
-    final achievement = AchievementService.getAchievementById(achievementId);
+    final achievement = getAchievementById(achievementId);
     if (achievement == null) return 0.0;
     return (currentProgress / achievement.requiredProgress).clamp(0.0, 1.0);
   }
@@ -60,10 +60,8 @@ class AchievementProgress {
   }
 }
 
-/// Service class for managing achievements
-class AchievementService {
-  /// All available achievements in the app
-  static const List<Achievement> allAchievements = [
+/// All available achievements in the app
+const List<Achievement> allAchievements = [
     // AR Exploration Achievements
     Achievement(
       id: 'first_ar_visit',
@@ -261,123 +259,15 @@ class AchievementService {
       category: 'Web3',
       points: 80,
     ),
-  ];
-  
-  /// Get achievement by ID
-  static Achievement? getAchievementById(String id) {
-    try {
-      return allAchievements.firstWhere((achievement) => achievement.id == id);
-    } catch (e) {
-      return null;
-    }
-  }
-  
-  /// Get achievements by category
-  static List<Achievement> getAchievementsByCategory(String category) {
-    return allAchievements.where((achievement) => achievement.category == category).toList();
-  }
-  
-  /// Get all achievement categories
-  static List<String> getAllCategories() {
-    return allAchievements.map((achievement) => achievement.category).toSet().toList();
-  }
-  
-  /// Calculate total points for completed achievements
-  static int calculateTotalPoints(List<AchievementProgress> userProgress) {
-    int totalPoints = 0;
-    for (final progress in userProgress) {
-      if (progress.isCompleted) {
-        final achievement = getAchievementById(progress.achievementId);
-        if (achievement != null) {
-          totalPoints += achievement.points;
-        }
-      }
-    }
-    return totalPoints;
-  }
-  
-  /// Get completion percentage for all achievements
-  static double getOverallCompletionPercentage(List<AchievementProgress> userProgress) {
-    if (allAchievements.isEmpty) return 0.0;
-    
-    int completedCount = 0;
-    for (final progress in userProgress) {
-      if (progress.isCompleted) {
-        completedCount++;
-      }
-    }
-    
-    return (completedCount / allAchievements.length) * 100;
-  }
-  
-  /// Get achievements that are close to completion (75%+ progress)
-  static List<Achievement> getAlmostCompleteAchievements(List<AchievementProgress> userProgress) {
-    List<Achievement> almostComplete = [];
-    
-    for (final progress in userProgress) {
-      if (!progress.isCompleted && progress.progressPercentage >= 0.75) {
-        final achievement = getAchievementById(progress.achievementId);
-        if (achievement != null) {
-          almostComplete.add(achievement);
-        }
-      }
-    }
-    
-    return almostComplete;
-  }
-  
-  /// Create default progress for all achievements (for new users)
-  static List<AchievementProgress> createDefaultProgress() {
-    return allAchievements.map((achievement) => AchievementProgress(
-      achievementId: achievement.id,
-      currentProgress: 0,
-      isCompleted: false,
-    )).toList();
-  }
-  
-  /// Update progress for a specific achievement
-  static List<AchievementProgress> updateProgress(
-    List<AchievementProgress> currentProgress,
-    String achievementId,
-    int newProgress,
-  ) {
-    return currentProgress.map((progress) {
-      if (progress.achievementId == achievementId) {
-        final achievement = getAchievementById(achievementId);
-        if (achievement != null) {
-          final isCompleted = newProgress >= achievement.requiredProgress;
-          return progress.copyWith(
-            currentProgress: newProgress,
-            isCompleted: isCompleted,
-            completedDate: isCompleted && !progress.isCompleted ? DateTime.now() : progress.completedDate,
-          );
-        }
-      }
-      return progress;
-    }).toList();
-  }
-  
-  /// Increment progress for a specific achievement
-  static List<AchievementProgress> incrementProgress(
-    List<AchievementProgress> currentProgress,
-    String achievementId, {
-    int increment = 1,
-  }) {
-    return currentProgress.map((progress) {
-      if (progress.achievementId == achievementId && !progress.isCompleted) {
-        final newProgress = progress.currentProgress + increment;
-        final achievement = getAchievementById(achievementId);
-        if (achievement != null) {
-          final isCompleted = newProgress >= achievement.requiredProgress;
-          return progress.copyWith(
-            currentProgress: newProgress,
-            isCompleted: isCompleted,
-            completedDate: isCompleted ? DateTime.now() : null,
-          );
-        }
-      }
-      return progress;
-    }).toList();
+];
+
+/// Helper function to get achievement by ID
+/// For full achievement management, use AchievementService
+Achievement? getAchievementById(String id) {
+  try {
+    return allAchievements.firstWhere((achievement) => achievement.id == id);
+  } catch (e) {
+    return null;
   }
 }
 

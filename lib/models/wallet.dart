@@ -1,6 +1,6 @@
 // Wallet and Token Models
 enum TokenType { native, erc20, nft, governance }
-enum TransactionType { send, receive, swap, stake, unstake, governance_vote }
+enum TransactionType { send, receive, swap, stake, unstake, governanceVote }
 enum TransactionStatus { pending, confirmed, failed }
 
 class Token {
@@ -165,7 +165,7 @@ class WalletTransaction {
         return 'Staked';
       case TransactionType.unstake:
         return 'Unstaked';
-      case TransactionType.governance_vote:
+      case TransactionType.governanceVote:
         return 'Voted';
     }
   }
