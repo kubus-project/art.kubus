@@ -5,10 +5,12 @@ import 'package:provider/provider.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/chat_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/profile_provider.dart';
 import '../services/solana_walletconnect_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
 
 class ConnectWallet extends StatefulWidget {
   const ConnectWallet({super.key});
@@ -521,40 +523,58 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
       final address = await walletProvider.importWalletFromMnemonic(mnemonic);
-      
+
       // Import the wallet in Web3Provider as well
       await web3Provider.importWallet(mnemonic);
       
-      // Load or create user profile linked to wallet
-      if (mounted) {
-        final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-        final backendApiService = BackendApiService();
-        
-        // Check if profile exists on backend first
-        bool profileExistsOnBackend = false;
-        try {
-          await backendApiService.getProfileByWallet(address);
-          profileExistsOnBackend = true;
-          debugPrint('Profile exists on backend for wallet: $address');
-        } catch (e) {
-          debugPrint('Profile not found on backend, will create new: $e');
+        // Load or create user profile linked to wallet
+        if (mounted) {
+          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+          final backendApiService = BackendApiService();
+
+          // Prefer cache-first lookup via UserService to avoid unnecessary network calls
+          bool profileExistsOnBackend = false;
+          try {
+            // Force a fresh lookup during wallet import
+            final freshUser = await UserService.getUserById(address, forceRefresh: true);
+            if (freshUser != null) {
+              profileExistsOnBackend = true;
+              debugPrint('Profile found (fresh) for wallet: $address');
+            } else {
+              try {
+                await backendApiService.getProfileByWallet(address);
+                profileExistsOnBackend = true;
+                debugPrint('Profile exists on backend for wallet: $address');
+              } catch (e) {
+                debugPrint('Profile not found on backend, will create new: $e');
+              }
+            }
+          } catch (e) {
+            debugPrint('Profile lookup failed: $e');
+          }
+
+          // Load profile (will create default if doesn't exist)
+          await profileProvider.loadProfile(address);
+
+          // Only save to backend if profile doesn't exist there yet
+          if (!profileExistsOnBackend && profileProvider.currentUser != null) {
+            debugPrint('Saving new profile to backend for wallet: $address');
+            await profileProvider.saveProfile(
+              walletAddress: address,
+              username: profileProvider.currentUser!.username,
+              displayName: profileProvider.currentUser!.displayName,
+              bio: profileProvider.currentUser!.bio,
+              avatar: profileProvider.currentUser!.avatar,
+            );
+          }
+
+          // After profile is loaded/created, inform ChatProvider so chats and unread badges refresh
+          try {
+            await Provider.of<ChatProvider>(context, listen: false).setCurrentWallet(address);
+          } catch (e) {
+            debugPrint('connectwallet: failed to set chat provider wallet after import: $e');
+          }
         }
-        
-        // Load profile (will create default if doesn't exist)
-        await profileProvider.loadProfile(address);
-        
-        // Only save to backend if profile doesn't exist there yet
-        if (!profileExistsOnBackend && profileProvider.currentUser != null) {
-          debugPrint('Saving new profile to backend for wallet: $address');
-          await profileProvider.saveProfile(
-            walletAddress: address,
-            username: profileProvider.currentUser!.username,
-            displayName: profileProvider.currentUser!.displayName,
-            bio: profileProvider.currentUser!.bio,
-            avatar: profileProvider.currentUser!.avatar,
-          );
-        }
-      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1162,7 +1182,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       }
       
       // Set up callbacks
-      wcService.onConnected = (address) {
+      wcService.onConnected = (address) async {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1171,9 +1191,55 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               behavior: SnackBarBehavior.floating,
             ),
           );
-          
+
           // Update wallet provider and web3 provider
-          web3Provider.connectExistingWallet(address);
+          debugPrint('connectwallet: calling web3Provider.connectExistingWallet for $address');
+          await web3Provider.connectExistingWallet(address);
+          debugPrint('connectwallet: web3Provider.connectExistingWallet completed for $address');
+
+          // Load or create profile for this wallet, similar to import flow
+          try {
+            final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+            debugPrint('connectwallet: calling profileProvider.loadProfile for $address');
+            final backendApiService = BackendApiService();
+            bool profileExistsOnBackend = false;
+            try {
+              final freshUser = await UserService.getUserById(address, forceRefresh: true);
+              if (freshUser != null) profileExistsOnBackend = true;
+              else {
+                try {
+                  await backendApiService.getProfileByWallet(address);
+                  profileExistsOnBackend = true;
+                } catch (_) {}
+              }
+            } catch (_) {}
+
+            await profileProvider.loadProfile(address);
+            debugPrint('connectwallet: profileProvider.loadProfile completed for $address');
+            if (!profileExistsOnBackend && profileProvider.currentUser != null) {
+              try {
+                await profileProvider.saveProfile(
+                  walletAddress: address,
+                  username: profileProvider.currentUser!.username,
+                  displayName: profileProvider.currentUser!.displayName,
+                  bio: profileProvider.currentUser!.bio,
+                  avatar: profileProvider.currentUser!.avatar,
+                );
+              } catch (_) {}
+            }
+          } catch (e, st) {
+            debugPrint('connectwallet: profile load/create failed after walletconnect: $e\n$st');
+          }
+
+          // Inform ChatProvider so it can subscribe and refresh conversations/unread
+          try {
+            debugPrint('connectwallet: calling ChatProvider.setCurrentWallet for $address');
+            await Provider.of<ChatProvider>(context, listen: false).setCurrentWallet(address);
+            debugPrint('connectwallet: ChatProvider.setCurrentWallet completed for $address');
+          } catch (e, st) {
+            debugPrint('connectwallet: failed to set chat provider wallet after walletconnect: $e\n$st');
+          }
+
           Navigator.pop(context);
         }
       };
@@ -1237,6 +1303,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         
         // Import the wallet in Web3Provider using the generated mnemonic
         await web3Provider.importWallet(result['mnemonic']!);
+        // Notify ChatProvider about the new wallet so conversations and sockets refresh
+        try {
+          await Provider.of<ChatProvider>(context, listen: false).setCurrentWallet(result['address']!);
+        } catch (e) {
+          debugPrint('connectwallet: failed to set chat provider wallet after create: $e');
+        }
         
         // Create user profile linked to wallet
         if (mounted) {
@@ -1244,14 +1316,25 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           final backendApiService = BackendApiService();
           final address = result['address']!;
           
-          // Check if profile exists on backend first
+          // Prefer cache-first lookup via UserService to avoid unnecessary network calls
           bool profileExistsOnBackend = false;
           try {
-            await backendApiService.getProfileByWallet(address);
-            profileExistsOnBackend = true;
-            debugPrint('Profile exists on backend for wallet: $address');
+            // Force fresh lookup during wallet creation
+            final freshUser = await UserService.getUserById(address, forceRefresh: true);
+            if (freshUser != null) {
+              profileExistsOnBackend = true;
+              debugPrint('Profile found (fresh) for wallet: $address');
+            } else {
+              try {
+                await backendApiService.getProfileByWallet(address);
+                profileExistsOnBackend = true;
+                debugPrint('Profile exists on backend for wallet: $address');
+              } catch (e) {
+                debugPrint('Profile not found on backend, will create new: $e');
+              }
+            }
           } catch (e) {
-            debugPrint('Profile not found on backend, will create new: $e');
+            debugPrint('Profile lookup failed: $e');
           }
           
           // Only create profile if it doesn't exist on backend

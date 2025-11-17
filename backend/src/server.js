@@ -29,6 +29,27 @@ const achievementsRouter = require('./routes/achievements');
 const collectionsRouter = require('./routes/collections');
 const notificationsRouter = require('./routes/notifications');
 const searchRouter = require('./routes/search');
+const messagesRouter = require('./routes/messages');
+const avatarRouter = require('./routes/avatar');
+// Debug router (optional, controlled by env var)
+let debugRouter = null;
+if (process.env.ENABLE_DEBUG_ENDPOINTS && process.env.ENABLE_DEBUG_ENDPOINTS.toLowerCase() === 'true') {
+  const expressDebug = require('express');
+  const { verifyToken: verifyTokenMiddleware } = require('./middleware/auth');
+  debugRouter = expressDebug.Router();
+  debugRouter.get('/token', verifyTokenMiddleware, (req, res) => {
+    try {
+      // return decoded payload but mask sensitive fields
+      const payload = Object.assign({}, req.user || {});
+      if (payload.token) delete payload.token;
+      res.json({ success: true, payload });
+    } catch (e) {
+      res.status(500).json({ success: false, error: 'Failed to decode token' });
+    }
+  });
+  app.use('/api/debug', debugRouter);
+  logger.info('Debug endpoints enabled: /api/debug/token');
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +93,7 @@ const corsOptions = {
     }
   },
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-API-KEY'],
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
@@ -127,6 +149,39 @@ app.use('/profiles/posts', express.static(path.join(__dirname, '../uploads/profi
 app.use('/health', healthRouter);
 
 // API routes
+// Debug: verify imported routers are Express routers (log type/info)
+const _routeChecks = {
+  arMarkersRouter,
+  artworksRouter,
+  communityRouter,
+  uploadRouter,
+  storageRouter,
+  authRouter,
+  healthRouter,
+  mockDataRouter,
+  profilesRouter,
+  achievementsRouter,
+  collectionsRouter,
+  notificationsRouter,
+  searchRouter,
+  messagesRouter,
+  avatarRouter
+};
+
+Object.keys(_routeChecks).forEach((k) => {
+  try {
+    const val = _routeChecks[k];
+    // router.stack exists for express routers
+    if (val && typeof val === 'object' && val.stack) {
+      console.log(`[route-check] ${k}: router (stack len=${val.stack.length})`);
+    } else {
+      console.log(`[route-check] ${k}: NOT router -`, typeof val, val && Object.keys(val).slice(0,5));
+    }
+  } catch (e) {
+    console.log('[route-check] error checking', k, e && e.message);
+  }
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/ar-markers', arMarkersRouter);
 app.use('/api/artworks', artworksRouter);
@@ -139,6 +194,8 @@ app.use('/api/achievements', achievementsRouter);
 app.use('/api/collections', collectionsRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/search', searchRouter);
+app.use('/api/messages', messagesRouter);
+app.use('/api/avatar', avatarRouter);
 
 // API documentation
 app.get('/api', (req, res) => {
@@ -176,6 +233,72 @@ io.on('connection', (socket) => {
   socket.on('subscribe:artwork', (artworkId) => {
     socket.join(`artwork:${artworkId}`);
     logger.debug(`Client ${socket.id} subscribed to artwork:${artworkId}`);
+  });
+
+  // Conversation subscriptions for real-time messaging
+  socket.on('subscribe:conversation', (conversationId) => {
+    try {
+      socket.join(`conversation:${conversationId}`);
+      logger.debug(`Client ${socket.id} subscribed to conversation:${conversationId}`);
+    } catch (e) {
+      logger.warn(`Failed to subscribe socket ${socket.id} to conversation:${conversationId} - ${e.message}`);
+    }
+  });
+
+  // Subscribe/unsubscribe to personal user room (notifications)
+  socket.on('subscribe:user', (walletAddress) => {
+    try {
+      // Try to validate token from handshake (auth or headers)
+      const jwt = require('jsonwebtoken');
+      const token = socket.handshake?.auth?.token || (socket.handshake?.headers && socket.handshake.headers.authorization && socket.handshake.headers.authorization.split(' ')[1]);
+      if (!token) {
+        socket.emit('subscribe:error', { error: 'Authentication token required for subscribe:user' });
+        return;
+      }
+
+      const secret = process.env.JWT_SECRET || 'dev-secret';
+      let decoded = null;
+      try {
+        decoded = jwt.verify(token, secret);
+      } catch (err) {
+        socket.emit('subscribe:error', { error: 'Invalid or expired token' });
+        return;
+      }
+
+      const userWallet = (decoded.walletAddress || decoded.wallet || decoded.sub || '').toString().toLowerCase();
+      const requested = (walletAddress || '').toString().toLowerCase();
+      if (!userWallet || userWallet !== requested) {
+        socket.emit('subscribe:error', { error: 'Wallet address does not match token' });
+        return;
+      }
+
+      socket.join(`user:${userWallet}`);
+      logger.debug(`Client ${socket.id} subscribed to user:${userWallet}`);
+      socket.emit('subscribe:ok', { room: `user:${userWallet}` });
+    } catch (e) {
+      logger.warn(`Failed to subscribe socket ${socket.id} to user room - ${e.message}`);
+      socket.emit('subscribe:error', { error: e.message });
+    }
+  });
+
+  socket.on('unsubscribe:user', (walletAddress) => {
+    try {
+      const nid = (walletAddress || '').toString().toLowerCase();
+      socket.leave(`user:${nid}`);
+      logger.debug(`Client ${socket.id} unsubscribed from user:${nid}`);
+      socket.emit('subscribe:ok', { room: `user:${nid}`, unsubscribed: true });
+    } catch (e) {
+      logger.warn(`Failed to unsubscribe socket ${socket.id} from user room - ${e.message}`);
+    }
+  });
+
+  socket.on('leave:conversation', (conversationId) => {
+    try {
+      socket.leave(`conversation:${conversationId}`);
+      logger.debug(`Client ${socket.id} left conversation:${conversationId}`);
+    } catch (e) {
+      logger.warn(`Failed to remove socket ${socket.id} from conversation:${conversationId} - ${e.message}`);
+    }
   });
 
   socket.on('disconnect', () => {

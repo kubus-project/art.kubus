@@ -209,7 +209,7 @@ router.get('/stats/:walletAddress', asyncHandler(async (req, res) => {
 
   // Get total tokens earned
   const tokensResult = await query(
-    `SELECT COALESCE(SUM(a.token_reward), 0) as total_tokens
+    `SELECT COALESCE(SUM(a.reward_kub8), 0) as total_tokens
      FROM user_achievements ua
      JOIN achievements a ON ua.achievement_id = a.id
      WHERE ua.wallet_address = $1`,

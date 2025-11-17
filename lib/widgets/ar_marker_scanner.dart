@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../services/ar_service.dart';
 import '../providers/themeprovider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 
 /// Professional QR/Marker Scanner for AR Artwork Discovery
 class ARMarkerScanner extends StatefulWidget {
@@ -301,11 +302,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        themeProvider.accentColor,
-                      ),
-                    ),
+                    AppLoading(),
                     const SizedBox(height: 20),
                     Text(
                       'Launching AR Viewer...',

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../widgets/app_loading.dart';
 import '../../screens/mnemonic_reveal_screen.dart';
 import '../../providers/web3provider.dart';
 import '../../models/wallet.dart';
@@ -48,15 +49,13 @@ class _WalletHomeState extends State<WalletHome> {
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    color: Provider.of<ThemeProvider>(context).accentColor,
-                  ),
+                children: const [
+                  AppLoading(),
                   SizedBox(height: 16),
                   Text(
                     'Loading your wallet...',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
+                      color: Colors.white70,
                       fontSize: 16,
                     ),
                   ),

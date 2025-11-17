@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/achievements.dart';
+import '../../widgets/app_loading.dart';
 import '../../services/achievement_service.dart' as new_service;
 
 class AchievementsPage extends StatefulWidget {
@@ -85,7 +86,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         ),
       ),
       body: _isLoading
-            ? Center(child: CircularProgressIndicator())
+        ? const AppLoading()
             : Column(
                 children: [
                   _buildStatsHeader(),

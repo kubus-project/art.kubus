@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
+import '../../widgets/app_loading.dart';
 import '../../services/backend_api_service.dart';
 
 class NFTGallery extends StatefulWidget {
@@ -90,9 +91,7 @@ class _NFTGalleryState extends State<NFTGallery> {
 
   Widget _buildBody() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const AppLoading();
     }
 
     if (_error != null) {

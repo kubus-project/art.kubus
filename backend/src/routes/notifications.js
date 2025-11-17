@@ -132,7 +132,7 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
   // Emit WebSocket event if available
   const io = req.app.get('io');
   if (io) {
-    io.to(`user:${targetWallet}`).emit('notification:new', {
+    io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
       id: notification.id,
       type: notification.type,
       title: notification.title,

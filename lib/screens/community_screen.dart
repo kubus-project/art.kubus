@@ -1,5 +1,7 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,15 +10,27 @@ import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart' as loc;
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:math' as math;
 import '../providers/themeprovider.dart';
 import '../providers/config_provider.dart';
+import '../providers/profile_provider.dart';
 import '../services/backend_api_service.dart';
 import '../models/artwork.dart';
+import '../services/push_notification_service.dart';
 import 'art_detail_screen.dart';
 import 'user_profile_screen.dart';
 import '../community/community_interactions.dart';
+import '../services/user_service.dart';
+import '../providers/app_refresh_provider.dart';
+import '../services/socket_service.dart';
+import '../providers/notification_provider.dart';
+import '../providers/chat_provider.dart';
+import 'messages_screen.dart';
 
 class CommunityScreen extends StatefulWidget {
+  // Global key to allow other screens to request opening a post by id
+  static final GlobalKey<_CommunityScreenState> globalKey = GlobalKey<_CommunityScreenState>();
+
   const CommunityScreen({super.key});
 
   @override
@@ -28,6 +42,12 @@ class _CommunityScreenState extends State<CommunityScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late AnimationController _bellController;
+  late Animation<double> _bellScale;
+  late AnimationController _messagePulseController;
+  late Animation<double> _messageScale;
+  int _messageUnreadCount = 0;
+  int _bellUnreadCount = 0;
   
   late TabController _tabController;
   
@@ -35,6 +55,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   
   // Community data
   List<CommunityPost> _communityPosts = [];
+  // How many posts to prefetch comments for (make configurable)
+  final int _commentPrefetchCount = 8;
+  final int _prefetchConcurrencyLimit = 3;
+  final int _prefetchMaxRetries = 3;
+  final int _prefetchBaseDelayMs = 300; // milliseconds
   List<Artwork> _discoverArtworks = [];
   List<Map<String, dynamic>> _followingArtists = [];
   bool _isLoading = false;
@@ -59,15 +84,13 @@ class _CommunityScreenState extends State<CommunityScreen>
         _isLoadingDiscover = true;
       });
     }
-    
+
     try {
-      // Fetch artworks for discovery
       final artworks = await BackendApiService().getArtworks(
         arEnabled: true,
         page: 1,
         limit: 20,
       );
-      
       if (mounted) {
         setState(() {
           _discoverArtworks = artworks;
@@ -84,21 +107,18 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
     }
   }
-  
+
   Future<void> _loadFollowingArtists() async {
     if (mounted) {
       setState(() {
         _isLoadingFollowing = true;
       });
     }
-    
     try {
-      // Fetch artists list
       final artists = await BackendApiService().listArtists(
         limit: 20,
         offset: 0,
       );
-      
       if (mounted) {
         setState(() {
           _followingArtists = artists;
@@ -127,20 +147,33 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
     
     try {
+      // Ensure auth token is loaded first
+      final backendApi = BackendApiService();
+      try {
+        await backendApi.loadAuthToken();
+        debugPrint('🔐 Auth token loaded for community posts');
+      } catch (e) {
+        debugPrint('⚠️ No auth token: $e');
+      }
+      
       // Fetch community posts from backend API
-      final posts = await BackendApiService().getCommunityPosts(
+      final posts = await backendApi.getCommunityPosts(
         page: 1,
         limit: 50,
       );
+      debugPrint('📥 Loaded ${posts.length} posts from backend');
       
-      // Load saved interactions (likes, bookmarks, follows)
+      // Load saved interactions (likes, bookmarks, follows) - this overrides backend isLiked with local state
       await CommunityService.loadSavedInteractions(posts);
+      debugPrint('✅ Restored local interaction state for posts');
       
       if (mounted) {
         setState(() {
           _communityPosts = posts;
           _isLoading = false;
         });
+        // Prefetch comments for the first few posts in background for snappier UI
+        _prefetchComments();
       }
     } catch (e) {
       debugPrint('Error loading community data: $e');
@@ -151,6 +184,58 @@ class _CommunityScreenState extends State<CommunityScreen>
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _prefetchComments() async {
+    try {
+      final prefetchCount = math.min(_commentPrefetchCount, _communityPosts.length);
+      final concurrency = _prefetchConcurrencyLimit;
+      for (var i = 0; i < prefetchCount; i += concurrency) {
+        final end = math.min(i + concurrency, prefetchCount);
+        final batch = _communityPosts.sublist(i, end);
+        await Future.wait(batch.map((post) async {
+          int attempt = 0;
+          while (attempt < _prefetchMaxRetries) {
+            try {
+              final comments = await BackendApiService().getComments(postId: post.id);
+              post.comments = comments;
+              post.commentCount = post.comments.length;
+              if (mounted) setState(() {});
+              break;
+            } catch (e) {
+              attempt++;
+              final delayMs = _prefetchBaseDelayMs * (1 << (attempt - 1));
+              debugPrint('Prefetch comments failed for post ${post.id} (attempt $attempt): $e. Retrying in ${delayMs}ms');
+              await Future.delayed(Duration(milliseconds: delayMs));
+            }
+          }
+        }));
+      }
+    } catch (e) {
+      debugPrint('Unexpected error in _prefetchComments: $e');
+    }
+  }
+
+  /// Public helper: open comments view for a post by id (if present in current feed)
+  void openPostById(String postId) {
+    final idx = _communityPosts.indexWhere((p) => p.id == postId);
+    if (idx != -1) {
+      // delay to ensure UI is ready
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showComments(idx);
+      });
+    } else {
+      // If not in feed, attempt to reload and then open
+      (() async {
+        await _loadCommunityData();
+        final newIdx = _communityPosts.indexWhere((p) => p.id == postId);
+        if (newIdx != -1) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showComments(newIdx);
+          });
+        }
+      })();
     }
   }
   
@@ -195,6 +280,49 @@ class _CommunityScreenState extends State<CommunityScreen>
     ));
     
     _animationController.forward();
+
+    _bellController = AnimationController(
+      duration: const Duration(milliseconds: 450),
+      vsync: this,
+    );
+
+    _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(CurvedAnimation(
+      parent: _bellController,
+      curve: Curves.elasticOut,
+    ));
+
+    _messagePulseController = AnimationController(
+      duration: const Duration(milliseconds: 420),
+      vsync: this,
+    );
+    _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(CurvedAnimation(parent: _messagePulseController, curve: Curves.easeOut));
+
+    // Listen for socket notifications to animate bell
+    try {
+      SocketService().addNotificationListener(_onSocketNotificationForCommunity);
+    } catch (_) {}
+    
+    // Load initial unread notification count via provider
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final provider = Provider.of<NotificationProvider>(context, listen: false);
+        await provider.refresh();
+        if (!mounted) return;
+        setState(() { _bellUnreadCount = provider.unreadCount; });
+        provider.addListener(_onNotificationProviderChange);
+      } catch (_) {}
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        final cp = Provider.of<ChatProvider>(context, listen: false);
+        // Ensure ChatProvider is initialized so socket subscriptions and unread counts are active
+        try { await cp.initialize(); } catch (_) {}
+        if (!mounted) return;
+        _messageUnreadCount = cp.totalUnread;
+        cp.addListener(_onChatProviderChanged);
+      } catch (_) {}
+    });
     
     // Listen for config provider changes to reload data
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -216,19 +344,32 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
   
   // Helper to get user avatar from backend
-  Future<String> _getUserAvatar(String walletAddress) async {
+  Future<String> _getUserAvatar(String wallet) async {
     // Check cache first
-    if (_avatarCache.containsKey(walletAddress)) {
-      return _avatarCache[walletAddress]!;
+    if (_avatarCache.containsKey(wallet)) {
+      return _avatarCache[wallet]!;
     }
-    
+
     try {
-      final profile = await BackendApiService().getProfileByWallet(walletAddress);
-      final avatar = profile['avatar'] ?? '';
-      _avatarCache[walletAddress] = avatar; // Cache the result
-      return avatar;
+      // Prefer cache-first lookup via UserService to avoid immediate network call
+      final user = await UserService.getUserById(wallet);
+      final avatar = (user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty) ? user.profileImageUrl! : '';
+      _avatarCache[wallet] = avatar; // Cache the result (may be empty)
+      if (avatar.isNotEmpty) return avatar;
+
+      // Fallback to backend API if no avatar found in cached profile
+      try {
+        final profile = await BackendApiService().getProfileByWallet(wallet);
+        final a = profile['avatar'] ?? '';
+        _avatarCache[wallet] = a;
+        return a ?? '';
+      } catch (_) {
+        _avatarCache[wallet] = ''; // Cache empty result to prevent retries
+        return '';
+      }
     } catch (e) {
-      _avatarCache[walletAddress] = ''; // Cache empty result to prevent retries
+      debugPrint('CommunityScreen._getUserAvatar: lookup failed: $e');
+      _avatarCache[wallet] = '';
       return '';
     }
   }
@@ -244,6 +385,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
     
     _animationController.dispose();
+    try {
+      SocketService().removeNotificationListener(_onSocketNotificationForCommunity);
+    } catch (_) {}
+    try { Provider.of<NotificationProvider>(context, listen: false).removeListener(_onNotificationProviderChange); } catch (_) {}
+    _bellController.dispose();
+    _messagePulseController.dispose();
+    try { Provider.of<ChatProvider>(context, listen: false).removeListener(_onChatProviderChanged); } catch (_) {}
     _tabController.dispose();
     super.dispose();
   }
@@ -288,7 +436,6 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildAppBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Container(
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -308,24 +455,157 @@ class _CommunityScreenState extends State<CommunityScreen>
             },
             icon: Icon(
               Icons.search,
-              color: themeProvider.accentColor,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 28,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              _showNotifications();
-            },
-            icon: Icon(
-              Icons.notifications_outlined,
-              color: themeProvider.accentColor,
-              size: 28,
+          GestureDetector(
+            onTap: _showNotifications,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                AnimatedBuilder(
+                  animation: _bellController,
+                  builder: (ctx, child) {
+                    final scale = _bellScale.value;
+                    return Transform.scale(
+                      scale: scale,
+                      child: Icon(
+                        _bellUnreadCount > 0 ? Icons.notifications : Icons.notifications_outlined,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        size: 28,
+                      ),
+                    );
+                  },
+                ),
+                if (_bellUnreadCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: themeProvider.accentColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
+                      ),
+                      constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
+                      child: Center(
+                        child: Text(
+                          _bellUnreadCount > 99 ? '99+' : '$_bellUnreadCount',
+                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
+          ),
+          const SizedBox(width: 12),
+          // Message icon - open messages screen as a full-screen modal
+          Selector<ChatProvider, int>(
+            selector: (_, cp) => cp.totalUnread,
+            builder: (context, totalUnread, child) {
+              // Animate when unread count increases
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (totalUnread > 0 && _messageScale.value == 1.0) {
+                  _messagePulseController.forward(from: 0.0);
+                }
+              });
+              return GestureDetector(
+                onTap: () {
+                  showGeneralDialog(
+                    context: context,
+                    barrierDismissible: true,
+                    barrierLabel: 'Messages',
+                    barrierColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
+                    transitionDuration: const Duration(milliseconds: 300),
+                    pageBuilder: (ctx, a1, a2) => const MessagesScreen(),
+                    transitionBuilder: (ctx, anim1, anim2, child) {
+                      final curved = Curves.easeOut.transform(anim1.value);
+                      return Transform.translate(
+                        offset: Offset(0, (1 - curved) * MediaQuery.of(context).size.height),
+                        child: Opacity(opacity: anim1.value, child: child),
+                      );
+                    },
+                  );
+                },
+                child: Tooltip(
+                  message: 'Open messages',
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      ScaleTransition(
+                        scale: _messageScale,
+                        child: Icon(
+                          totalUnread > 0 ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                          color: totalUnread > 0 ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface,
+                          size: 26,
+                        ),
+                      ),
+                      // Unread indicator for messages
+                      if (totalUnread > 0)
+                        Positioned(
+                          right: -6,
+                          top: -6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: themeProvider.accentColor,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
+                            ),
+                            constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
+                            child: Center(
+                              child: Text(
+                                totalUnread > 99 ? '99+' : '$totalUnread',
+                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
   }
+
+  void _onSocketNotificationForCommunity(Map<String, dynamic> data) {
+    if (!mounted) return;
+    try {
+      setState(() {
+        _bellUnreadCount += 1;
+      });
+      _bellController.forward(from: 0.0);
+    } catch (_) {}
+  }
+
+  void _onNotificationProviderChange() {
+    if (!mounted) return;
+    try {
+      final provider = Provider.of<NotificationProvider>(context, listen: false);
+      setState(() { _bellUnreadCount = provider.unreadCount; });
+    } catch (_) {}
+  }
+
+  void _onChatProviderChanged() {
+    try {
+      final cp = Provider.of<ChatProvider>(context, listen: false);
+      final newCount = cp.totalUnread;
+      if (newCount > _messageUnreadCount) {
+        _messagePulseController.forward(from: 0.0);
+      }
+      _messageUnreadCount = newCount;
+      setState(() {});
+    } catch (_) {}
+  }
+
+  // Unread notification count is now managed via NotificationProvider.
 
   Widget _buildTabBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -380,148 +660,193 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildFeedTab() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const AppLoading();
     }
     
     if (_communityPosts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.feed,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No Posts Available',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      return RefreshIndicator(
+        onRefresh: () async {
+          await _loadCommunityData();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.feed,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Posts Available',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Community posts will appear here when available',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Community posts will appear here when available',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: _communityPosts.length,
-      itemBuilder: (context, index) => _buildPostCard(index),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadCommunityData();
+      },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        itemCount: _communityPosts.length,
+        itemBuilder: (context, index) => _buildPostCard(index),
+      ),
     );
   }
 
   Widget _buildDiscoverTab() {
     if (_isLoadingDiscover) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const AppLoading();
     }
     
     if (_discoverArtworks.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.explore,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No Artworks to Discover',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      return RefreshIndicator(
+        onRefresh: () async {
+          await _loadDiscoverArtworks();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.explore,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Artworks to Discover',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'New artworks will appear here',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'New artworks will appear here',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.8,
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadDiscoverArtworks();
+      },
+      child: GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.8,
+        ),
+        itemCount: _discoverArtworks.length,
+        itemBuilder: (context, index) => _buildDiscoverArtworkCard(_discoverArtworks[index]),
       ),
-      itemCount: _discoverArtworks.length,
-      itemBuilder: (context, index) => _buildDiscoverArtworkCard(_discoverArtworks[index]),
     );
   }
 
   Widget _buildFollowingTab() {
     if (_isLoadingFollowing) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const AppLoading();
     }
     
     if (_followingArtists.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.people,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No Artists Yet',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      return RefreshIndicator(
+        onRefresh: () async {
+          await _loadFollowingArtists();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.people,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Artists Yet',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Discover and follow artists in the Discover tab',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Discover and follow artists in the Discover tab',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: _followingArtists.length,
-      itemBuilder: (context, index) => _buildArtistCard(_followingArtists[index], index),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _loadFollowingArtists();
+      },
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        itemCount: _followingArtists.length,
+        itemBuilder: (context, index) => _buildArtistCard(_followingArtists[index], index),
+      ),
     );
   }
 
@@ -590,20 +915,15 @@ class _CommunityScreenState extends State<CommunityScreen>
             children: [
               GestureDetector(
                 onTap: () => _viewUserProfile(post.authorId),
-                child: FutureBuilder<String>(
-                  future: _getUserAvatar(post.authorId),
-                  builder: (context, snapshot) {
-                    return CircleAvatar(
-                      radius: 20,
-                      backgroundColor: themeProvider.accentColor,
-                      backgroundImage: snapshot.hasData && snapshot.data!.isNotEmpty
-                          ? NetworkImage(snapshot.data!) as ImageProvider
-                          : null,
-                      child: !snapshot.hasData || snapshot.data!.isEmpty
-                          ? Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20)
-                          : null,
-                    );
-                  },
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: themeProvider.accentColor,
+                  backgroundImage: post.authorAvatar != null && post.authorAvatar!.isNotEmpty
+                      ? NetworkImage(post.authorAvatar!) as ImageProvider
+                      : null,
+                  child: post.authorAvatar == null || post.authorAvatar!.isEmpty
+                      ? Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20)
+                      : null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -623,7 +943,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        '@${post.authorId.substring(0, 8)}',
+                        '@${post.authorUsername}',
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 12 : 14,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1123,90 +1443,209 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  void _showNotifications() {
+  Future<void> _showNotifications() async {
+    final notificationService = PushNotificationService();
+    final backend = BackendApiService();
+    List<Map<String, dynamic>> combined = [];
+    
+    // Initial load function
+    Future<List<Map<String, dynamic>>> loadNotifications() async {
+      try {
+        // Ensure auth token is loaded for user-specific notifications
+        try {
+          await backend.loadAuthToken();
+          final token = backend.getAuthToken();
+          debugPrint('🔐 Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
+          // Optionally fetch which wallet this token maps to
+          try {
+            final me = await backend.getMyProfile();
+            debugPrint('🔍 Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
+          } catch (e) {
+            debugPrint('⚠️ Unable to map token to profile: $e');
+          }
+        } catch (e) {
+          debugPrint('⚠️ No auth token available: $e');
+        }
+        
+        // Load local in-app notifications
+        final local = await notificationService.getInAppNotifications();
+        // Load server notifications (if authenticated)
+        final remote = await backend.getNotifications(limit: 50);
+        debugPrint('📥 Loaded ${local.length} local + ${remote.length} remote notifications');
+        // Normalize remote (ensure Map<String,dynamic>)
+        final remapped = remote.map((e) => Map<String, dynamic>.from(e)).toList();
+        final notifications = [...local, ...remapped];
+        // Sort by timestamp desc if available
+        notifications.sort((a, b) {
+          final ta = a['timestamp'] ?? a['createdAt'] ?? '';
+          final tb = b['timestamp'] ?? b['createdAt'] ?? '';
+          try {
+            final da = DateTime.parse(ta.toString());
+            final db = DateTime.parse(tb.toString());
+            return db.compareTo(da);
+          } catch (_) {
+            return 0;
+          }
+        });
+        return notifications;
+      } catch (e) {
+        debugPrint('Failed to load notifications: $e');
+        return [];
+      }
+    }
+    
+    combined = await loadNotifications();
+    if (!mounted) return;
+
+    // Clear bell unread count when opening notifications
+    try {
+      setState(() { _bellUnreadCount = 0; });
+      Provider.of<NotificationProvider>(context, listen: false).markViewed();
+    } catch (_) {}
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Text(
-                    'Community Notifications',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Mark all read',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Provider.of<ThemeProvider>(context).accentColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.notifications_none,
-                        size: 64,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No Notifications',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'You\'re all caught up!',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  children: [
+                    Text(
+                      'Community Notifications',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Removed 'Mark all read' per UX decision: notifications are marked as read when viewed
+                  ],
+                ),
+              ),
+              Expanded(
+                child: combined.isEmpty
+                    ? RefreshIndicator(
+                        onRefresh: () async {
+                          final refreshed = await loadNotifications();
+                          setModalState(() {
+                            combined = refreshed;
+                          });
+                        },
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height * 0.4,
+                            child: Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.notifications_none,
+                                      size: 64,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No Notifications',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'You\'re all caught up!',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          final refreshed = await loadNotifications();
+                          setModalState(() {
+                            combined = refreshed;
+                          });
+                        },
+                        child: ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          itemBuilder: (ctx, i) {
+                            final n = combined[i];
+                            final type = (n['interactionType'] ?? n['type'] ?? '').toString();
+                            // Extract sender info from backend notification structure
+                            final sender = n['sender'] as Map<String, dynamic>?;
+                            final user = sender?['displayName'] as String? ?? sender?['username'] as String? ?? (n['userName'] ?? n['authorName'] ?? 'Someone').toString();
+                            final body = (n['comment'] ?? n['message'] ?? n['content'] ?? '').toString();
+                            final ts = (n['timestamp'] ?? n['createdAt'] ?? '').toString();
+                            String time = ts.isNotEmpty ? ts : '';
+                            try {
+                              if (time.isNotEmpty) time = _getTimeAgo(DateTime.parse(time));
+                            } catch (_) {}
+                            final leadSeed = (sender?['wallet'] ?? sender?['wallet_address'] ?? sender?['walletAddress'] ?? user).toString();
+                            return ListTile(
+                              leading: CircleAvatar(backgroundImage: NetworkImage(UserService.safeAvatarUrl(leadSeed))),
+                              title: Text(
+                                type == 'like' ? '$user liked your post' : type == 'comment' ? '$user commented' : type == 'reply' ? '$user replied' : type == 'mention' ? '$user mentioned you' : (n['type'] ?? 'Notification').toString(),
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: Text(body, maxLines: 2, overflow: TextOverflow.ellipsis),
+                              trailing: Text(time, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                              onTap: () {
+                                // Close and navigate to post or take appropriate action
+                                Navigator.pop(context);
+                                final postId = n['postId']?.toString();
+                                if (postId != null && postId.isNotEmpty) {
+                                  // attempt to find post in current feed and open comments
+                                  final idx = _communityPosts.indexWhere((p) => p.id == postId);
+                                  if (idx != -1) {
+                                    // open comments for that post
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      _showComments(idx);
+                                    });
+                                  }
+                                }
+                              },
+                            );
+                          },
+                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          itemCount: combined.length,
+                        ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1277,8 +1716,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           // Check if user has auth token
                           try {
                             final prefs = await SharedPreferences.getInstance();
-                            final walletAddress = prefs.getString('wallet_address');
-                            
+                            final walletAddress = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('walletAddress');
+
                             if (walletAddress == null || walletAddress.isEmpty) {
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1300,7 +1739,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               debugPrint('No JWT token found, auto-registering user');
                               try {
                                 await BackendApiService().saveProfile({
-                                  'walletAddress': walletAddress,
+                                  'wallet': walletAddress,
                                   'username': 'user_${walletAddress.substring(0, 8)}',
                                   'displayName': 'User ${walletAddress.substring(0, 8)}',
                                   'bio': '',
@@ -1483,8 +1922,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 },
                                 icon: const Icon(Icons.close),
                                 style: IconButton.styleFrom(
-                                  backgroundColor: Colors.black54,
-                                  foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
+                                  foregroundColor: Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),
@@ -1496,7 +1935,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         Container(
                           height: 200,
                           decoration: BoxDecoration(
-                            color: Colors.black87,
+                            color: Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Stack(
@@ -1504,7 +1943,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
+                               children: [
                                     Icon(
                                       Icons.videocam,
                                       size: 48,
@@ -1515,7 +1954,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       _selectedPostVideo!.name,
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
-                                        color: Colors.white,
+                                        color: Provider.of<ThemeProvider>(context).accentColor,
                                       ),
                                       textAlign: TextAlign.center,
                                       maxLines: 2,
@@ -1535,8 +1974,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   },
                                   icon: const Icon(Icons.close),
                                   style: IconButton.styleFrom(
-                                    backgroundColor: Colors.black54,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
+                                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -1711,7 +2150,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           children: [
             Icon(
               icon,
-              color: Provider.of<ThemeProvider>(context).accentColor,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 24,
             ),
             const SizedBox(height: 8),
@@ -1740,24 +2179,20 @@ class _CommunityScreenState extends State<CommunityScreen>
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
     debugPrint('DEBUG: Post ${post.id} was liked: $wasLiked, count: ${post.likeCount}');
-    
-    // Update UI immediately with direct state change
-    setState(() {
-      post.isLiked = !wasLiked;
-      post.likeCount = wasLiked ? post.likeCount - 1 : post.likeCount + 1;
-    debugPrint('DEBUG: UI updated immediately - liked: ${post.isLiked}, count: ${post.likeCount}');
-    });
-    
-    // Update through service in background
+
     try {
-      // Get current user ID from SharedPreferences
+      // Get current user wallet from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      final currentUserId = prefs.getString('user_id');
-      
-      await CommunityService.togglePostLike(post, currentUserId: currentUserId);
-    debugPrint('DEBUG: Service call completed successfully');
+      final currentUserWallet = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('user_id');
+
+      // Let the service perform the toggle and persistence; it mutates `post` synchronously
+      await CommunityService.togglePostLike(post, currentUserWallet: currentUserWallet);
+      debugPrint('DEBUG: Service call completed successfully - liked: ${post.isLiked}, count: ${post.likeCount}');
+
       if (!mounted) return;
-      
+      // Rebuild UI to reflect the updated post state
+      setState(() {});
+
       // Show feedback message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1766,15 +2201,11 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
       );
     } catch (e) {
-    debugPrint('DEBUG: Error in togglePostLike: $e');
-      // Revert state if service fails
-      setState(() {
-        post.isLiked = wasLiked;
-        post.likeCount = wasLiked ? post.likeCount + 1 : post.likeCount - 1;
-    debugPrint('DEBUG: State reverted due to error');
-      });
+      debugPrint('DEBUG: Error in togglePostLike: $e');
+      // CommunityService performs rollback on error; ensure UI is refreshed
+      setState(() {});
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to ${!wasLiked ? 'like' : 'unlike'} post'),
@@ -1816,29 +2247,29 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (artistId.isEmpty) return;
     
     try {
-      // Toggle follow state
-      final isCurrentlyFollowing = _followedArtists[index] ?? false;
-      
-      if (isCurrentlyFollowing) {
-        // Unfollow
-        await BackendApiService().unfollowUser(artistId);
-      } else {
-        // Follow
-        await BackendApiService().followUser(artistId);
-      }
-      
+      // Use centralized UserService.toggleFollow which handles backend sync + local fallback
+      final newState = await UserService.toggleFollow(artistId);
+
       if (!mounted) return;
-      
-      // Update local state
+
+      // Update local follow map and refetch artist stats from backend
+      final backend = BackendApiService();
+      int updatedFollowers = (artist['followersCount'] as int?) ?? 0;
+      try {
+        final stats = await backend.getUserStats(artistId);
+        updatedFollowers = stats['followers'] as int? ?? updatedFollowers;
+      } catch (_) {}
       setState(() {
-        _followedArtists[index] = !isCurrentlyFollowing;
+        _followedArtists[index] = newState;
+        _followingArtists[index]['followersCount'] = updatedFollowers;
       });
-      
+
+      // Trigger global refresh so other UIs update
+      try { Provider.of<AppRefreshProvider>(context, listen: false).triggerCommunity(); } catch (_) {}
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(!isCurrentlyFollowing 
-              ? 'Now following $artistName!' 
-              : 'Unfollowed $artistName'),
+          content: Text(newState ? 'Now following $artistName!' : 'Unfollowed $artistName'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -1856,11 +2287,58 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  void _showComments(int index) {
+  void _showComments(int index) async {
     if (index >= _communityPosts.length) return;
     
     final post = _communityPosts[index];
+    debugPrint('🔵 _showComments called for post ${post.id}');
+    
+    // Fetch comments from backend to ensure we have fresh, nested replies and author avatars
+    try {
+      debugPrint('   📥 Fetching comments from backend...');
+      final backendComments = await BackendApiService().getComments(postId: post.id);
+      debugPrint('   ✅ Received ${backendComments.length} root comments from backend');
+      
+      // Count total comments including nested replies
+      int totalComments = backendComments.length;
+      for (final comment in backendComments) {
+        totalComments += comment.replies.length;
+        debugPrint('   Comment ${comment.id} has ${comment.replies.length} replies');
+      }
+      debugPrint('   Total comments (including nested): $totalComments');
+      
+      // Replace current comments with backend-provided nested comments
+      post.comments = backendComments;
+      post.commentCount = post.comments.length;
+      
+      // Load liked state from SharedPreferences for all comments and replies
+      debugPrint('   📥 Loading liked state from SharedPreferences...');
+      final prefs = await SharedPreferences.getInstance();
+      final likedComments = prefs.getStringList('community_likes_comments') ?? [];
+      debugPrint('   Found ${likedComments.length} liked comments in local storage');
+      
+      void applyLikedState(Comment comment) {
+        final commentKey = '${post.id}|${comment.id}';
+        comment.isLiked = likedComments.contains(commentKey);
+        debugPrint('   Comment ${comment.id}: isLiked=${comment.isLiked}, key=$commentKey');
+        for (final reply in comment.replies) {
+          applyLikedState(reply);
+        }
+      }
+      
+      for (final comment in post.comments) {
+        applyLikedState(comment);
+      }
+      
+      debugPrint('   ✅ Liked state applied to all comments');
+      
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('❌ Failed to load backend comments for post ${post.id}: $e');
+    }
+    
     final TextEditingController commentController = TextEditingController();
+    String? replyToCommentId; // Track which comment is being replied to
     
     showModalBottomSheet(
       context: context,
@@ -1921,29 +2399,36 @@ class _CommunityScreenState extends State<CommunityScreen>
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Provider.of<ThemeProvider>(context).accentColor,
-                                Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Center(
-                            child: Text(
-                              post.comments[commentIndex].authorName[0].toUpperCase(),
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onPrimary,
+                        // Avatar (if available) or fallback initial avatar
+                        post.comments[commentIndex].authorAvatar != null && post.comments[commentIndex].authorAvatar!.isNotEmpty
+                            ? CircleAvatar(
+                                radius: 16,
+                                backgroundImage: NetworkImage(post.comments[commentIndex].authorAvatar!),
+                                backgroundColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
+                              )
+                            : Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Provider.of<ThemeProvider>(context).accentColor,
+                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    post.comments[commentIndex].authorName.isNotEmpty ? post.comments[commentIndex].authorName[0].toUpperCase() : 'U',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(context).colorScheme.onPrimary,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -1973,6 +2458,162 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                                 ),
                               ),
+                              const SizedBox(height: 8),
+                              // Comment actions: like and reply
+                              Row(
+                                children: [
+                                  IconButton(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: Icon(
+                                      post.comments[commentIndex].isLiked ? Icons.favorite : Icons.favorite_border,
+                                      size: 18,
+                                      color: post.comments[commentIndex].isLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                    onPressed: () async {
+                                      // Optimistic toggle
+                                      setModalState(() {
+                                        post.comments[commentIndex].isLiked = !post.comments[commentIndex].isLiked;
+                                        post.comments[commentIndex].likeCount += post.comments[commentIndex].isLiked ? 1 : -1;
+                                      });
+                                      try {
+                                        await CommunityService.toggleCommentLike(post.comments[commentIndex], post.id);
+                                      } catch (e) {
+                                        // rollback on error
+                                        setModalState(() {
+                                          post.comments[commentIndex].isLiked = !post.comments[commentIndex].isLiked;
+                                          post.comments[commentIndex].likeCount += post.comments[commentIndex].isLiked ? 1 : -1;
+                                        });
+                                        // Show error feedback
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text('Failed to update like: $e'),
+                                              backgroundColor: Colors.red,
+                                              duration: const Duration(seconds: 2),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${post.comments[commentIndex].likeCount}',
+                                    style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  GestureDetector(
+                                    onTap: () {
+                                      // Set reply parent and prefill mention
+                                      final authorName = post.comments[commentIndex].authorName;
+                                      final fallbackId = post.comments[commentIndex].authorId;
+                                      String mention;
+                                      if (authorName.isNotEmpty) {
+                                        final sanitized = authorName.replaceAll(' ', '');
+                                        mention = '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
+                                      } else if (fallbackId.isNotEmpty) {
+                                        mention = '@${fallbackId.substring(0, 8)} ';
+                                      } else {
+                                        mention = '';
+                                      }
+                                      setModalState(() {
+                                        replyToCommentId = post.comments[commentIndex].id; // Track parent comment
+                                        commentController.text = mention;
+                                        // place cursor at end
+                                        commentController.selection = TextSelection.fromPosition(TextPosition(offset: commentController.text.length));
+                                      });
+                                    },
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.reply_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                        const SizedBox(width: 6),
+                                        Text('Reply', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // Nested replies (rendered indented)
+                              if (post.comments[commentIndex].replies.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: post.comments[commentIndex].replies.map((reply) {
+                                    return Container(
+                                      margin: const EdgeInsets.only(top: 8),
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          reply.authorAvatar != null && reply.authorAvatar!.isNotEmpty
+                                              ? CircleAvatar(radius: 12, backgroundImage: NetworkImage(reply.authorAvatar!))
+                                              : Container(width: 24, height: 24, decoration: BoxDecoration(color: Provider.of<ThemeProvider>(context).accentColor, borderRadius: BorderRadius.circular(12)), child: Center(child: Text(reply.authorName.isNotEmpty ? reply.authorName[0].toUpperCase() : 'U', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 12)))),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(reply.authorName, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+                                                const SizedBox(height: 4),
+                                                Text(reply.content, style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8))),
+                                                const SizedBox(height: 6),
+                                                Row(
+                                                  children: [
+                                                    Text(_getTimeAgo(reply.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                                                    const SizedBox(width: 16),
+                                                    GestureDetector(
+                                                      onTap: () async {
+                                                        setModalState(() {
+                                                          reply.isLiked = !reply.isLiked;
+                                                          reply.likeCount += reply.isLiked ? 1 : -1;
+                                                        });
+                                                        try {
+                                                          await CommunityService.toggleCommentLike(reply, post.id);
+                                                        } catch (e) {
+                                                          setModalState(() {
+                                                            reply.isLiked = !reply.isLiked;
+                                                            reply.likeCount += reply.isLiked ? 1 : -1;
+                                                          });
+                                                          // Show error feedback
+                                                          if (context.mounted) {
+                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                              SnackBar(
+                                                                content: Text('Failed to update like: $e'),
+                                                                backgroundColor: Colors.red,
+                                                                duration: const Duration(seconds: 2),
+                                                              ),
+                                                            );
+                                                          }
+                                                        }
+                                                      },
+                                                      child: Row(
+                                                        children: [
+                                                          Icon(
+                                                            reply.isLiked ? Icons.favorite : Icons.favorite_border,
+                                                            size: 14,
+                                                            color: reply.isLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                          ),
+                                                          const SizedBox(width: 4),
+                                                          Text('${reply.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -1997,30 +2638,71 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                   ),
                 ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Provider.of<ThemeProvider>(context).accentColor,
-                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
+                    // Reply indicator (shows when replying to a comment)
+                    if (replyToCommentId != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.reply, size: 16, color: Provider.of<ThemeProvider>(context).accentColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Replying to comment',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: Provider.of<ThemeProvider>(context).accentColor,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                setModalState(() {
+                                  replyToCommentId = null;
+                                  commentController.clear();
+                                });
+                              },
+                            ),
                           ],
                         ),
-                        borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Center(
-                        child: Text(
-                          'U',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Row(
+                      children: [
+                        // Current user avatar
+                        Consumer<ProfileProvider>(
+                      builder: (context, profileProvider, _) {
+                        final currentUser = profileProvider.currentUser;
+                        final avatarUrl = currentUser?.avatar;
+                        final displayName = currentUser?.displayName ?? currentUser?.username ?? 'U';
+                        
+                        return CircleAvatar(
+                          radius: 16,
+                          backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+                          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                              ? NetworkImage(avatarUrl)
+                              : null,
+                          child: avatarUrl == null || avatarUrl.isEmpty
+                              ? Text(
+                                  displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onPrimary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -2061,17 +2743,46 @@ class _CommunityScreenState extends State<CommunityScreen>
                           if (value.trim().isNotEmpty) {
                             final messenger = ScaffoldMessenger.of(context);
                             try {
-                              final prefs = await SharedPreferences.getInstance();
-                              final currentUserId = prefs.getString('user_id');
-                              final userName = prefs.getString('username') ?? 'Current User';
-                              
-                              await CommunityService.addComment(
-                                post,
-                                value.trim(),
-                                userName,
-                                currentUserId: currentUserId,
-                              );
+                                final prefs = await SharedPreferences.getInstance();
+                                var currentUserId = prefs.getString('user_id');
+                                var userName = prefs.getString('username') ?? 'Current User';
+                                if (currentUserId == null || currentUserId.isEmpty) {
+                                  // Allow commenting if wallet is connected (mnemonic or wallet_address present)
+                                  final walletAddress = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('walletAddress');
+                                  if (walletAddress != null && walletAddress.isNotEmpty) {
+                                    currentUserId = walletAddress;
+                                    userName = prefs.getString('username') ?? 'user_${walletAddress.substring(0, 8)}';
+                                  }
+                                }
+                                if (currentUserId == null || currentUserId.isEmpty) {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please complete onboarding or re-login to comment.'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                debugPrint('💬 Adding comment with parentCommentId: $replyToCommentId');
+                                await CommunityService.addComment(
+                                  post,
+                                  value.trim(),
+                                  userName,
+                                  currentUserId: currentUserId,
+                                  parentCommentId: replyToCommentId, // Pass parent comment ID for nesting
+                                );
+                                // Refresh comments from backend to ensure server state (avatars, real ids)
+                                try {
+                                  final backendComments = await BackendApiService().getComments(postId: post.id);
+                                  post.comments = backendComments;
+                                  post.commentCount = post.comments.length;
+                                } catch (e) {
+                                  debugPrint('Warning: failed to refresh comments after submit: $e');
+                                }
                               if (!mounted) return;
+                              // Reset reply state
+                              replyToCommentId = null;
                               setModalState(() {});
                               setState(() {});
                               commentController.clear();
@@ -2108,22 +2819,50 @@ class _CommunityScreenState extends State<CommunityScreen>
                       ),
                       child: IconButton(
                         onPressed: () async {
-                          if (commentController.text.trim().isNotEmpty) {
+                            if (commentController.text.trim().isNotEmpty) {
                             final messenger = ScaffoldMessenger.of(context);
                             try {
                               final prefs = await SharedPreferences.getInstance();
-                              final currentUserId = prefs.getString('user_id');
-                              final userName = prefs.getString('username') ?? 'Current User';
+                              var currentUserId = prefs.getString('user_id');
+                              var userName = prefs.getString('username') ?? 'Current User';
                               final commentText = commentController.text.trim();
-                              
+                              if (currentUserId == null || currentUserId.isEmpty) {
+                                final walletAddress = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('walletAddress');
+                                if (walletAddress != null && walletAddress.isNotEmpty) {
+                                  currentUserId = walletAddress;
+                                  userName = prefs.getString('username') ?? 'user_${walletAddress.substring(0, 8)}';
+                                }
+                              }
+                              if (currentUserId == null || currentUserId.isEmpty) {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Please complete onboarding or re-login to comment.'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                                return;
+                              }
+                              debugPrint('💬 Adding comment (button) with parentCommentId: $replyToCommentId');
                               await CommunityService.addComment(
                                 post,
                                 commentText,
                                 userName,
                                 currentUserId: currentUserId,
+                                parentCommentId: replyToCommentId, // Pass parent comment ID for nesting
                               );
+                              // Refresh comments to reflect server state
+                              try {
+                                final backendComments = await BackendApiService().getComments(postId: post.id);
+                                post.comments = backendComments;
+                                post.commentCount = post.comments.length;
+                              } catch (e) {
+                                debugPrint('Warning: failed to refresh comments after send: $e');
+                              }
                               if (!mounted) return;
                               
+                              // Reset reply state
+                              replyToCommentId = null;
                               setModalState(() {});
                               setState(() {});
                               commentController.clear();
@@ -2157,10 +2896,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ],
+                  ], // End of Row children
+                ), // End of Row
+              ], // End of Column children
+            ), // End of Column
+          ), // End of Container
+        ], // End of main Column children
           ),
         ),
       ),
@@ -2173,21 +2914,22 @@ class _CommunityScreenState extends State<CommunityScreen>
     final post = _communityPosts[index];
     final prefs = await SharedPreferences.getInstance();
     final userName = prefs.getString('username') ?? 'Current User';
-    
+
     // Share through service (with backend sync and notification)
     await CommunityService.sharePost(post, currentUserName: userName);
-    
+
     // Use share_plus for actual platform sharing
     final shareText = '${post.content}\n\n- ${post.authorName} on art.kubus\n\nDiscover more AR art on art.kubus!';
-    await Share.share(shareText);
+    final messenger = ScaffoldMessenger.of(context);
+    await SharePlus.instance.share(ShareParams(text: shareText));
     if (!mounted) return;
-    
+
     // Update UI immediately
     setState(() {
       // UI will reflect the updated share count from the service
     });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
+
+    messenger.showSnackBar(
       const SnackBar(
         content: Text('Post shared!'),
         duration: Duration(seconds: 2),
@@ -2234,20 +2976,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         GestureDetector(
                           onTap: () => _viewUserProfile(post.authorId),
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  Provider.of<ThemeProvider>(context).accentColor,
-                                  Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20),
-                          ),
+                          child: post.authorAvatar != null && post.authorAvatar!.isNotEmpty
+                              ? CircleAvatar(
+                                  radius: 20,
+                                  backgroundImage: NetworkImage(post.authorAvatar!),
+                                  backgroundColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
+                                )
+                              : Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Provider.of<ThemeProvider>(context).accentColor,
+                                        Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+                                ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2265,7 +3013,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   ),
                                 ),
                                 Text(
-                                  '@${post.authorId.substring(0, 8)}',
+                                  '@${post.authorUsername}',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -2411,7 +3159,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _showImageLightbox(String imageUrl) {
     showDialog(
       context: context,
-      barrierColor: Colors.black87,
+      barrierColor: Theme.of(context).colorScheme.onSurface.withAlpha(230),
       builder: (BuildContext context) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -2438,7 +3186,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               value: loadingProgress.expectedTotalBytes != null
                                   ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
                                   : null,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           );
                         },
@@ -2447,11 +3195,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.error_outline, color: Colors.white, size: 64),
+                                Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onSurface, size: 64),
                                 const SizedBox(height: 16),
                                 Text(
                                   'Failed to load image',
-                                  style: GoogleFonts.inter(color: Colors.white, fontSize: 16),
+                                  style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
                                 ),
                               ],
                             ),
@@ -2467,9 +3215,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                 right: 20,
                 child: IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface, size: 32),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.black54,
+                    backgroundColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
                   ),
                 ),
               ),

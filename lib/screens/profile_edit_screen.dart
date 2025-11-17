@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
@@ -38,7 +37,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final profile = profileProvider.currentUser;
     
-    _usernameController = TextEditingController(text: profile?.username ?? '');
+    // Show username without any leading '@' in the edit field for a cleaner UX.
+    final initialUsername = (profile?.username ?? '').toString().replaceFirst(RegExp(r'^@+'), '');
+    _usernameController = TextEditingController(text: initialUsername);
     _displayNameController = TextEditingController(text: profile?.displayName ?? '');
     _bioController = TextEditingController(text: profile?.bio ?? '');
     // Avoid null map index when social is null

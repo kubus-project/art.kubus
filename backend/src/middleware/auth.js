@@ -5,9 +5,11 @@ const logger = require('../utils/logger');
  * Verify JWT token
  */
 const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1]; // Bearer TOKEN
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    logger.debug('Auth middleware: missing Authorization header');
     return res.status(401).json({
       success: false,
       error: 'Authentication required',
@@ -15,8 +17,26 @@ const verifyToken = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const secret = process.env.JWT_SECRET || 'dev-secret';
+    const decoded = jwt.verify(token, secret);
+    // Log the decoded payload keys for diagnostics (don't log the token itself)
+    try {
+      const keys = Object.keys(decoded);
+      const walletKey = decoded.walletAddress || decoded.wallet || decoded.id || decoded.email || null;
+      logger.debug(`Auth middleware: token verified. payloadKeys=${JSON.stringify(keys)}, userKey=${walletKey}`);
+    } catch (e) {
+      logger.debug('Auth middleware: token verified but failed to parse payload details');
+    }
     req.user = decoded;
+    // If debug endpoints enabled, expose a masked user header so clients can detect successful verification
+    if (process.env.ENABLE_DEBUG_ENDPOINTS && process.env.ENABLE_DEBUG_ENDPOINTS.toLowerCase() === 'true') {
+      try {
+        const userKey = (decoded.walletAddress || decoded.wallet || decoded.id || decoded.email || 'unknown').toString();
+        // Keep masked: show only last 6 characters
+        const masked = userKey.length > 6 ? `***${userKey.slice(-6)}` : userKey;
+        res.set('X-Auth-User', masked);
+      } catch (e) { /* no-op */ }
+    }
     next();
   } catch (error) {
     logger.warn(`Invalid token: ${error.message}`);

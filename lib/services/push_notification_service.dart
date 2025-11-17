@@ -778,4 +778,21 @@ class PushNotificationService {
     onNotificationTap = null;
     onNotificationReceived = null;
   }
+
+  /// Return in-app notifications stored locally (simple stub)
+  /// Stored as a JSON-encoded list of notification objects under key 'in_app_notifications'
+  Future<List<Map<String, dynamic>>> getInAppNotifications() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList('in_app_notifications') ?? [];
+    final List<Map<String, dynamic>> out = [];
+    for (final item in raw) {
+      try {
+        final decoded = jsonDecode(item) as Map<String, dynamic>;
+        out.add(decoded);
+      } catch (e) {
+        debugPrint('PushNotificationService.getInAppNotifications: failed to decode item: $e');
+      }
+    }
+    return out;
+  }
 }

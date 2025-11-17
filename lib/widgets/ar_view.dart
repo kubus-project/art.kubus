@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import '../widgets/app_loading.dart';
 
 /// AR View Widget - Handles platform-specific AR rendering
 class ARView extends StatefulWidget {
@@ -268,9 +269,7 @@ class _ARViewState extends State<ARView> with TickerProviderStateMixin {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-              ),
+              AppLoading(),
               const SizedBox(height: 20),
               Text(
                 'Initializing AR Experience...',

@@ -30,6 +30,50 @@
   <title>art.kubus - AR Art Discovery Platform</title>
   <link rel="manifest" href="manifest.json">
 
+  <!-- Dev helper: Unregister service workers + clear Flutter caches on local dev only.
+       This is intentionally conservative so it will NOT run on production hosts.
+       It only acts when running on localhost/127.0.0.1/::1 or when a port is present
+       (typical dev servers). It only removes caches that look like Flutter caches
+       to avoid deleting unrelated site caches. -->
+  <script>
+    (function() {
+      try {
+        var hostname = location.hostname || '';
+        var isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || location.port !== '';
+        if (!isLocalHost) return;
+
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations()
+            .then(function(regs) {
+              regs.forEach(function(r) {
+                try { console.info('Dev helper: unregistering service worker at', r.scope); } catch(e) {}
+                r.unregister();
+              });
+            })
+            .catch(function(e) { console.warn('Dev helper: getRegistrations failed', e); });
+        }
+
+        if (window.caches && caches.keys) {
+          caches.keys()
+            .then(function(names) {
+              names.forEach(function(name) {
+                try {
+                  var n = (name || '').toLowerCase();
+                  // Only delete caches that look like Flutter-generated caches
+                  if (n.indexOf('flutter') !== -1 || n.indexOf('flutter-app-manifest') !== -1 || n.indexOf('flutter-temp-cache') !== -1) {
+                    caches.delete(name);
+                    try { console.info('Dev helper: deleted cache', name); } catch(e) {}
+                  }
+                } catch (e) { /* ignore individual cache errors */ }
+              });
+            })
+            .catch(function(e) { console.warn('Dev helper: caches.keys failed', e); });
+        }
+      } catch (e) {
+        console.warn('Dev helper: unregister script failed', e);
+      }
+    })();
+  </script>
   <!-- This script adds the flutter initialization JS code -->
   <script src="flutter_bootstrap.js" async></script>
   

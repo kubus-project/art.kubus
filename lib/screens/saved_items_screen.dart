@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/saved_items_provider.dart';
@@ -171,7 +172,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> with TickerProvider
           future: _postsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const AppLoading();
             }
             if (snapshot.hasError) {
               return _buildEmptyTabState(
@@ -716,7 +717,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> with TickerProvider
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Are you sure you want to remove this ${type} from your saved items?',
+          'Are you sure you want to remove this $type from your saved items?',
           style: GoogleFonts.inter(),
         ),
         actions: [

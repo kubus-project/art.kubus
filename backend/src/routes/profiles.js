@@ -33,6 +33,41 @@ const avatarUpload = multer({
  */
 
 // ============================================
+// GET MY PROFILE (from token)
+// Note: placed before wildcard wallet route to avoid being shadowed
+// ============================================
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const walletAddress = req.user?.walletAddress || req.user?.wallet_address;
+    if (!walletAddress) return res.status(400).json({ success: false, error: 'No wallet in token' });
+
+    const result = await query('SELECT * FROM profiles WHERE wallet_address = $1', [walletAddress]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Profile not found' });
+
+    const row = result.rows[0];
+    const profile = {
+      id: row.id,
+      walletAddress: row.wallet_address,
+      username: row.username,
+      displayName: row.display_name,
+      bio: row.bio,
+      avatar: row.avatar_url,
+      coverImage: row.cover_image_url,
+      social: { twitter: row.twitter, instagram: row.instagram, discord: row.discord, website: row.website },
+      isArtist: row.is_artist,
+      isVerified: row.is_verified,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+
+    res.json({ success: true, data: profile });
+  } catch (err) {
+    logger.error('Error fetching my profile:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// ============================================
 // GET PROFILE BY WALLET ADDRESS
 // ============================================
 router.get('/:walletAddress', async (req, res) => {
@@ -55,24 +90,31 @@ router.get('/:walletAddress', async (req, res) => {
       });
     }
     
+    // Provide a default identicon avatar when none is set in the DB so clients
+    // immediately receive a stable avatar URL (avoids flicker and 410s).
+    const row = result.rows[0];
+    const base = (process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
+    const defaultAvatar = (base ? `${base}` : '') + `/api/avatar/${encodeURIComponent(walletAddress)}?style=identicon&format=png`;
+    const avatarUrl = row.avatar_url && String(row.avatar_url).trim().length > 0 ? row.avatar_url : defaultAvatar;
+
     const profile = {
-      id: result.rows[0].id,
-      walletAddress: result.rows[0].wallet_address,
-      username: result.rows[0].username,
-      displayName: result.rows[0].display_name,
-      bio: result.rows[0].bio,
-      avatar: result.rows[0].avatar_url,
-      coverImage: result.rows[0].cover_image_url,
+      id: row.id,
+      walletAddress: row.wallet_address,
+      username: row.username,
+      displayName: row.display_name,
+      bio: row.bio,
+      avatar: avatarUrl,
+      coverImage: row.cover_image_url,
       social: {
-        twitter: result.rows[0].twitter,
-        instagram: result.rows[0].instagram,
-        discord: result.rows[0].discord,
-        website: result.rows[0].website
+        twitter: row.twitter,
+        instagram: row.instagram,
+        discord: row.discord,
+        website: row.website
       },
-      isArtist: result.rows[0].is_artist,
-      isVerified: result.rows[0].is_verified,
-      createdAt: result.rows[0].created_at,
-      updatedAt: result.rows[0].updated_at
+      isArtist: row.is_artist,
+      isVerified: row.is_verified,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
     };
     
     res.json({
@@ -86,6 +128,80 @@ router.get('/:walletAddress', async (req, res) => {
       error: 'Server error',
       message: error.message
     });
+  }
+});
+
+// ============================================
+// GET MY PROFILE (from token)
+// ============================================
+router.get('/me', verifyToken, async (req, res) => {
+  try {
+    const walletAddress = req.user?.walletAddress || req.user?.wallet_address;
+    if (!walletAddress) return res.status(400).json({ success: false, error: 'No wallet in token' });
+
+    const result = await query('SELECT * FROM profiles WHERE wallet_address = $1', [walletAddress]);
+    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Profile not found' });
+
+    const row = result.rows[0];
+    // Ensure a default identicon is returned when avatar_url is empty
+    const base = (process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
+    const defaultAvatar = (base ? `${base}` : '') + `/api/avatar/${encodeURIComponent(walletAddress)}?style=identicon&format=png`;
+    const avatarUrl = row.avatar_url && String(row.avatar_url).trim().length > 0 ? row.avatar_url : defaultAvatar;
+
+    const profile = {
+      id: row.id,
+      walletAddress: row.wallet_address,
+      username: row.username,
+      displayName: row.display_name,
+      bio: row.bio,
+      avatar: avatarUrl,
+      coverImage: row.cover_image_url,
+      social: { twitter: row.twitter, instagram: row.instagram, discord: row.discord, website: row.website },
+      isArtist: row.is_artist,
+      isVerified: row.is_verified,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+
+    res.json({ success: true, data: profile });
+  } catch (err) {
+    logger.error('Error fetching my profile:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// ============================================
+// POST /api/profiles/batch - fetch multiple profiles by wallets
+// Expects JSON: { wallets: ['wallet1','wallet2'] }
+// ============================================
+router.post('/batch', async (req, res) => {
+  try {
+    const { wallets } = req.body || {};
+    if (!Array.isArray(wallets) || wallets.length === 0) {
+      return res.status(400).json({ success: false, error: 'wallets array required' });
+    }
+
+    // Build parameterized query
+    const params = wallets.map((_, i) => `$${i + 1}`).join(',');
+    const q = `SELECT wallet_address, username, display_name, avatar_url FROM profiles WHERE wallet_address IN (${params})`;
+    const result = await query(q, wallets);
+
+    const base = (process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
+    const profiles = result.rows.map(r => {
+      const w = r.wallet_address;
+      const defaultAvatar = (base ? `${base}` : '') + `/api/avatar/${encodeURIComponent(w)}?style=identicon&format=png`;
+      return {
+        walletAddress: r.wallet_address,
+        username: r.username,
+        displayName: r.display_name,
+        avatar: r.avatar_url && String(r.avatar_url).trim().length > 0 ? r.avatar_url : defaultAvatar
+      };
+    });
+
+    res.json({ success: true, count: profiles.length, data: profiles });
+  } catch (err) {
+    logger.error('Error fetching profiles batch:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 
@@ -428,6 +544,30 @@ router.post('/:walletAddress/verify', async (req, res) => {
       error: 'Server error',
       message: error.message
     });
+  }
+});
+
+// ============================================
+// ISSUE TOKEN
+// POST /api/profiles/issue-token
+// Minimal endpoint used by frontend to get a short-lived token for profile-related requests
+// Expects: { walletAddress }
+router.post('/issue-token', async (req, res) => {
+  try {
+    const { walletAddress } = req.body;
+    if (!walletAddress) {
+      return res.status(400).json({ success: false, error: 'walletAddress required' });
+    }
+
+    // Create short-lived JWT (defaults to 10 minutes)
+    const token = jwt.sign({ walletAddress }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: process.env.ISSUE_TOKEN_EXPIRES || '10m' });
+
+    logger.info(`Issued short token for wallet: ${walletAddress}`);
+
+    res.json({ success: true, token, expiresIn: process.env.ISSUE_TOKEN_EXPIRES || '10m' });
+  } catch (error) {
+    logger.error('Error issuing token:', error);
+    res.status(500).json({ success: false, error: 'Server error', message: error.message });
   }
 });
 

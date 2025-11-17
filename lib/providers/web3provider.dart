@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/solana_wallet_service.dart';
 import 'package:solana/solana.dart' hide Wallet; // Hide solana Wallet to avoid name clash with app model
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
 import '../models/wallet.dart';
 
 class Web3Provider extends ChangeNotifier {
@@ -19,6 +20,15 @@ class Web3Provider extends ChangeNotifier {
   // Configurable constants (replace with actual KUB8 mint/address)
   final String _kub8TokenAddress = 'KUB8_TOKEN_MINT_PLACEHOLDER';
 
+  // Initialization guards
+  bool _initialized = false;
+  bool _initializing = false;
+  int _initializeCallCount = 0;
+
+  // Error tracking
+  String? _initializeError;
+  Exception? _lastInitException;
+
   Web3Provider();
 
   // Getters
@@ -35,6 +45,11 @@ class Web3Provider extends ChangeNotifier {
   double get achievementTokenTotal => _achievementTokenTotal;
   String get kub8TokenAddress => _kub8TokenAddress;
 
+  // Add simple initialize / state flags so AppInitializer can await provider init
+  bool get isInitialized => _initialized;
+  bool get isInitializing => _initializing;
+  String? get initializeError => _initializeError;
+
   // Network management
   void switchNetwork(String network) {
     _solanaService.switchNetwork(network);
@@ -44,39 +59,104 @@ class Web3Provider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> initialize({bool attemptRestore = true}) async {
+    _initializeCallCount++;
+    if (_initialized || _initializing) {
+      debugPrint('Web3Provider.initialize skipped: already initialized or initializing (#$_initializeCallCount)');
+      return;
+    }
+    _initializing = true;
+    _initializeError = null;
+    _lastInitException = null;
+    debugPrint('Web3Provider.initialize: start (#$_initializeCallCount), attemptRestore=$attemptRestore');
+    try {
+      if (attemptRestore) {
+        try {
+          final dynamic dynamicSol = _solanaService;
+          if (dynamicSol != null) {
+            try {
+              final String? savedPubKey = await dynamicSol.getActivePublicKey();
+              if (savedPubKey != null && savedPubKey.isNotEmpty) {
+                debugPrint('Web3Provider.initialize: restoring wallet $savedPubKey');
+                await _initializeWallet(savedPubKey, suppressErrors: true);
+              }
+            } catch (e, st) {
+              debugPrint('Web3Provider.initialize: restore attempt not possible or failed: $e\n$st');
+              // Do not rethrow - it's a best-effort restore
+            }
+          }
+        } catch (e, st) {
+          debugPrint('Web3Provider.initialize: restore attempt top-level failure: $e\n$st');
+        }
+      }
+    } catch (e, st) {
+      _initializeError = e.toString();
+      _lastInitException = e is Exception ? e : Exception(e.toString());
+      debugPrint('Web3Provider.initialize error: $e\n$st');
+    } finally {
+      _initialized = true;
+      _initializing = false;
+      debugPrint('Web3Provider.initialize: done (#$_initializeCallCount)');
+      notifyListeners();
+    }
+  }
+
   // Wallet connection (mnemonic based for now)
   Future<String> createWallet() async {
     final mnemonic = _solanaService.generateMnemonic();
     final keyPair = await _solanaService.generateKeyPairFromMnemonic(mnemonic);
-    // Store keypair in service for signing
     final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(mnemonic);
     _solanaService.setActiveKeyPair(hdKeyPair);
-    await _initializeWallet(keyPair.publicKey, mnemonic: mnemonic);
+    await _initializeWallet(keyPair.publicKey); // explicit user action - allow rethrow
     return keyPair.publicKey;
   }
 
   Future<void> importWallet(String mnemonic) async {
+    if (mnemonic.trim().isEmpty) {
+      throw ArgumentError('Mnemonic cannot be empty');
+    }
     final keyPair = await _solanaService.generateKeyPairFromMnemonic(mnemonic);
     final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(mnemonic);
     _solanaService.setActiveKeyPair(hdKeyPair);
-    await _initializeWallet(keyPair.publicKey, mnemonic: mnemonic);
+    await _initializeWallet(keyPair.publicKey); // explicit user action - allow rethrow
   }
 
   Future<void> connectExistingWallet(String publicKey) async {
+    if (publicKey.trim().isEmpty) {
+      debugPrint('Web3Provider.connectExistingWallet: empty publicKey, skipping init');
+      return;
+    }
     // Existing wallet without mnemonic cannot sign (read-only mode)
     await _initializeWallet(publicKey);
   }
 
-  Future<void> _initializeWallet(String publicKey, {String? mnemonic}) async {
+  Future<void> _initializeWallet(String publicKey, {String? mnemonic, bool suppressErrors = false}) async {
     try {
+      if (publicKey.trim().isEmpty) {
+        throw ArgumentError('Public key cannot be empty');
+      }
       _isConnected = true;
       await _reloadWallet(address: publicKey);
       await _syncBackend(publicKey);
+
+      try {
+        final issued = await BackendApiService().issueTokenForWallet(publicKey);
+        debugPrint('Web3Provider._initializeWallet: backend token issuance for $publicKey -> $issued');
+        if (issued) {
+          await BackendApiService().loadAuthToken();
+          debugPrint('Web3Provider._initializeWallet: Auth token loaded after issuance');
+        }
+      } catch (e, st) {
+        debugPrint('Web3Provider._initializeWallet: token issuance failed: $e\n$st');
+      }
+
       notifyListeners();
-    } catch (e) {
+    } catch (e, st) {
       _isConnected = false;
-      debugPrint('Web3Provider: wallet init failed: $e');
-      rethrow;
+      _initializeError = e.toString();
+      _lastInitException = e is Exception ? e : Exception(e.toString());
+      debugPrint('Web3Provider: wallet init failed: $e\n$st');
+      if (!suppressErrors) rethrow;
     }
   }
 
@@ -102,7 +182,9 @@ class Web3Provider extends ChangeNotifier {
     if (!_isConnected || walletAddress.isEmpty) {
       throw Exception('Wallet not connected');
     }
-    // Attempt SPL transfer via service (currently placeholder throws)
+    if (toAddress.trim().isEmpty) {
+      throw ArgumentError('Recipient address cannot be empty');
+    }
     try {
       final signature = await _solanaService.transferSplToken(
         mint: _kub8TokenAddress,
@@ -110,15 +192,14 @@ class Web3Provider extends ChangeNotifier {
         amount: amount,
         decimals: 6,
       );
-      // Refresh balances after transfer
       await _reloadWallet();
       notifyListeners();
       return signature;
     } on UnimplementedError catch (e) {
       debugPrint('KUB8 transfer pending implementation: $e');
-      rethrow; // Surface unimplemented state to UI
-    } catch (e) {
-      debugPrint('KUB8 transfer failed: $e');
+      rethrow;
+    } catch (e, st) {
+      debugPrint('KUB8 transfer failed: $e\n$st');
       rethrow;
     }
   }
@@ -135,8 +216,8 @@ class Web3Provider extends ChangeNotifier {
     } on UnimplementedError catch (e) {
       debugPrint('Swap not yet implemented: $e');
       rethrow;
-    } catch (e) {
-      debugPrint('Swap failed: $e');
+    } catch (e, st) {
+      debugPrint('Swap failed: $e\n$st');
       rethrow;
     }
   }
@@ -161,89 +242,118 @@ class Web3Provider extends ChangeNotifier {
 
   // Transaction loading
   Future<void> _reloadWallet({String? address}) async {
-    final pubKey = address ?? walletAddress;
+    final pubKey = (address ?? walletAddress).trim();
     if (pubKey.isEmpty) return;
-    final solBalance = await _solanaService.getBalance(pubKey);
-    final splBalances = await _solanaService.getTokenBalances(pubKey);
-    final txHistory = await _solanaService.getTransactionHistory(pubKey);
 
-    // Build token list (SOL first)
-    final tokens = <Token>[
-      Token(
-        id: 'sol_native',
-        name: 'Solana',
-        symbol: 'SOL',
-        type: TokenType.native,
-        balance: solBalance,
-        value: solBalance * 50.0,
-        changePercentage: 0.0,
-        contractAddress: 'native',
-        decimals: 9,
-        logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+    try {
+      final solBalance = await _solanaService.getBalance(pubKey);
+      final splBalances = await _solanaService.getTokenBalances(pubKey);
+      final txHistory = await _solanaService.getTransactionHistory(pubKey);
+
+      // Build token list (SOL first)
+      final tokens = <Token>[
+        Token(
+          id: 'sol_native',
+          name: 'Solana',
+          symbol: 'SOL',
+          type: TokenType.native,
+          balance: solBalance,
+          value: solBalance * 50.0,
+          changePercentage: 0.0,
+          contractAddress: 'native',
+          decimals: 9,
+          logoUrl: 'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png',
+          network: 'Solana',
+        ),
+      ];
+
+      for (final b in splBalances) {
+        tokens.add(Token(
+          id: 'spl_${b.mint}',
+          name: b.name,
+          symbol: b.symbol,
+          type: TokenType.erc20,
+          balance: b.balance,
+          value: b.balance * 1.0,
+          changePercentage: 0.0,
+          contractAddress: b.mint,
+          decimals: b.decimals,
+          logoUrl: null,
+          network: 'Solana',
+        ));
+      }
+
+      _transactions = txHistory.map((tx) => WalletTransaction(
+        id: tx.signature,
+        type: TransactionType.receive,
+        token: 'SOL',
+        amount: 0.0,
+        fromAddress: null,
+        toAddress: pubKey,
+        timestamp: tx.blockTime,
+        status: tx.status == 'success' ? TransactionStatus.confirmed : TransactionStatus.failed,
+        txHash: tx.signature,
+        gasUsed: tx.fee,
+        gasFee: tx.fee,
+        metadata: {'slot': tx.slot},
+      )).toList();
+
+      _wallet = Wallet(
+        id: 'wallet_${pubKey.substring(0,8)}',
+        address: pubKey,
+        name: 'Solana Wallet',
         network: 'Solana',
-      ),
-    ];
-    for (final b in splBalances) {
-      tokens.add(Token(
-        id: 'spl_${b.mint}',
-        name: b.name,
-        symbol: b.symbol,
-        type: TokenType.erc20,
-        balance: b.balance,
-        value: b.balance * 1.0,
-        changePercentage: 0.0,
-        contractAddress: b.mint,
-        decimals: b.decimals,
-        logoUrl: null,
-        network: 'Solana',
-      ));
+        tokens: tokens,
+        transactions: _transactions,
+        totalValue: tokens.fold(0.0, (sum, t) => sum + t.value),
+        lastUpdated: DateTime.now(),
+      );
+    } catch (e, st) {
+      // Log and mark wallet as disconnected if reload fails during restore
+      debugPrint('Web3Provider._reloadWallet failed for $pubKey: $e\n$st');
+      _isConnected = false;
+      _wallet = null;
+      _transactions.clear();
+      // Do NOT rethrow when called during background initialization or restore
     }
-
-    _transactions = txHistory.map((tx) => WalletTransaction(
-      id: tx.signature,
-      type: TransactionType.receive,
-      token: 'SOL',
-      amount: 0.0,
-      fromAddress: null,
-      toAddress: pubKey,
-      timestamp: tx.blockTime,
-      status: tx.status == 'success' ? TransactionStatus.confirmed : TransactionStatus.failed,
-      txHash: tx.signature,
-      gasUsed: tx.fee,
-      gasFee: tx.fee,
-      metadata: {'slot': tx.slot},
-    )).toList();
-
-    _wallet = Wallet(
-      id: 'wallet_${pubKey.substring(0,8)}',
-      address: pubKey,
-      name: 'Solana Wallet',
-      network: 'Solana',
-      tokens: tokens,
-      transactions: _transactions,
-      totalValue: tokens.fold(0.0, (sum, t) => sum + t.value),
-      lastUpdated: DateTime.now(),
-    );
   }
 
-  // Add mock transaction for demo purposes
   // Backend sync
   Future<void> _syncBackend(String address) async {
     try {
-      try {
-        _backendProfile = await _apiService.getProfileByWallet(address);
-      } catch (e) {
-        if (e.toString().contains('Profile not found')) {
-          _backendProfile = await _apiService.saveProfile({
-            'walletAddress': address,
-            'username': 'user_${address.substring(0,6)}',
-            'displayName': 'New User',
-            'bio': '',
-          });
-        } else {
-          rethrow;
+        try {
+          // Prefer cache-first UserService lookup to avoid unnecessary network calls
+          final user = await UserService.getUserById(address, forceRefresh: true);
+          if (user != null) {
+            _backendProfile = {
+              'walletAddress': user.id,
+              'username': user.username.replaceFirst('@', ''),
+              'displayName': user.name,
+              'bio': user.bio,
+              'avatar': user.profileImageUrl,
+              'isVerified': user.isVerified,
+              'createdAt': null,
+            };
+          } else {
+            // Fallback to backend call if cache miss
+            try {
+              _backendProfile = await _apiService.getProfileByWallet(address);
+            } catch (e) {
+              if (e.toString().contains('Profile not found')) {
+                _backendProfile = await _apiService.saveProfile({
+                  'walletAddress': address,
+                  'username': 'user_${address.substring(0,6)}',
+                  'displayName': 'New User',
+                  'bio': '',
+                });
+              } else {
+                rethrow;
+              }
+            }
+          }
+        } catch (e) {
+          debugPrint('Web3Provider._syncBackend: profile lookup failed: $e');
         }
-      }
 
       // Collections count
       try {
@@ -263,8 +373,8 @@ class Web3Provider extends ChangeNotifier {
       }
 
       notifyListeners();
-    } catch (e) {
-      debugPrint('Web3Provider: backend sync error: $e');
+    } catch (e, st) {
+      debugPrint('Web3Provider: backend sync error: $e\n$st');
     }
   }
 

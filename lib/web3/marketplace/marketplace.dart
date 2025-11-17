@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
@@ -310,11 +311,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               ),
               const SizedBox(height: 16),
               if (collectiblesProvider.isLoading)
-                Center(
-                  child: CircularProgressIndicator(
-                    color: themeProvider.accentColor,
-                  ),
-                )
+                const AppLoading()
               else if (featuredSeries.isEmpty)
                 Container(
                   padding: const EdgeInsets.all(16),
