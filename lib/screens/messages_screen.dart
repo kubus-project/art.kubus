@@ -88,6 +88,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
       if (wallets.isEmpty) return;
       final users = await UserService.getUsersByWallets(wallets.toList());
+      if (!mounted) return;
       try { Provider.of<ChatProvider>(context, listen: false).mergeUserCache(users); } catch (_) {}
       for (final c in convToWallet.keys) {
         final walletsForConv = convToWallet[c]!;
@@ -230,6 +231,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
         onPressed: () async {
           // Simple create conversation: members entry (comma separated wallets)
           final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => _CreateConversationDialog());
+          if (!mounted) return;
           if (result != null && result['members'] != null) {
             await _chatProvider.createConversation(result['title'] as String? ?? '', result['isGroup'] as bool? ?? false, (result['members'] as List<String>));
           }

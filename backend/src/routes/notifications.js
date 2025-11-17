@@ -268,7 +268,7 @@ router.delete('/', verifyToken, asyncHandler(async (req, res) => {
 /**
  * Create a like notification
  */
-async function createLikeNotification(targetWallet, senderWallet, targetType, targetId) {
+async function createLikeNotification(targetWallet, senderWallet, targetType, targetId, io = null) {
   try {
     const profileResult = await query(
       `SELECT display_name, username FROM profiles WHERE wallet_address = $1`,
@@ -307,6 +307,20 @@ async function createLikeNotification(targetWallet, senderWallet, targetType, ta
         { targetType, targetId }
       ]
     );
+    // Emit WebSocket event if io provided
+    try {
+      if (io) {
+        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+          type: 'like',
+          title: 'New Like',
+          message,
+          data: { targetType, targetId },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      logger.warn('createLikeNotification: failed to emit socket event', err.message);
+    }
   } catch (error) {
     logger.error('Error creating like notification:', error);
   }
@@ -315,7 +329,7 @@ async function createLikeNotification(targetWallet, senderWallet, targetType, ta
 /**
  * Create a comment notification
  */
-async function createCommentNotification(targetWallet, senderWallet, postId, commentContent) {
+async function createCommentNotification(targetWallet, senderWallet, postId, commentContent, io = null) {
   try {
     const profileResult = await query(
       `SELECT display_name, username FROM profiles WHERE wallet_address = $1`,
@@ -339,6 +353,20 @@ async function createCommentNotification(targetWallet, senderWallet, postId, com
         { postId, commentPreview: commentContent.substring(0, 100) }
       ]
     );
+    // Emit WebSocket event if io provided
+    try {
+      if (io) {
+        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+          type: 'comment',
+          title: 'New Comment',
+          message: `${senderName} commented on your post`,
+          data: { postId, commentPreview: commentContent.substring(0, 100) },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      logger.warn('createCommentNotification: failed to emit socket event', err.message);
+    }
   } catch (error) {
     logger.error('Error creating comment notification:', error);
   }
@@ -347,7 +375,7 @@ async function createCommentNotification(targetWallet, senderWallet, postId, com
 /**
  * Create a follow notification
  */
-async function createFollowNotification(targetWallet, senderWallet) {
+async function createFollowNotification(targetWallet, senderWallet, io = null) {
   try {
     const profileResult = await query(
       `SELECT display_name, username FROM profiles WHERE wallet_address = $1`,
@@ -371,8 +399,71 @@ async function createFollowNotification(targetWallet, senderWallet) {
         { followerWallet: senderWallet }
       ]
     );
+    // Emit WebSocket event if io provided
+    try {
+      if (io) {
+        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+          type: 'follow',
+          title: 'New Follower',
+          message: `${senderName} started following you`,
+          data: { followerWallet: senderWallet },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      logger.warn('createFollowNotification: failed to emit socket event', err.message);
+    }
   } catch (error) {
     logger.error('Error creating follow notification:', error);
+  }
+}
+
+/**
+ * Create a share notification
+ */
+async function createShareNotification(targetWallet, senderWallet, postId, io = null) {
+  try {
+    const profileResult = await query(
+      `SELECT display_name, username FROM profiles WHERE wallet_address = $1`,
+      [senderWallet]
+    );
+
+    const senderName = profileResult.rows.length > 0
+      ? (profileResult.rows[0].display_name || profileResult.rows[0].username)
+      : 'Someone';
+
+    const message = `${senderName} shared your post`;
+    const actionUrl = `/community/posts/${postId}`;
+
+    await query(
+      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        targetWallet,
+        senderWallet,
+        'share',
+        'New Share',
+        message,
+        actionUrl,
+        { postId }
+      ]
+    );
+
+    try {
+      if (io) {
+        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+          type: 'share',
+          title: 'New Share',
+          message,
+          data: { postId },
+          createdAt: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      logger.warn('createShareNotification: failed to emit socket event', err.message);
+    }
+  } catch (error) {
+    logger.error('Error creating share notification:', error);
   }
 }
 
@@ -402,4 +493,5 @@ module.exports = router;
 module.exports.createLikeNotification = createLikeNotification;
 module.exports.createCommentNotification = createCommentNotification;
 module.exports.createFollowNotification = createFollowNotification;
+module.exports.createShareNotification = createShareNotification;
 module.exports.createAchievementNotification = createAchievementNotification;

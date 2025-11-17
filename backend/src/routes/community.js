@@ -4,6 +4,7 @@ const { verifyToken, optionalAuth } = require('../middleware/auth');
 const { communityValidation, sanitizeInput } = require('../middleware/validation');
 const { query } = require('../db');
 const logger = require('../utils/logger');
+const notifications = require('./notifications');
 
 const router = express.Router();
 
@@ -329,6 +330,7 @@ router.delete('/posts/:id', verifyToken, asyncHandler(async (req, res) => {
 router.post('/posts/:id/like', verifyToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
+  const senderWallet = req.user.walletAddress;
 
   // Check if post exists
   const postCheck = await query(
@@ -361,6 +363,18 @@ router.post('/posts/:id/like', verifyToken, asyncHandler(async (req, res) => {
       success: true,
       message: 'Post liked successfully'
     });
+      // Create a notification for the post author
+      try {
+        const postOwner = await query('SELECT wallet_address FROM community_posts WHERE id = $1', [id]);
+        if (postOwner.rows.length > 0) {
+          const targetWallet = postOwner.rows[0].wallet_address;
+          if (targetWallet && targetWallet.toLowerCase() !== (senderWallet || '').toLowerCase()) {
+            await notifications.createLikeNotification(targetWallet, senderWallet, 'post', id, req.app.get('io'));
+          }
+        }
+      } catch (e) {
+        logger.warn('Could not create like notification', e.message);
+      }
   } catch (error) {
     logger.error('Error liking post:', error);
     res.status(500).json({ success: false, error: 'Failed to like post' });
@@ -403,6 +417,8 @@ router.delete('/posts/:id/like', verifyToken, asyncHandler(async (req, res) => {
 router.post('/posts/:id/share', verifyToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  const senderWallet = req.user.walletAddress;
+
   await query(
     `UPDATE community_posts SET shares_count = shares_count + 1 WHERE id = $1`,
     [id]
@@ -412,6 +428,18 @@ router.post('/posts/:id/share', verifyToken, asyncHandler(async (req, res) => {
     success: true,
     message: 'Post shared successfully'
   });
+  // Create share notification for the post author
+  try {
+    const postOwner = await query('SELECT wallet_address FROM community_posts WHERE id = $1', [id]);
+    if (postOwner.rows.length > 0) {
+      const targetWallet = postOwner.rows[0].wallet_address;
+      if (targetWallet && targetWallet.toLowerCase() !== (senderWallet || '').toLowerCase()) {
+        await notifications.createShareNotification(targetWallet, senderWallet, id, req.app.get('io'));
+      }
+    }
+  } catch (e) {
+    logger.warn('Could not create share notification', e.message);
+  }
 }));
 
 // ============================================
@@ -495,6 +523,19 @@ router.post('/posts/:id/comments', verifyToken, sanitizeInput, asyncHandler(asyn
     message: 'Comment added successfully',
     data: result.rows[0]
   });
+  // Create comment notification for post author
+  try {
+    const postOwner = await query('SELECT wallet_address FROM community_posts WHERE id = $1', [id]);
+    if (postOwner.rows.length > 0) {
+      const targetWallet = postOwner.rows[0].wallet_address;
+      const senderWallet = req.user.walletAddress;
+      if (targetWallet && targetWallet.toLowerCase() !== (senderWallet || '').toLowerCase()) {
+        await notifications.createCommentNotification(targetWallet, senderWallet, id, content, req.app.get('io'));
+      }
+    }
+  } catch (e) {
+    logger.warn('Could not create comment notification', e.message);
+  }
 }));
 
 /**
@@ -545,6 +586,7 @@ router.delete('/comments/:id', verifyToken, asyncHandler(async (req, res) => {
 router.post('/comments/:id/like', verifyToken, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
+  const senderWallet = req.user.walletAddress;
 
   await query(
     `INSERT INTO likes (user_id, target_type, target_id)
@@ -565,6 +607,18 @@ router.post('/comments/:id/like', verifyToken, asyncHandler(async (req, res) => 
     success: true,
     message: 'Comment liked successfully'
   });
+  // Create a notification for the comment author
+  try {
+    const commentOwner = await query('SELECT u.wallet_address FROM comments c JOIN users u ON c.author_id = u.id WHERE c.id = $1', [id]);
+    if (commentOwner.rows.length > 0) {
+      const targetWallet = commentOwner.rows[0].wallet_address;
+      if (targetWallet && targetWallet.toLowerCase() !== (senderWallet || '').toLowerCase()) {
+        await notifications.createLikeNotification(targetWallet, senderWallet, 'comment', id, req.app.get('io'));
+      }
+    }
+  } catch (e) {
+    logger.warn('Could not create comment like notification', e.message);
+  }
 }));
 
 /**
@@ -607,6 +661,7 @@ router.delete('/comments/:id/like', verifyToken, asyncHandler(async (req, res) =
 router.post('/follow/:walletAddress', verifyToken, asyncHandler(async (req, res) => {
   const { walletAddress } = req.params;
   const followerId = req.user.id;
+  const senderWallet = req.user.walletAddress;
 
   // Get target user ID
   const targetResult = await query(
@@ -635,6 +690,15 @@ router.post('/follow/:walletAddress', verifyToken, asyncHandler(async (req, res)
     success: true,
     message: 'User followed successfully'
   });
+  // Create follow notification for the target user
+  try {
+    const targetWallet = walletAddress;
+    if (targetWallet && targetWallet.toLowerCase() !== (senderWallet || '').toLowerCase()) {
+      await notifications.createFollowNotification(targetWallet, senderWallet, req.app.get('io'));
+    }
+  } catch (e) {
+    logger.warn('Could not create follow notification', e.message);
+  }
 }));
 
 /**
