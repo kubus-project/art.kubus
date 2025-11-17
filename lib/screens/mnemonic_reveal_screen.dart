@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import '../providers/wallet_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 
 class MnemonicRevealScreen extends StatefulWidget {
   const MnemonicRevealScreen({super.key});
@@ -79,7 +80,7 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoading()
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [

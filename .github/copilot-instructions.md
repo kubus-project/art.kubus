@@ -961,7 +961,7 @@ lib/services/
 ---
 
 **Last Updated:** November 12, 2025
-**App Version:** 0.0.1+1
+**App Version:** 0.0.2
 **Flutter SDK:** >=3.3.4 <4.0.0
 **Node.js:** 20+
 **Author:** Rok Černezel (Founder & Lead Developer)

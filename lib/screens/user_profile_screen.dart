@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
 import '../models/achievements.dart';
 import '../providers/themeprovider.dart';
+import '../providers/chat_provider.dart';
+import 'conversation_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -54,13 +57,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     if (widget.username != null) {
       loadedUser = await UserService.getUserByUsername(widget.username!);
     } else {
-      loadedUser = await UserService.getUserById(widget.userId);
+      // Force fresh load when opening a user's profile screen
+      loadedUser = await UserService.getUserById(widget.userId, forceRefresh: true);
     }
 
     setState(() {
       user = loadedUser;
       isLoading = false;
     });
+    try { debugPrint('UserProfileScreen._loadUser: loaded user: ${user?.id}, username: ${user?.username}, avatar: ${user?.profileImageUrl}'); } catch (_) {}
   }
 
   Future<void> _toggleFollow() async {
@@ -112,9 +117,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             ),
           ),
         ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        body: const AppLoading(),
       );
     }
 
@@ -184,7 +187,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Profile Image
+          // Profile Image (use actual author avatar if available)
           Container(
             width: 100,
             height: 100,
@@ -204,10 +207,38 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 50,
+            child: ClipOval(
+              child: Builder(builder: (ctx) {
+                final avatar = user!.profileImageUrl;
+                if (avatar != null && avatar.isNotEmpty) {
+                  try {
+                    return Image.network(
+                      avatar,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (c, e, s) => Container(
+                      color: themeProvider.accentColor,
+                      child: const Icon(Icons.person, color: Colors.white, size: 50),
+                    ),
+                    );
+                  } catch (e, st) {
+                    debugPrint('UserProfileScreen._buildProfileHeader: Image.network build failed for avatar: $avatar -> $e');
+                    debugPrint('Stack trace: $st');
+                    return Container(
+                      color: themeProvider.accentColor,
+                      child: const Icon(Icons.person, color: Colors.white, size: 50),
+                    );
+                  }
+                }
+                return const Center(
+                  child: Icon(
+                    Icons.person,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                );
+              }),
             ),
           ),
           const SizedBox(height: 16),
@@ -355,14 +386,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(width: 12),
           ElevatedButton(
-            onPressed: () {
-              // Message functionality - to be implemented later
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Messaging feature coming soon!'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
+            onPressed: () async {
+              final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+              try {
+                final conv = await chatProvider.createConversation('', false, [user!.id]);
+                if (conv != null) {
+                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConversationScreen(conversation: conv)));
+                } else {
+                  // Improve messaging: suggest login if token isn't present
+                  final chatAuth = Provider.of<ChatProvider>(context, listen: false).isAuthenticated;
+                  if (!chatAuth) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please log in to message this user.')),
+                      );
+                    }
+                  } else {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Could not open conversation')),
+                      );
+                    }
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to open conversation: $e')),
+                  );
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.surface,

@@ -1,3 +1,5 @@
+import '../services/backend_api_service.dart';
+
 class UserProfile {
   final String id;
   final String walletAddress;
@@ -68,7 +70,7 @@ class UserProfile {
   // JSON serialization
   factory UserProfile.fromJson(Map<String, dynamic> json) {
     // Helper to safely parse date fields that might be null or already Date objects
-    DateTime _parseDate(dynamic value) {
+    DateTime parseDate(dynamic value) {
       if (value == null) return DateTime.now();
       if (value is DateTime) return value;
       try {
@@ -96,14 +98,14 @@ class UserProfile {
       displayName: (json['displayName'] ?? json['display_name'] ?? '').toString(),
       bio: (json['bio'] ?? '').toString(),
       avatar: (json['avatar'] ?? json['avatar_url'] ?? '').toString(),
-      coverImage: coverRaw != null ? coverRaw.toString() : null,
+      coverImage: coverRaw?.toString(),
       social: socialMap,
       isArtist: json['isArtist'] ?? json['is_artist'] ?? false,
       artistInfo: json['artistInfo'] != null ? ArtistInfo.fromJson(json['artistInfo']) : null,
       preferences: json['preferences'] != null ? ProfilePreferences.fromJson(json['preferences']) : null,
       stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
-      createdAt: _parseDate(json['createdAt'] ?? json['created_at']),
-      updatedAt: _parseDate(json['updatedAt'] ?? json['updated_at']),
+      createdAt: parseDate(json['createdAt'] ?? json['created_at']),
+      updatedAt: parseDate(json['updatedAt'] ?? json['updated_at']),
     );
   }
 
@@ -254,7 +256,7 @@ extension UserProfileSamples on UserProfile {
         username: 'crypto_artist',
         displayName: 'Crypto Artist',
         bio: 'Digital artist exploring blockchain',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=crypto_artist',
+        avatar: '${_backendAvatarBase()}/crypto_artist?style=avataaars&format=png',
         isArtist: true,
         stats: UserStats(followersCount: 1234, followingCount: 567),
         createdAt: now,
@@ -266,7 +268,7 @@ extension UserProfileSamples on UserProfile {
         username: 'nft_collector',
         displayName: 'NFT Collector',
         bio: 'Collecting amazing digital art',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nft_collector',
+        avatar: '${_backendAvatarBase()}/nft_collector?style=avataaars&format=png',
         stats: UserStats(followersCount: 890, followingCount: 432),
         createdAt: now,
         updatedAt: now,
@@ -277,11 +279,23 @@ extension UserProfileSamples on UserProfile {
         username: 'ar_enthusiast',
         displayName: 'AR Enthusiast',
         bio: 'Love augmented reality art',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ar_enthusiast',
+        avatar: '${_backendAvatarBase()}/ar_enthusiast?style=avataaars&format=png',
         stats: UserStats(followersCount: 456, followingCount: 789),
         createdAt: now,
         updatedAt: now,
       ),
     ];
+  }
+}
+
+// Helper to compute backend avatar base URL without importing BackendApiService in model constructors
+String _backendAvatarBase() {
+  // Try to resolve from environment-like fallback. In runtime, BackendApiService.baseUrl should be preferred.
+  try {
+    // Importing inside function to avoid circular import at top-level
+    final svc = BackendApiService();
+    return '${svc.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
+  } catch (_) {
+    return 'https://api.kubus.site/api/avatar';
   }
 }

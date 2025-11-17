@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_keys.dart';
 import '../models/ar_marker.dart';
 import '../models/artwork.dart';
@@ -28,20 +29,124 @@ class BackendApiService {
   final String baseUrl = ApiKeys.backendUrl;
   String? _authToken;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
+  bool _authInitialized = false;
+  Future<void>? _authInitFuture;
+
+  /// Ensure auth token is loaded once. If token missing and wallet provided,
+  /// attempt a single token issuance for that wallet and persist it.
+  Future<void> ensureAuthLoaded({String? walletAddress}) async {
+    if (_authInitialized) return;
+    if (_authInitFuture != null) return _authInitFuture!;
+    _authInitFuture = _doAuthInit(walletAddress);
+    await _authInitFuture;
+  }
+
+  Future<void> _doAuthInit(String? walletAddress) async {
+    try {
+      await loadAuthToken();
+      if ((_authToken == null || _authToken!.isEmpty) && walletAddress != null && walletAddress.isNotEmpty) {
+        // Try to issue a token once for the provided wallet
+        try {
+          final issued = await issueTokenForWallet(walletAddress);
+          if (issued) {
+            await loadAuthToken();
+          } else {
+            debugPrint('BackendApiService._doAuthInit: issueTokenForWallet returned false for $walletAddress');
+          }
+        } catch (e) {
+          debugPrint('BackendApiService._doAuthInit: issueTokenForWallet threw: $e');
+        }
+      }
+    } finally {
+      _authInitialized = true;
+    }
+  }
+
+  /// Ensure we have token loaded; if missing, attempt to issue using a stored wallet.
+  Future<void> _ensureAuthWithStoredWallet() async {
+    // If token already loaded, nothing to do
+    if ((_authToken ?? '').isNotEmpty) return;
+    // Try to load token from storage
+    await loadAuthToken();
+    if ((_authToken ?? '').isNotEmpty) return;
+    // No token: check for stored wallet and try issuance
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final storedWallet = prefs.getString('wallet_address') ?? prefs.getString('wallet') ?? prefs.getString('walletAddress') ?? prefs.getString('user_id');
+      if (storedWallet != null && storedWallet.isNotEmpty) {
+        debugPrint('BackendApiService: Attempting token issuance for stored wallet: $storedWallet');
+        try {
+          await ensureAuthLoaded(walletAddress: storedWallet);
+        } catch (e) {
+          debugPrint('BackendApiService: ensureAuthLoaded failed for stored wallet: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
+    }
+  }
 
   /// Set authentication token for API requests
-  void setAuthToken(String token) {
+  Future<void> setAuthToken(String token) async {
     _authToken = token;
-    debugPrint('BackendApiService: Auth token set');
+    debugPrint('BackendApiService: Auth token set (in-memory)');
+    // Persist token to secure storage and shared preferences (web fallback)
+    try {
+      await _secureStorage.write(key: 'jwt_token', value: token);
+      debugPrint('BackendApiService: Auth token written to secure storage');
+    } catch (e) {
+      debugPrint('BackendApiService: failed to write secure storage token: $e');
+    }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('jwt_token', token);
+      debugPrint('BackendApiService: Auth token written to SharedPreferences fallback');
+    } catch (e) {
+      debugPrint('BackendApiService: failed to write prefs token: $e');
+    }
   }
 
   /// Load auth token from secure storage
   Future<void> loadAuthToken() async {
     try {
-      final token = await _secureStorage.read(key: 'jwt_token');
+      String? token;
+      try {
+        token = await _secureStorage.read(key: 'jwt_token');
+      } catch (e) {
+        debugPrint('BackendApiService: secure storage read failed: $e');
+      }
+
+      // Fallback to SharedPreferences (useful for web builds where secure storage may not persist)
+      if (token == null || token.isEmpty) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          // Try a few known keys for backward compatibility
+          token = prefs.getString('jwt_token') ?? prefs.getString('token') ?? prefs.getString('auth_token') ?? prefs.getString('authToken');
+          if (token != null && token.isNotEmpty) debugPrint('BackendApiService: Auth token loaded from SharedPreferences fallback');
+        } catch (e) {
+          debugPrint('BackendApiService: SharedPreferences fallback failed: $e');
+        }
+      }
       if (token != null && token.isNotEmpty) {
         _authToken = token;
-        debugPrint('BackendApiService: Auth token loaded from secure storage');
+        debugPrint('BackendApiService: Auth token loaded (in-memory)');
+        // Attempt to decode exp field for debug information
+        try {
+          final parts = token.split('.');
+          if (parts.length >= 2) {
+            final payload = base64Url.normalize(parts[1]);
+            final decoded = utf8.decode(base64Url.decode(payload));
+            final map = jsonDecode(decoded) as Map<String, dynamic>;
+            if (map.containsKey('exp')) {
+              final exp = (map['exp'] as num).toInt();
+              final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+              final secsLeft = exp - now;
+              debugPrint('BackendApiService: token expiry in $secsLeft seconds');
+            }
+          }
+        } catch (e) {
+          debugPrint('BackendApiService: failed to decode token expiry: $e');
+        }
       } else {
         debugPrint('BackendApiService: No stored auth token found');
       }
@@ -59,6 +164,13 @@ class BackendApiService {
     } catch (e) {
       debugPrint('BackendApiService: Error clearing auth token: $e');
     }
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('jwt_token');
+      debugPrint('BackendApiService: Auth cleared from SharedPreferences');
+    } catch (e) {
+      debugPrint('BackendApiService: Error clearing prefs auth token: $e');
+    }
   }
 
   /// Get common headers for API requests
@@ -70,6 +182,10 @@ class BackendApiService {
 
     if (includeAuth && _authToken != null) {
       headers['Authorization'] = 'Bearer $_authToken';
+      // Avoid printing the token, but log that Authorization header will be included
+      debugPrint('BackendApiService._getHeaders: Authorization header present');
+    } else if (includeAuth) {
+      debugPrint('BackendApiService._getHeaders: Authorization header NOT present — ensure BackendApiService.loadAuthToken() was called earlier');
     }
 
     return headers;
@@ -117,7 +233,7 @@ class BackendApiService {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         if (data['token'] != null) {
           final token = data['token'] as String;
-          setAuthToken(token);
+          await setAuthToken(token);
           // Store token in secure storage
           try {
             await _secureStorage.write(key: 'jwt_token', value: token);
@@ -153,6 +269,295 @@ class BackendApiService {
     } catch (e) {
       debugPrint('Error getting profile: $e');
       rethrow;
+    }
+  }
+
+  // ==================== Chat / Messaging Helpers (wrappers used by providers) ====================
+
+  /// Return current in-memory auth token (may be null)
+  String? getAuthToken() => _authToken;
+
+  /// Get current authenticated profile
+  /// GET /api/profiles/me
+  Future<Map<String, dynamic>> getMyProfile() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/api/profiles/me'), headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': data['data'] ?? data};
+      }
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error in getMyProfile: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Issue a short-lived backend token for a wallet (used for socket auth)
+  /// POST /api/profiles/issue-token { walletAddress }
+  Future<bool> issueTokenForWallet(String walletAddress) async {
+    try {
+      final resp = await http.post(
+        Uri.parse('$baseUrl/api/profiles/issue-token'),
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'walletAddress': walletAddress}),
+      );
+      debugPrint('BackendApiService.issueTokenForWallet: status=${resp.statusCode}');
+      debugPrint('BackendApiService.issueTokenForWallet: bodyLen=${resp.body.length}');
+      if (resp.statusCode == 200 || resp.statusCode == 201) {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        final token = body['token'] as String? ?? body['data']?['token'] as String?;
+        debugPrint('BackendApiService.issueTokenForWallet: tokenPresent=${token != null && token.isNotEmpty}');
+        if (token != null && token.isNotEmpty) {
+          await setAuthToken(token);
+          try {
+            await _secureStorage.write(key: 'jwt_token', value: token);
+          } catch (e) {
+            debugPrint('issueTokenForWallet: failed to persist token: $e');
+          }
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error issuing token for wallet: $e');
+      return false;
+    }
+  }
+
+  /// Fetch list of conversations (lightweight)
+  /// GET /api/messages
+  Future<Map<String, dynamic>> fetchConversations() async {
+    try {
+      // Ensure we attempt to load persisted token before every protected call
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      debugPrint('BackendApiService.fetchConversations: authToken present=${_authToken != null && _authToken!.isNotEmpty}');
+      final response = await http.get(Uri.parse('$baseUrl/api/messages'), headers: _getHeaders());
+      // If unauthorized, try once more after reloading persisted token (short-lived tokens can expire)
+      if (response.statusCode == 401) {
+        debugPrint('BackendApiService.fetchConversations: 401 received, retrying after reload of auth token');
+        try { await loadAuthToken(); } catch (_) {}
+        try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+        final retryResp = await http.get(Uri.parse('$baseUrl/api/messages'), headers: _getHeaders());
+        if (retryResp.statusCode == 200) {
+          return jsonDecode(retryResp.body) as Map<String, dynamic>;
+        }
+        return {'success': false, 'status': retryResp.statusCode};
+      }
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error fetching conversations: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Fetch messages for a conversation
+  /// GET /api/messages/:conversationId/messages
+  Future<Map<String, dynamic>> fetchMessages(String conversationId, {int page = 1, int limit = 50}) async {
+    try {
+      // Ensure we attempt to load persisted token before every protected call (and attempt issuance for stored wallet if missing)
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      debugPrint('BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${_authToken != null && _authToken!.isNotEmpty}');
+      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages').replace(queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      });
+      final response = await http.get(uri, headers: _getHeaders());
+      if (response.statusCode == 401) {
+        debugPrint('BackendApiService.fetchMessages: 401 received, retrying after auth reload');
+        try { await loadAuthToken(); } catch (_) {}
+        try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+        final retryResp = await http.get(uri, headers: _getHeaders());
+        if (retryResp.statusCode == 200) return jsonDecode(retryResp.body) as Map<String, dynamic>;
+        return {'success': false, 'status': retryResp.statusCode};
+      }
+      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error fetching messages: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Send a message to a conversation (JSON)
+  /// POST /api/messages/:conversationId/messages { message, data }
+  Future<Map<String, dynamic>> sendMessage(String conversationId, String message, {Map<String, dynamic>? data}) async {
+    try {
+      final body = <String, dynamic>{'message': message};
+      if (data != null) body['data'] = data;
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/messages/$conversationId/messages'),
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      return {'success': false, 'status': response.statusCode, 'body': response.body};
+    } catch (e) {
+      debugPrint('Error sending message: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Fetch conversation members
+  /// GET /api/messages/:conversationId/members
+  Future<Map<String, dynamic>> fetchConversationMembers(String conversationId) async {
+    try {
+      // Ensure persisted token is loaded and token issuance attempted once (use stored wallet fallback)
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.get(Uri.parse('$baseUrl/api/messages/$conversationId/members'), headers: _getHeaders());
+      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 429) {
+        debugPrint('BackendApiService.fetchConversationMembers: 429 Too Many Requests for $conversationId');
+        return {'success': false, 'status': 429, 'retryAfter': response.headers['retry-after']};
+      }
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error fetching conversation members: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Upload a message attachment by posting multipart to the messages endpoint
+  Future<Map<String, dynamic>> uploadMessageAttachment(String conversationId, List<int> bytes, String filename, String contentType) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages');
+      final request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(_getHeaders());
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
+      // include a small content field to satisfy backend
+      request.fields['content'] = '';
+      final streamed = await request.send();
+      final resp = await http.Response.fromStream(streamed);
+      if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
+      return {'success': false, 'status': resp.statusCode, 'body': resp.body};
+    } catch (e) {
+      debugPrint('Error uploading message attachment: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Create a conversation
+  /// POST /api/messages { title, members }
+  Future<Map<String, dynamic>> createConversation({String? title, bool isGroup = false, List<String>? members}) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/messages'),
+        headers: _getHeaders(),
+        body: jsonEncode({'title': title, 'members': members ?? []}),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error creating conversation: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Upload conversation avatar (attempt common endpoints)
+  Future<Map<String, dynamic>> uploadConversationAvatar(String conversationId, List<int> bytes, String filename, String contentType) async {
+    try {
+      // Try conversation-specific avatar endpoint first
+      var uri = Uri.parse('$baseUrl/api/conversations/$conversationId/avatar');
+      var request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(_getHeaders());
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
+      var streamed = await request.send();
+      var resp = await http.Response.fromStream(streamed);
+      if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
+
+      // Fallback to messages-based endpoint
+      uri = Uri.parse('$baseUrl/api/messages/$conversationId/avatar');
+      request = http.MultipartRequest('POST', uri);
+      request.headers.addAll(_getHeaders());
+      request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
+      streamed = await request.send();
+      resp = await http.Response.fromStream(streamed);
+      if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
+
+      return {'success': false, 'status': resp.statusCode, 'body': resp.body};
+    } catch (e) {
+      debugPrint('Error uploading conversation avatar: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Add a member to conversation
+  Future<Map<String, dynamic>> addConversationMember(String conversationId, String walletAddress) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/messages/$conversationId/members'),
+        headers: _getHeaders(),
+        body: jsonEncode({'walletAddress': walletAddress}),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error adding conversation member: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Remove a member from conversation (best-effort)
+  Future<Map<String, dynamic>> removeConversationMember(String conversationId, String walletOrUsername) async {
+    try {
+      // Try a DELETE endpoint first (may not exist on server)
+      final uri = Uri.parse('$baseUrl/api/messages/$conversationId/members');
+      final response = await http.delete(uri, headers: _getHeaders(), body: jsonEncode({'walletAddress': walletOrUsername, 'username': walletOrUsername}));
+      if (response.statusCode == 200 || response.statusCode == 204) return {'success': true};
+
+      // Fallback: call a removal helper endpoint (non-standard)
+      final fallback = await http.post(Uri.parse('$baseUrl/api/messages/$conversationId/members/remove'), headers: _getHeaders(), body: jsonEncode({'walletAddress': walletOrUsername}));
+      if (fallback.statusCode == 200 || fallback.statusCode == 201) return jsonDecode(fallback.body) as Map<String, dynamic>;
+
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error removing conversation member: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Transfer conversation ownership (best-effort)
+  Future<Map<String, dynamic>> transferConversationOwner(String conversationId, String newOwnerWallet) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/messages/$conversationId/transfer-owner'),
+        headers: _getHeaders(),
+        body: jsonEncode({'newOwnerWallet': newOwnerWallet}),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error transferring conversation owner: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Mark conversation as read
+  Future<Map<String, dynamic>> markConversationRead(String conversationId) async {
+    try {
+      final response = await http.put(Uri.parse('$baseUrl/api/messages/$conversationId/read'), headers: _getHeaders());
+      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error marking conversation read: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Mark a specific message as read
+  Future<Map<String, dynamic>> markMessageRead(String conversationId, String messageId) async {
+    try {
+      final response = await http.put(Uri.parse('$baseUrl/api/messages/$conversationId/messages/$messageId/read'), headers: _getHeaders());
+      if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
+      return {'success': false, 'status': response.statusCode};
+    } catch (e) {
+      debugPrint('Error marking message read: $e');
+      return {'success': false, 'error': e.toString()};
     }
   }
 
@@ -209,6 +614,28 @@ class BackendApiService {
     }
   }
 
+  /// Fetch multiple profiles in a single batch call
+  /// POST /api/profiles/batch { wallets: [wallet1,wallet2] }
+  Future<Map<String, dynamic>> getProfilesBatch(List<String> wallets) async {
+    try {
+      if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/profiles/batch'),
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'wallets': wallets}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': data['data'] ?? data};
+      }
+      return {'success': false, 'status': response.statusCode, 'body': response.body};
+    } catch (e) {
+      debugPrint('Error in getProfilesBatch: $e');
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Create or update profile
   /// POST /api/profiles
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
@@ -226,7 +653,7 @@ class BackendApiService {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
           if (data['token'] != null) {
-            setAuthToken(data['token'] as String);
+            await setAuthToken(data['token'] as String);
             debugPrint('JWT token received and stored from profile creation');
           }
           return data['data'] as Map<String, dynamic>;
@@ -677,6 +1104,7 @@ class BackendApiService {
   Future<Comment> createComment({
     required String postId,
     required String content,
+    String? parentCommentId,
   }) async {
     try {
       final response = await http.post(
@@ -684,6 +1112,7 @@ class BackendApiService {
         headers: _getHeaders(),
         body: jsonEncode({
           'content': content,
+          if (parentCommentId != null) 'parentId': parentCommentId,
         }),
       );
 
@@ -707,6 +1136,8 @@ class BackendApiService {
     int limit = 50,
   }) async {
     try {
+      // Ensure auth loaded once (safe for public endpoints)
+      try { await ensureAuthLoaded(); } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -717,15 +1148,24 @@ class BackendApiService {
       final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final comments = data['comments'] as List<dynamic>;
-        return comments.map((json) => _commentFromBackendJson(json as Map<String, dynamic>)).toList();
+        final parsed = jsonDecode(response.body);
+        if (parsed is Map<String, dynamic>) {
+          final raw = parsed['comments'] ?? parsed['data'] ?? [];
+          if (raw is List) {
+            return raw.map((json) => _commentFromBackendJson(json as Map<String, dynamic>)).toList();
+          }
+          debugPrint('BackendApiService.getComments: unexpected payload for comments, returning empty list');
+          return <Comment>[];
+        }
+        debugPrint('BackendApiService.getComments: response body not a JSON object, returning empty list');
+        return <Comment>[];
       } else {
-        throw Exception('Failed to get comments: ${response.statusCode}');
+        debugPrint('BackendApiService.getComments: non-200 status ${response.statusCode}, returning empty list');
+        return <Comment>[];
       }
     } catch (e) {
       debugPrint('Error getting comments: $e');
-      rethrow;
+      return <Comment>[];
     }
   }
 
@@ -1483,8 +1923,9 @@ class BackendApiService {
           // Try to determine the best URL for the uploaded file
           String? uploadedUrl;
           try {
-            if (data.containsKey('url') && (data['url'] as String).isNotEmpty) uploadedUrl = data['url'] as String;
-            else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) uploadedUrl = data['ipfsUrl'] as String;
+            if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
+              uploadedUrl = data['url'] as String;
+            } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) uploadedUrl = data['ipfsUrl'] as String;
             else if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) uploadedUrl = data['httpUrl'] as String;
             else if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) uploadedUrl = data['fileUrl'] as String;
             else if (data.containsKey('path') && (data['path'] as String).isNotEmpty) uploadedUrl = data['path'] as String;
@@ -1641,6 +2082,21 @@ class BackendApiService {
   }
 
   // ==================== Health Check ====================
+
+  /// Send telemetry/analytics event to backend
+  /// POST /api/telemetry (best-effort; backend may ignore)
+  Future<void> sendTelemetryEvent(String eventName, Map<String, dynamic>? params) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/telemetry');
+      final body = jsonEncode({'event': eventName, 'params': params ?? {}});
+      final response = await http.post(uri, headers: _getHeaders(), body: body);
+      if (response.statusCode >= 200 && response.statusCode < 300) return;
+      // Non-fatal: ignore telemetry failures
+      debugPrint('Telemetry event post returned ${response.statusCode}');
+    } catch (e) {
+      debugPrint('Error sending telemetry event: $e');
+    }
+  }
 
   /// Check backend health
   /// GET /health
@@ -2082,6 +2538,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     id: json['id'] as String,
     authorId: json['authorId'] as String? ?? json['walletAddress'] as String? ?? json['userId'] as String? ?? 'unknown',
     authorName: author?['username'] as String? ?? author?['display_name'] as String? ?? json['username'] as String? ?? json['authorName'] as String? ?? 'Anonymous',
+    authorAvatar: author?['avatar'] as String? ?? author?['profileImage'] as String? ?? json['authorAvatar'] as String?,
+    authorUsername: author?['username'] as String? ?? json['authorUsername'] as String? ?? json['username'] as String?,
     content: json['content'] as String,
     imageUrl: json['imageUrl'] as String? ?? 
               (json['mediaUrls'] != null && (json['mediaUrls'] as List).isNotEmpty 
@@ -2110,6 +2568,8 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
     id: json['id'] as String,
     authorId: json['authorId'] as String? ?? json['userId'] as String? ?? 'unknown',
     authorName: json['username'] as String? ?? json['authorName'] as String? ?? 'Anonymous',
+    authorAvatar: (json['author'] is Map<String, dynamic>) ? (json['author']['avatar'] as String?) : (json['authorAvatar'] as String?),
+    authorUsername: json['username'] as String? ?? json['authorUsername'] as String?,
     content: json['content'] as String,
     timestamp: json['createdAt'] != null 
       ? DateTime.parse(json['createdAt'] as String)

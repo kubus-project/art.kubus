@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
 
 class ProfileProvider extends ChangeNotifier {
   UserProfile? _currentUser;
@@ -47,7 +48,7 @@ class ProfileProvider extends ChangeNotifier {
         return base.replaceAll(RegExp(r'/$'), '') + url;
       }
       // Otherwise, just prefix
-      return base.replaceAll(RegExp(r'/$'), '') + '/' + url;
+      return '${base.replaceAll(RegExp(r'/$'), '')}/$url';
     } catch (_) {
       return url;
     }
@@ -282,15 +283,63 @@ class ProfileProvider extends ChangeNotifier {
   Future<void> loadProfile(String walletAddress) async {
     _isLoading = true;
     _error = null;
+    // Immediately set a provisional profile so UI can show a stable identicon
+    // and a shortened wallet display name without waiting for the backend.
+    try {
+      final provisional = UserProfile(
+        id: 'profile_${walletAddress.substring(0, 8)}',
+        walletAddress: walletAddress,
+        username: _generateUsername(walletAddress),
+        displayName: _shortWallet(walletAddress),
+        bio: '',
+        avatar: UserService.safeAvatarUrl(walletAddress),
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      _currentUser = provisional;
+    } catch (_) {}
     notifyListeners();
 
     try {
       debugPrint('ProfileProvider: Loading profile for wallet: $walletAddress');
       
-      // Always try to load from backend
+      // Prefer cached user service profile to avoid extra backend calls
       try {
-        final profileData = await _apiService.getProfileByWallet(walletAddress);
-        _currentUser = UserProfile.fromJson(profileData);
+        final user = await UserService.getUserById(walletAddress);
+        if (user != null) {
+          // Normalize username coming from UserService: strip leading '@' if present
+          final normalized = user.username.replaceFirst(RegExp(r'^@+'), '');
+          _currentUser = UserProfile(
+            id: 'profile_${user.id}',
+            walletAddress: user.id,
+            username: normalized,
+            displayName: user.name,
+            bio: user.bio,
+            avatar: user.profileImageUrl ?? UserService.safeAvatarUrl(walletAddress),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+        } else {
+          final profileData = await _apiService.getProfileByWallet(walletAddress);
+          try {
+            debugPrint('ProfileProvider.loadProfile: profileData keys = ${profileData.keys}');
+            _currentUser = UserProfile.fromJson(profileData);
+          } catch (e, st) {
+            debugPrint('ProfileProvider.loadProfile: UserProfile.fromJson failed: $e');
+            debugPrint('Stack trace: $st');
+            // Fallback to a minimal profile to avoid crash in the UI
+            _currentUser = UserProfile(
+              id: 'profile_fallback_${walletAddress.substring(0, walletAddress.length > 8 ? 8 : walletAddress.length)}',
+              walletAddress: walletAddress,
+              username: _generateUsername(walletAddress),
+              displayName: _shortWallet(walletAddress),
+              bio: profileData['bio']?.toString() ?? '',
+              avatar: UserService.safeAvatarUrl(walletAddress),
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+          }
+        }
         // Ensure avatar URL is rasterized and absolute
         try {
           final av = _currentUser?.avatar ?? '';
@@ -315,9 +364,24 @@ class ProfileProvider extends ChangeNotifier {
           });
           debugPrint('ProfileProvider: Auto-registration successful, JWT token received');
           
-          // Load the newly created profile
-          final profileData = await _apiService.getProfileByWallet(walletAddress);
-          _currentUser = UserProfile.fromJson(profileData);
+          // Load the newly created profile (prefer cached service)
+          final user = await UserService.getUserById(walletAddress);
+          if (user != null) {
+            final normalized = user.username.replaceFirst(RegExp(r'^@+'), '');
+            _currentUser = UserProfile(
+              id: 'profile_${user.id}',
+              walletAddress: user.id,
+              username: normalized,
+              displayName: user.name,
+              bio: user.bio,
+              avatar: user.profileImageUrl ?? UserService.safeAvatarUrl(walletAddress),
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            );
+          } else {
+            final profileData = await _apiService.getProfileByWallet(walletAddress);
+            _currentUser = UserProfile.fromJson(profileData);
+          }
           try {
             final av = _currentUser?.avatar ?? '';
             final resolved = _resolveUrl(av);
@@ -363,7 +427,10 @@ class ProfileProvider extends ChangeNotifier {
 
     try {
       // If caller omitted profile fields, prefer existing in-memory values
-      final effectiveUsername = username ?? _currentUser?.username;
+      final rawUsername = username ?? _currentUser?.username;
+      // Normalize username: strip any leading '@' characters so stored usernames
+      // never contain the '@' prefix. UI can add '@' for display when needed.
+      final effectiveUsername = rawUsername?.replaceFirst(RegExp(r'^@+'), '');
       final effectiveDisplayName = displayName ?? _currentUser?.displayName;
       final effectiveBio = bio ?? _currentUser?.bio;
       final effectiveAvatar = avatar ?? _currentUser?.avatar;
@@ -476,7 +543,7 @@ class ProfileProvider extends ChangeNotifier {
       String? rawUrl = _extractUrlFromUploadResult(resultMap);
       _lastUploadDebug ??= {};
       _lastUploadDebug!['extractedUrl'] = rawUrl;
-      final url = rawUrl == null ? null : rawUrl.toString();
+      final url = rawUrl?.toString();
       final resolved = _resolveUrl(url);
 
       final raster = resolved.isNotEmpty ? _convertSvgToRaster(resolved) : '';
@@ -528,8 +595,9 @@ class ProfileProvider extends ChangeNotifier {
       String fileType = mimeType ?? 'image/jpeg';
       if (mimeType == null) {
         final ext = fileName.toLowerCase().split('.').last;
-        if (ext == 'png') fileType = 'image/png';
-        else if (ext == 'jpg' || ext == 'jpeg') fileType = 'image/jpeg';
+        if (ext == 'png') {
+          fileType = 'image/png';
+        } else if (ext == 'jpg' || ext == 'jpeg') fileType = 'image/jpeg';
         else if (ext == 'webp') fileType = 'image/webp';
       }
       
@@ -554,7 +622,7 @@ class ProfileProvider extends ChangeNotifier {
       String? rawUrl = _extractUrlFromUploadResult(resultMap);
       _lastUploadDebug ??= {};
       _lastUploadDebug!['extractedUrl'] = rawUrl;
-      final url = rawUrl == null ? null : rawUrl.toString();
+      final url = rawUrl?.toString();
       final resolved = _resolveUrl(url);
       final raster = resolved.isNotEmpty ? _convertSvgToRaster(resolved) : '';
 
@@ -624,6 +692,19 @@ class ProfileProvider extends ChangeNotifier {
   /// Helper: Generate username from wallet
   String _generateUsername(String walletAddress) {
     return 'user_${walletAddress.substring(0, 8)}';
+  }
+
+  /// Helper: Shorten wallet address for immediate display (e.g. 0x1234...abcd)
+  String _shortWallet(String wallet) {
+    if (wallet.isEmpty) return '';
+    try {
+      if (wallet.length <= 16) return wallet;
+      final head = wallet.substring(0, 8);
+      final tail = wallet.substring(wallet.length - 6);
+      return '$head...$tail';
+    } catch (_) {
+      return wallet;
+    }
   }
   
   // Refresh stats from backend
@@ -712,7 +793,7 @@ class ProfileProvider extends ChangeNotifier {
       username: 'current_user',
       displayName: 'Current User',
       bio: 'Digital artist exploring the intersection of AR, blockchain, and creativity.',
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=current',
+      avatar: '${_apiService.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar/current?style=avataaars&format=png',
       stats: UserStats(
         followersCount: 1250,
         followingCount: 340,

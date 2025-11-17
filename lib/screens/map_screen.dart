@@ -8,6 +8,7 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:location/location.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 
 import '../providers/themeprovider.dart';
 import '../providers/artwork_provider.dart';
@@ -712,12 +713,12 @@ class _MapScreenState extends State<MapScreen>
     return Scaffold(
       body: Consumer2<ThemeProvider, ArtworkProvider>(
         builder: (context, themeProvider, artworkProvider, child) {
-          if (!mounted) return const Center(child: CircularProgressIndicator());
+          if (!mounted) return const AppLoading();
           
           try {
             tileProviders ??= TileProviders(themeProvider);
           } catch (e) {
-            return const Center(child: CircularProgressIndicator());
+            return const AppLoading();
           }
 
           final filteredArt = _getFilteredArtwork(artworkProvider.artworks);

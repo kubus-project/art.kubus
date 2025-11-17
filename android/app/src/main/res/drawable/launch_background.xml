@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <bitmap android:gravity="fill" android:src="@drawable/background"/>
-    </item>
-    <item>
-        <bitmap android:gravity="center" android:src="@drawable/splash"/>
-    </item>
-</layer-list>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+        <!-- Keep the native launch background minimal and dark so Flutter-level splash
+            (SplashWave) appears without a white flash. Matches ThemeProvider dark scaffold. -->
+        <solid android:color="#0A0A0A" />
+</shape>

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/themeprovider.dart';
@@ -151,7 +152,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
 
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: themeProvider.accentColor))
+              ? const AppLoading()
                 : _error != null
                     ? _buildErrorState(theme, _error!)
                     : _followers!.isEmpty
@@ -403,7 +404,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator(color: themeProvider.accentColor))
+              ? const AppLoading()
                 : _error != null
                     ? _buildErrorState(theme, _error!)
                     : _following!.isEmpty

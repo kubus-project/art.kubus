@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 0.0.1
+version: 0.0.2
 
 environment:
   sdk: '>=3.3.4 <4.0.0'
@@ -98,6 +98,7 @@ dependencies:
   filesystem_picker: ^4.1.0
   intl: ^0.19.0
   share_plus: ^11.0.0  # Updated to latest version
+  socket_io_client: ^2.0.0
 
 
 # Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4

@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/wallet.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
 
 class WalletProvider extends ChangeNotifier {
   final SolanaWalletService _solanaWalletService;
@@ -617,18 +618,36 @@ class WalletProvider extends ChangeNotifier {
     try {
       // Profile fetch or create
       try {
-        _backendProfile = await _apiService.getProfileByWallet(address);
-      } catch (e) {
-        if (e.toString().contains('Profile not found')) {
-          _backendProfile = await _apiService.saveProfile({
-            'walletAddress': address,
-            'username': 'user_${address.substring(0,6)}',
-            'displayName': 'New User',
-            'bio': '',
-          });
+        // Request fresh profile when syncing backend data for connected wallet
+        final user = await UserService.getUserById(address, forceRefresh: true);
+        if (user != null) {
+          _backendProfile = {
+            'walletAddress': user.id,
+            'username': user.username.replaceFirst('@', ''),
+            'displayName': user.name,
+            'bio': user.bio,
+            'avatar': user.profileImageUrl,
+            'isVerified': user.isVerified,
+            'createdAt': null,
+          };
         } else {
-          rethrow;
+          try {
+            _backendProfile = await _apiService.getProfileByWallet(address);
+          } catch (e) {
+            if (e.toString().contains('Profile not found')) {
+              _backendProfile = await _apiService.saveProfile({
+                'walletAddress': address,
+                'username': 'user_${address.substring(0,6)}',
+                'displayName': 'New User',
+                'bio': '',
+              });
+            } else {
+              rethrow;
+            }
+          }
         }
+      } catch (e) {
+        debugPrint('WalletProvider._syncBackendData: profile lookup failed: $e');
       }
 
       // Collections
@@ -646,6 +665,15 @@ class WalletProvider extends ChangeNotifier {
         _achievementTokenTotal = (stats['totalTokens'] as num?)?.toDouble() ?? 0.0;
       } catch (e) {
         debugPrint('achievement stats fetch failed: $e');
+      }
+
+      // Try to issue backend token for this wallet to ensure API auth is ready
+      try {
+        final issued = await _apiService.issueTokenForWallet(address);
+        debugPrint('WalletProvider._syncBackendData: token issued for $address -> $issued');
+        if (issued) await _apiService.loadAuthToken();
+      } catch (e) {
+        debugPrint('WalletProvider._syncBackendData: token issuance failed: $e');
       }
 
       notifyListeners();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
@@ -785,7 +786,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             future: _loadUserActivity(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const AppLoading();
               }
               
               if (snapshot.hasError) {
@@ -915,7 +916,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final activities = <Map<String, dynamic>>[];
     
     // Add posts
-    final posts = activityData['posts'] as List<dynamic>? ?? [];
+    final posts = activityData['posts'] ?? [];
     for (final post in posts) {
       if (post is CommunityPost) {
         activities.add({
@@ -931,7 +932,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
     
     // Add likes
-    final likes = activityData['likes'] as List<dynamic>? ?? [];
+    final likes = activityData['likes'] ?? [];
     if (likes.isNotEmpty) {
       activities.add({
         'type': 'likes',
@@ -943,7 +944,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
     
     // Add bookmarks
-    final bookmarks = activityData['bookmarks'] as List<dynamic>? ?? [];
+    final bookmarks = activityData['bookmarks'] ?? [];
     if (bookmarks.isNotEmpty) {
       activities.add({
         'type': 'bookmarks',
@@ -955,7 +956,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
     
     // Add saved artworks
-    final savedArtworks = activityData['savedArtworks'] as List<dynamic>? ?? [];
+    final savedArtworks = activityData['savedArtworks'] ?? [];
     if (savedArtworks.isNotEmpty) {
       activities.add({
         'type': 'saved',

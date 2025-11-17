@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/app_loading.dart';
 import '../config/config.dart';
 
 /// Developer tool to reset app onboarding state
@@ -116,8 +117,8 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
         title: const Text('Onboarding Reset Tool'),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+        body: _isLoading
+          ? const AppLoading()
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(

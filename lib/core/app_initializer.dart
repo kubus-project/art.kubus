@@ -1,9 +1,11 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/chat_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -11,6 +13,7 @@ import '../providers/web3provider.dart';
 import '../services/backend_api_service.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
+import '../widgets/app_loading.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -20,10 +23,14 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
+  String? initializationError;
+
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeApp();
+    });
   }
 
   Future<void> _initializeApp() async {
@@ -68,6 +75,19 @@ class _AppInitializerState extends State<AppInitializer> {
       }
     }
     if (!mounted) return;
+    // Initialize ChatProvider after WalletProvider and ProfileProvider are ready so wallet can be resolved
+    try {
+      // Ensure auth is initialized (attempt single issuance if wallet restored)
+      try {
+        await BackendApiService().ensureAuthLoaded(walletAddress: walletAddress);
+        debugPrint('✅ BackendApiService.ensureAuthLoaded completed in AppInitializer');
+      } catch (e) {
+        debugPrint('⚠️ BackendApiService.ensureAuthLoaded failed in AppInitializer: $e');
+      }
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      await chatProvider.initialize(initialWallet: walletAddress);
+      debugPrint('✅ ChatProvider initialized from AppInitializer');
+    } catch (e) { debugPrint('⚠️ ChatProvider initialize from AppInitializer failed: $e'); }
     
     // Initialize SavedItemsProvider
     final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
@@ -146,9 +166,7 @@ class _AppInitializerState extends State<AppInitializer> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: const Center(
-        child: CircularProgressIndicator(),
-      ),
+      body: const AppLoading(),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:latlong2/latlong.dart';
@@ -353,14 +354,12 @@ class _ARScreenState extends State<ARScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
-            ),
+            const AppLoading(),
             const SizedBox(height: 24),
             Text(
               'Initializing AR...',
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface,
+                color: themeProvider.accentColor,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),

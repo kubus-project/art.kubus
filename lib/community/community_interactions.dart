@@ -9,6 +9,8 @@ class CommunityPost {
   final String id;
   final String authorId;
   final String authorName;
+  final String? authorAvatar;
+  final String? authorUsername;
   final String content;
   final String? imageUrl;
   final DateTime timestamp;
@@ -26,6 +28,8 @@ class CommunityPost {
     required this.id,
     required this.authorId,
     required this.authorName,
+    this.authorAvatar,
+    this.authorUsername,
     required this.content,
     this.imageUrl,
     required this.timestamp,
@@ -49,11 +53,15 @@ class CommunityPost {
     bool? isFollowing,
     List<Comment>? comments,
     int? commentCount,
+    String? authorAvatar,
+    String? authorUsername,
   }) {
     return CommunityPost(
       id: id,
       authorId: authorId,
       authorName: authorName,
+      authorAvatar: authorAvatar ?? this.authorAvatar,
+      authorUsername: authorUsername ?? this.authorUsername,
       content: content,
       imageUrl: imageUrl,
       timestamp: timestamp,
@@ -74,6 +82,8 @@ class Comment {
   final String id;
   final String authorId;
   final String authorName;
+  final String? authorAvatar;
+  final String? authorUsername;
   String content; // Made mutable for editing
   final DateTime timestamp;
   int likeCount;
@@ -84,6 +94,8 @@ class Comment {
     required this.id,
     required this.authorId,
     required this.authorName,
+    this.authorAvatar,
+    this.authorUsername,
     required this.content,
     required this.timestamp,
     this.likeCount = 0,
@@ -94,11 +106,15 @@ class Comment {
   Comment copyWith({
     int? likeCount,
     bool? isLiked,
+    String? authorAvatar,
+    String? authorUsername,
   }) {
     return Comment(
       id: id,
       authorId: authorId,
       authorName: authorName,
+      authorAvatar: authorAvatar ?? this.authorAvatar,
+      authorUsername: authorUsername ?? this.authorUsername,
       content: content,
       timestamp: timestamp,
       likeCount: likeCount ?? this.likeCount,
@@ -119,7 +135,7 @@ class CommunityService {
   static const String _likeCountsKey = 'community_like_counts';
 
   // Like/Unlike post (with backend sync)
-  static Future<void> togglePostLike(CommunityPost post, {String? currentUserId, String? currentUserName}) async {
+  static Future<void> togglePostLike(CommunityPost post, {String? currentUserId, String? currentUserName, String? currentUserWallet}) async {
     if (!AppConfig.enableLiking) return;
 
     final prefs = await SharedPreferences.getInstance();
@@ -128,41 +144,43 @@ class CommunityService {
     final backendApi = BackendApiService();
     final notificationService = PushNotificationService();
 
-    // Store original state for rollback
-    final originalIsLiked = post.isLiked;
-    final originalLikeCount = post.likeCount;
+      // Store original state for rollback
+      final originalIsLiked = post.isLiked;
+      final originalLikeCount = post.likeCount;
 
-    // The post object state has already been updated by the UI
-    // We just need to persist the current state
-    if (post.isLiked) {
-      // Post is now liked, add to persistence
-      if (!likedPosts.contains(post.id)) {
-        likedPosts.add(post.id);
+      // If UI did not pre-toggle, toggle here: flip the like state and adjust count
+      final toggledToLiked = !post.isLiked;
+      post.isLiked = toggledToLiked;
+      post.likeCount = (post.likeCount + (toggledToLiked ? 1 : -1)).clamp(0, 1 << 30);
+
+      // Persist local liked posts list
+      if (post.isLiked) {
+        if (!likedPosts.contains(post.id)) likedPosts.add(post.id);
+      } else {
+        likedPosts.remove(post.id);
       }
-    } else {
-      // Post is now unliked, remove from persistence
-      likedPosts.remove(post.id);
-    }
 
-    // Update like counts persistence
-    likeCounts.removeWhere((item) => item.startsWith('${post.id}|'));
-    likeCounts.add('${post.id}|${post.likeCount}');
+      // Update like counts persistence
+      likeCounts.removeWhere((item) => item.startsWith('${post.id}|'));
+      likeCounts.add('${post.id}|${post.likeCount}');
 
-    await prefs.setStringList(_likesKey, likedPosts);
-    await prefs.setStringList(_likeCountsKey, likeCounts);
-    
-    if (AppConfig.enableDebugPrints) {
-      debugPrint('Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
-    }
+      await prefs.setStringList(_likesKey, likedPosts);
+      await prefs.setStringList(_likeCountsKey, likeCounts);
+
+      if (AppConfig.enableDebugPrints) {
+        debugPrint('Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
+      }
 
     // Sync with backend (optimistic update)
     try {
+      // Accept either explicit id or wallet param passed from UI
+      final effectiveUserId = currentUserId ?? currentUserWallet;
       if (post.isLiked) {
         await backendApi.likePost(post.id);
         // Send notification to post author
-        if (currentUserId != null && currentUserId != post.authorId) {
+        if (effectiveUserId != null && effectiveUserId != post.authorId) {
           // Get username from profile provider or use wallet address
-          final userName = currentUserName ?? 'User ${currentUserId.substring(0, 6)}...';
+          final userName = currentUserName ?? 'User ${effectiveUserId.substring(0, 6)}...';
           await notificationService.showCommunityInteractionNotification(
             postId: post.id,
             type: 'like',
@@ -225,6 +243,7 @@ class CommunityService {
     String content,
     String authorName, {
     String? currentUserId,
+    String? parentCommentId,
   }) async {
     if (!AppConfig.enableCommenting) throw Exception('Commenting is disabled');
 
@@ -248,6 +267,7 @@ class CommunityService {
       final backendComment = await backendApi.createComment(
         postId: post.id,
         content: content,
+        parentCommentId: parentCommentId,
       );
 
       // Replace temp comment with real comment from backend
