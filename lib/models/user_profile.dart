@@ -1,4 +1,5 @@
 import '../services/backend_api_service.dart';
+import '../config/config.dart';
 
 class UserProfile {
   final String id;
@@ -296,6 +297,6 @@ String _backendAvatarBase() {
     final svc = BackendApiService();
     return '${svc.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
   } catch (_) {
-    return 'https://api.kubus.site/api/avatar';
+    return AppConfig.isDevelopment ? 'http://localhost:3000/api/avatar' : 'https://api.kubus.site/api/avatar';
   }
 }

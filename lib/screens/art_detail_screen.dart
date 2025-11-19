@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/inline_loading.dart';
+import '../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -624,16 +626,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         children: [
           Row(
             children: [
-              CircleAvatar(
+              AvatarWidget(
+                avatarUrl: comment.userAvatarUrl,
+                wallet: comment.userId,
                 radius: 16,
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                child: Text(
-                  comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : '?',
-                  style: GoogleFonts.outfit(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                enableProfileNavigation: true,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -778,10 +775,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                    ),
+                                    child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                                   )
                                 : Text(
                                     'Post Comment',
@@ -1313,9 +1307,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
-            ),
+            SizedBox(width: 56, height: 56, child: InlineLoading(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary, tileSize: 8.0)),
             const SizedBox(height: 16),
             Text(
               'Minting NFT...',

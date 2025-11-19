@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
+import '../../widgets/inline_loading.dart';
 import 'qr_scanner_screen.dart';
 
 class SendTokenScreen extends StatefulWidget {
@@ -518,10 +519,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           ? SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
-              ),
+              child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Theme.of(context).colorScheme.onPrimary),
             )
           : Text(
               'Send $_selectedToken',

@@ -19,6 +19,11 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   // Getters
   ThemeMode get themeMode => _themeMode;
   Color get accentColor => _accentColor;
+  // Returns a contrasting text color suitable for accentColor (onAccent)
+  Color get onAccentColor {
+    final brightness = ThemeData.estimateBrightnessForColor(_accentColor);
+    return brightness == Brightness.dark ? Colors.white : Colors.black;
+  }
   bool get isInitialized => _isInitialized;
   
   // Enhanced theme detection that properly handles system mode

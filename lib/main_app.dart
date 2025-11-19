@@ -72,20 +72,24 @@ class _MainAppState extends State<MainApp> {
                       const SizedBox(height: 20),
                       ElevatedButton(
                         onPressed: () async {
-                          // Use a non-listening provider reference inside async handler
+                          // Ensure mounted and capture provider before async ops to avoid using BuildContext across awaits
+                          if (!mounted) return;
                           final localWallet = Provider.of<WalletProvider>(context, listen: false);
+                          final messenger = ScaffoldMessenger.of(context);
+                          final dialogContext = context;
                           // Try biometric unlock first
                           final ok = await localWallet.authenticateForAppUnlock();
                           if (ok) {
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App unlocked')));
+                            messenger.showSnackBar(const SnackBar(content: Text('App unlocked')));
                             return;
                           }
 
                           // Biometric not available or failed — prompt for PIN
                           final pinController = TextEditingController();
+                          if (!mounted) return;
                           final entered = await showDialog<String?>(
-                            context: context,
+                            context: dialogContext,
                             builder: (ctx) => AlertDialog(
                               title: const Text('Enter PIN to unlock'),
                               content: TextField(
@@ -108,10 +112,10 @@ class _MainAppState extends State<MainApp> {
                           final ok2 = await localWallet.authenticateForAppUnlock(pin: entered);
                           if (ok2) {
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App unlocked')));
+                            messenger.showSnackBar(const SnackBar(content: Text('App unlocked')));
                           } else {
                             if (!mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed')));
+                            messenger.showSnackBar(const SnackBar(content: Text('Authentication failed')));
                           }
                         },
                         child: const Text('Unlock'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../widgets/inline_loading.dart';
 import '../providers/themeprovider.dart';
 
 class AdvancedStatsScreen extends StatefulWidget {
@@ -443,10 +444,17 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           ],
         ),
         const SizedBox(height: 6),
-        LinearProgressIndicator(
-          value: progress,
-          backgroundColor: Theme.of(context).colorScheme.outline,
-          valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+        SizedBox(
+          height: 6,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: InlineLoading(
+              progress: progress,
+              tileSize: 6.0,
+              color: themeProvider.accentColor,
+              duration: const Duration(milliseconds: 700),
+            ),
+          ),
         ),
         const SizedBox(height: 4),
         Text(

@@ -635,12 +635,31 @@ class WalletProvider extends ChangeNotifier {
             _backendProfile = await _apiService.getProfileByWallet(address);
           } catch (e) {
             if (e.toString().contains('Profile not found')) {
-              _backendProfile = await _apiService.saveProfile({
-                'walletAddress': address,
-                'username': 'user_${address.substring(0,6)}',
-                'displayName': 'New User',
-                'bio': '',
-              });
+              try {
+                final reg = await _apiService.registerWallet(
+                  walletAddress: address,
+                  username: 'user_${address.substring(0,6)}',
+                );
+                debugPrint('WalletProvider._syncBackendData: registerWallet response: $reg');
+                try {
+                  _backendProfile = await _apiService.getProfileByWallet(address);
+                } catch (_) {
+                  final user2 = await UserService.getUserById(address, forceRefresh: true);
+                  if (user2 != null) {
+                    _backendProfile = {
+                      'walletAddress': user2.id,
+                      'username': user2.username.replaceFirst('@', ''),
+                      'displayName': user2.name,
+                      'bio': user2.bio,
+                      'avatar': user2.profileImageUrl,
+                      'isVerified': user2.isVerified,
+                      'createdAt': null,
+                    };
+                  }
+                }
+              } catch (regErr) {
+                debugPrint('WalletProvider._syncBackendData: registerWallet failed: $regErr');
+              }
             } else {
               rethrow;
             }

@@ -18,6 +18,7 @@ import 'saved_items_screen.dart';
 import 'profile_screen_methods.dart';
 import '../models/achievements.dart';
 import 'profile_edit_screen.dart';
+import '../widgets/avatar_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -184,43 +185,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ],
                 ),
                 SizedBox(height: isSmallScreen ? 24 : 32),
-                Container(
-                  width: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
-                  height: isVerySmallScreen ? 100 : isSmallScreen ? 110 : 120,
-                  decoration: BoxDecoration(
-                    gradient: profileProvider.currentUser?.avatar == null || profileProvider.currentUser!.avatar.isEmpty
-                        ? LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              themeProvider.accentColor,
-                              themeProvider.accentColor.withValues(alpha: 0.7),
-                            ],
-                          )
-                        : null,
-                    image: profileProvider.currentUser?.avatar != null && profileProvider.currentUser!.avatar.isNotEmpty
-                        ? DecorationImage(
-                            image: NetworkImage(profileProvider.currentUser!.avatar),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                    borderRadius: BorderRadius.circular(isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60),
-                    boxShadow: [
-                      BoxShadow(
-                        color: themeProvider.accentColor.withValues(alpha: 0.3),
-                        blurRadius: isSmallScreen ? 15 : 20,
-                        spreadRadius: 0,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: profileProvider.currentUser?.avatar == null || profileProvider.currentUser!.avatar.isEmpty
-                      ? Icon(
-                          Icons.person,
-                          color: Colors.white,
-                          size: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
-                        )
-                      : null,
+                AvatarWidget(
+                  wallet: profileProvider.currentUser?.walletAddress ?? '',
+                  avatarUrl: profileProvider.currentUser?.avatar,
+                  radius: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
+                  enableProfileNavigation: false,
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 20),
                 Text(

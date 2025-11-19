@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../services/backend_api_service.dart';
-import '../services/push_notification_service.dart';
 
 // Enhanced community interaction models
 class CommunityPost {
@@ -84,11 +83,13 @@ class Comment {
   final String authorName;
   final String? authorAvatar;
   final String? authorUsername;
+  final String? authorWallet;
+  final String? parentCommentId;
   String content; // Made mutable for editing
   final DateTime timestamp;
   int likeCount;
   bool isLiked;
-  final List<Comment> replies;
+  List<Comment> replies;
 
   Comment({
     required this.id,
@@ -96,18 +97,22 @@ class Comment {
     required this.authorName,
     this.authorAvatar,
     this.authorUsername,
+    this.authorWallet,
+    this.parentCommentId,
     required this.content,
     required this.timestamp,
     this.likeCount = 0,
     this.isLiked = false,
-    this.replies = const [],
-  });
+    List<Comment>? replies,
+  }) : replies = replies ?? <Comment>[];
 
   Comment copyWith({
     int? likeCount,
     bool? isLiked,
     String? authorAvatar,
     String? authorUsername,
+    String? content,
+    List<Comment>? replies,
   }) {
     return Comment(
       id: id,
@@ -115,11 +120,13 @@ class Comment {
       authorName: authorName,
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
-      content: content,
+      authorWallet: authorWallet,
+      parentCommentId: parentCommentId,
+      content: content ?? this.content,
       timestamp: timestamp,
       likeCount: likeCount ?? this.likeCount,
       isLiked: isLiked ?? this.isLiked,
-      replies: replies,
+      replies: replies ?? List<Comment>.from(this.replies),
     );
   }
 }
@@ -142,7 +149,7 @@ class CommunityService {
     final likedPosts = prefs.getStringList(_likesKey) ?? [];
     final likeCounts = prefs.getStringList(_likeCountsKey) ?? [];
     final backendApi = BackendApiService();
-    final notificationService = PushNotificationService();
+    // Local notification service removed for actor-side; server will notify recipients.
 
       // Store original state for rollback
       final originalIsLiked = post.isLiked;
@@ -174,19 +181,10 @@ class CommunityService {
     // Sync with backend (optimistic update)
     try {
       // Accept either explicit id or wallet param passed from UI
-      final effectiveUserId = currentUserId ?? currentUserWallet;
+      // Effective user ID not needed here; server-side notifications to recipients will be handled by backend.
       if (post.isLiked) {
         await backendApi.likePost(post.id);
-        // Send notification to post author
-        if (effectiveUserId != null && effectiveUserId != post.authorId) {
-          // Get username from profile provider or use wallet address
-          final userName = currentUserName ?? 'User ${effectiveUserId.substring(0, 6)}...';
-          await notificationService.showCommunityInteractionNotification(
-            postId: post.id,
-            type: 'like',
-            userName: userName,
-          );
-        }
+        // Server will create and emit a notification to the post author. No local push is required here for the actor.
       } else {
         await backendApi.unlikePost(post.id);
       }
@@ -219,22 +217,46 @@ class CommunityService {
     if (!AppConfig.enableLiking) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final likedComments = prefs.getStringList('${_likesKey}_comments') ?? [];
-    final commentKey = '${postId}_${comment.id}';
+    final likesKey = '${_likesKey}_comments';
+    final likedComments = prefs.getStringList(likesKey) ?? [];
+    final commentKey = '${postId}|${comment.id}';
+    final backendApi = BackendApiService();
 
-    if (comment.isLiked) {
-      // Unlike
+    final wasLiked = comment.isLiked;
+    final originalCount = comment.likeCount;
+
+    if (wasLiked) {
       likedComments.remove(commentKey);
       comment.likeCount = (comment.likeCount - 1).clamp(0, double.infinity).toInt();
       comment.isLiked = false;
     } else {
-      // Like
-      likedComments.add(commentKey);
+      if (!likedComments.contains(commentKey)) likedComments.add(commentKey);
       comment.likeCount++;
       comment.isLiked = true;
     }
 
-    await prefs.setStringList('${_likesKey}_comments', likedComments);
+    await prefs.setStringList(likesKey, likedComments);
+
+    try {
+      if (comment.isLiked) {
+        await backendApi.likeComment(comment.id);
+      } else {
+        await backendApi.unlikeComment(comment.id);
+      }
+    } catch (e) {
+      // Roll back state and persistence on failure
+      if (comment.isLiked) {
+        comment.likeCount = (comment.likeCount - 1).clamp(0, double.infinity).toInt();
+        likedComments.remove(commentKey);
+      } else {
+        comment.likeCount = originalCount;
+        if (!likedComments.contains(commentKey)) likedComments.add(commentKey);
+      }
+      comment.isLiked = wasLiked;
+      comment.likeCount = originalCount;
+      await prefs.setStringList(likesKey, likedComments);
+      rethrow;
+    }
   }
 
   // Add comment to post (with backend sync)
@@ -248,19 +270,28 @@ class CommunityService {
     if (!AppConfig.enableCommenting) throw Exception('Commenting is disabled');
 
     final backendApi = BackendApiService();
-    final notificationService = PushNotificationService();
 
     // Optimistic UI update
     final tempComment = Comment(
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       authorId: currentUserId ?? 'current_user',
       authorName: authorName,
+      parentCommentId: parentCommentId,
       content: content,
       timestamp: DateTime.now(),
+      replies: <Comment>[],
     );
 
-    post.comments = [...post.comments, tempComment];
-    post.commentCount = post.comments.length;
+    if (parentCommentId == null || parentCommentId.isEmpty) {
+      post.comments = [...post.comments, tempComment];
+    } else {
+      final inserted = _appendReply(post.comments, parentCommentId, tempComment);
+      if (!inserted) {
+        // Fallback to root insertion if parent isn't present locally yet
+        post.comments = [...post.comments, tempComment];
+      }
+    }
+    post.commentCount = _countComments(post.comments);
 
     try {
       // Create comment on backend
@@ -270,10 +301,17 @@ class CommunityService {
         parentCommentId: parentCommentId,
       );
 
-      // Replace temp comment with real comment from backend
-      post.comments = post.comments.map((c) {
-        return c.id == tempComment.id ? backendComment : c;
-      }).toList();
+      final replaced = _replaceComment(post.comments, tempComment.id, backendComment);
+      if (!replaced) {
+        // If we somehow lost the temp comment reference, append freshly fetched one
+        if (parentCommentId == null || parentCommentId.isEmpty) {
+          post.comments = [...post.comments.where((c) => c.id != backendComment.id), backendComment];
+        } else {
+          final inserted = _appendReply(post.comments, parentCommentId, backendComment);
+          if (!inserted) post.comments = [...post.comments, backendComment];
+        }
+      }
+      post.commentCount = _countComments(post.comments);
 
       // Save to local preferences for persistence
       final prefs = await SharedPreferences.getInstance();
@@ -285,15 +323,7 @@ class CommunityService {
         debugPrint('Comment added to post ${post.id}. Total comments: ${post.commentCount}');
       }
 
-      // Send notification to post author
-      if (currentUserId != null && currentUserId != post.authorId) {
-        await notificationService.showCommunityInteractionNotification(
-          postId: post.id,
-          type: 'comment',
-          userName: authorName,
-          comment: content,
-        );
-      }
+      // Server will create notification for the post author; client-side push is not shown for actor.
 
       return backendComment;
     } catch (e) {
@@ -302,11 +332,61 @@ class CommunityService {
         debugPrint('Failed to create comment on backend: $e. Rolling back.');
       }
       
-      post.comments = post.comments.where((c) => c.id != tempComment.id).toList();
-      post.commentCount = post.comments.length;
+      _removeComment(post.comments, tempComment.id);
+      post.commentCount = _countComments(post.comments);
       
       rethrow;
     }
+  }
+
+  static bool _appendReply(List<Comment> comments, String parentId, Comment reply) {
+    for (final comment in comments) {
+      if (comment.id == parentId) {
+        comment.replies = [...comment.replies, reply];
+        return true;
+      }
+      if (comment.replies.isNotEmpty) {
+        final inserted = _appendReply(comment.replies, parentId, reply);
+        if (inserted) return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _replaceComment(List<Comment> comments, String targetId, Comment replacement) {
+    for (var i = 0; i < comments.length; i++) {
+      if (comments[i].id == targetId) {
+        comments[i] = replacement;
+        return true;
+      }
+      if (comments[i].replies.isNotEmpty) {
+        final replaced = _replaceComment(comments[i].replies, targetId, replacement);
+        if (replaced) return true;
+      }
+    }
+    return false;
+  }
+
+  static bool _removeComment(List<Comment> comments, String targetId) {
+    for (var i = 0; i < comments.length; i++) {
+      if (comments[i].id == targetId) {
+        comments.removeAt(i);
+        return true;
+      }
+      if (comments[i].replies.isNotEmpty) {
+        final removed = _removeComment(comments[i].replies, targetId);
+        if (removed) return true;
+      }
+    }
+    return false;
+  }
+
+  static int _countComments(List<Comment> comments) {
+    int total = comments.length;
+    for (final comment in comments) {
+      if (comment.replies.isNotEmpty) total += _countComments(comment.replies);
+    }
+    return total;
   }
 
   // Load saved interactions
@@ -358,7 +438,7 @@ class CommunityService {
           );
 
           // Check if comment is liked
-          final commentKey = '${post.id}_${comment.id}';
+          final commentKey = '${post.id}|${comment.id}';
           comment.isLiked = likedComments.contains(commentKey);
 
           loadedComments.add(comment);
@@ -366,6 +446,12 @@ class CommunityService {
       }
 
       post.comments = [...post.comments, ...loadedComments];
+      for (final comment in post.comments) {
+        final commentKey = '${post.id}|${comment.id}';
+        if (likedComments.contains(commentKey)) {
+          comment.isLiked = true;
+        }
+      }
       post.commentCount = post.comments.length;
     }
   }
@@ -421,7 +507,6 @@ class CommunityService {
     final prefs = await SharedPreferences.getInstance();
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
     final backendApi = BackendApiService();
-    final notificationService = PushNotificationService();
 
     bool isFollowing = followedUsers.contains(userId);
     bool originalFollowState = isFollowing;
@@ -448,11 +533,7 @@ class CommunityService {
       if (!originalFollowState) {
         // Was unfollowed, now following
         await backendApi.followUser(userId);
-        // Send follower notification
-        await notificationService.showFollowerNotification(
-          userId: userId,
-          userName: currentUserName ?? 'Someone',
-        );
+        // Server will emit follower notification to the followed user; no local push for actor.
       } else {
         // Was following, now unfollowing
         await backendApi.unfollowUser(userId);
@@ -521,7 +602,6 @@ class CommunityService {
     final sharedPosts = prefs.getStringList(_sharesKey) ?? [];
     final shareKey = '${post.id}_${DateTime.now().millisecondsSinceEpoch}';
     final backendApi = BackendApiService();
-    final notificationService = PushNotificationService();
     
     // Optimistic update
     sharedPosts.add(shareKey);
@@ -541,12 +621,7 @@ class CommunityService {
     try {
       await backendApi.sharePost(post.id);
       
-      // Send notification to post author
-      await notificationService.showCommunityInteractionNotification(
-        postId: post.id,
-        type: 'share',
-        userName: currentUserName ?? 'Someone',
-      );
+      // Server will create and emit notification to the post author. No local push for actor.
     } catch (e) {
       // Rollback on error
       if (AppConfig.enableDebugPrints) {

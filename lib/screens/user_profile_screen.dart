@@ -7,7 +7,8 @@ import '../services/user_service.dart';
 import '../models/achievements.dart';
 import '../providers/themeprovider.dart';
 import '../providers/chat_provider.dart';
-import 'conversation_screen.dart';
+import '../core/conversation_navigator.dart';
+import '../widgets/avatar_widget.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -188,58 +189,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       child: Column(
         children: [
           // Profile Image (use actual author avatar if available)
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  themeProvider.accentColor,
-                  themeProvider.accentColor.withValues(alpha: 0.7),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(50),
-              boxShadow: [
-                BoxShadow(
-                  color: themeProvider.accentColor.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: ClipOval(
-              child: Builder(builder: (ctx) {
-                final avatar = user!.profileImageUrl;
-                if (avatar != null && avatar.isNotEmpty) {
-                  try {
-                    return Image.network(
-                      avatar,
-                    width: 100,
-                    height: 100,
-                    fit: BoxFit.cover,
-                    errorBuilder: (c, e, s) => Container(
-                      color: themeProvider.accentColor,
-                      child: const Icon(Icons.person, color: Colors.white, size: 50),
-                    ),
-                    );
-                  } catch (e, st) {
-                    debugPrint('UserProfileScreen._buildProfileHeader: Image.network build failed for avatar: $avatar -> $e');
-                    debugPrint('Stack trace: $st');
-                    return Container(
-                      color: themeProvider.accentColor,
-                      child: const Icon(Icons.person, color: Colors.white, size: 50),
-                    );
-                  }
-                }
-                return const Center(
-                  child: Icon(
-                    Icons.person,
-                    color: Colors.white,
-                    size: 50,
-                  ),
-                );
-              }),
-            ),
+          AvatarWidget(
+            wallet: user!.id,
+            avatarUrl: user!.profileImageUrl,
+            radius: 50,
+            enableProfileNavigation: false,
           ),
           const SizedBox(height: 16),
           
@@ -388,32 +342,44 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ElevatedButton(
             onPressed: () async {
               final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+              // navigator variable no longer used; ConversationNavigator handles navigation
+              final messenger = ScaffoldMessenger.of(context);
+              final chatAuth = chatProvider.isAuthenticated;
               try {
                 final conv = await chatProvider.createConversation('', false, [user!.id]);
                 if (conv != null) {
-                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => ConversationScreen(conversation: conv)));
+                  if (!mounted) return;
+                  final preloaded = Provider.of<ChatProvider>(context, listen: false).getPreloadedProfileMapsForConversation(conv.id);
+                  // Ensure we pass non-empty members and sensible fallbacks for avatars / display names
+                  final rawMembers = (preloaded['members'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+                  final members = (rawMembers.isNotEmpty) ? rawMembers : <String>[user!.id];
+                  final rawAvatars = (preloaded['avatars'] as Map<String, String?>?) ?? <String, String?>{};
+                  final avatars = Map<String, String?>.from(rawAvatars);
+                  if (!avatars.containsKey(members.first) || (avatars[members.first] == null || avatars[members.first]!.isEmpty)) {
+                    avatars[members.first] = user!.profileImageUrl;
+                  }
+                  final rawNames = (preloaded['names'] as Map<String, String?>?) ?? <String, String?>{};
+                  final names = Map<String, String?>.from(rawNames);
+                  if (!names.containsKey(members.first) || (names[members.first] == null || names[members.first]!.isEmpty)) {
+                    names[members.first] = user!.name;
+                  }
+                  await ConversationNavigator.openConversationWithPreload(context, conv, preloadedMembers: members, preloadedAvatars: avatars, preloadedDisplayNames: names);
                 } else {
                   // Improve messaging: suggest login if token isn't present
-                  final chatAuth = Provider.of<ChatProvider>(context, listen: false).isAuthenticated;
+                  // use pre-captured chatAuth variable
                   if (!chatAuth) {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Please log in to message this user.')),
-                      );
+                      messenger.showSnackBar(const SnackBar(content: Text('Please log in to message this user.')));
                     }
                   } else {
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Could not open conversation')),
-                      );
+                      messenger.showSnackBar(const SnackBar(content: Text('Could not open conversation')));
                     }
                   }
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to open conversation: $e')),
-                  );
+                  messenger.showSnackBar(SnackBar(content: Text('Failed to open conversation: $e')));
                 }
               }
             },

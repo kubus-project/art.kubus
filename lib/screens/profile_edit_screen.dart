@@ -7,7 +7,11 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
 import '../providers/profile_provider.dart';
+import '../services/backend_api_service.dart';
+import '../models/user.dart';
+import '../services/event_bus.dart';
 import '../providers/themeprovider.dart';
+import '../widgets/inline_loading.dart';
 
 class ProfileEditScreen extends StatefulWidget {
   const ProfileEditScreen({super.key});
@@ -275,6 +279,28 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        // Also update ChatProvider and UserService caches to ensure other screens
+        // (e.g., MessagesScreen) show the updated avatar/displayName immediately.
+        try {
+          final uprof = profileProvider.currentUser;
+          if (uprof != null) {
+            final User updatedUser = User(
+              id: uprof.walletAddress,
+              name: uprof.displayName,
+              username: uprof.username,
+              bio: uprof.bio,
+              profileImageUrl: uprof.avatar,
+              followersCount: uprof.stats?.followersCount ?? 0,
+              followingCount: uprof.stats?.followingCount ?? 0,
+              postsCount: uprof.stats?.artworksCreated ?? 0,
+              isFollowing: false,
+              isVerified: false,
+              joinedDate: uprof.createdAt.toIso8601String(),
+              achievementProgress: [],
+            );
+            try { EventBus().emitProfileUpdated(updatedUser); } catch (_) {}
+          }
+        } catch (_) {}
         Navigator.pop(context);
       } else {
         throw Exception(profileProvider.error ?? 'Failed to save profile');
@@ -311,15 +337,31 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         },
       );
     }
-    // Ensure we use raster images; convert known SVG avatar URLs (DiceBear) to PNG.
+    // Ensure we use raster images; for DiceBear URLs, prefer the internal proxy so we don't hit the external CDN directly
     String displayUrl = url;
     try {
       final lower = url.toLowerCase();
-      if (lower.contains('dicebear') && (lower.contains('/svg') || lower.contains('format=svg') || lower.contains('type=svg') || lower.endsWith('.svg'))) {
-        displayUrl = url.replaceAll(RegExp(r'/svg(?=/|\?|$)', caseSensitive: false), '/png')
-            .replaceAll(RegExp(r'\.svg(\?|$)', caseSensitive: false), '.png')
-            .replaceAll(RegExp(r'format=svg', caseSensitive: false), 'format=png')
-            .replaceAll(RegExp(r'type=svg', caseSensitive: false), 'type=png');
+      if (lower.contains('dicebear')) {
+        // Build proxy path `/api/avatar/<seed>?style=<style>&format=png`
+        String seed = '';
+        String style = 'identicon';
+        try {
+          final u = Uri.parse(url);
+          if (u.queryParameters.containsKey('seed')) {
+            seed = u.queryParameters['seed']!;
+            final segs = u.pathSegments;
+            if (segs.isNotEmpty) style = segs.lastWhere((s) => s.isNotEmpty, orElse: () => 'identicon');
+          } else {
+            final last = u.pathSegments.isNotEmpty ? u.pathSegments.last : '';
+            seed = last.replaceAll('.svg', '');
+            if (u.pathSegments.length >= 2) style = u.pathSegments[u.pathSegments.length - 2];
+          }
+        } catch (_) {
+          final p = url.split('/').last;
+          seed = p.split('?').first.replaceAll('.svg', '');
+        }
+        final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
+        displayUrl = '$base/api/avatar/${Uri.encodeComponent(seed)}?style=$style&format=png&raw=true';
       } else if (lower.endsWith('.svg') || lower.contains('.svg?')) {
         displayUrl = url.replaceAll(RegExp(r'\.svg', caseSensitive: false), '.png');
       }
@@ -365,15 +407,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         ),
         actions: [
           if (_isLoading)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  padding: EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0),
+                  ),
                 ),
-              ),
             )
           else
             TextButton(

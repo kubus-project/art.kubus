@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/achievements.dart';
 import '../../widgets/app_loading.dart';
+import '../../widgets/inline_loading.dart';
 import '../../services/achievement_service.dart' as new_service;
 
 class AchievementsPage extends StatefulWidget {
@@ -290,11 +291,17 @@ class _AchievementsPageState extends State<AchievementsPage> {
               ),
             ),
             const SizedBox(height: 4),
-            LinearProgressIndicator(
-              value: progressPercent,
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              valueColor: AlwaysStoppedAnimation<Color>(achievement.color),
-              minHeight: 3,
+            SizedBox(
+              height: 6,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: InlineLoading(
+                  progress: progressPercent,
+                  tileSize: 6.0,
+                  color: achievement.color,
+                  duration: const Duration(milliseconds: 700),
+                ),
+              ),
             ),
           ],
           if (isUnlocked) ...[

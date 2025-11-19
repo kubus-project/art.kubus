@@ -1,5 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'notification_helper.dart';
+import 'notification_show_helper.dart' as webshow;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ar_marker.dart';
@@ -62,6 +65,20 @@ class PushNotificationService {
   /// Request notification permission
   Future<bool> requestPermission() async {
     if (!_initialized) await initialize();
+    // Web: use browser Permission API + fallback
+    if (kIsWeb) {
+      try {
+        final granted = await requestWebNotificationPermission();
+        _permissionGranted = granted;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('notification_permission_granted', _permissionGranted);
+        debugPrint('PushNotificationService (web): Permission granted: $_permissionGranted');
+        return _permissionGranted;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) requestPermission failed: $e');
+        return false;
+      }
+    }
 
     // Request permission on iOS
     final bool? granted = await _flutterLocalNotificationsPlugin
@@ -113,6 +130,15 @@ class PushNotificationService {
     required double distance,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'ar_proximity', 'markerId': marker.id, 'artworkId': marker.artworkId, 'distance': distance, 'actionUrl': 'app://artwork/${marker.artworkId}'};
+        await webshow.showNotification('AR Artwork Nearby! 🎨', '${marker.name} is ${distance.round()}m away', mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showARProximityNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'ar_proximity',
@@ -143,6 +169,7 @@ class PushNotificationService {
       'markerId': marker.id,
       'artworkId': marker.artworkId,
       'distance': distance,
+      'actionUrl': 'app://artwork/${marker.artworkId}',
     });
 
     await _flutterLocalNotificationsPlugin.show(
@@ -189,7 +216,24 @@ class PushNotificationService {
       'type': 'community_post',
       'postId': postId,
       'authorName': authorName,
+      'actionUrl': 'app://posts/$postId',
     });
+    if (kIsWeb) {
+      try {
+        final mapData = {
+          'type': 'community_post',
+          'postId': postId,
+          'authorName': authorName,
+          'content': content,
+          if (imageUrl != null) 'imageUrl': imageUrl,
+          'actionUrl': 'app://posts/$postId'
+        };
+        await webshow.showNotification('New post from $authorName', content.length > 60 ? '${content.substring(0, 60)}...' : content, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showCommunityNotification failed: $e');
+      }
+    }
 
     await _flutterLocalNotificationsPlugin.show(
       postId.hashCode,
@@ -208,6 +252,15 @@ class PushNotificationService {
     required int rewards,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'artwork_discovery', 'artworkId': artworkId, 'title': title, 'artist': artist, 'rewards': rewards, 'actionUrl': 'app://artwork/$artworkId'};
+        await webshow.showNotification('Art Discovered! 🎉', '$title by $artist (+$rewards KUB8)', mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showArtworkDiscoveryNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'artwork_discovery',
@@ -236,6 +289,7 @@ class PushNotificationService {
     final payload = jsonEncode({
       'type': 'artwork_discovery',
       'artworkId': artworkId,
+      'actionUrl': 'app://artwork/$artworkId',
     });
 
     await _flutterLocalNotificationsPlugin.show(
@@ -254,6 +308,15 @@ class PushNotificationService {
     required String reason,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'reward', 'amount': amount, 'reason': reason, 'actionUrl': 'app://rewards'};
+        await webshow.showNotification(title, '+$amount KUB8 - $reason', mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showRewardNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'rewards',
@@ -282,6 +345,7 @@ class PushNotificationService {
     final payload = jsonEncode({
       'type': 'reward',
       'amount': amount,
+      'actionUrl': 'app://rewards',
     });
 
     await _flutterLocalNotificationsPlugin.show(
@@ -316,6 +380,31 @@ class PushNotificationService {
     String? transactionId,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'nft_minting', 'artworkId': artworkId, 'artworkTitle': artworkTitle, 'status': status, 'transactionId': transactionId, 'actionUrl': 'app://artwork/$artworkId'};
+        String titleText = '';
+        String bodyText = '';
+        switch (status) {
+          case 'started':
+            titleText = 'Minting NFT... ⏳';
+            bodyText = 'Creating NFT for "$artworkTitle"';
+            break;
+          case 'success':
+            titleText = 'NFT Minted! 🎉';
+            bodyText = '"$artworkTitle" is now on the blockchain';
+            break;
+          case 'failed':
+            titleText = 'Minting Failed ❌';
+            bodyText = 'Could not mint "$artworkTitle". Please try again.';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showNFTMintingNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'nft_minting',
@@ -346,6 +435,7 @@ class PushNotificationService {
       'artworkId': artworkId,
       'status': status,
       if (transactionId != null) 'transactionId': transactionId,
+      'actionUrl': 'app://artwork/$artworkId',
     });
 
     String title = '';
@@ -385,6 +475,31 @@ class PushNotificationService {
     String? sellerName,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'trading', 'tradeId': tradeId, 'tradeType': type, 'artworkTitle': artworkTitle, 'amount': amount, 'buyerName': buyerName, 'sellerName': sellerName, 'actionUrl': 'app://trade/$tradeId'};
+        String titleText = '';
+        String bodyText = '';
+        switch (type) {
+          case 'offer_received':
+            titleText = 'New Offer! 💰';
+            bodyText = '${buyerName ?? 'Someone'} offered $amount SOL for "$artworkTitle"';
+            break;
+          case 'offer_accepted':
+            titleText = 'Offer Accepted! ✅';
+            bodyText = 'Your offer for "$artworkTitle" was accepted';
+            break;
+          case 'sale_completed':
+            titleText = 'Sale Complete! 🎊';
+            bodyText = 'You sold "$artworkTitle" for $amount SOL';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showTradingNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'trading',
@@ -415,6 +530,7 @@ class PushNotificationService {
       'tradeId': tradeId,
       'tradeType': type,
       'artworkTitle': artworkTitle,
+      'actionUrl': 'app://trade/$tradeId',
     });
 
     String title = '';
@@ -453,6 +569,15 @@ class PushNotificationService {
     String? badgeIcon,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'achievement', 'achievementId': achievementId, 'title': title, 'description': description, 'rewardTokens': rewardTokens, 'actionUrl': 'app://achievement/$achievementId'};
+        await webshow.showNotification('🏆 Achievement Unlocked!', '$title - $description (+$rewardTokens KUB8)', mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showAchievementNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'achievements',
@@ -481,6 +606,7 @@ class PushNotificationService {
     final payload = jsonEncode({
       'type': 'achievement',
       'achievementId': achievementId,
+      'actionUrl': 'app://achievement/$achievementId',
     });
 
     await _flutterLocalNotificationsPlugin.show(
@@ -528,28 +654,23 @@ class PushNotificationService {
       'interactionType': type,
       'postId': postId,
       'userName': userName,
+      'actionUrl': 'app://posts/$postId',
     });
 
-    String title = '';
-    String body = '';
-    
-    switch (type) {
-      case 'like':
-        title = '❤️ New Like';
-        body = '$userName liked your post';
-        break;
-      case 'comment':
-        title = '💬 New Comment';
-        body = '$userName: ${comment ?? "commented on your post"}';
-        break;
-      case 'share':
-        title = '🔄 Post Shared';
-        body = '$userName shared your post';
-        break;
-      case 'mention':
-        title = '📢 You were mentioned';
-        body = '$userName mentioned you in a post';
-        break;
+    final formatted = _formatCommunityMessage(type, userName, comment);
+    final title = formatted['title'] ?? 'New Activity';
+    final body = formatted['body'] ?? ''; 
+
+    if (kIsWeb) {
+      // For web, use the browser/unified notification helper to show a notification via service worker or Notification API
+      try {
+        final mapData = {'type': 'community_interaction', 'interactionType': type, 'postId': postId, 'userName': userName, 'comment': comment, 'actionUrl': 'app://posts/$postId'};
+        await webshow.showNotification(title, body, mapData);
+        return;
+      } catch (e) {
+        // fallback to native/local notifications if show fails
+        debugPrint('PushNotificationService (web) show failed: $e');
+      }
     }
 
     await _flutterLocalNotificationsPlugin.show(
@@ -561,6 +682,23 @@ class PushNotificationService {
     );
   }
 
+  // Local helper for consistent community message formatting
+  Map<String, String> _formatCommunityMessage(String type, String userName, [String? comment]) {
+    switch (type) {
+      case 'like':
+        return {'title': '❤️ New Like', 'body': '$userName liked your post'};
+      case 'comment':
+        final b = comment != null && comment.isNotEmpty ? '${comment.length > 60 ? comment.substring(0, 60) + '...' : comment}' : 'commented on your post';
+        return {'title': '💬 New Comment', 'body': '$userName: $b'};
+      case 'share':
+        return {'title': '🔄 Post Shared', 'body': '$userName shared your post'};
+      case 'mention':
+        return {'title': '📢 You were mentioned', 'body': '$userName mentioned you in a post'};
+      default:
+        return {'title': 'New activity', 'body': '$userName interacted with your post'};
+    }
+  }
+
   /// Show follower notification
   Future<void> showFollowerNotification({
     required String userId,
@@ -568,6 +706,15 @@ class PushNotificationService {
     String? userAvatar,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'follower', 'userId': userId, 'userName': userName, 'userAvatar': userAvatar, 'actionUrl': 'app://user/$userId'};
+        await webshow.showNotification('👥 New Follower', '$userName started following you', mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showFollowerNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'followers',
@@ -594,6 +741,7 @@ class PushNotificationService {
     final payload = jsonEncode({
       'type': 'follower',
       'userId': userId,
+      'actionUrl': 'app://user/$userId',
     });
 
     await _flutterLocalNotificationsPlugin.show(
@@ -613,6 +761,27 @@ class PushNotificationService {
     int? collectionCount,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'collection', 'collectionType': type, 'artworkTitle': artworkTitle, 'collectorName': collectorName, 'collectionCount': collectionCount, 'actionUrl': 'app://collections'};
+        String titleText = '';
+        String bodyText = '';
+        switch (type) {
+          case 'added':
+            titleText = '⭐ Added to Collection';
+            bodyText = '${collectorName ?? 'Someone'} added "$artworkTitle" to their collection';
+            break;
+          case 'milestone':
+            titleText = '🎯 Collection Milestone!';
+            bodyText = 'You\'ve collected $collectionCount artworks!';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showCollectionNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'collections',
@@ -639,6 +808,7 @@ class PushNotificationService {
     final payload = jsonEncode({
       'type': 'collection',
       'collectionType': type,
+      'actionUrl': 'app://collections',
     });
 
     String title = '';
@@ -671,6 +841,15 @@ class PushNotificationService {
     String? actionUrl,
   }) async {
     if (!_permissionGranted) return;
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'system', 'actionUrl': actionUrl};
+        await webshow.showNotification(title, message, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showSystemNotification failed: $e');
+      }
+    }
 
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'system',
@@ -722,6 +901,34 @@ class PushNotificationService {
     String? bidderName,
   }) async {
     // Placeholder for auction notifications
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'auction', 'auctionId': auctionId, 'eventType': type, 'artworkTitle': artworkTitle, 'currentBid': currentBid, 'bidderName': bidderName, 'actionUrl': 'app://auction/$auctionId'};
+        String titleText = 'Auction Update';
+        String bodyText = '';
+        switch (type) {
+          case 'started':
+            bodyText = 'Auction started for "$artworkTitle"';
+            break;
+          case 'bid_placed':
+            bodyText = '${bidderName ?? 'Someone'} placed a bid of $currentBid';
+            break;
+          case 'outbid':
+            bodyText = 'You were outbid for "$artworkTitle"';
+            break;
+          case 'won':
+            bodyText = 'You won the auction for "$artworkTitle"';
+            break;
+          case 'ended':
+            bodyText = 'Auction ended for "$artworkTitle"';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showAuctionNotification failed: $e');
+      }
+    }
     debugPrint('TODO: Implement auction notification - type: $type, artwork: $artworkTitle');
   }
 
@@ -734,6 +941,28 @@ class PushNotificationService {
     String? collaboratorName,
   }) async {
     // Placeholder for collaboration notifications
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'collaboration', 'projectId': projectId, 'eventType': type, 'projectTitle': projectTitle, 'collaboratorName': collaboratorName, 'actionUrl': 'app://project/$projectId'};
+        String titleText = 'Collaboration';
+        String bodyText = '';
+        switch (type) {
+          case 'invited':
+            bodyText = '${collaboratorName ?? 'Someone'} invited you to collaborate on "$projectTitle"';
+            break;
+          case 'contribution':
+            bodyText = '${collaboratorName ?? 'Someone'} contributed to "$projectTitle"';
+            break;
+          case 'completed':
+            bodyText = 'Your project "$projectTitle" was completed';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showCollaborationNotification failed: $e');
+      }
+    }
     debugPrint('TODO: Implement collaboration notification - type: $type, project: $projectTitle');
   }
 
@@ -746,6 +975,31 @@ class PushNotificationService {
     DateTime? startTime,
   }) async {
     // Placeholder for AR event notifications
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'ar_event', 'eventId': eventId, 'eventTitle': eventTitle, 'eventType': type, 'startTime': startTime?.toIso8601String(), 'actionUrl': 'app://ar_event/$eventId'};
+        String titleText = 'AR Event';
+        String bodyText = '';
+        switch (type) {
+          case 'starting_soon':
+            bodyText = 'AR Event starting soon: $eventTitle';
+            break;
+          case 'live':
+            bodyText = 'AR Event live: $eventTitle';
+            break;
+          case 'reminder':
+            bodyText = 'Reminder: $eventTitle';
+            break;
+          case 'ended':
+            bodyText = 'AR Event ended: $eventTitle';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showAREventNotification failed: $e');
+      }
+    }
     debugPrint('TODO: Implement AR event notification - type: $type, event: $eventTitle');
   }
 
@@ -759,6 +1013,28 @@ class PushNotificationService {
     int? total,
   }) async {
     // Placeholder for challenge notifications
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'challenge', 'challengeId': challengeId, 'eventType': type, 'challengeTitle': challengeTitle, 'progress': progress, 'total': total, 'actionUrl': 'app://challenge/$challengeId'};
+        String titleText = 'Challenge';
+        String bodyText = '';
+        switch (type) {
+          case 'available':
+            bodyText = 'New challenge available: $challengeTitle';
+            break;
+          case 'progress':
+            bodyText = 'Challenge progress: $progress/$total';
+            break;
+          case 'completed':
+            bodyText = 'Challenge completed: $challengeTitle';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showChallengeNotification failed: $e');
+      }
+    }
     debugPrint('TODO: Implement challenge notification - type: $type, challenge: $challengeTitle');
   }
 
@@ -770,6 +1046,28 @@ class PushNotificationService {
     String? poolName,
   }) async {
     // Placeholder for staking notifications
+    if (kIsWeb) {
+      try {
+        final mapData = {'type': 'staking', 'eventType': type, 'rewardAmount': rewardAmount, 'poolName': poolName, 'actionUrl': 'app://staking'};
+        String titleText = 'Staking Update';
+        String bodyText = '';
+        switch (type) {
+          case 'reward':
+            bodyText = 'You earned $rewardAmount from staking in $poolName';
+            break;
+          case 'unstake_ready':
+            bodyText = 'Your staked tokens are ready to withdraw from $poolName';
+            break;
+          case 'pool_update':
+            bodyText = 'Pool update: $poolName';
+            break;
+        }
+        await webshow.showNotification(titleText, bodyText, mapData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showStakingNotification failed: $e');
+      }
+    }
     debugPrint('TODO: Implement staking notification - type: $type');
   }
 

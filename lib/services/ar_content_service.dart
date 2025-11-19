@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/ar_marker.dart';
 import '../config/api_keys.dart';
+import '../config/config.dart';
 
 /// Configuration for storage providers
 class StorageConfig {
@@ -16,7 +17,7 @@ class StorageConfig {
   ];
 
   // Default HTTP backend
-  static const String defaultHttpBackend = 'https://api.kubus.site';
+  static const String defaultHttpBackend = AppConfig.isDevelopment ? 'http://localhost:3000/api/avatar' : 'https://api.kubus.site/api/avatar';
   
   // Custom backend URL (can be overridden)
   static String? customHttpBackend;

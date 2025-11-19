@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+// inline_loading no longer used in this file; replaced with inline_progress
+import '../widgets/inline_progress.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -254,7 +256,9 @@ class _MapScreenState extends State<MapScreen>
     _pushNotificationService.showARProximityNotification(
       marker: marker,
       distance: distance,
-    );
+    ).catchError((e) {
+      debugPrint('MapScreen: showARProximityNotification failed: $e');
+    });
     
     // Also show in-app SnackBar
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1673,12 +1677,7 @@ class _MapScreenState extends State<MapScreen>
                   // Header (not draggable)
                   Row(
                     children: [
-                      CircularProgressIndicator(
-                        value: overallProgress,
-                        strokeWidth: 3,
-                        backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-                        valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
-                      ),
+                      SizedBox(width: 24, height: 24, child: InlineProgress(progress: overallProgress, rows: 3, cols: 3, tileSize: 6.0, gap: 2.0, color: Theme.of(context).colorScheme.primary, backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.04), shape: BoxShape.circle)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -1765,10 +1764,17 @@ class _MapScreenState extends State<MapScreen>
                                           ),
                                         ),
                                         const SizedBox(height: 4),
-                                        LinearProgressIndicator(
-                                          value: progress.progressPercentage,
-                                          backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-                                          valueColor: AlwaysStoppedAnimation<Color>(task.color),
+                                        SizedBox(
+                                          height: 6,
+                                          child: InlineProgress(
+                                            progress: progress.progressPercentage,
+                                            rows: 1,
+                                            cols: 5,
+                                            tileSize: 6.0,
+                                            gap: 2.0,
+                                            color: task.color,
+                                            backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.02),
+                                          ),
                                         ),
                                       ],
                                     ),
