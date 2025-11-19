@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 
@@ -428,13 +429,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             ),
           ),
           const SizedBox(height: 16),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(
-              Provider.of<ThemeProvider>(context).accentColor,
+          SizedBox(
+            height: 10,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: InlineLoading(
+                progress: progress,
+                tileSize: 8.0,
+                color: Provider.of<ThemeProvider>(context).accentColor,
+                duration: const Duration(milliseconds: 700),
+              ),
             ),
-            minHeight: 8,
           ),
           const SizedBox(height: 12),
           Row(
@@ -747,11 +752,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             ],
           ),
           const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: value,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
+          SizedBox(
+            height: 8,
+              child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: InlineLoading(
+                progress: value,
+                tileSize: 6.0,
+                color: color,
+                duration: const Duration(milliseconds: 700),
+              ),
+            ),
           ),
         ],
       ),
@@ -1040,11 +1051,17 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             ],
           ),
           const SizedBox(height: 4),
-          LinearProgressIndicator(
-            value: strength,
-            backgroundColor: Colors.white.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 4,
+          SizedBox(
+            height: 6,
+              child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: InlineLoading(
+                progress: strength,
+                tileSize: 6.0,
+                color: color,
+                duration: const Duration(milliseconds: 700),
+              ),
+            ),
           ),
         ],
       ),

@@ -126,7 +126,9 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
       widget.onArtworkFound?.call(artworkData);
 
       // Show confirmation and launch AR
-      if (mounted) {
+        if (mounted) {
+        // Ensure we're mounted before showing the dialog to avoid using a stale BuildContext
+        if (!mounted) return;
         final shouldLaunch = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
@@ -162,7 +164,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
           ),
         );
 
-        if (shouldLaunch == true) {
+          if (shouldLaunch == true) {
           final arService = ARService();
           final success = await arService.launchARViewer(
             modelUrl: artworkData['modelUrl'],
@@ -172,7 +174,8 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
           );
 
           if (!success && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.showSnackBar(
               SnackBar(
                 content: const Text('Failed to launch AR viewer. Install Google AR Core?'),
                 action: SnackBarAction(

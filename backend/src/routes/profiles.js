@@ -6,6 +6,8 @@ const { query } = require('../db');
 const multer = require('multer');
 const storageService = require('../services/storageService');
 const { verifyToken, createUserRateLimit } = require('../middleware/auth');
+const { generateUsername } = require('../utils/usernameGenerator');
+const { normalizeAvatarUrl, buildAvatarProxyUrl } = require('../utils/avatar');
 
 // Multer config for avatar uploads (memory storage)
 const avatarUpload = multer({
@@ -32,40 +34,7 @@ const avatarUpload = multer({
  * Solana wallet stores only verification NFTs and token ownership.
  */
 
-// ============================================
-// GET MY PROFILE (from token)
-// Note: placed before wildcard wallet route to avoid being shadowed
-// ============================================
-router.get('/me', verifyToken, async (req, res) => {
-  try {
-    const walletAddress = req.user?.walletAddress || req.user?.wallet_address;
-    if (!walletAddress) return res.status(400).json({ success: false, error: 'No wallet in token' });
-
-    const result = await query('SELECT * FROM profiles WHERE wallet_address = $1', [walletAddress]);
-    if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Profile not found' });
-
-    const row = result.rows[0];
-    const profile = {
-      id: row.id,
-      walletAddress: row.wallet_address,
-      username: row.username,
-      displayName: row.display_name,
-      bio: row.bio,
-      avatar: row.avatar_url,
-      coverImage: row.cover_image_url,
-      social: { twitter: row.twitter, instagram: row.instagram, discord: row.discord, website: row.website },
-      isArtist: row.is_artist,
-      isVerified: row.is_verified,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
-
-    res.json({ success: true, data: profile });
-  } catch (err) {
-    logger.error('Error fetching my profile:', err);
-    res.status(500).json({ success: false, error: 'Server error' });
-  }
-});
+// NOTE: consolidated GET /me is implemented below (avoid duplicate handlers)
 
 // ============================================
 // GET PROFILE BY WALLET ADDRESS
@@ -93,9 +62,7 @@ router.get('/:walletAddress', async (req, res) => {
     // Provide a default identicon avatar when none is set in the DB so clients
     // immediately receive a stable avatar URL (avoids flicker and 410s).
     const row = result.rows[0];
-    const base = (process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
-    const defaultAvatar = (base ? `${base}` : '') + `/api/avatar/${encodeURIComponent(walletAddress)}?style=identicon&format=png`;
-    const avatarUrl = row.avatar_url && String(row.avatar_url).trim().length > 0 ? row.avatar_url : defaultAvatar;
+    const avatarUrl = normalizeAvatarUrl(row.avatar_url, walletAddress);
 
     const profile = {
       id: row.id,
@@ -143,10 +110,7 @@ router.get('/me', verifyToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Profile not found' });
 
     const row = result.rows[0];
-    // Ensure a default identicon is returned when avatar_url is empty
-    const base = (process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
-    const defaultAvatar = (base ? `${base}` : '') + `/api/avatar/${encodeURIComponent(walletAddress)}?style=identicon&format=png`;
-    const avatarUrl = row.avatar_url && String(row.avatar_url).trim().length > 0 ? row.avatar_url : defaultAvatar;
+    const avatarUrl = normalizeAvatarUrl(row.avatar_url, walletAddress);
 
     const profile = {
       id: row.id,
@@ -186,17 +150,12 @@ router.post('/batch', async (req, res) => {
     const q = `SELECT wallet_address, username, display_name, avatar_url FROM profiles WHERE wallet_address IN (${params})`;
     const result = await query(q, wallets);
 
-    const base = (process.env.HTTP_BASE_URL || '').replace(/\/$/, '');
-    const profiles = result.rows.map(r => {
-      const w = r.wallet_address;
-      const defaultAvatar = (base ? `${base}` : '') + `/api/avatar/${encodeURIComponent(w)}?style=identicon&format=png`;
-      return {
-        walletAddress: r.wallet_address,
-        username: r.username,
-        displayName: r.display_name,
-        avatar: r.avatar_url && String(r.avatar_url).trim().length > 0 ? r.avatar_url : defaultAvatar
-      };
-    });
+    const profiles = result.rows.map(r => ({
+      walletAddress: r.wallet_address,
+      username: r.username,
+      displayName: r.display_name,
+      avatar: normalizeAvatarUrl(r.avatar_url, r.wallet_address)
+    }));
 
     res.json({ success: true, count: profiles.length, data: profiles });
   } catch (err) {
@@ -233,8 +192,52 @@ router.post('/', async (req, res) => {
     }
     
     logger.info(`Creating/updating profile for wallet: ${walletAddress}`);
-    
-    // Save to database with UPSERT
+    // Determine whether this is a create (new wallet) or update (existing)
+    const existingRes = await query('SELECT username, avatar_url FROM profiles WHERE wallet_address = $1', [walletAddress]);
+    const isUpdate = existingRes.rows.length > 0;
+
+    // For new profiles: always generate a server username and ignore any client-provided username.
+    // For updates: allow the client to change username unless it's a placeholder 'user_...';
+    // if client doesn't provide a username on update, preserve existing username.
+    let finalUsername = null;
+    if (!isUpdate) {
+      finalUsername = generateUsername();
+    } else {
+      let provided = (username || '').toString().trim();
+      if (provided.startsWith('user_')) provided = '';
+      // If provided non-empty use it, otherwise preserve existing username
+      finalUsername = provided || existingRes.rows[0].username || null;
+    }
+
+    // Avatar handling: for new profiles, generate a DiceBear avatar seeded by the generated username
+    // For updates, if the client provided an avatar use it, otherwise preserve existing avatar (pass null so UPSERT COALESCE keeps it)
+    let finalAvatar = null;
+    if (!isUpdate) {
+      const seed = finalUsername || walletAddress;
+      finalAvatar = buildAvatarProxyUrl(seed, { style: 'identicon', format: 'png', raw: true });
+    } else {
+      const providedAvatar = (avatar || '').toString().trim();
+      finalAvatar = providedAvatar || null; // null -> DO UPDATE will COALESCE and keep existing avatar
+    }
+
+    // Display name handling: default to capitalized username with hash for new profiles.
+    // Example: 'bravelion_ab12' -> 'Bravelion_ab12'
+    let finalDisplayName = null;
+    if (!isUpdate) {
+      if (displayName && String(displayName).trim().length > 0) {
+        finalDisplayName = String(displayName).trim();
+      } else {
+        const parts = (finalUsername || '').split('_');
+        const namePart = parts[0] || finalUsername || walletAddress;
+        const hashPart = parts[1] ? `_${parts[1]}` : '';
+        finalDisplayName = namePart.charAt(0).toUpperCase() + namePart.slice(1) + hashPart;
+      }
+    } else {
+      const providedDisplay = (displayName || '').toString().trim();
+      finalDisplayName = providedDisplay || existingRes.rows[0].display_name || null;
+    }
+
+    // Save to database with UPSERT. Use COALESCE to avoid clobbering existing values with nulls.
     const result = await query(
       `INSERT INTO profiles (
         wallet_address, username, display_name, bio, avatar_url, 
@@ -242,24 +245,24 @@ router.post('/', async (req, res) => {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (wallet_address) 
       DO UPDATE SET 
-        username = EXCLUDED.username,
-        display_name = EXCLUDED.display_name,
-        bio = EXCLUDED.bio,
-        avatar_url = EXCLUDED.avatar_url,
-        cover_image_url = EXCLUDED.cover_image_url,
-        twitter = EXCLUDED.twitter,
-        instagram = EXCLUDED.instagram,
-        discord = EXCLUDED.discord,
-        website = EXCLUDED.website,
-        is_artist = EXCLUDED.is_artist,
+        username = COALESCE(EXCLUDED.username, profiles.username),
+        display_name = COALESCE(EXCLUDED.display_name, profiles.display_name),
+        bio = COALESCE(EXCLUDED.bio, profiles.bio),
+        avatar_url = COALESCE(EXCLUDED.avatar_url, profiles.avatar_url),
+        cover_image_url = COALESCE(EXCLUDED.cover_image_url, profiles.cover_image_url),
+        twitter = COALESCE(EXCLUDED.twitter, profiles.twitter),
+        instagram = COALESCE(EXCLUDED.instagram, profiles.instagram),
+        discord = COALESCE(EXCLUDED.discord, profiles.discord),
+        website = COALESCE(EXCLUDED.website, profiles.website),
+        is_artist = COALESCE(EXCLUDED.is_artist, profiles.is_artist),
         updated_at = CURRENT_TIMESTAMP
       RETURNING *`,
       [
         walletAddress,
-        username,
-        displayName,
+        finalUsername,
+        finalDisplayName,
         bio,
-        avatar,
+        finalAvatar,
         coverImage,
         social?.twitter,
         social?.instagram,
@@ -275,7 +278,7 @@ router.post('/', async (req, res) => {
       username: result.rows[0].username,
       displayName: result.rows[0].display_name,
       bio: result.rows[0].bio,
-      avatar: result.rows[0].avatar_url,
+      avatar: normalizeAvatarUrl(result.rows[0].avatar_url, walletAddress),
       coverImage: result.rows[0].cover_image_url,
       social: {
         twitter: result.rows[0].twitter,
@@ -350,7 +353,7 @@ router.get('/artists/list', async (req, res) => {
       username: row.username,
       displayName: row.display_name,
       bio: row.bio,
-      avatar: row.avatar_url,
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
       coverImage: row.cover_image_url,
       isArtist: row.is_artist,
       isVerified: row.is_verified,

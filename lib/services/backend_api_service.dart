@@ -211,6 +211,43 @@ class BackendApiService {
     });
   }
 
+  /// Register a wallet-based user via auth endpoint
+  /// POST /api/auth/register { walletAddress, username? }
+  /// On success stores returned JWT token for subsequent authenticated calls.
+  Future<Map<String, dynamic>> registerWallet({
+    required String walletAddress,
+    String? username,
+  }) async {
+    try {
+      final body = {
+        'walletAddress': walletAddress,
+        if (username != null) 'username': username,
+      };
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/register'),
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode(body),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        // If backend returned token, persist it
+        final token = data['data'] != null && data['data']['token'] != null
+            ? data['data']['token'] as String
+            : (data['token'] as String?) ?? null;
+        if (token != null) {
+          await setAuthToken(token);
+          try { await _secureStorage.write(key: 'jwt_token', value: token); } catch (_) {}
+        }
+        return data;
+      } else {
+        throw Exception('Register failed: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error in registerWallet: $e');
+      rethrow;
+    }
+  }
+
   /// Login with wallet signature
   /// POST /api/auth/login
   Future<Map<String, dynamic>> loginWithWallet({
@@ -383,11 +420,14 @@ class BackendApiService {
   }
 
   /// Send a message to a conversation (JSON)
-  /// POST /api/messages/:conversationId/messages { message, data }
-  Future<Map<String, dynamic>> sendMessage(String conversationId, String message, {Map<String, dynamic>? data}) async {
+  /// POST /api/messages/:conversationId/messages { message, data, replyToId }
+  Future<Map<String, dynamic>> sendMessage(String conversationId, String message, {Map<String, dynamic>? data, String? replyToId}) async {
     try {
       final body = <String, dynamic>{'message': message};
       if (data != null) body['data'] = data;
+      if (replyToId != null && replyToId.isNotEmpty) {
+        body['replyToId'] = replyToId;
+      }
       final response = await http.post(
         Uri.parse('$baseUrl/api/messages/$conversationId/messages'),
         headers: _getHeaders(),
@@ -429,8 +469,9 @@ class BackendApiService {
       final request = http.MultipartRequest('POST', uri);
       request.headers.addAll(_getHeaders());
       request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
-      // include a small content field to satisfy backend
-      request.fields['content'] = '';
+      final placeholder = filename.isNotEmpty ? 'Attachment • $filename' : 'Shared an attachment';
+      request.fields['message'] = placeholder;
+      request.fields['content'] = placeholder;
       final streamed = await request.send();
       final resp = await http.Response.fromStream(streamed);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
@@ -448,7 +489,7 @@ class BackendApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/api/messages'),
         headers: _getHeaders(),
-        body: jsonEncode({'title': title, 'members': members ?? []}),
+        body: jsonEncode({'title': title, 'members': members ?? [], 'isGroup': isGroup}),
       );
       if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
@@ -644,6 +685,7 @@ class BackendApiService {
     while (true) {
       attempt++;
       try {
+        debugPrint('BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
         final response = await http.post(
           Uri.parse('$baseUrl/api/profiles'),
           headers: _getHeaders(includeAuth: false),
@@ -1064,6 +1106,7 @@ class BackendApiService {
   /// POST /api/community/posts/:id/like
   Future<void> likePost(String postId) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       await http.post(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
@@ -1090,6 +1133,7 @@ class BackendApiService {
   /// DELETE /api/community/posts/:id/like
   Future<void> unlikePost(String postId) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       await http.delete(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
@@ -1107,18 +1151,29 @@ class BackendApiService {
     String? parentCommentId,
   }) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       final response = await http.post(
         Uri.parse('$baseUrl/api/community/posts/$postId/comments'),
         headers: _getHeaders(),
         body: jsonEncode({
           'content': content,
-          if (parentCommentId != null) 'parentId': parentCommentId,
+          if (parentCommentId != null) 'parentCommentId': parentCommentId,
         }),
       );
 
       if (response.statusCode == 201) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return _commentFromBackendJson(data['comment'] as Map<String, dynamic>);
+        final parsed = jsonDecode(response.body);
+        if (parsed is Map<String, dynamic>) {
+          final commentJson = parsed['comment'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'];
+          if (commentJson is Map<String, dynamic>) {
+            return _commentFromBackendJson(commentJson);
+          }
+          // Some endpoints may return the comment fields at root level
+          if (parsed.containsKey('id') && parsed.containsKey('content')) {
+            return _commentFromBackendJson(parsed);
+          }
+        }
+        throw Exception('Unexpected response when creating comment: ${response.body}');
       } else {
         throw Exception('Failed to create comment: ${response.statusCode}');
       }
@@ -1150,9 +1205,13 @@ class BackendApiService {
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
         if (parsed is Map<String, dynamic>) {
-          final raw = parsed['comments'] ?? parsed['data'] ?? [];
+          final raw = parsed['comments'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'] ?? [];
           if (raw is List) {
-            return raw.map((json) => _commentFromBackendJson(json as Map<String, dynamic>)).toList();
+            final flat = raw
+                .whereType<Map<String, dynamic>>()
+                .map(_commentFromBackendJson)
+                .toList();
+            return _nestComments(flat);
           }
           debugPrint('BackendApiService.getComments: unexpected payload for comments, returning empty list');
           return <Comment>[];
@@ -1187,6 +1246,7 @@ class BackendApiService {
   /// POST /api/community/comments/:id/like
   Future<void> likeComment(String commentId) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       await http.post(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
@@ -1200,6 +1260,7 @@ class BackendApiService {
   /// DELETE /api/community/comments/:id/like
   Future<void> unlikeComment(String commentId) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       await http.delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
@@ -2466,6 +2527,46 @@ class BackendApiService {
       return [];
     }
   }
+
+  // ==================== Message Reactions ====================
+
+  /// Add a reaction to a message
+  /// POST /api/conversations/:conversationId/messages/:messageId/reactions
+  Future<void> addMessageReaction(String conversationId, String messageId, String emoji) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
+        headers: _getHeaders(),
+        body: jsonEncode({'emoji': emoji}),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        throw Exception('Failed to add reaction: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error adding message reaction: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove a reaction from a message
+  /// DELETE /api/conversations/:conversationId/messages/:messageId/reactions
+  Future<void> removeMessageReaction(String conversationId, String messageId, String emoji) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
+        headers: _getHeaders(),
+        body: jsonEncode({'emoji': emoji}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to remove reaction: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error removing message reaction: $e');
+      rethrow;
+    }
+  }
 }
 
 // Helper functions for model conversions
@@ -2528,18 +2629,50 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   );
 }
 
+String? _normalizeBackendAvatarUrl(String? raw) {
+  if (raw == null) return null;
+  var candidate = raw.trim();
+  if (candidate.isEmpty) return null;
+  try {
+    if (candidate.startsWith('ipfs://')) {
+      final cid = candidate.replaceFirst('ipfs://', '');
+      return 'https://ipfs.io/ipfs/$cid';
+    }
+    if (candidate.startsWith('//')) {
+      return 'https:$candidate';
+    }
+    if (candidate.startsWith('/')) {
+      final base = ApiKeys.backendUrl.replaceAll(RegExp(r'/$'), '');
+      return '$base$candidate';
+    }
+    if (candidate.startsWith('api/')) {
+      final base = ApiKeys.backendUrl.replaceAll(RegExp(r'/$'), '');
+      return '$base/$candidate';
+    }
+  } catch (_) {}
+  return candidate;
+}
+
 CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   // Extract nested author object if present
   final author = json['author'] as Map<String, dynamic>?;
   // Extract nested stats object if present
   final stats = json['stats'] as Map<String, dynamic>?;
+  final authorDisplayName = author?['displayName'] as String? ?? author?['display_name'] as String? ?? json['displayName'] as String?;
+  final rawUsername = author?['username'] as String? ?? json['authorUsername'] as String? ?? json['username'] as String?;
+  final resolvedAuthorName = (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
+      ? authorDisplayName.trim()
+      : ((rawUsername != null && rawUsername.trim().isNotEmpty) ? rawUsername.trim() : (json['authorName'] as String?) ?? 'Anonymous');
+  final avatarCandidate = author?['avatar'] as String?
+      ?? author?['profileImage'] as String?
+      ?? json['authorAvatar'] as String?;
   
   return CommunityPost(
     id: json['id'] as String,
     authorId: json['authorId'] as String? ?? json['walletAddress'] as String? ?? json['userId'] as String? ?? 'unknown',
-    authorName: author?['username'] as String? ?? author?['display_name'] as String? ?? json['username'] as String? ?? json['authorName'] as String? ?? 'Anonymous',
-    authorAvatar: author?['avatar'] as String? ?? author?['profileImage'] as String? ?? json['authorAvatar'] as String?,
-    authorUsername: author?['username'] as String? ?? json['authorUsername'] as String? ?? json['username'] as String?,
+    authorName: resolvedAuthorName,
+    authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
+    authorUsername: rawUsername,
     content: json['content'] as String,
     imageUrl: json['imageUrl'] as String? ?? 
               (json['mediaUrls'] != null && (json['mediaUrls'] as List).isNotEmpty 
@@ -2564,19 +2697,75 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 }
 
 Comment _commentFromBackendJson(Map<String, dynamic> json) {
+  final author = json['author'];
+  final normalizedAuthor = author is Map<String, dynamic> ? author : <String, dynamic>{};
+  final authorWallet = normalizedAuthor['walletAddress'] as String? ?? normalizedAuthor['wallet_address'] as String?;
+  final authorId = json['authorId'] as String?
+    ?? json['userId'] as String?
+    ?? json['author_id']?.toString()
+    ?? authorWallet
+    ?? 'unknown';
+
+  final authorDisplayName = normalizedAuthor['displayName'] as String?
+    ?? normalizedAuthor['display_name'] as String?
+    ?? json['displayName'] as String?
+    ?? json['authorDisplayName'] as String?;
+  final rawUsername = json['username'] as String?
+    ?? json['authorName'] as String?
+    ?? normalizedAuthor['username'] as String?;
+  final authorName = (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
+    ? authorDisplayName.trim()
+    : ((rawUsername != null && rawUsername.trim().isNotEmpty) ? rawUsername.trim() : 'Anonymous');
+
+  final avatarCandidate = normalizedAuthor['avatar'] as String?
+    ?? normalizedAuthor['avatarUrl'] as String?
+    ?? normalizedAuthor['avatar_url'] as String?
+    ?? json['authorAvatar'] as String?;
+
+  final authorUsername = json['authorUsername'] as String?
+    ?? normalizedAuthor['username'] as String?
+    ?? json['username'] as String?;
+
   return Comment(
-    id: json['id'] as String,
-    authorId: json['authorId'] as String? ?? json['userId'] as String? ?? 'unknown',
-    authorName: json['username'] as String? ?? json['authorName'] as String? ?? 'Anonymous',
-    authorAvatar: (json['author'] is Map<String, dynamic>) ? (json['author']['avatar'] as String?) : (json['authorAvatar'] as String?),
-    authorUsername: json['username'] as String? ?? json['authorUsername'] as String?,
-    content: json['content'] as String,
+  id: (json['id'] ?? '').toString(),
+  authorId: authorId,
+  authorName: authorName,
+  authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
+  authorUsername: authorUsername,
+  authorWallet: authorWallet ?? authorId,
+  parentCommentId: json['parentCommentId'] as String? ?? json['parent_comment_id']?.toString(),
+  content: json['content'] as String,
     timestamp: json['createdAt'] != null 
       ? DateTime.parse(json['createdAt'] as String)
       : (json['timestamp'] != null 
         ? DateTime.parse(json['timestamp'] as String)
         : DateTime.now()),
-    likeCount: json['likes'] as int? ?? json['likeCount'] as int? ?? 0,
+    likeCount: json['likes'] as int? ?? json['likeCount'] as int? ?? json['likesCount'] as int? ?? 0,
     isLiked: json['isLiked'] as bool? ?? false,
+    replies: <Comment>[],
   );
+}
+
+List<Comment> _nestComments(List<Comment> comments) {
+  if (comments.isEmpty) return <Comment>[];
+  final Map<String, Comment> byId = {
+    for (final comment in comments) comment.id: comment,
+  };
+  final List<Comment> roots = [];
+
+  for (final comment in comments) {
+    final parentId = comment.parentCommentId;
+    if (parentId == null || parentId.isEmpty) {
+      roots.add(comment);
+      continue;
+    }
+    final parent = byId[parentId];
+    if (parent == null) {
+      roots.add(comment);
+      continue;
+    }
+    parent.replies = [...parent.replies, comment];
+  }
+
+  return roots;
 }

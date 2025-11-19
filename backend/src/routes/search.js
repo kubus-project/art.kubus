@@ -3,6 +3,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { optionalAuth } = require('../middleware/auth');
 const { query } = require('../db');
 const logger = require('../utils/logger');
+const { normalizeAvatarUrl } = require('../utils/avatar');
 
 const router = express.Router();
 
@@ -59,7 +60,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
         username: row.username,
         displayName: row.display_name,
         bio: row.bio,
-        avatar: row.avatar_url,
+        avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
         stats: {
           followers: row.followers_count || 0,
           following: row.following_count || 0,
@@ -179,7 +180,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
           walletAddress: row.wallet_address,
           username: row.username,
           displayName: row.display_name,
-          avatar: row.avatar_url
+          avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
         }
       }));
     }
@@ -210,7 +211,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
           walletAddress: row.wallet_address,
           username: row.username,
           displayName: row.display_name,
-          avatar: row.avatar_url
+          avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
         },
         stats: {
           likes: row.likes_count || 0,

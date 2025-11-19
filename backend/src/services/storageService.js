@@ -13,7 +13,7 @@ class StorageService {
     this.pinataApiKey = process.env.PINATA_API_KEY;
     this.pinataSecret = process.env.PINATA_SECRET;
     this.httpStoragePath = process.env.HTTP_STORAGE_PATH || './uploads';
-    this.httpBaseUrl = process.env.HTTP_BASE_URL || 'https://api.kubus.site/uploads';
+    this.httpBaseUrl = process.env.HTTP_BASE_URL || 'http://localhost:3000/uploads';
     this.s3Enabled = process.env.S3_ENABLED === 'true';
   }
 

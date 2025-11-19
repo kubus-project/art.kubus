@@ -1,10 +1,12 @@
 const express = require('express');
 const axios = require('axios');
+const crypto = require('crypto');
+const { URLSearchParams } = require('url');
 const router = express.Router();
 
 // Simple proxy for avatars.dicebear.com to ensure CORS headers are present
-// Usage: GET /api/avatar/:seed?style=identicon&format=png
-// Example: /api/avatar/a3a5b91b-5df6-4aa0-a9af-ae88171555b2?style=identicon&format=png
+// Usage: GET /api/avatar/:seed?style=identicon&format=png&raw=true
+// Example: /api/avatar/a3a5b91b-5df6-4aa0-a9af-ae88171555b2?style=identicon&format=png&raw=true
 
 router.get('/:seed', async (req, res) => {
   // Normalize inputs and protect against UUID/conversation IDs being used as seeds
@@ -12,12 +14,46 @@ router.get('/:seed', async (req, res) => {
   const style = (req.query.style || 'identicon').toString();
   const format = (req.query.format || 'png').toString();
 
-  // sanitize seed: keep only alphanumerics to avoid weird upstream issues
-  const sanitized = rawSeed.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-  const seedForRemote = (sanitized && sanitized.length > 0) ? sanitized : 'anon';
+  // We used to strictly sanitize the seed to only keep alphanumerics and lowercase
+  // to avoid upstream issues with special characters, dots, slashes and so on.
+  // That prevented some seeds (emails, UUIDs) from being used directly and also
+  // reduced entropy if two different seeds sanitize to the same value.
+  //
+  // To keep it safe but preserve uniqueness for new users, we default to a
+  // cryptographic hash (hex) of the raw seed which is URL-safe and ensures
+  // uniqueness without dangerous characters. If callers want the original
+  // seed to be used by the remote API (e.g. for visual determinism), they can
+  // opt-in with `?raw=true` and we'll use a sanitized-but-more-raw version.
+  const useRawSeed = req.query.raw === 'true';
+  const defaultAnon = 'anon';
+
+  let seedForRemote;
+  if (!rawSeed || rawSeed.trim().length === 0) {
+    seedForRemote = defaultAnon;
+  } else if (useRawSeed) {
+    // Permit more characters but still remove truly problematic ones. Allow
+    // '-', '_' and '.' to preserve many typical seeds like UUIDs and emails
+    // while rejecting whitespace, control chars and slashes.
+    const sanitized = rawSeed.replace(/[^-_.a-zA-Z0-9]/g, '').toLowerCase();
+    seedForRemote = sanitized.length > 0 ? sanitized : defaultAnon;
+    console.log('[avatar proxy] using raw seed for remote:', seedForRemote);
+  } else {
+    // Hash to hex to avoid any chance of reserved chars, and cut to 32 hex
+    // characters to keep a reasonable URL length and entropy.
+    seedForRemote = crypto.createHash('sha256').update(rawSeed).digest('hex').slice(0, 32);
+  }
 
   // Build remote URL (always defined so logging in catch is safe)
-  const remoteUrl = `https://avatars.dicebear.com/api/${encodeURIComponent(style)}/${encodeURIComponent(seedForRemote)}.${encodeURIComponent(format)}`;
+  const dicebearVersion = process.env.DICEBEAR_VERSION || '9.x';
+  const forwardedParams = new URLSearchParams();
+  Object.entries(req.query).forEach(([key, value]) => {
+    if (['style', 'format', 'raw'].includes(key)) return;
+    if (value === undefined || value === null) return;
+    forwardedParams.append(key, value.toString());
+  });
+  forwardedParams.set('seed', seedForRemote);
+  const queryString = forwardedParams.toString();
+  const remoteUrl = `https://api.dicebear.com/${dicebearVersion}/${encodeURIComponent(style)}/${encodeURIComponent(format)}${queryString ? `?${queryString}` : ''}`;
 
   try {
     console.log('[avatar proxy] fetching remoteUrl:', remoteUrl);

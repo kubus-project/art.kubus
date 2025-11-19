@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/inline_loading.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../onboarding/web3_onboarding.dart';
@@ -1366,13 +1367,12 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           ],
                         ),
                         const SizedBox(height: 1),
-                        LinearProgressIndicator(
-                          value: series.mintProgress,
-                          backgroundColor: Colors.grey[800],
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            isNearSoldOut ? Colors.orange : themeProvider.accentColor,
+                        SizedBox(
+                          height: 8,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: InlineLoading(tileSize: 3.0, progress: series.mintProgress, color: isNearSoldOut ? Colors.orange : themeProvider.accentColor),
                           ),
-                          minHeight: 2,
                         ),
                       ],
                     ),
@@ -1870,9 +1870,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
         context: context,
         barrierDismissible: false,
         builder: (context) => Center(
-          child: CircularProgressIndicator(
-            color: themeProvider.accentColor,
-          ),
+          child: SizedBox(width: 72, height: 72, child: InlineLoading(shape: BoxShape.circle, color: themeProvider.accentColor, tileSize: 8.0)),
         ),
       );
 

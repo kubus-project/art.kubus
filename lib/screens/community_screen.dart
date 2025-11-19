@@ -1,7 +1,10 @@
-// ignore_for_file: use_build_context_synchronously
+// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/inline_loading.dart';
 import '../widgets/app_loading.dart';
+import '../widgets/topbar_icon.dart';
+import '../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -65,8 +68,9 @@ class _CommunityScreenState extends State<CommunityScreen>
   bool _isLoading = false;
   bool _isLoadingDiscover = false;
   bool _isLoadingFollowing = false;
+  // Deduplication and local push are now handled centrally by NotificationProvider
   final Map<int, bool> _bookmarkedPosts = {};
-  final Map<String, String> _avatarCache = {}; // Cache avatars to prevent repeated API calls
+  // Avatar cache removed - ChatProvider or UserService are used for user avatars
   final Map<int, bool> _followedArtists = {};
   
   // New post state
@@ -75,7 +79,8 @@ class _CommunityScreenState extends State<CommunityScreen>
   XFile? _selectedPostImage;
   Uint8List? _selectedPostImageBytes; // Store bytes for preview
   XFile? _selectedPostVideo;
-  loc.LocationData? _selectedLocation;
+  // Location selected by user when creating a new post; may be null.
+  // selectedLocation removed; location name is used in the UI when creating posts
   String? _locationName;
 
   Future<void> _loadDiscoverArtworks() async {
@@ -85,6 +90,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       });
     }
 
+    // appRefresh not needed here
     try {
       final artworks = await BackendApiService().getArtworks(
         arEnabled: true,
@@ -344,35 +350,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
   
   // Helper to get user avatar from backend
-  Future<String> _getUserAvatar(String wallet) async {
-    // Check cache first
-    if (_avatarCache.containsKey(wallet)) {
-      return _avatarCache[wallet]!;
-    }
-
-    try {
-      // Prefer cache-first lookup via UserService to avoid immediate network call
-      final user = await UserService.getUserById(wallet);
-      final avatar = (user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty) ? user.profileImageUrl! : '';
-      _avatarCache[wallet] = avatar; // Cache the result (may be empty)
-      if (avatar.isNotEmpty) return avatar;
-
-      // Fallback to backend API if no avatar found in cached profile
-      try {
-        final profile = await BackendApiService().getProfileByWallet(wallet);
-        final a = profile['avatar'] ?? '';
-        _avatarCache[wallet] = a;
-        return a ?? '';
-      } catch (_) {
-        _avatarCache[wallet] = ''; // Cache empty result to prevent retries
-        return '';
-      }
-    } catch (e) {
-      debugPrint('CommunityScreen._getUserAvatar: lookup failed: $e');
-      _avatarCache[wallet] = '';
-      return '';
-    }
-  }
+  // _getUserAvatar removed (unused) — avatars are now resolved via UserService and ChatProvider caching
 
   @override
   void dispose() {
@@ -436,6 +414,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildAppBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isSmallScreen = MediaQuery.of(context).size.width < 375;
     return Container(
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -449,57 +428,37 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
           ),
           const Spacer(),
-          IconButton(
-            onPressed: () {
-              _showSearchBottomSheet();
-            },
+          // Search icon - unified TopBarIcon
+          TopBarIcon(
+            tooltip: 'Search',
             icon: Icon(
               Icons.search,
               color: Theme.of(context).colorScheme.onSurface,
-              size: 28,
+              size: isSmallScreen ? 22 : 26,
             ),
+            onPressed: _showSearchBottomSheet,
           ),
-          GestureDetector(
-            onTap: _showNotifications,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                AnimatedBuilder(
-                  animation: _bellController,
-                  builder: (ctx, child) {
-                    final scale = _bellScale.value;
-                    return Transform.scale(
-                      scale: scale,
-                      child: Icon(
-                        _bellUnreadCount > 0 ? Icons.notifications : Icons.notifications_outlined,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        size: 28,
-                      ),
-                    );
-                  },
-                ),
-                if (_bellUnreadCount > 0)
-                  Positioned(
-                    right: -6,
-                    top: -6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: themeProvider.accentColor,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
-                      ),
-                      constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
-                      child: Center(
-                        child: Text(
-                          _bellUnreadCount > 99 ? '99+' : '$_bellUnreadCount',
-                          style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ),
+          const SizedBox(width: 8),
+          // Bell icon - unified TopBarIcon
+          TopBarIcon(
+            tooltip: 'Notifications',
+            icon: AnimatedBuilder(
+              animation: _bellController,
+              builder: (ctx, child) {
+                final scale = _bellScale.value;
+                return Transform.scale(
+                  scale: scale,
+                  child: Icon(
+                    _bellUnreadCount > 0 ? Icons.notifications : Icons.notifications_outlined,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: isSmallScreen ? 18 : 20,
                   ),
-              ],
+                );
+              },
             ),
+            onPressed: _showNotifications,
+            badgeCount: _bellUnreadCount,
+            badgeColor: themeProvider.accentColor,
           ),
           const SizedBox(width: 12),
           // Message icon - open messages screen as a full-screen modal
@@ -512,8 +471,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                   _messagePulseController.forward(from: 0.0);
                 }
               });
-              return GestureDetector(
-                onTap: () {
+              return TopBarIcon(
+                tooltip: 'Open messages',
+                icon: ScaleTransition(
+                  scale: _messageScale,
+                  child: Icon(
+                    totalUnread > 0 ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                    color: totalUnread > 0 ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface,
+                    size: isSmallScreen ? 18 : 20,
+                  ),
+                ),
+                onPressed: () {
                   showGeneralDialog(
                     context: context,
                     barrierDismissible: true,
@@ -530,43 +498,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     },
                   );
                 },
-                child: Tooltip(
-                  message: 'Open messages',
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      ScaleTransition(
-                        scale: _messageScale,
-                        child: Icon(
-                          totalUnread > 0 ? Icons.chat_bubble : Icons.chat_bubble_outline,
-                          color: totalUnread > 0 ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface,
-                          size: 26,
-                        ),
-                      ),
-                      // Unread indicator for messages
-                      if (totalUnread > 0)
-                        Positioned(
-                          right: -6,
-                          top: -6,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: themeProvider.accentColor,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 1.5),
-                            ),
-                            constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
-                            child: Center(
-                              child: Text(
-                                totalUnread > 99 ? '99+' : '$totalUnread',
-                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                badgeCount: totalUnread,
+                badgeColor: themeProvider.accentColor,
               );
             },
           ),
@@ -575,13 +508,12 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  void _onSocketNotificationForCommunity(Map<String, dynamic> data) {
+  Future<void> _onSocketNotificationForCommunity(Map<String, dynamic> data) async {
     if (!mounted) return;
     try {
-      setState(() {
-        _bellUnreadCount += 1;
-      });
       _bellController.forward(from: 0.0);
+      // UI will be refreshed by NotificationProvider which is already listening for socket events and
+      // updating the unread count and showing local notifications. No local show/dedupe here.
     } catch (_) {}
   }
 
@@ -913,18 +845,11 @@ class _CommunityScreenState extends State<CommunityScreen>
             children: [
           Row(
             children: [
-              GestureDetector(
-                onTap: () => _viewUserProfile(post.authorId),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: themeProvider.accentColor,
-                  backgroundImage: post.authorAvatar != null && post.authorAvatar!.isNotEmpty
-                      ? NetworkImage(post.authorAvatar!) as ImageProvider
-                      : null,
-                  child: post.authorAvatar == null || post.authorAvatar!.isEmpty
-                      ? Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20)
-                      : null,
-                ),
+              AvatarWidget(
+                wallet: post.authorId,
+                avatarUrl: post.authorAvatar,
+                radius: 20,
+                allowFabricatedFallback: true,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -999,11 +924,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
+                        child: SizedBox(width: 36, height: 36, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null)),
                       ),
                     );
                   },
@@ -1161,12 +1082,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
+                                child: SizedBox(width: 36, height: 36, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null)),
                           );
                         },
                         errorBuilder: (context, error, stackTrace) {
@@ -1371,8 +1287,10 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   // Navigation and interaction methods
   void _showSearchBottomSheet() {
+    if (!mounted) return;
+    final sheetContext = context;
     showModalBottomSheet(
-      context: context,
+      context: sheetContext,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => Container(
@@ -1615,7 +1533,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             } catch (_) {}
                             final leadSeed = (sender?['wallet'] ?? sender?['wallet_address'] ?? sender?['walletAddress'] ?? user).toString();
                             return ListTile(
-                              leading: CircleAvatar(backgroundImage: NetworkImage(UserService.safeAvatarUrl(leadSeed))),
+                              leading: AvatarWidget(wallet: leadSeed, radius: 20, allowFabricatedFallback: false),
                               title: Text(
                                 type == 'like' ? '$user liked your post' : type == 'comment' ? '$user commented' : type == 'reply' ? '$user replied' : type == 'mention' ? '$user mentioned you' : (n['type'] ?? 'Notification').toString(),
                                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
@@ -1658,7 +1576,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     _selectedPostImage = null;
     _selectedPostImageBytes = null;
     _selectedPostVideo = null;
-    _selectedLocation = null;
     _locationName = null;
     
     showModalBottomSheet(
@@ -1697,10 +1614,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     const Spacer(),
                     if (_isPostingNew)
-                      const SizedBox(
+                      SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 3.5),
                       )
                     else
                       TextButton(
@@ -1720,7 +1637,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                             if (walletAddress == null || walletAddress.isEmpty) {
                               if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                final messenger = ScaffoldMessenger.of(context);
+                                messenger.showSnackBar(
                                   const SnackBar(content: Text('Please connect your wallet first')),
                                 );
                               }
@@ -1738,15 +1656,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                               // Auto-register user
                               debugPrint('No JWT token found, auto-registering user');
                               try {
-                                await BackendApiService().saveProfile({
-                                  'wallet': walletAddress,
-                                  'username': 'user_${walletAddress.substring(0, 8)}',
-                                  'displayName': 'User ${walletAddress.substring(0, 8)}',
-                                  'bio': '',
-                                  'isArtist': false,
-                                });
-                                // Token should now be stored
-                                await BackendApiService().loadAuthToken();
+                                // Use auth/register so server creates user+profile and returns a JWT
+                                final reg = await BackendApiService().registerWallet(
+                                  walletAddress: walletAddress,
+                                  username: 'user_${walletAddress.substring(0, 8)}',
+                                );
+                                debugPrint('Auto-register (auth) response: $reg');
+                                // Token is stored by registerWallet on success
                               } catch (e) {
                                 debugPrint('Auto-registration failed: $e');
                                 if (context.mounted) {
@@ -2011,7 +1927,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                               IconButton(
                                 onPressed: () {
                                   setModalState(() {
-                                    _selectedLocation = null;
                                     _locationName = null;
                                   });
                                 },
@@ -2108,7 +2023,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   // Get current location
                                   final locationData = await location.getLocation();
                                   setModalState(() {
-                                    _selectedLocation = locationData;
                                     _locationName = 'Current Location (${locationData.latitude?.toStringAsFixed(4)}, ${locationData.longitude?.toStringAsFixed(4)})';
                                   });
                                 } catch (e) {
@@ -2245,6 +2159,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final artistName = artist['name'] as String? ?? 'Artist';
     
     if (artistId.isEmpty) return;
+    final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
     
     try {
       // Use centralized UserService.toggleFollow which handles backend sync + local fallback
@@ -2265,9 +2180,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       });
 
       // Trigger global refresh so other UIs update
-      try { Provider.of<AppRefreshProvider>(context, listen: false).triggerCommunity(); } catch (_) {}
-
-      ScaffoldMessenger.of(context).showSnackBar(
+      try { appRefresh.triggerCommunity(); } catch (_) {}
+      if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(
           content: Text(newState ? 'Now following $artistName!' : 'Unfollowed $artistName'),
           duration: const Duration(seconds: 2),
@@ -2276,8 +2192,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     } catch (e) {
       debugPrint('Error toggling follow: $e');
       if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger2 = ScaffoldMessenger.of(context);
+      messenger2.showSnackBar(
         SnackBar(
           content: Text('Failed to update follow status'),
           duration: const Duration(seconds: 2),
@@ -2309,7 +2225,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       
       // Replace current comments with backend-provided nested comments
       post.comments = backendComments;
-      post.commentCount = post.comments.length;
+      post.commentCount = totalComments;
       
       // Load liked state from SharedPreferences for all comments and replies
       debugPrint('   📥 Loading liked state from SharedPreferences...');
@@ -2340,6 +2256,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final TextEditingController commentController = TextEditingController();
     String? replyToCommentId; // Track which comment is being replied to
     
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -2376,7 +2293,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     const Spacer(),
                     Text(
-                      '${post.comments.length} comments',
+                      '${post.commentCount} comments',
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -2400,35 +2317,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Avatar (if available) or fallback initial avatar
-                        post.comments[commentIndex].authorAvatar != null && post.comments[commentIndex].authorAvatar!.isNotEmpty
-                            ? CircleAvatar(
-                                radius: 16,
-                                backgroundImage: NetworkImage(post.comments[commentIndex].authorAvatar!),
-                                backgroundColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
-                              )
-                            : Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Provider.of<ThemeProvider>(context).accentColor,
-                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    post.comments[commentIndex].authorName.isNotEmpty ? post.comments[commentIndex].authorName[0].toUpperCase() : 'U',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.onPrimary,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                        AvatarWidget(
+                          wallet: post.comments[commentIndex].authorId,
+                          avatarUrl: post.comments[commentIndex].authorAvatar,
+                          radius: 16,
+                          allowFabricatedFallback: false,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -2550,9 +2444,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       child: Row(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          reply.authorAvatar != null && reply.authorAvatar!.isNotEmpty
-                                              ? CircleAvatar(radius: 12, backgroundImage: NetworkImage(reply.authorAvatar!))
-                                              : Container(width: 24, height: 24, decoration: BoxDecoration(color: Provider.of<ThemeProvider>(context).accentColor, borderRadius: BorderRadius.circular(12)), child: Center(child: Text(reply.authorName.isNotEmpty ? reply.authorName[0].toUpperCase() : 'U', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 12)))),
+                                          AvatarWidget(
+                                            wallet: reply.authorId,
+                                            avatarUrl: reply.authorAvatar,
+                                            radius: 12,
+                                            allowFabricatedFallback: false,
+                                          ),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Column(
@@ -2920,8 +2817,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     // Use share_plus for actual platform sharing
     final shareText = '${post.content}\n\n- ${post.authorName} on art.kubus\n\nDiscover more AR art on art.kubus!';
-    final messenger = ScaffoldMessenger.of(context);
     await SharePlus.instance.share(ShareParams(text: shareText));
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
     if (!mounted) return;
 
     // Update UI immediately
@@ -3062,11 +2960,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                        : null,
-                                  ),
+                                  child: SizedBox(width: 36, height: 36, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null)),
                                 ),
                               );
                             },
@@ -3182,12 +3076,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
                           return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                  : null,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                            child: SizedBox(width: 56, height: 56, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 8.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null, color: Theme.of(context).colorScheme.onSurface, highlight: Theme.of(context).colorScheme.surface)),
                           );
                         },
                         errorBuilder: (context, error, stackTrace) {

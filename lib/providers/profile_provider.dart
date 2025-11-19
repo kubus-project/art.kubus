@@ -5,7 +5,9 @@ import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile.dart';
 import '../services/backend_api_service.dart';
+import '../models/user.dart';
 import '../services/user_service.dart';
+import '../services/event_bus.dart';
 
 class ProfileProvider extends ChangeNotifier {
   UserProfile? _currentUser;
@@ -59,15 +61,38 @@ class ProfileProvider extends ChangeNotifier {
     if (url.isEmpty) return url;
     final lower = url.toLowerCase();
 
-    // DiceBear: convert /svg? to /png? or .svg extension to .png
-    if (lower.contains('dicebear') && (lower.contains('/svg') || lower.endsWith('.svg') || lower.contains('format=svg') || lower.contains('type=svg'))) {
+    // DiceBear: Use internal proxy instead of direct dicebear URLs for consistent CORS and caching
+    if (lower.contains('dicebear') && (lower.contains('/svg') || lower.endsWith('.svg') || lower.contains('format=svg') || lower.contains('type=svg') || lower.contains('/identicon/') || lower.contains('/api/'))) {
       try {
-        // Replace '/svg' with '/png' in path segments
-        final replaced = url.replaceAll(RegExp(r'/svg(?=/|\?|$)', caseSensitive: false), '/png')
-            .replaceAll(RegExp(r'\.svg(\?|$)', caseSensitive: false), '.png');
-        // Also replace query params format=svg -> format=png
-        return replaced.replaceAll(RegExp(r'format=svg', caseSensitive: false), 'format=png')
-            .replaceAll(RegExp(r'type=svg', caseSensitive: false), 'type=png');
+        // Extract seed from known formats:
+        // - https://api.dicebear.com/{style}/svg?seed=FOO
+        // - https://avatars.dicebear.com/api/{style}/FOO.svg
+        String seed = '';
+        String style = 'identicon';
+        try {
+          final uri = Uri.parse(url);
+          if (uri.queryParameters.containsKey('seed')) {
+            seed = uri.queryParameters['seed']!;
+            final pathSegments = uri.pathSegments;
+            // styles may be in the first segment (e.g., 9.x/identicon or api/identicon)
+            if (pathSegments.isNotEmpty) style = pathSegments.lastWhere((s) => s.isNotEmpty, orElse: () => 'identicon');
+          } else {
+            // Try to get seed from last path segment without extension
+            final last = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+            seed = last.replaceAll('.svg', '');
+            if (uri.pathSegments.length >= 2) style = uri.pathSegments[uri.pathSegments.length - 2];
+          }
+        } catch (_) {
+          // Fallback: take last slash segment
+          try {
+            final p = url.split('/').last;
+            seed = p.split('?').first.replaceAll('.svg', '');
+          } catch (e) {
+            seed = url;
+          }
+        }
+        final proxy = '/api/avatar/${Uri.encodeComponent(seed)}?style=$style&format=png&raw=true';
+        return _resolveUrl(proxy);
       } catch (_) {
         return url;
       }
@@ -203,6 +228,7 @@ class ProfileProvider extends ChangeNotifier {
     _currentUser = user;
     _isSignedIn = true;
     notifyListeners();
+    try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
   }
   
   // Initialize SharedPreferences and settings
@@ -211,6 +237,10 @@ class ProfileProvider extends ChangeNotifier {
     
     // Try to load existing profile
     final walletAddress = _prefs.getString('wallet_address');
+    // Initialize persisted user cache for returning users only
+    if (walletAddress != null && walletAddress.isNotEmpty) {
+      try { await UserService.initialize(); } catch (_) {}
+    }
     if (walletAddress != null && walletAddress.isNotEmpty) {
       await loadProfile(walletAddress);
       // Load additional stats from backend
@@ -352,19 +382,16 @@ class ProfileProvider extends ChangeNotifier {
         // Load additional stats (collections, followers, following)
         await _loadBackendStats(walletAddress);
       } catch (e) {
-        debugPrint('ProfileProvider: Profile not found on backend, auto-registering: $e');
-        // Profile doesn't exist, register with backend to get JWT token
+        debugPrint('ProfileProvider: Profile not found on backend, auto-registering via auth: $e');
+        // Profile doesn't exist — ask auth/register to create user+profile and return token
         try {
-          await _apiService.saveProfile({
-            'walletAddress': walletAddress,
-            'username': 'user_${walletAddress.substring(0, 8)}',
-            'displayName': 'User ${walletAddress.substring(0, 8)}',
-            'bio': '',
-            'isArtist': false,
-          });
-          debugPrint('ProfileProvider: Auto-registration successful, JWT token received');
-          
-          // Load the newly created profile (prefer cached service)
+          final reg = await _apiService.registerWallet(
+            walletAddress: walletAddress,
+            username: 'user_${walletAddress.substring(0, 8)}',
+          );
+          debugPrint('ProfileProvider: Auto-registration (auth) response: $reg');
+
+          // After registration, prefer cached UserService or fetch profile
           final user = await UserService.getUserById(walletAddress);
           if (user != null) {
             final normalized = user.username.replaceFirst(RegExp(r'^@+'), '');
@@ -426,6 +453,8 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Ensure persistent user cache is initialized on profile save (wallet registration)
+      try { await UserService.initialize(); } catch (_) {}
       // If caller omitted profile fields, prefer existing in-memory values
       final rawUsername = username ?? _currentUser?.username;
       // Normalize username: strip any leading '@' characters so stored usernames
@@ -494,8 +523,33 @@ class ProfileProvider extends ChangeNotifier {
       await _prefs.setString('username', _currentUser!.username);
       debugPrint('ProfileProvider: Profile saved successfully for wallet: $walletAddress');
       
+      // Persist to UserService cache (and let ChatProvider be updated via EventBus)
+      try {
+        final u = _currentUser;
+        if (u != null) {
+          UserService.setUsersInCache([User(
+            id: u.walletAddress,
+            name: u.displayName,
+            username: u.username,
+            bio: u.bio,
+            profileImageUrl: u.avatar,
+            followersCount: u.stats?.followersCount ?? 0,
+            followingCount: u.stats?.followingCount ?? 0,
+            postsCount: u.stats?.artworksCreated ?? 0,
+            isFollowing: false,
+            isVerified: false,
+            joinedDate: u.createdAt.toIso8601String(),
+            achievementProgress: [],
+          )]);
+        }
+      } catch (_) {}
       _isLoading = false;
       notifyListeners();
+
+      // Emit an application event indicating the profile was updated
+      try {
+        EventBus().emitProfileUpdated(_currentUser);
+      } catch (_) {}
       return true;
     } catch (e) {
       // Detect 429 response message and provide a friendly error
@@ -566,16 +620,18 @@ class ProfileProvider extends ChangeNotifier {
         try {
           _currentUser = _currentUser!.copyWith(avatar: raster);
           notifyListeners();
+          try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
         } catch (_) {}
       }
 
       return raster;
     } catch (e) {
       debugPrint('Error uploading avatar: $e');
-      // Fallback to dicebear avatar
+      // Return empty string so the UI uses local initials instead of synthetic URLs
       return '';
     }
   }
+
 
   /// Upload avatar using raw bytes (works with Android content:// URIs from image_picker)
   Future<String> uploadAvatarBytes({
@@ -597,8 +653,19 @@ class ProfileProvider extends ChangeNotifier {
         final ext = fileName.toLowerCase().split('.').last;
         if (ext == 'png') {
           fileType = 'image/png';
-        } else if (ext == 'jpg' || ext == 'jpeg') fileType = 'image/jpeg';
-        else if (ext == 'webp') fileType = 'image/webp';
+        } else if (ext == 'jpg' || ext == 'jpeg') {
+          fileType = 'image/jpeg';
+
+        } else if (ext == 'webp') {
+          fileType = 'image/webp';
+        }
+
+        else if (ext == 'gif') {
+          fileType = 'image/gif';
+        } else if (ext == 'svg') {
+          fileType = 'image/svg+xml';
+          
+      }
       }
       
       debugPrint('   determined fileType: $fileType');
@@ -642,6 +709,7 @@ class ProfileProvider extends ChangeNotifier {
         try {
           _currentUser = _currentUser!.copyWith(avatar: raster);
           notifyListeners();
+          try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
         } catch (_) {}
       }
 
@@ -662,14 +730,12 @@ class ProfileProvider extends ChangeNotifier {
   }) async {
     debugPrint('ProfileProvider: Creating profile from wallet: $walletAddress');
     debugPrint('ProfileProvider: Username: ${username ?? _generateUsername(walletAddress)}');
-    
-    final result = await saveProfile(
-      walletAddress: walletAddress,
-      username: username ?? _generateUsername(walletAddress),
-      displayName: username ?? 'Art Enthusiast',
-      bio: 'Exploring the world of AR art',
-      avatar: '',
-    );
+    // Compute effective username once and use it for both username and displayName
+    final effectiveUsername = username ?? _generateUsername(walletAddress);
+    // Instead of saving profile client-side, call server auth/register so server
+    // creates user+profile and returns a JWT. Backend will handle username/avatar defaults.
+    final reg = await _apiService.registerWallet(walletAddress: walletAddress, username: effectiveUsername);
+    final result = reg['success'] == true || reg['message'] != null;
     
     debugPrint('ProfileProvider: Profile creation result: $result');
     return result;
@@ -793,7 +859,7 @@ class ProfileProvider extends ChangeNotifier {
       username: 'current_user',
       displayName: 'Current User',
       bio: 'Digital artist exploring the intersection of AR, blockchain, and creativity.',
-      avatar: '${_apiService.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar/current?style=avataaars&format=png',
+      avatar: '${_apiService.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar/current?style=avataaars&format=png&raw=true',
       stats: UserStats(
         followersCount: 1250,
         followingCount: 340,

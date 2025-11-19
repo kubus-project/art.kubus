@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../widgets/inline_loading.dart';
 
 
 class InstitutionAnalytics extends StatefulWidget {
@@ -675,10 +676,18 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             ],
           ),
           const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: percentage,
-            backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+          SizedBox(
+            height: 10,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: InlineLoading(
+                progress: percentage,
+                tileSize: 6.0,
+                color: themeProvider.accentColor,
+                duration: const Duration(milliseconds: 700),
+                animate: true,
+              ),
+            ),
           ),
         ],
       ),

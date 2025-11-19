@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../widgets/inline_loading.dart';
+import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_logo.dart';
 import '../main_app.dart';
@@ -30,19 +33,60 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Future<void> _checkExistingPermissions() async {
-    // Check if all permissions are already granted
-    final locationStatus = await Permission.location.status;
-    final cameraStatus = await Permission.camera.status;
-    final notificationStatus = await Permission.notification.status;
-    final storageStatus = await Permission.photos.status;
+    // Check if all permissions are already granted; wrap calls in try/catch
+    bool locationGranted = false;
+    bool cameraGranted = false;
+    bool notificationsGranted = false;
+    bool storageGranted = false;
 
-    _locationGranted = locationStatus.isGranted;
-    _cameraGranted = cameraStatus.isGranted;
-    _notificationsGranted = notificationStatus.isGranted;
-    _storageGranted = storageStatus.isGranted;
+    try {
+      // Only query permission status for the pages that apply on this platform
+      for (final page in _pages) {
+        switch (page.permissionType) {
+          case PermissionType.location:
+            final locationStatus = await Permission.location.status;
+            locationGranted = locationStatus.isGranted;
+            break;
+          case PermissionType.camera:
+            final cameraStatus = await Permission.camera.status;
+            cameraGranted = cameraStatus.isGranted;
+            break;
+          case PermissionType.notifications:
+            final notificationStatus = await Permission.notification.status;
+            notificationsGranted = notificationStatus.isGranted;
+            break;
+          case PermissionType.storage:
+            if (kIsWeb) {
+              // Storage/photo permission is irrelevant on web - treat as granted
+              storageGranted = true;
+            } else {
+              final storageStatus = await Permission.photos.status;
+              storageGranted = storageStatus.isGranted;
+            }
+            break;
+        }
+      }
+    } catch (e, st) {
+      debugPrint('PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
+      // Keep defaults (false) on failures
+      locationGranted = false;
+      cameraGranted = false;
+      notificationsGranted = false;
+      storageGranted = false;
+    }
+    // Update the state for UI rendering
+    if (mounted) {
+      setState(() {
+        _locationGranted = locationGranted;
+        _cameraGranted = cameraGranted;
+        _notificationsGranted = notificationsGranted;
+        _storageGranted = storageGranted;
+        _isCheckingPermissions = false;
+      });
+    }
 
-    // If all permissions are granted, complete onboarding and go to main app
-    if (_locationGranted && _cameraGranted && _notificationsGranted && _storageGranted) {
+    // If all visible (platform-specific) permissions are granted, complete onboarding and go to main app
+    if (_pages.every((p) => _isPermissionGranted(p.permissionType))) {
       if (mounted) {
         _completeOnboarding();
       }
@@ -54,10 +98,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     });
   }
 
-  final List<PermissionPage> _pages = [
+  List<PermissionPage> get _allPages => [
     PermissionPage(
       title: 'Location Access',
-      subtitle: 'Discover Art\nNear You',
+      subtitle: 'Discover Art Near You',
       description: 'We use your location to show AR artworks placed in your area. Find hidden art pieces, discover local artists, and explore galleries nearby.',
       benefits: [
         'Find AR artworks near you',
@@ -73,7 +117,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     ),
     PermissionPage(
       title: 'Camera Access',
-      subtitle: 'Experience AR\nMagic',
+      subtitle: 'Experience AR Magic',
       description: 'The camera is essential for viewing AR artworks in your space. Place, interact with, and photograph stunning 3D art installations anywhere.',
       benefits: [
         'View AR artworks in real-world',
@@ -89,7 +133,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     ),
     PermissionPage(
       title: 'Notifications',
-      subtitle: 'Stay Connected\nto Art',
+      subtitle: 'Stay Connected to Art',
       description: 'Get notified about new artworks, achievement unlocks, NFT sales, and community updates. Never miss important moments.',
       benefits: [
         'New artwork discoveries',
@@ -105,7 +149,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     ),
     PermissionPage(
       title: 'Photo Library Access',
-      subtitle: 'Save Your\nCreations',
+      subtitle: 'Save Your Creations',
       description: 'Save AR screenshots, download artwork images, and keep your collection in your photo library. Your art memories, always accessible.',
       benefits: [
         'Save AR screenshots to your photos',
@@ -120,6 +164,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       permissionType: PermissionType.storage,
     ),
   ];
+
+  // Filter pages for the current platform. Do not request storage/photos on web.
+  List<PermissionPage> get _pages => kIsWeb
+      ? _allPages.where((p) => p.permissionType != PermissionType.storage).toList()
+      : _allPages;
 
   @override
   void dispose() {
@@ -141,10 +190,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+              children: [
+              SizedBox(width: 56, height: 56, child: InlineLoading(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary, tileSize: 6.0)),
               SizedBox(height: 24),
               Text(
                 'Checking permissions...',
@@ -249,7 +296,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
                     decoration: BoxDecoration(
                       gradient: page.gradient,
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
                           color: page.gradient.colors.first.withValues(alpha: 0.3),
@@ -299,9 +346,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     textAlign: TextAlign.center,
                   ),
                   SizedBox(height: isVerySmallScreen ? 8 : 12),
-                  // Subtitle
+                  // Subtitle (single-line & responsive)
                   Text(
-                    page.subtitle,
+                    page.subtitle.replaceAll('\n', ' '),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
                     style: GoogleFonts.inter(
                       fontSize: isVerySmallScreen ? 18 : effectiveSmallScreen ? 20 : 22,
                       fontWeight: FontWeight.w600,
@@ -553,6 +603,17 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Future<void> _requestPermission(PermissionType type) async {
+    // If the permission is not applicable on this platform, skip the request
+    if (type == PermissionType.storage && kIsWeb) {
+      // On web storage/photos are not requested; treat as granted/irrelevant
+      if (mounted) {
+        setState(() {
+          _storageGranted = true;
+        });
+      }
+      return;
+    }
+
     Permission permission;
     
     switch (type) {
@@ -570,8 +631,28 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         break;
     }
 
-    final status = await permission.request();
+    final messenger = ScaffoldMessenger.of(context);
+    PermissionStatus status;
+    try {
+      status = await permission.request();
+    } catch (e, st) {
+      debugPrint('PermissionsScreen._requestPermission: permission.request failed: $e\n$st');
+      status = PermissionStatus.denied;
+    }
     if (!mounted) return;
+    
+    bool nowGranted = false;
+    if (type == PermissionType.notifications && kIsWeb) {
+      final pn = PushNotificationService();
+      try {
+        nowGranted = await pn.requestPermission();
+      } catch (e, st) {
+        debugPrint('PermissionsScreen._requestPermission: web notification request failed: $e\n$st');
+        nowGranted = false;
+      }
+    } else {
+      nowGranted = status.isGranted;
+    }
     
     setState(() {
       switch (type) {
@@ -582,7 +663,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           _cameraGranted = status.isGranted;
           break;
         case PermissionType.notifications:
-          _notificationsGranted = status.isGranted;
+          _notificationsGranted = nowGranted;
           break;
         case PermissionType.storage:
           _storageGranted = status.isGranted;
@@ -592,7 +673,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
     if (status.isGranted) {
       // Show success feedback
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             '${_getPermissionName(type)} permission granted!',
@@ -608,7 +689,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       );
 
       // Auto-advance after a short delay
-      await Future.delayed(const Duration(milliseconds: 500));
+            await Future.delayed(const Duration(milliseconds: 500));
       if (_currentPage < _pages.length - 1) {
         _nextPage();
       }

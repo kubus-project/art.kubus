@@ -98,6 +98,27 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// Defensive CORS preflight handler: ensure Access-Control headers are present
+// even if later middleware throws an error. This helps browsers receive the
+// required preflight responses instead of failing with 'CORS header missing'.
+app.use((req, res, next) => {
+  try {
+    const origin = req.get('origin') || '*';
+    const allowed = (process.env.CORS_ORIGIN || '*').split(',');
+    // Allow if wildcard configured or origin absent or origin explicitly allowed
+    if (allowed.includes('*') || !origin || allowed.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin === '' ? '*' : origin);
+    }
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-API-KEY');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } catch (e) {
+    // ignore header setting errors
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
 // Rate limiting
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
@@ -239,7 +260,13 @@ io.on('connection', (socket) => {
   socket.on('subscribe:conversation', (conversationId) => {
     try {
       socket.join(`conversation:${conversationId}`);
-      logger.debug(`Client ${socket.id} subscribed to conversation:${conversationId}`);
+      logger.info(`Client ${socket.id} subscribed to conversation:${conversationId}`);
+      // Acknowledge subscription so clients can reliably wait for join confirmation
+      try {
+        socket.emit('subscribe:ok', { room: `conversation:${conversationId}` });
+      } catch (emitErr) {
+        logger.debug(`Failed to emit subscribe:ok for conversation:${conversationId} - ${emitErr && emitErr.message}`);
+      }
     } catch (e) {
       logger.warn(`Failed to subscribe socket ${socket.id} to conversation:${conversationId} - ${e.message}`);
     }
@@ -265,16 +292,21 @@ io.on('connection', (socket) => {
         return;
       }
 
-      const userWallet = (decoded.walletAddress || decoded.wallet || decoded.sub || '').toString().toLowerCase();
-      const requested = (walletAddress || '').toString().toLowerCase();
-      if (!userWallet || userWallet !== requested) {
+      // Preserve canonical wallet casing from the token for the joined room
+      const decodedRaw = (decoded.walletAddress || decoded.wallet || decoded.sub || '').toString();
+      const userWalletLower = decodedRaw.toLowerCase();
+      const requestedLower = (walletAddress || '').toString().toLowerCase();
+      if (!decodedRaw || userWalletLower !== requestedLower) {
         socket.emit('subscribe:error', { error: 'Wallet address does not match token' });
         return;
       }
 
-      socket.join(`user:${userWallet}`);
-      logger.debug(`Client ${socket.id} subscribed to user:${userWallet}`);
-      socket.emit('subscribe:ok', { room: `user:${userWallet}` });
+      // Join a room using the canonical wallet casing from the token. This
+      // preserves wallet case-sensitivity in room names while validating the
+      // request in a case-insensitive manner.
+      socket.join(`user:${decodedRaw}`);
+      logger.info(`Client ${socket.id} subscribed to user:${decodedRaw}`);
+      socket.emit('subscribe:ok', { room: `user:${decodedRaw}` });
     } catch (e) {
       logger.warn(`Failed to subscribe socket ${socket.id} to user room - ${e.message}`);
       socket.emit('subscribe:error', { error: e.message });
@@ -283,9 +315,13 @@ io.on('connection', (socket) => {
 
   socket.on('unsubscribe:user', (walletAddress) => {
     try {
-      const nid = (walletAddress || '').toString().toLowerCase();
-      socket.leave(`user:${nid}`);
-      logger.debug(`Client ${socket.id} unsubscribed from user:${nid}`);
+      const nid = (walletAddress || '').toString();
+      const nidLower = nid.toLowerCase();
+      // Attempt to leave both canonical and lowercased room names to avoid
+      // leaving the socket in either variant (backwards compatibility).
+      try { socket.leave(`user:${nid}`); } catch (_) {}
+      try { socket.leave(`user:${nidLower}`); } catch (_) {}
+      logger.debug(`Client ${socket.id} unsubscribed from user:${nid} (also attempted ${nidLower})`);
       socket.emit('subscribe:ok', { room: `user:${nid}`, unsubscribed: true });
     } catch (e) {
       logger.warn(`Failed to unsubscribe socket ${socket.id} from user room - ${e.message}`);
@@ -365,6 +401,10 @@ async function startServer() {
   }
 }
 
-startServer();
+// If this file was executed directly (node src/server.js), start the server.
+// This allows importing `app` from tests without starting a TCP listener.
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = { app, server, io };

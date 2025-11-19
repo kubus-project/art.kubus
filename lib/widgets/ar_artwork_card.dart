@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'inline_loading.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
 import '../services/ar_integration_service.dart';
@@ -239,7 +240,7 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
+                                child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0),
                               )
                             : const Icon(Icons.view_in_ar),
                         label: Text(

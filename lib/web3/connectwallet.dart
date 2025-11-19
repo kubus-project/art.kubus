@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../services/event_bus.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
@@ -11,6 +12,8 @@ import '../providers/profile_provider.dart';
 import '../services/solana_walletconnect_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
+import '../models/user.dart';
+import '../widgets/inline_loading.dart';
 
 class ConnectWallet extends StatefulWidget {
   const ConnectWallet({super.key});
@@ -465,13 +468,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
+                        child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                       )
                     : Text(
                         'Import Wallet',
@@ -522,14 +522,17 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
       final address = await walletProvider.importWalletFromMnemonic(mnemonic);
 
       // Import the wallet in Web3Provider as well
       await web3Provider.importWallet(mnemonic);
       
         // Load or create user profile linked to wallet
-        if (mounted) {
-          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+          if (mounted) {
           final backendApiService = BackendApiService();
 
           // Prefer cache-first lookup via UserService to avoid unnecessary network calls
@@ -556,35 +559,61 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           // Load profile (will create default if doesn't exist)
           await profileProvider.loadProfile(address);
 
-          // Only save to backend if profile doesn't exist there yet
-          if (!profileExistsOnBackend && profileProvider.currentUser != null) {
-            debugPrint('Saving new profile to backend for wallet: $address');
-            await profileProvider.saveProfile(
-              walletAddress: address,
-              username: profileProvider.currentUser!.username,
-              displayName: profileProvider.currentUser!.displayName,
-              bio: profileProvider.currentUser!.bio,
-              avatar: profileProvider.currentUser!.avatar,
-            );
+          // Only register on backend if profile doesn't exist there yet
+            if (!profileExistsOnBackend && profileProvider.currentUser != null) {
+            debugPrint('Registering wallet on backend for wallet: $address');
+            await UserService.initialize();
+            try {
+              final reg = await BackendApiService().registerWallet(
+                walletAddress: address,
+                username: profileProvider.currentUser!.username.replaceFirst(RegExp(r'^@+'), ''),
+              );
+              debugPrint('registerWallet response: $reg');
+              // Reload profile after registration
+              await profileProvider.loadProfile(address);
+            } catch (e) {
+              debugPrint('Backend registration failed: $e');
+            }
+              // Update ChatProvider cache so messages/conversations show correct avatar/name immediately
+              try {
+                final updated = profileProvider.currentUser;
+                if (updated != null) {
+                  final user = User(
+                    id: updated.walletAddress,
+                    name: updated.displayName,
+                    username: updated.username,
+                    bio: updated.bio,
+                    profileImageUrl: updated.avatar,
+                    followersCount: updated.stats?.followersCount ?? 0,
+                    followingCount: updated.stats?.followingCount ?? 0,
+                    postsCount: updated.stats?.artworksCreated ?? 0,
+                    isFollowing: false,
+                    isVerified: false,
+                    joinedDate: updated.createdAt.toIso8601String(),
+                    achievementProgress: [],
+                  );
+                  try { EventBus().emitProfileUpdated(user); } catch (_) {}
+                }
+              } catch (_) {}
           }
 
           // After profile is loaded/created, inform ChatProvider so chats and unread badges refresh
           try {
-            await Provider.of<ChatProvider>(context, listen: false).setCurrentWallet(address);
+            await chatProvider.setCurrentWallet(address);
           } catch (e) {
             debugPrint('connectwallet: failed to set chat provider wallet after import: $e');
           }
         }
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Text('Wallet imported successfully!\nAddress: ${address.substring(0, 8)}...'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
         );
-        Navigator.pop(context);
+        navigator.pop();
       }
     } catch (e) {
       if (mounted) {
@@ -729,13 +758,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   disabledBackgroundColor: Colors.green.withValues(alpha: 0.5),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          strokeWidth: 2,
-                        ),
+                        child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                       )
                     : Text(
                         'Generate Wallet',
@@ -985,13 +1011,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
                     ),
                     child: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              strokeWidth: 2,
-                            ),
+                            child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                           )
                         : Text(
                             'Connect',
@@ -1181,10 +1204,16 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         await wcService.initialize();
       }
       
+      // Do not capture BuildContext-dependent objects here — capture inside the callback after verifying mounted
+
       // Set up callbacks
       wcService.onConnected = (address) async {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          final messenger = ScaffoldMessenger.of(context);
+          final navigator = Navigator.of(context);
+          final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+          messenger.showSnackBar(
             SnackBar(
               content: Text('Connected to $address'),
               backgroundColor: Colors.green,
@@ -1199,7 +1228,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
           // Load or create profile for this wallet, similar to import flow
           try {
-            final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+            // use captured profileProvider
             debugPrint('connectwallet: calling profileProvider.loadProfile for $address');
             final backendApiService = BackendApiService();
             bool profileExistsOnBackend = false;
@@ -1218,14 +1247,36 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             debugPrint('connectwallet: profileProvider.loadProfile completed for $address');
             if (!profileExistsOnBackend && profileProvider.currentUser != null) {
               try {
-                await profileProvider.saveProfile(
+                final reg = await BackendApiService().registerWallet(
                   walletAddress: address,
-                  username: profileProvider.currentUser!.username,
-                  displayName: profileProvider.currentUser!.displayName,
-                  bio: profileProvider.currentUser!.bio,
-                  avatar: profileProvider.currentUser!.avatar,
+                  username: profileProvider.currentUser!.username.replaceFirst(RegExp(r'^@+'), ''),
                 );
-              } catch (_) {}
+                debugPrint('connectwallet (onConnected): registerWallet response: $reg');
+                await profileProvider.loadProfile(address);
+                // Update ChatProvider cache to immediately reflect profile changes in messages UI
+                try {
+                  final u = profileProvider.currentUser;
+                  if (u != null) {
+                    final user = User(
+                      id: u.walletAddress,
+                      name: u.displayName,
+                      username: u.username,
+                      bio: u.bio,
+                      profileImageUrl: u.avatar,
+                      followersCount: u.stats?.followersCount ?? 0,
+                      followingCount: u.stats?.followingCount ?? 0,
+                      postsCount: u.stats?.artworksCreated ?? 0,
+                      isFollowing: false,
+                      isVerified: false,
+                      joinedDate: u.createdAt.toIso8601String(),
+                      achievementProgress: [],
+                    );
+                    try { EventBus().emitProfileUpdated(user); } catch (_) {}
+                  }
+                } catch (_) {}
+              } catch (e) {
+                debugPrint('connectwallet (onConnected): backend registration failed: $e');
+              }
             }
           } catch (e, st) {
             debugPrint('connectwallet: profile load/create failed after walletconnect: $e\n$st');
@@ -1234,13 +1285,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           // Inform ChatProvider so it can subscribe and refresh conversations/unread
           try {
             debugPrint('connectwallet: calling ChatProvider.setCurrentWallet for $address');
-            await Provider.of<ChatProvider>(context, listen: false).setCurrentWallet(address);
+            await chatProvider.setCurrentWallet(address);
             debugPrint('connectwallet: ChatProvider.setCurrentWallet completed for $address');
           } catch (e, st) {
             debugPrint('connectwallet: failed to set chat provider wallet after walletconnect: $e\n$st');
           }
-
-          Navigator.pop(context);
+          navigator.pop();
         }
       };
       
@@ -1295,6 +1345,12 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      // Capture providers and UI state before any awaits to avoid use_build_context_synchronously
+      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final messenger = ScaffoldMessenger.of(context);
+      final navigator = Navigator.of(context);
+
       final result = await walletProvider.createWallet();
       
       // Show the mnemonic to the user
@@ -1305,14 +1361,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         await web3Provider.importWallet(result['mnemonic']!);
         // Notify ChatProvider about the new wallet so conversations and sockets refresh
         try {
-          await Provider.of<ChatProvider>(context, listen: false).setCurrentWallet(result['address']!);
+          await chatProvider.setCurrentWallet(result['address']!);
         } catch (e) {
           debugPrint('connectwallet: failed to set chat provider wallet after create: $e');
         }
         
         // Create user profile linked to wallet
         if (mounted) {
-          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+          // profileProvider captured earlier
           final backendApiService = BackendApiService();
           final address = result['address']!;
           
@@ -1355,19 +1411,19 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
         
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: const Text('Wallet created and profile set up successfully!'),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
           );
-          Navigator.pop(context);
+          navigator.pop();
         }
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
+        if (mounted) {
+          setState(() {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(

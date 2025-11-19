@@ -3,6 +3,7 @@ const { asyncHandler } = require('../middleware/errorHandler');
 const { verifyToken, optionalAuth } = require('../middleware/auth');
 const { query } = require('../db');
 const logger = require('../utils/logger');
+const { normalizeAvatarUrl } = require('../utils/avatar');
 
 const router = express.Router();
 
@@ -54,11 +55,11 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
     isPublic: row.is_public,
     artworkCount: row.artwork_count || 0,
     thumbnailUrl: row.thumbnail_url,
-    owner: {
+      owner: {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+        avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -134,7 +135,7 @@ router.get('/:id', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     artworks: artworksResult.rows.map(artwork => ({
       id: artwork.id,

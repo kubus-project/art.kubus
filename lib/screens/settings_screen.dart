@@ -14,6 +14,7 @@ import '../widgets/platform_aware_widgets.dart';
 import '../web3/wallet.dart' as web3_wallet;
 import 'onboarding_reset_screen.dart';
 import 'profile_edit_screen.dart';
+import '../widgets/avatar_widget.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -179,6 +180,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildUserSection() {
     final web3Provider = Provider.of<Web3Provider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
     
     return Container(
       padding: const EdgeInsets.all(24),
@@ -212,10 +214,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Icon(
-                  Icons.person,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  size: 30,
+                child: AvatarWidget(
+                  wallet: profileProvider.currentUser?.walletAddress ?? '',
+                  avatarUrl: profileProvider.currentUser?.avatar,
+                  radius: 30,
+                  enableProfileNavigation: false,
                 ),
               ),
               const SizedBox(width: 16),
@@ -224,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Anonymous User',
+                      profileProvider.currentUser?.displayName ?? 'Guest User',
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -1799,17 +1802,17 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              
+              final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+
               // Clear all SharedPreferences
               final prefs = await SharedPreferences.getInstance();
               await prefs.clear();
-              
+
               // Disconnect wallet if connected
-              final web3Provider = Provider.of<Web3Provider>(context, listen: false);
               if (web3Provider.isConnected) {
                 web3Provider.disconnectWallet();
               }
-              
+
               if (!mounted) return;
               navigator.pop();
               messenger.showSnackBar(
@@ -1860,12 +1863,13 @@ class _SettingsScreenState extends State<SettingsScreen>
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
-              final navigator = Navigator.of(context);
-              final messenger = ScaffoldMessenger.of(context);
-              
-              // Show confirmation dialog
+              // Show confirmation dialog — ensure mounted before calling showDialog
+              if (!mounted) return;
+              final dialogContext = context;
+              final navigator = Navigator.of(dialogContext);
+              final messenger = ScaffoldMessenger.of(dialogContext);
               final confirmed = await showDialog<bool>(
-                context: context,
+                context: dialogContext,
                 builder: (context) => AlertDialog(
                   backgroundColor: Theme.of(context).colorScheme.surface,
                   title: Text(
@@ -1897,17 +1901,18 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               );
               
+              if (!mounted) return;
               if (confirmed == true) {
                 // Clear all data
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.clear();
-                
+
                 // Disconnect wallet
-                final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+                final web3Provider = Provider.of<Web3Provider>(dialogContext, listen: false);
                 if (web3Provider.isConnected) {
                   web3Provider.disconnectWallet();
                 }
-                
+
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showSnackBar(
@@ -2673,8 +2678,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final navigator = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
+                final dialogContext = context;
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {
                   _profileVisibility = selectedVisibility;
                 });
@@ -2758,8 +2764,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final navigator = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
+                final dialogContext = context;
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {}); // Update main state
                 await _saveAllSettings();
                 if (!mounted) return;
@@ -2849,8 +2856,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final navigator = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
+                final dialogContext = context;
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {}); // Update main state
                 await _saveAllSettings();
                 if (!mounted) return;
@@ -2956,8 +2964,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final navigator = Navigator.of(context);
-                final messenger = ScaffoldMessenger.of(context);
+                final dialogContext = context;
+                final navigator = Navigator.of(dialogContext);
+                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {}); // Update main state
                 await _saveAllSettings();
                 if (!mounted) return;

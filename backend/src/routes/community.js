@@ -4,6 +4,7 @@ const { verifyToken, optionalAuth } = require('../middleware/auth');
 const { communityValidation, sanitizeInput } = require('../middleware/validation');
 const { query } = require('../db');
 const logger = require('../utils/logger');
+const { normalizeAvatarUrl } = require('../utils/avatar');
 const notifications = require('./notifications');
 
 const router = express.Router();
@@ -68,7 +69,7 @@ router.get('/posts', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,
@@ -142,7 +143,7 @@ router.get('/posts/:id', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,
@@ -478,7 +479,7 @@ router.get('/posts/:id/comments', optionalAuth, asyncHandler(async (req, res) =>
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -758,7 +759,7 @@ router.get('/followers/:walletAddress', optionalAuth, asyncHandler(async (req, r
     walletAddress: row.wallet_address,
     username: row.username,
     displayName: row.display_name,
-    avatar: row.avatar_url,
+    avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
     followedAt: row.followed_at
   }));
 
@@ -795,7 +796,7 @@ router.get('/following/:walletAddress', optionalAuth, asyncHandler(async (req, r
     walletAddress: row.wallet_address,
     username: row.username,
     displayName: row.display_name,
-    avatar: row.avatar_url,
+    avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
     followedAt: row.followed_at
   }));
 
@@ -853,7 +854,7 @@ router.get('/feed', verifyToken, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,
@@ -915,7 +916,7 @@ router.get('/trending', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: row.avatar_url
+      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,

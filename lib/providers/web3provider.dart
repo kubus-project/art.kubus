@@ -339,16 +339,38 @@ class Web3Provider extends ChangeNotifier {
             try {
               _backendProfile = await _apiService.getProfileByWallet(address);
             } catch (e) {
-              if (e.toString().contains('Profile not found')) {
-                _backendProfile = await _apiService.saveProfile({
-                  'walletAddress': address,
-                  'username': 'user_${address.substring(0,6)}',
-                  'displayName': 'New User',
-                  'bio': '',
-                });
-              } else {
-                rethrow;
-              }
+                if (e.toString().contains('Profile not found')) {
+                  try {
+                    // Ask backend auth to register the wallet (creates user+profile and issues token)
+                    final reg = await _apiService.registerWallet(
+                      walletAddress: address,
+                      username: 'user_${address.substring(0,6)}',
+                    );
+                    debugPrint('Web3Provider._syncBackend: registerWallet response: $reg');
+                    // Try to fetch created profile
+                    try {
+                      _backendProfile = await _apiService.getProfileByWallet(address);
+                    } catch (_) {
+                      // Fallback to UserService cache
+                      final user2 = await UserService.getUserById(address, forceRefresh: true);
+                      if (user2 != null) {
+                        _backendProfile = {
+                          'walletAddress': user2.id,
+                          'username': user2.username.replaceFirst('@', ''),
+                          'displayName': user2.name,
+                          'bio': user2.bio,
+                          'avatar': user2.profileImageUrl,
+                          'isVerified': user2.isVerified,
+                          'createdAt': null,
+                        };
+                      }
+                    }
+                  } catch (regErr) {
+                    debugPrint('Web3Provider._syncBackend: registerWallet failed: $regErr');
+                  }
+                } else {
+                  rethrow;
+                }
             }
           }
         } catch (e) {

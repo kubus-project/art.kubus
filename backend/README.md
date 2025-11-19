@@ -256,12 +256,16 @@ GET /health
 
 ### Authentication
 
-```bash
 POST /api/auth/register
-Body: { username, email, password }
+Body: { walletAddress, username? }
+Response: { token, user }
+
+GET /api/auth/challenge?walletAddress=<wallet>
+Response: { message, expiresAt }
 
 POST /api/auth/login
-Body: { email, password }
+Body: { walletAddress, signature }
+# Response: { token, user }
 # Response: { token, user }
 ```
 

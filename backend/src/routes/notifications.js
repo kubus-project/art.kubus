@@ -132,7 +132,7 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
   // Emit WebSocket event if available
   const io = req.app.get('io');
   if (io) {
-    io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+    io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
       id: notification.id,
       type: notification.type,
       title: notification.title,
@@ -310,7 +310,7 @@ async function createLikeNotification(targetWallet, senderWallet, targetType, ta
     // Emit WebSocket event if io provided
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
           type: 'like',
           title: 'New Like',
           message,
@@ -356,7 +356,7 @@ async function createCommentNotification(targetWallet, senderWallet, postId, com
     // Emit WebSocket event if io provided
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
           type: 'comment',
           title: 'New Comment',
           message: `${senderName} commented on your post`,
@@ -402,7 +402,7 @@ async function createFollowNotification(targetWallet, senderWallet, io = null) {
     // Emit WebSocket event if io provided
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
           type: 'follow',
           title: 'New Follower',
           message: `${senderName} started following you`,
@@ -451,7 +451,7 @@ async function createShareNotification(targetWallet, senderWallet, postId, io = 
 
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString().toLowerCase()}`).emit('notification:new', {
+        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
           type: 'share',
           title: 'New Share',
           message,

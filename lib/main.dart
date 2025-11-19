@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:art_kubus/widgets/app_loading.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
@@ -14,43 +13,25 @@ import 'providers/artwork_provider.dart';
 import 'providers/institution_provider.dart';
 import 'providers/dao_provider.dart';
 import 'providers/wallet_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/collectibles_provider.dart';
 import 'providers/platform_provider.dart';
 import 'providers/config_provider.dart';
+import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/ar_screen.dart';
 import 'web3/connectwallet.dart';
-import 'services/user_service.dart';
+// user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
 
 void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Safer Flutter error handler: guard against zone or stack nulls
-  FlutterError.onError = (FlutterErrorDetails details) {
-    try {
-      // Always present the error in debug console (keeps Flutter's default behavior)
-      FlutterError.presentError(details);
-    } catch (e) {
-      // If presenting the error fails, still log the details
-      debugPrint('FlutterError.presentError failed: $e');
-    }
-
-    // Forward to zone handler if available; guard against any exceptions here
-    try {
-      final zone = Zone.current;
-      if (zone != null) {
-        zone.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
-      } else {
-        debugPrint('No active Zone to forward FlutterError');
-      }
-    } catch (e, st) {
-      debugPrint('Failed to forward FlutterError to zone: $e\n$st');
-    }
-  };
+  // We'll initialize the bindings inside the runZonedGuarded callback so the
+  // WidgetsBinding is created in the same zone as the rest of the app and
+  // prevents 'Zone mismatch' warnings when the zone-global error handler
+  // or other zone-specific configuration is used.
 
   // Fallback UI for build-time errors so UI doesn't crash with a null-check exception
   ErrorWidget.builder = (FlutterErrorDetails details) {
@@ -76,6 +57,23 @@ void main() {
       var logger = Logger();
 
       try {
+        // Initialize Flutter bindings in the guarded zone.
+        WidgetsFlutterBinding.ensureInitialized();
+
+        // Now forward Flutter framework errors to this zone so the runZonedGuarded
+        // error handler receives them.
+        FlutterError.onError = (FlutterErrorDetails details) {
+          try {
+            FlutterError.presentError(details);
+          } catch (e) {
+            debugPrint('FlutterError.presentError failed: $e');
+          }
+          try {
+            Zone.current.handleUncaughtError(details.exception, details.stack ?? StackTrace.current);
+          } catch (e, st) {
+            debugPrint('Failed to forward FlutterError to zone: $e\n$st');
+          }
+        };
         // Camera initialization moved to AR screen to avoid early permission requests
       } catch (e) {
         logger.e('App initialization failed: $e');
@@ -113,10 +111,11 @@ class _AppLauncherState extends State<AppLauncher> {
 
   Future<void> _init() async {
     const initTimeout = Duration(seconds: 6); // safe fallback for web reload stalls
-    try {
-      // Try to initialize user store but avoid hanging indefinitely on web reloads.
-      await UserService.initialize().timeout(initTimeout);
-      debugPrint('AppLauncher: UserService.initialize completed.');
+      try {
+        // Previously we initialized the user store on app startup; we now move
+        // initialization to wallet registration/profile creation flows to avoid
+        // unnecessarily initializing persisted caches for anonymous users.
+        // Keep a small comment here to avoid losing historical context.
       // Initialize push notification service and request permission so the
       // permission state is persisted early and notifications can be shown
       // immediately when events arrive.
@@ -141,24 +140,32 @@ class _AppLauncherState extends State<AppLauncher> {
 
   @override
   Widget build(BuildContext context) {
+    // Create a single ThemeProvider instance and make it available for the
+    // entire app lifecycle (splash + main) to avoid `ProviderNotFound` risks
+    // and to keep the theme consistent across both app states.
+    final topTheme = ThemeProvider();
     if (!_initialized) {
       debugPrint('AppLauncher: Initialization not complete, showing splash screen.');
-      // Provide a temporary ThemeProvider so the splash can use the app's
-      // theme colors (accent/background) before the real providers are created.
-      final initTheme = ThemeProvider();
-      debugPrint('AppLauncher: Temporary ThemeProvider created with: \\${initTheme.lightTheme}, dark theme: \\${initTheme.darkTheme}, mode: \\${initTheme.themeMode}.');
-      return MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: initTheme.lightTheme,
-        darkTheme: initTheme.darkTheme,
-        themeMode: initTheme.themeMode,
-        home: Scaffold(
-          body: const AppLoading(),
+      debugPrint('AppLauncher: Temporary ThemeProvider created with: \\\${topTheme.lightTheme}, dark theme: \\\${topTheme.darkTheme}, mode: \\\${topTheme.themeMode}.');
+      return ChangeNotifierProvider<ThemeProvider>.value(
+        value: topTheme,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: topTheme.lightTheme,
+          darkTheme: topTheme.darkTheme,
+          themeMode: topTheme.themeMode,
+          home: Scaffold(
+            body: const AppLoading(),
+          ),
         ),
       );
     }
-
-    return MultiProvider(
+    
+    // Ensure ThemeProvider is present at the top of the tree for consumers.
+    // Provide ThemeProvider here (created once) to be consistent across splash and main UI.
+    return ChangeNotifierProvider<ThemeProvider>.value(
+      value: topTheme,
+      child: MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (context) => ConfigProvider()),
         ChangeNotifierProvider(create: (context) => PlatformProvider()),
@@ -166,10 +173,12 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider(create: (context) => ProfileProvider()),
         ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
         ChangeNotifierProvider(create: (context) => ChatProvider()),
+        ChangeNotifierProvider(create: (context) => NotificationProvider()),
         ChangeNotifierProvider(create: (context) => Web3Provider()),
-        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        // ThemeProvider is provided above; no duplicate provider here.
         ChangeNotifierProvider(create: (context) => NavigationProvider()),
         ChangeNotifierProvider(create: (context) => TaskProvider()),
+        ChangeNotifierProvider(create: (context) => CacheProvider()),
         ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
           create: (context) {
             final artworkProvider = ArtworkProvider();
@@ -187,6 +196,7 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider(create: (context) => WalletProvider()),
       ],
       child: const ArtKubus(),
+      ),
     );
   }
 }

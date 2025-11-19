@@ -2,7 +2,10 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'backend_api_service.dart';
-import '../utils/wallet_utils.dart';
+// wallet_utils is intentionally not used here because the server now expects
+// canonical wallet casing when subscribing to user rooms. Keep the import
+// commented for reference.
+// import '../utils/wallet_utils.dart';
 
 typedef NotificationCallback = void Function(Map<String, dynamic> data);
 
@@ -25,11 +28,20 @@ class SocketService {
   String? _currentSubscribedWallet;
   final Set<String> _subscribedConversations = {};
   bool _notificationHandlerRegistered = false;
+  final List<NotificationCallback> _messageReactionListeners = [];
 
   void _log(String msg) {
     try {
       debugPrint('SocketService: ${DateTime.now().toIso8601String()} - $msg');
     } catch (_) {}
+  }
+
+  void _logEventDetails(String eventName, Map<String, dynamic> payload) {
+    // Simplified logging for production
+    final messageId = payload['message_id'] ?? payload['messageId'] ?? '';
+    final wallet = payload['wallet'] ?? payload['reader'] ?? '';
+    final conversationId = payload['conversation_id'] ?? payload['conversationId'] ?? '';
+    _log('$eventName -> msg=$messageId, wallet=$wallet, conv=$conversationId');
   }
 
   /// Add a listener for incoming notifications. Multiple listeners are supported.
@@ -72,6 +84,16 @@ class SocketService {
   void removeConversationListener(NotificationCallback cb) {
     _conversationListeners.remove(cb);
     _log('removeConversationListener: total=${_conversationListeners.length}');
+  }
+
+  void addMessageReactionListener(NotificationCallback cb) {
+    if (!_messageReactionListeners.contains(cb)) _messageReactionListeners.add(cb);
+    _log('addMessageReactionListener: total=${_messageReactionListeners.length}');
+  }
+
+  void removeMessageReactionListener(NotificationCallback cb) {
+    _messageReactionListeners.remove(cb);
+    _log('removeMessageReactionListener: total=${_messageReactionListeners.length}');
   }
 
   /// Connects socket to backend. If `baseUrl` is null uses `BackendApiService().baseUrl`.
@@ -148,22 +170,44 @@ class SocketService {
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
   Future<bool> connectAndSubscribe(String baseUrl, String walletAddress, {Duration timeout = const Duration(seconds: 6)}) async {
     try {
-      if (_socket == null || !_socket!.connected) {
-        connect(baseUrl);
-      }
-      // Wait for connect event
+      // Ensure socket is connected before attempting subscription
+      final connected = await connect(baseUrl);
+      if (!connected) return false;
+
+      final expectedRoom = 'user:${walletAddress.toString()}';
       final completer = Completer<bool>();
-      // Setup a one-time listen for subscribe:ok or subscribe:error
+
       void handleOk(dynamic payload) {
-        if (!completer.isCompleted) completer.complete(true);
+        try {
+          if (payload is Map<String, dynamic> && payload['room'] != null) {
+            final room = payload['room'].toString();
+            if (room == expectedRoom || room.toLowerCase() == expectedRoom.toLowerCase()) {
+              if (!completer.isCompleted) completer.complete(true);
+            } else {
+              // Not the ack we're waiting for - ignore
+              _log('connectAndSubscribe: ignoring subscribe:ok for room=$room expected=$expectedRoom');
+            }
+          } else {
+            // Fallback: if payload is a string or has no room, accept as generic ack
+            if (!completer.isCompleted) completer.complete(true);
+          }
+        } catch (e) {
+          if (!completer.isCompleted) completer.complete(false);
+        }
       }
+
       void handleErr(dynamic payload) {
+        try {
+          _log('connectAndSubscribe: subscribe:error payload=$payload');
+        } catch (_) {}
         if (!completer.isCompleted) completer.complete(false);
       }
+
       _socket!.once('subscribe:ok', handleOk);
       _socket!.once('subscribe:error', handleErr);
-      // Now request subscription
+      // Request subscription; subscribeUser registers its own handlers too
       subscribeUser(walletAddress);
+
       return await completer.future.timeout(timeout, onTimeout: () => false);
     } catch (e) {
       debugPrint('SocketService.connectAndSubscribe error: $e');
@@ -189,20 +233,20 @@ class SocketService {
       return;
     }
 
-    final roomWallet = WalletUtils.roomKey(walletAddress);
-    // Prevent duplicate subscriptions
+    final roomWallet = walletAddress.toString();
+    // Prevent duplicate subscriptions (compare canonical strings)
     if (_currentSubscribedWallet == roomWallet) {
       debugPrint('SocketService: Already subscribed to $walletAddress');
       return;
     }
 
-    // Unsubscribe from previous wallet if any
+    // Unsubscribe from previous wallet if any (use stored canonical value)
     if (_currentSubscribedWallet != null) {
       _socket!.emit('unsubscribe:user', _currentSubscribedWallet);
     }
 
     _currentSubscribedWallet = roomWallet;
-    // Emit the wallet (case-preserved) as room name
+    // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
 
     // Register handlers only once
@@ -332,6 +376,7 @@ class SocketService {
         debugPrint('SocketService: Received message:read: $data');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
+          _logEventDetails('message:read', mapped);
           _log('message:read -> listeners=${_messageReadListeners.length}');
           for (final l in _messageReadListeners) {
             try { l(mapped); } catch (e) { debugPrint('SocketService: message:read listener error: $e'); }
@@ -346,6 +391,7 @@ class SocketService {
         debugPrint('SocketService: Received conversation:member:read: $data');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
+          _logEventDetails('conversation:member:read', mapped);
           _log('conversation:member:read -> listeners=${_conversationListeners.length}');
           for (final l in _conversationListeners) {
             try { l(mapped); } catch (e) { debugPrint('SocketService: conversation:member:read listener error: $e'); }
@@ -353,6 +399,19 @@ class SocketService {
           try { _conversationMemberReadController.add(mapped); _log('conversation:member:read -> controller.added'); } catch (e) { debugPrint('SocketService: conversationMember controller add error: $e'); }
         }
       } catch (e) { debugPrint('SocketService: conversation:member:read handler error: $e'); }
+    });
+
+    _socket!.on('message:reaction', (data) {
+      try {
+        debugPrint('SocketService: Received message:reaction: $data');
+        if (data is Map<String, dynamic>) {
+          final mapped = Map<String, dynamic>.from(data);
+          _log('message:reaction -> listeners=${_messageReactionListeners.length}');
+          for (final l in _messageReactionListeners) {
+            try { l(mapped); } catch (e) { debugPrint('SocketService: message:reaction listener error: $e'); }
+          }
+        }
+      } catch (e) { debugPrint('SocketService: message:reaction handler error: $e'); }
     });
   }
 
@@ -366,49 +425,58 @@ class SocketService {
 
   void unsubscribeUser(String walletAddress) {
     if (_socket == null) return;
-    
-    final roomWallet = WalletUtils.roomKey(walletAddress);
+    final roomWallet = walletAddress.toString();
     _socket!.emit('unsubscribe:user', roomWallet);
-    
     if (_currentSubscribedWallet == roomWallet) {
       _currentSubscribedWallet = null;
     }
   }
 
   /// Subscribe to a conversation room so the client receives message/read/member events
-  void subscribeConversation(String conversationId) {
+  Future<bool> subscribeConversation(String conversationId, {Duration timeout = const Duration(seconds: 6)}) async {
+    // Async subscription with acknowledgement
     if (_socket == null || !_socket!.connected) {
       debugPrint('SocketService: Cannot subscribe to conversation - socket not connected');
-      return;
+      return false;
     }
 
     final nid = conversationId;
     if (_subscribedConversations.contains(nid)) {
       debugPrint('SocketService: Already subscribed to conversation $nid');
-      return;
+      return false;
     }
-
     _socket!.emit('subscribe:conversation', nid);
+    final completer = Completer<bool>();
 
-    void okHandler(dynamic payload) {
+    _socket!.once('subscribe:ok', (payload) {
       try {
-        debugPrint('SocketService: subscribe:ok for conversation $nid -> $payload');
-        _subscribedConversations.add(nid);
+        if (payload is Map<String, dynamic> && payload['room'] != null) {
+          final room = payload['room'].toString();
+          if (room == 'conversation:$nid' || room.toLowerCase() == ('conversation:$nid').toLowerCase()) {
+            if (!completer.isCompleted) completer.complete(true);
+          } else {
+            _log('subscribeConversation: ignoring subscribe:ok for room=$room expected=conversation:$nid');
+          }
+        } else {
+          if (!completer.isCompleted) completer.complete(true);
+        }
       } catch (e) {
-        debugPrint('SocketService: subscribeConversation ok handler error: $e');
+        if (!completer.isCompleted) completer.complete(false);
       }
-    }
+    });
 
-    void errHandler(dynamic payload) {
-      try {
-        debugPrint('SocketService: subscribe:error for conversation $nid -> $payload');
-      } catch (e) {
-        debugPrint('SocketService: subscribeConversation err handler error: $e');
-      }
-    }
+    _socket!.once('subscribe:error', (payload) {
+      try { _log('subscribeConversation: subscribe:error payload=$payload'); } catch (_) {}
+      if (!completer.isCompleted) completer.complete(false);
+    });
 
-    _socket!.once('subscribe:ok', okHandler);
-    _socket!.once('subscribe:error', errHandler);
+    // Wait for acknowledgement or timeout
+    final ok = await completer.future.timeout(timeout, onTimeout: () => false);
+    if (ok == true) {
+      _subscribedConversations.add(nid);
+      return true;
+    }
+    return false;
   }
 
   /// Leave a previously subscribed conversation room

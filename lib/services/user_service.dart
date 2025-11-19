@@ -9,6 +9,7 @@ import '../utils/wallet_utils.dart';
 class UserService {
   static const String _followingKey = 'following_users';
   static const String _cachePrefsKey = 'user_cache_v1';
+  static const String _placeholderAvatarScheme = 'placeholder://';
 
   // Persistence defaults: keep entries for 6 hours and cap stored entries to avoid unbounded growth
   static int _maxEntries = 500;
@@ -147,21 +148,7 @@ class UserService {
             ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
             : 'Joined recently',
         achievementProgress: [], // TODO: Load achievements from backend
-        profileImageUrl: (() {
-          final a = profile['avatar'];
-          if (a == null) return null;
-          // If avatar field is a map (common when backend returns structured upload info), try to extract main URL
-          if (a is Map) {
-            // prefer avatar.url, httpUrl, ipfsUrl, or path
-            if (a['url'] != null && a['url'].toString().isNotEmpty) return a['url'].toString();
-            if (a['httpUrl'] != null && a['httpUrl'].toString().isNotEmpty) return a['httpUrl'].toString();
-            if (a['ipfsUrl'] != null && a['ipfsUrl'].toString().isNotEmpty) return a['ipfsUrl'].toString();
-            if (a['path'] != null && a['path'].toString().isNotEmpty) return a['path'].toString();
-            // Fallback to the stringified map (will probably fail to download but safe)
-            return a.toString();
-          }
-          return a.toString();
-        })(),
+        profileImageUrl: _extractAvatarCandidate(profile['avatar'], userId),
       );
       try { debugPrint('UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}'); } catch (_) {}
       // populate cache & timestamp
@@ -182,17 +169,31 @@ class UserService {
   // Helper to extract avatar string from various payload shapes that may be returned
   static String? _extractAvatarCandidate(dynamic candidate, String wallet) {
     try {
+      String? url;
       if (candidate == null) return null;
-      if (candidate is String) return candidate.isEmpty ? null : candidate;
-      if (candidate is Map) {
-        if (candidate['url'] != null && candidate['url'].toString().isNotEmpty) return candidate['url'].toString();
-        if (candidate['httpUrl'] != null && candidate['httpUrl'].toString().isNotEmpty) return candidate['httpUrl'].toString();
-        if (candidate['ipfsUrl'] != null && candidate['ipfsUrl'].toString().isNotEmpty) return candidate['ipfsUrl'].toString();
-        if (candidate['path'] != null && candidate['path'].toString().isNotEmpty) return candidate['path'].toString();
-        // Fallback to string representation if keys not present
-        return candidate.toString();
+      if (candidate is String) {
+        url = candidate.isEmpty ? null : candidate;
+      } else if (candidate is Map) {
+        if (candidate['url'] != null && candidate['url'].toString().isNotEmpty) url = candidate['url'].toString();
+        else if (candidate['httpUrl'] != null && candidate['httpUrl'].toString().isNotEmpty) url = candidate['httpUrl'].toString();
+        else if (candidate['ipfsUrl'] != null && candidate['ipfsUrl'].toString().isNotEmpty) url = candidate['ipfsUrl'].toString();
+        else if (candidate['path'] != null && candidate['path'].toString().isNotEmpty) url = candidate['path'].toString();
+        else url = candidate.toString();
+      } else {
+        url = candidate.toString();
       }
-      return candidate.toString();
+
+      if (url == null) return null;
+      final trimmed = url.trim();
+      if (trimmed.isEmpty) return null;
+      // Treat DiceBear/placeholder URLs as missing so UI renders local initials instead of remote SVGs
+      if (isPlaceholderAvatarUrl(trimmed)) {
+        return null;
+      }
+      if (trimmed.contains('api.dicebear.com') && trimmed.contains('/svg')) {
+        return trimmed.replaceAll('/svg', '/png');
+      }
+      return trimmed;
     } catch (_) {
       return null;
     }
@@ -326,9 +327,49 @@ class UserService {
         _cacheTimestamps.clear();
         _cacheTimestamps.addAll(timestamps);
       }
+      // Cleanup legacy fabricated avatars persisted in cache: if a cached
+      // profileImageUrl matches our placeholder token/legacy DiceBear URL,
+      // remove it so UI fallback logic can decide whether to render a
+      // synthesized image without persisting it.
+      try {
+        final keys = _cache.keys.toList();
+        for (final k in keys) {
+          final u = _cache[k];
+          if (u != null && isPlaceholderAvatarUrl(u.profileImageUrl)) {
+            _cache[k] = u.copyWith(profileImageUrl: null);
+          }
+        }
+        // Persist cleaned cache back to prefs (best-effort)
+        try { await _persistCache(); } catch (_) {}
+      } catch (_) {}
     } catch (e) {
       debugPrint('UserService.initialize failed: $e');
     }
+  }
+
+  /// Returns a cached User if present in the in-memory cache. This is synchronous
+  /// and useful for UI paths that need immediate access to previously persisted
+  /// user profiles without performing async calls.
+  static User? getCachedUser(String userId) {
+    try {
+      if (userId.isEmpty) return null;
+      return _cache[userId];
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Returns a map of cached User objects for the given ids. Non-existing ids are omitted.
+  static Map<String, User> getCachedUsers(List<String> walletIds) {
+    final Map<String, User> result = {};
+    try {
+      for (final id in walletIds) {
+        if (id.isEmpty) continue;
+        final u = _cache[id];
+        if (u != null) result[id] = u;
+      }
+    } catch (_) {}
+    return result;
   }
 
   /// Clear persistent and in-memory cache
@@ -417,14 +458,14 @@ class UserService {
     }).toList();
   }
 
-  /// Returns a default avatar URL for a wallet address.
-  /// Uses a stable identicon generator so the same wallet has the same image.
+  /// Returns a deterministic placeholder identifier for wallets without avatars.
+  /// This never points to a remote image; the UI should render local initials.
   static String defaultAvatarUrl(String wallet) {
-    // Use backend avatar proxy so CORS and hosting is controlled by our API
-    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-    if (wallet.isEmpty) return '$base/api/avatar/anon?style=identicon&format=png';
-    final key = WalletUtils.identiconKey(wallet);
-    return '$base/api/avatar/$key?style=identicon&format=png';
+    final seed = wallet.isEmpty ? 'anon' : WalletUtils.identiconKey(wallet);
+    final normalized = seed.trim().isEmpty ? 'anon' : seed.trim();
+    final sanitized = normalized.replaceAll(RegExp(r'[^a-zA-Z0-9_-]'), '').toLowerCase();
+    final token = sanitized.isNotEmpty ? sanitized : normalized.hashCode.toRadixString(16);
+    return '$_placeholderAvatarScheme$token';
   }
 
   /// Returns a safe avatar URL for a provided seed that may be a wallet, username, or other id.
@@ -440,6 +481,15 @@ class UserService {
     }
     // Otherwise assume it's a wallet/seed and return identicon
     return defaultAvatarUrl(s);
+  }
+
+  /// Detects whether a URL/string represents a synthesized placeholder avatar.
+  static bool isPlaceholderAvatarUrl(String? value) {
+    if (value == null || value.isEmpty) return false;
+    final lower = value.toLowerCase();
+    if (lower.startsWith(_placeholderAvatarScheme)) return true;
+    if (lower.contains('dicebear.com')) return true;
+    return false;
   }
 
   /// Fetches multiple users by wallet addresses. Returns a list of User objects (skips missing profiles).
@@ -476,7 +526,7 @@ class UserService {
                 isVerified: profile['isVerified'] ?? false,
                 joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
                 achievementProgress: [],
-                profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet) ?? safeAvatarUrl(wallet),
+                profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
               );
               found[wallet] = user;
             } catch (e, st) {
@@ -508,7 +558,7 @@ class UserService {
               isVerified: false,
               joinedDate: 'Joined recently',
               achievementProgress: [],
-              profileImageUrl: safeAvatarUrl(w),
+              profileImageUrl: null,
             ));
           }
         }
@@ -547,7 +597,6 @@ class UserService {
         if (w.isEmpty) continue;
         results.add(orderedCache[w]!);
       }
-      return results;
     }
 
     // For missing wallets, call batch endpoint and merge with cached entries
@@ -573,7 +622,7 @@ class UserService {
               isVerified: profile['isVerified'] ?? false,
               joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
               achievementProgress: [],
-              profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet) ?? safeAvatarUrl(wallet),
+              profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
             );
             found[wallet] = user;
             } catch (e, st) {
@@ -605,7 +654,7 @@ class UserService {
             isVerified: false,
             joinedDate: 'Joined recently',
             achievementProgress: [],
-            profileImageUrl: safeAvatarUrl(w),
+            profileImageUrl: null,
           ));
         }
       }
@@ -634,7 +683,7 @@ class UserService {
           isVerified: false,
           joinedDate: 'Joined recently',
           achievementProgress: [],
-          profileImageUrl: safeAvatarUrl(w),
+          profileImageUrl: null,
         ));
         }
       } catch (_) {
@@ -650,7 +699,7 @@ class UserService {
           isVerified: false,
           joinedDate: 'Joined recently',
           achievementProgress: [],
-          profileImageUrl: safeAvatarUrl(w),
+          profileImageUrl: null,
         ));
       }
     }

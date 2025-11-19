@@ -1,4 +1,4 @@
-// ignore_for_file: use_build_context_synchronously
+// NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +10,7 @@ import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
+import '../providers/cache_provider.dart';
 import '../services/backend_api_service.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
@@ -42,6 +43,11 @@ class _AppInitializerState extends State<AppInitializer> {
     final configProvider = Provider.of<ConfigProvider>(context, listen: false);
     await configProvider.initialize();
     if (!mounted) return;
+
+    // Ensure cache provider is hydrated before any screen depends on it.
+    final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
+    await cacheProvider.initialize();
+    if (!mounted) return;
     
     // Initialize WalletProvider early to restore cached wallet
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -50,6 +56,8 @@ class _AppInitializerState extends State<AppInitializer> {
     final walletAddress = walletProvider.currentWalletAddress;
     debugPrint('🔐 WalletProvider initialization complete. Has wallet: ${walletAddress != null}');
     if (!mounted) return;
+    // Capture chatProvider early to avoid BuildContext use after async gaps
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     
     // Sync Web3Provider with WalletProvider if wallet was restored
     if (walletAddress != null) {
@@ -77,6 +85,7 @@ class _AppInitializerState extends State<AppInitializer> {
     if (!mounted) return;
     // Initialize ChatProvider after WalletProvider and ProfileProvider are ready so wallet can be resolved
     try {
+      // Use captured chatProvider instance
       // Ensure auth is initialized (attempt single issuance if wallet restored)
       try {
         await BackendApiService().ensureAuthLoaded(walletAddress: walletAddress);
@@ -84,8 +93,9 @@ class _AppInitializerState extends State<AppInitializer> {
       } catch (e) {
         debugPrint('⚠️ BackendApiService.ensureAuthLoaded failed in AppInitializer: $e');
       }
-      final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+      if (!mounted) return;
       await chatProvider.initialize(initialWallet: walletAddress);
+      if (!mounted) return;
       debugPrint('✅ ChatProvider initialized from AppInitializer');
     } catch (e) { debugPrint('⚠️ ChatProvider initialize from AppInitializer failed: $e'); }
     

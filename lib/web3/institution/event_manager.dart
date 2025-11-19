@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../widgets/inline_loading.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -393,13 +394,17 @@ class _EventManagerState extends State<EventManager>
                       ),
                     ),
                     const SizedBox(height: 4),
-                    LinearProgressIndicator(
-                      value: occupancyPercentage,
-                      backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        occupancyPercentage > 0.8 ? Colors.red : themeProvider.accentColor,
+                    SizedBox(
+                      height: 6,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: InlineLoading(
+                          progress: occupancyPercentage,
+                          tileSize: 6.0,
+                          color: occupancyPercentage > 0.8 ? Colors.red : themeProvider.accentColor,
+                          duration: const Duration(milliseconds: 700),
+                        ),
                       ),
-                      minHeight: 3,
                     ),
                   ],
                 ),

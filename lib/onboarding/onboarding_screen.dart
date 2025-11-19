@@ -195,7 +195,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                       height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
                       decoration: BoxDecoration(
                         gradient: page.gradient,
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
                             color: page.gradient.colors.first.withValues(alpha: 0.3),

@@ -92,7 +92,7 @@ class AppConfig {
   
   /// API endpoints
   static const String baseApiUrl = isDevelopment 
-    ? 'https://api.kubus.site' 
+    ? 'http://localhost:3000' 
     : 'https://api.kubus.site';
   
   /// Mock data endpoint (when useBackendMockData is true)

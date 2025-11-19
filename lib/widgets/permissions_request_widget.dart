@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'inline_loading.dart';
 import '../services/push_notification_service.dart';
 
 class PermissionsRequestWidget extends StatefulWidget {
@@ -37,16 +39,27 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
   }
 
   Future<void> _checkPermissions() async {
-    final cameraStatus = await Permission.camera.status;
-    final locationStatus = await Permission.locationWhenInUse.status;
-    final notificationStatus = await Permission.notification.status;
+    try {
+      final cameraStatus = await Permission.camera.status;
+      final locationStatus = await Permission.locationWhenInUse.status;
+      final notificationStatus = await Permission.notification.status;
 
-    if (mounted) {
-      setState(() {
-        _cameraGranted = cameraStatus.isGranted;
-        _locationGranted = locationStatus.isGranted;
-        _notificationGranted = notificationStatus.isGranted;
-      });
+      if (mounted) {
+        setState(() {
+          _cameraGranted = cameraStatus.isGranted;
+          _locationGranted = locationStatus.isGranted;
+          _notificationGranted = notificationStatus.isGranted;
+        });
+      }
+    } catch (e, st) {
+      debugPrint('PermissionsRequestWidget._checkPermissions failed: $e\n$st');
+      if (mounted) {
+        setState(() {
+          _cameraGranted = false;
+          _locationGranted = false;
+          _notificationGranted = false;
+        });
+      }
     }
   }
 
@@ -59,23 +72,58 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
 
     try {
       // Request camera permission
-      final cameraStatus = await Permission.camera.request();
-      setState(() {
-        _cameraGranted = cameraStatus.isGranted;
-      });
+      try {
+        final cameraStatus = await Permission.camera.request();
+        setState(() {
+          _cameraGranted = cameraStatus.isGranted;
+        });
+      } catch (e, st) {
+        debugPrint('PermissionsRequestWidget._requestAllPermissions camera.request failed: $e\n$st');
+        setState(() => _cameraGranted = false);
+      }
 
       // Request location permission
-      final locationStatus = await Permission.locationWhenInUse.request();
-      setState(() {
-        _locationGranted = locationStatus.isGranted;
-      });
+      try {
+        final locationStatus = await Permission.locationWhenInUse.request();
+        setState(() {
+          _locationGranted = locationStatus.isGranted;
+        });
+      } catch (e, st) {
+        debugPrint('PermissionsRequestWidget._requestAllPermissions location.request failed: $e\n$st');
+        setState(() => _locationGranted = false);
+      }
 
-      // Request notification permission (both OS and push notification service)
-      final notificationStatus = await Permission.notification.request();
-      final pushGranted = await _pushNotificationService.requestPermission();
-      setState(() {
-        _notificationGranted = notificationStatus.isGranted || pushGranted;
-      });
+      // Request notification permission (platform-specific)
+      bool pushGranted = false;
+      if (kIsWeb) {
+        try {
+          pushGranted = await _pushNotificationService.requestPermission();
+        } catch (e) {
+          pushGranted = false;
+        }
+        setState(() => _notificationGranted = pushGranted);
+      } else {
+        bool notificationIsGranted = false;
+        try {
+          final notificationStatus = await Permission.notification.request();
+          notificationIsGranted = notificationStatus.isGranted;
+        } catch (e, st) {
+          debugPrint('PermissionsRequestWidget._requestAllPermissions notification.request failed: $e\n$st');
+          notificationIsGranted = false;
+        }
+
+        bool pushGrantedLocal = false;
+        try {
+          pushGrantedLocal = await _pushNotificationService.requestPermission();
+        } catch (e, st) {
+          debugPrint('PermissionsRequestWidget._requestAllPermissions push request failed: $e\n$st');
+          pushGrantedLocal = false;
+        }
+
+        setState(() {
+          _notificationGranted = notificationIsGranted || pushGrantedLocal;
+        });
+      }
 
       // Check if all critical permissions are granted (camera and location are critical for AR)
       if (_cameraGranted && _locationGranted) {
@@ -169,13 +217,10 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
                 ),
               ),
               child: _isRequesting
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 24,
                       height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
+                      child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 3.5, color: Colors.white),
                     )
                   : Text(
                       'Grant Permissions',

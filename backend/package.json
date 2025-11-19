@@ -35,6 +35,8 @@
     "winston": "^3.11.0",
     "axios": "^1.6.2",
     "uuid": "^9.0.1",
+    "tweetnacl": "^1.0.3",
+    "bs58": "^5.0.0",
     "compression": "^1.7.4",
     "express-mongo-sanitize": "^2.2.0",
     "hpp": "^0.2.3",
