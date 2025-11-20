@@ -1263,13 +1263,23 @@ class BackendApiService {
 
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
+        debugPrint('🔍 getComments: Raw response body type: ${parsed.runtimeType}');
         if (parsed is Map<String, dynamic>) {
           final raw = parsed['comments'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'] ?? [];
+          debugPrint('🔍 getComments: Found ${(raw as List?)?.length ?? 0} comments in response');
+          if (raw is List && raw.isNotEmpty) {
+            debugPrint('🔍 getComments: First comment sample: ${raw.first}');
+          }
           if (raw is List) {
             final flat = raw
                 .whereType<Map<String, dynamic>>()
                 .map(_commentFromBackendJson)
                 .toList();
+            debugPrint('🔍 getComments: Parsed ${flat.length} comments initially');
+            if (flat.isNotEmpty) {
+              final first = flat.first;
+              debugPrint('🔍 First parsed comment: id=${first.id}, name="${first.authorName}", avatar="${first.authorAvatar}", wallet="${first.authorWallet}"');
+            }
 
             // Batch fetch profiles for comment authors to fill missing name/avatar if possible
             try {
@@ -1322,18 +1332,34 @@ class BackendApiService {
                     final profileUsername = profile['username'] as String? ?? profile['walletAddress'] as String? ?? profile['wallet'] as String?;
                     final avatarCandidate = profile['avatar'] as String? ?? profile['profileImage'] as String? ?? profile['profile_image'] as String? ?? profile['avatarUrl'] as String? ?? profile['avatar_url'] as String?;
                     final normalizedAvatar = _normalizeBackendAvatarUrl(avatarCandidate);
+                    
+                    // Determine best display name: prioritize displayName, then username, then fallback to existing
+                    final bestDisplayName = (profileDisplayName != null && profileDisplayName.trim().isNotEmpty)
+                        ? profileDisplayName.trim()
+                        : ((profileUsername != null && profileUsername.trim().isNotEmpty) 
+                            ? profileUsername.trim() 
+                            : c.authorName);
+                    
+                    debugPrint('   Profile enrichment for comment ${c.id}: displayName=$profileDisplayName, username=$profileUsername, bestName=$bestDisplayName, avatar=$avatarCandidate');
+                    
                     final updated = c.copyWith(
                       authorAvatar: normalizedAvatar,
                       authorUsername: profileUsername ?? c.authorUsername,
-                      authorName: profileDisplayName ?? c.authorName,
+                      authorName: bestDisplayName,
                       authorId: (profile['walletAddress'] ?? profile['wallet'] ?? profile['id'] ?? profile['userId'] ?? c.authorId)?.toString(),
                       authorWallet: (profile['walletAddress'] ?? profile['wallet'] ?? profile['wallet_address'] ?? profile['publicKey'] ?? profile['public_key'])?.toString(),
                     );
                     flat[i] = updated;
                     filled++;
-                  } catch (_) {}
+                  } catch (e) {
+                    debugPrint('   Profile enrichment error for comment ${c.id}: $e');
+                  }
                 }
                 debugPrint('BackendApiService.getComments: filled $filled comment author profiles from ${profilesByWallet.length} profile results');
+                if (flat.isNotEmpty) {
+                  final first = flat.first;
+                  debugPrint('🔍 After enrichment, first comment: id=${first.id}, name="${first.authorName}", avatar="${first.authorAvatar}"');
+                }
               }
             } catch (e) {
               debugPrint('BackendApiService.getComments: profile batch fetch error: $e');
@@ -2854,6 +2880,7 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
     final authorId = json['authorId'] as String?
       ?? json['author_id']?.toString()
       ?? normalizedAuthor['id'] as String?
+      ?? normalizedAuthor['walletAddress'] as String?
       ?? json['walletAddress'] as String?
       ?? json['wallet_address'] as String?
       ?? json['wallet'] as String?
