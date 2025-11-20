@@ -385,16 +385,67 @@ class UserService {
   }
 
   static Future<User?> getUserByUsername(String username) async {
+    final trimmed = username.trim();
+    if (trimmed.isEmpty) return null;
+    final lookup = trimmed.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
+
+    // Check in-memory cache first for instant hits
     try {
+      for (final entry in _cache.values) {
+        final cachedUsername = entry.username.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
+        if (cachedUsername == lookup) {
+          return entry;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final profile = await BackendApiService().findProfileByUsername(lookup);
+      if (profile == null) return null;
+
+      final wallet = WalletUtils.normalize((profile['walletAddress'] ?? profile['wallet_address'] ?? profile['wallet'])?.toString());
+      if (wallet.isEmpty) return null;
+
       final followingList = await getFollowingUsers();
-      
-      final user = _sampleUsers.firstWhere(
-        (user) => user.username == username,
-        orElse: () => _sampleUsers.first,
+      final stats = profile['stats'];
+      int followers = 0;
+      int following = 0;
+      if (stats is Map<String, dynamic>) {
+        followers = int.tryParse((stats['followers'] ?? stats['followersCount'] ?? 0).toString()) ?? 0;
+        following = int.tryParse((stats['following'] ?? stats['followingCount'] ?? 0).toString()) ?? 0;
+      }
+
+      String joinedDate = 'Joined recently';
+      final createdAtRaw = profile['createdAt'] ?? profile['created_at'];
+      if (createdAtRaw != null) {
+        try {
+          final dt = DateTime.parse(createdAtRaw.toString());
+          joinedDate = 'Joined ${dt.month}/${dt.year}';
+        } catch (_) {}
+      }
+
+      final resolvedUsername = (profile['username'] ?? lookup).toString().replaceAll('@', '');
+      final avatarCandidate = profile['avatar'] ?? profile['avatar_url'] ?? profile['avatarUrl'];
+
+      final user = User(
+        id: wallet,
+        name: profile['displayName']?.toString() ?? profile['username']?.toString() ?? wallet,
+        username: '@$resolvedUsername',
+        bio: profile['bio']?.toString() ?? '',
+        followersCount: followers,
+        followingCount: following,
+        postsCount: 0,
+        isFollowing: followingList.contains(wallet),
+        isVerified: profile['isVerified'] == true,
+        joinedDate: joinedDate,
+        achievementProgress: const [],
+        profileImageUrl: _extractAvatarCandidate(avatarCandidate, wallet),
       );
-      
-      return user.copyWith(isFollowing: followingList.contains(user.id));
+
+      setUsersInCache([user]);
+      return user;
     } catch (e) {
+      debugPrint('UserService.getUserByUsername failed: $e');
       return null;
     }
   }
@@ -488,7 +539,11 @@ class UserService {
     if (value == null || value.isEmpty) return false;
     final lower = value.toLowerCase();
     if (lower.startsWith(_placeholderAvatarScheme)) return true;
+    // Consider external DiceBear URLs as placeholders (we prefer internal proxy URLs)
     if (lower.contains('dicebear.com')) return true;
+    // Do NOT treat internal proxy paths ("/api/avatar/") or query params like
+    // "style=identicon" as placeholders — those are legitimate proxied avatars
+    // returned by the backend and should be displayed by the UI.
     return false;
   }
 

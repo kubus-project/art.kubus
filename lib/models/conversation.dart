@@ -135,6 +135,18 @@ class Conversation {
       return fallback;
     }
 
+    bool parseBool(dynamic value, {bool fallback = false}) {
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final lower = value.trim().toLowerCase();
+        if (lower.isEmpty) return fallback;
+        if (lower == 'true' || lower == '1' || lower == 'yes' || lower == 'y') return true;
+        if (lower == 'false' || lower == '0' || lower == 'no' || lower == 'n') return false;
+      }
+      return fallback;
+    }
+
     final rawTitle = (j['raw_title'] ?? j['rawTitle']) as String?;
     final resolvedTitle = (j['resolved_title'] ?? j['resolvedTitle'] ?? j['title']) as String?;
     final memberWallets = parseWallets(j['memberWallets'] ?? j['member_wallets']);
@@ -144,12 +156,13 @@ class Conversation {
     final memberCount = memberCountRaw == 0 && memberWallets.isNotEmpty ? memberWallets.length : memberCountRaw;
     final avatarCandidate = (j['display_avatar'] ?? j['displayAvatar'] ?? j['avatar'] ?? j['avatar_url']) as String?;
     final effectiveAvatar = avatarCandidate ?? counterpart?.avatarUrl;
+    final isGroup = parseBool(j['isGroup'] ?? j['is_group'], fallback: memberCount >= 3);
 
     return Conversation(
       id: j['id'] as String,
       title: resolvedTitle ?? rawTitle,
       rawTitle: rawTitle,
-      isGroup: (j['isGroup'] ?? j['is_group'] ?? false) == true,
+      isGroup: isGroup,
       createdBy: (j['createdBy'] ?? j['created_by']) as String?,
       lastMessageAt: parseDate(j['lastMessageAt'] ?? j['last_message_at']),
       lastMessage: (j['lastMessage'] ?? j['last_message']) as String?,

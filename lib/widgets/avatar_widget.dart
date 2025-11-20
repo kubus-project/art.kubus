@@ -3,6 +3,7 @@ import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
 import 'inline_loading.dart';
 import '../screens/user_profile_screen.dart';
+import '../utils/wallet_utils.dart';
 
 class AvatarWidget extends StatefulWidget {
   final String? avatarUrl;
@@ -18,7 +19,7 @@ class AvatarWidget extends StatefulWidget {
     required this.wallet,
     this.radius = 18,
     this.isLoading = false,
-    this.allowFabricatedFallback = true,
+    this.allowFabricatedFallback = false,
     this.enableProfileNavigation = true,
   });
 
@@ -38,6 +39,9 @@ class _AvatarWidgetState extends State<AvatarWidget> {
   }
 
   Future<void> _setup() async {
+    final walletId = WalletUtils.normalize(widget.wallet);
+    final cacheKey = walletId.isNotEmpty ? walletId : widget.wallet;
+    final fallbackSeed = WalletUtils.canonical(widget.wallet);
     // 1. If explicit URL provided, trust it completely and skip fetch.
     if (widget.avatarUrl != null && widget.avatarUrl!.isNotEmpty) {
       setState(() { _effectiveUrl = _normalizeAvatar(widget.avatarUrl); });
@@ -45,18 +49,29 @@ class _AvatarWidgetState extends State<AvatarWidget> {
     }
 
     // 2. Check cache
-    final cached = UserService.getCachedUser(widget.wallet)?.profileImageUrl;
+    final cached = UserService.getCachedUser(cacheKey)?.profileImageUrl;
     if (cached != null && cached.isNotEmpty) {
       setState(() { _effectiveUrl = _normalizeAvatar(cached); });
     } 
     
     // 3. Fetch authoritative profile
+    // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
+    final invalidWalletPlaceholders = ['unknown', 'anonymous', 'n/a', 'none'];
+    if (walletId.isEmpty || invalidWalletPlaceholders.contains(walletId.toLowerCase())) {
+      debugPrint('AvatarWidget._setup: skipping profile fetch for invalid wallet "$walletId"');
+      if (widget.allowFabricatedFallback) {
+        if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
+          setState(() { _effectiveUrl = UserService.safeAvatarUrl(WalletUtils.canonical(widget.wallet)); });
+        }
+      }
+      return;
+    }
     // Don't set fabricated URL yet to avoid "Robot -> Real" flash.
     // Show initials/loading state instead.
     
     setState(() { _loading = true; });
     try {
-      final u = await UserService.getUserById(widget.wallet);
+      final u = await UserService.getUserById(cacheKey);
       if (!mounted) return;
       
       final p = u?.profileImageUrl;
@@ -70,7 +85,7 @@ class _AvatarWidgetState extends State<AvatarWidget> {
         // Only set if we don't have one yet
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
            setState(() { 
-             _effectiveUrl = UserService.safeAvatarUrl(widget.wallet); 
+             _effectiveUrl = UserService.safeAvatarUrl(fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey); 
              _loading = false; 
            });
         } else {
@@ -83,7 +98,7 @@ class _AvatarWidgetState extends State<AvatarWidget> {
       if (mounted) {
         // On error, fallback if allowed
           if (widget.allowFabricatedFallback && (_effectiveUrl == null || _effectiveUrl!.isEmpty)) {
-            setState(() { _effectiveUrl = UserService.safeAvatarUrl(widget.wallet); });
+            setState(() { _effectiveUrl = UserService.safeAvatarUrl(fallbackSeed.isNotEmpty ? fallbackSeed : cacheKey); });
         }
         setState(() { _loading = false; });
       }

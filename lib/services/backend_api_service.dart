@@ -9,6 +9,7 @@ import '../config/api_keys.dart';
 import '../models/ar_marker.dart';
 import '../models/artwork.dart';
 import '../community/community_interactions.dart';
+import '../utils/wallet_utils.dart';
 
 /// Backend API Service
 /// 
@@ -602,6 +603,22 @@ class BackendApiService {
     }
   }
 
+  Future<Map<String, dynamic>> renameConversation(String conversationId, String newTitle) async {
+    try {
+      final response = await http.patch(
+        Uri.parse('$baseUrl/api/messages/$conversationId/rename'),
+        headers: _getHeaders(),
+        body: jsonEncode({'title': newTitle}),
+      );
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body) as Map<String, dynamic>;
+      }
+      throw Exception('Failed to rename conversation: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('Failed to rename conversation: $e');
+    }
+  }
+
   /// Update user profile
   /// PUT /api/users/:userId
   Future<Map<String, dynamic>> updateProfile(
@@ -632,6 +649,11 @@ class BackendApiService {
   /// GET /api/profiles/:walletAddress
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async {
     try {
+      // Avoid making pointless network calls when wallet is a known placeholder
+      final normalized = walletAddress.trim().toLowerCase();
+      if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized)) {
+        throw Exception('Profile not found');
+      }
       final response = await http.get(
         Uri.parse('$baseUrl/api/profiles/$walletAddress'),
         headers: _getHeaders(includeAuth: false),
@@ -675,6 +697,43 @@ class BackendApiService {
       debugPrint('Error in getProfilesBatch: $e');
       return {'success': false, 'error': e.toString()};
     }
+  }
+
+  /// Find a profile by username (helper built on top of the search endpoint)
+  Future<Map<String, dynamic>?> findProfileByUsername(String username) async {
+    final sanitized = username.trim().replaceFirst(RegExp(r'^@+'), '');
+    if (sanitized.isEmpty) return null;
+    try {
+      final response = await search(query: sanitized, type: 'profiles', limit: 10, page: 1);
+      if (response['success'] != true) return null;
+      final normalizedTarget = sanitized.toLowerCase();
+      final resultsPayload = response['results'];
+      List<dynamic> profiles = const [];
+      if (resultsPayload is Map<String, dynamic>) {
+        profiles = (resultsPayload['profiles'] as List<dynamic>? ?? const []);
+      } else if (response['profiles'] is List) {
+        profiles = response['profiles'] as List<dynamic>;
+      }
+      if (profiles.isEmpty && response['data'] is List) {
+        profiles = response['data'] as List<dynamic>;
+      }
+      for (final entry in profiles) {
+        if (entry is! Map<String, dynamic>) continue;
+        final rawUsername = (entry['username'] ?? entry['walletAddress'] ?? entry['wallet_address'] ?? entry['wallet'])?.toString() ?? '';
+        if (rawUsername.isEmpty) continue;
+        final normalized = rawUsername.replaceFirst(RegExp(r'^@+'), '').toLowerCase();
+        if (normalized == normalizedTarget) {
+          return entry;
+        }
+      }
+      // No exact match found; fallback to first profile result if available
+      if (profiles.isNotEmpty && profiles.first is Map<String, dynamic>) {
+        return profiles.first as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('BackendApiService.findProfileByUsername error: $e');
+    }
+    return null;
   }
 
   /// Create or update profile
@@ -1211,6 +1270,74 @@ class BackendApiService {
                 .whereType<Map<String, dynamic>>()
                 .map(_commentFromBackendJson)
                 .toList();
+
+            // Batch fetch profiles for comment authors to fill missing name/avatar if possible
+            try {
+              final Set<String> wallets = {};
+              for (final c in flat) {
+                final candidate = (c.authorWallet ?? c.authorId).trim();
+                if (candidate.isEmpty) continue;
+                final normalized = WalletUtils.canonical(candidate);
+                if (normalized.isEmpty) continue;
+                if (['unknown', 'anonymous', 'n/a', 'none'].contains(normalized)) continue;
+                wallets.add(normalized);
+              }
+
+              if (wallets.isNotEmpty) {
+                debugPrint('BackendApiService.getComments: attempting to batch-fetch profiles for ${wallets.length} authors');
+                final profilesResp = await getProfilesBatch(wallets.toList());
+                final Map<String, Map<String, dynamic>> profilesByWallet = {};
+                if (profilesResp['success'] == true && profilesResp['data'] is List) {
+                  final profilesList = profilesResp['data'] as List<dynamic>;
+                  for (final p in profilesList.whereType<Map<String, dynamic>>()) {
+                    final walletKey = WalletUtils.canonical((p['walletAddress'] ?? p['wallet'] ?? p['wallet_address'] ?? p['publicKey'] ?? p['public_key'])?.toString() ?? '');
+                    if (walletKey.isNotEmpty) profilesByWallet[walletKey] = p;
+                  }
+                }
+
+                // For any remaining candidates not found by wallet batch, try GET /api/users/:userId
+                final missing = wallets.where((w) => !profilesByWallet.containsKey(w)).toList();
+                for (final candidate in missing) {
+                  try {
+                    final profileResp = await getUserProfile(candidate);
+                    if (profileResp.isNotEmpty) {
+                      final walletKey = WalletUtils.canonical((profileResp['walletAddress'] ?? profileResp['wallet'] ?? profileResp['wallet_address'] ?? profileResp['publicKey'] ?? profileResp['public_key'])?.toString() ?? '');
+                      final key = walletKey.isNotEmpty ? walletKey : WalletUtils.canonical(candidate);
+                      profilesByWallet[key] = profileResp;
+                    }
+                  } catch (e) {
+                    // ignore 404s or failures for non-wallet ids
+                  }
+                }
+
+                int filled = 0;
+                for (int i = 0; i < flat.length; i++) {
+                  final c = flat[i];
+                  final walletKey = WalletUtils.canonical(c.authorWallet ?? c.authorId);
+                  if (walletKey.isEmpty) continue;
+                  final profile = profilesByWallet[walletKey];
+                  if (profile == null) continue;
+                  try {
+                    final profileDisplayName = profile['displayName'] as String? ?? profile['display_name'] as String?;
+                    final profileUsername = profile['username'] as String? ?? profile['walletAddress'] as String? ?? profile['wallet'] as String?;
+                    final avatarCandidate = profile['avatar'] as String? ?? profile['profileImage'] as String? ?? profile['profile_image'] as String? ?? profile['avatarUrl'] as String? ?? profile['avatar_url'] as String?;
+                    final normalizedAvatar = _normalizeBackendAvatarUrl(avatarCandidate);
+                    final updated = c.copyWith(
+                      authorAvatar: normalizedAvatar,
+                      authorUsername: profileUsername ?? c.authorUsername,
+                      authorName: profileDisplayName ?? c.authorName,
+                      authorId: (profile['walletAddress'] ?? profile['wallet'] ?? profile['id'] ?? profile['userId'] ?? c.authorId)?.toString(),
+                      authorWallet: (profile['walletAddress'] ?? profile['wallet'] ?? profile['wallet_address'] ?? profile['publicKey'] ?? profile['public_key'])?.toString(),
+                    );
+                    flat[i] = updated;
+                    filled++;
+                  } catch (_) {}
+                }
+                debugPrint('BackendApiService.getComments: filled $filled comment author profiles from ${profilesByWallet.length} profile results');
+              }
+            } catch (e) {
+              debugPrint('BackendApiService.getComments: profile batch fetch error: $e');
+            }
             return _nestComments(flat);
           }
           debugPrint('BackendApiService.getComments: unexpected payload for comments, returning empty list');
@@ -2654,8 +2781,10 @@ String? _normalizeBackendAvatarUrl(String? raw) {
 }
 
 CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
-  // Extract nested author object if present
-  final author = json['author'] as Map<String, dynamic>?;
+  // Extract nested author object if present - can be a map or a string (wallet address)
+  final authorRaw = json['author'];
+  final author = authorRaw is Map<String, dynamic> ? authorRaw : null;
+  final normalizedAuthor = author ?? <String, dynamic>{};
   // Extract nested stats object if present
   final stats = json['stats'] as Map<String, dynamic>?;
   final authorDisplayName = author?['displayName'] as String? ?? author?['display_name'] as String? ?? json['displayName'] as String?;
@@ -2667,9 +2796,18 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
       ?? author?['profileImage'] as String?
       ?? json['authorAvatar'] as String?;
   
+  // Determine author wallet (if available separately from authorId)
+  final authorWalletCandidate = normalizedAuthor['walletAddress'] as String?
+      ?? normalizedAuthor['wallet_address'] as String?
+      ?? normalizedAuthor['wallet'] as String?
+      ?? json['walletAddress'] as String?
+      ?? json['wallet'] as String?
+      ?? (authorRaw is String ? authorRaw : null);
+
   return CommunityPost(
     id: json['id'] as String,
     authorId: json['authorId'] as String? ?? json['walletAddress'] as String? ?? json['userId'] as String? ?? 'unknown',
+    authorWallet: authorWalletCandidate,
     authorName: resolvedAuthorName,
     authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
     authorUsername: rawUsername,
@@ -2697,42 +2835,73 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 }
 
 Comment _commentFromBackendJson(Map<String, dynamic> json) {
-  final author = json['author'];
-  final normalizedAuthor = author is Map<String, dynamic> ? author : <String, dynamic>{};
-  final authorWallet = normalizedAuthor['walletAddress'] as String? ?? normalizedAuthor['wallet_address'] as String?;
-  final authorId = json['authorId'] as String?
-    ?? json['userId'] as String?
-    ?? json['author_id']?.toString()
-    ?? authorWallet
-    ?? 'unknown';
+  // Normalize any nested author object - can be a map or a string (wallet address)
+  final authorRaw = json['author'];
+  final author = authorRaw is Map<String, dynamic> ? authorRaw : null;
+  final normalizedAuthor = author ?? <String, dynamic>{};
 
+  // Try common wallet field names in the author object
+  final authorWallet = normalizedAuthor['walletAddress'] as String?
+      ?? normalizedAuthor['wallet_address'] as String?
+      ?? normalizedAuthor['wallet'] as String?;
+  // Fallback when the author is a raw string (like a wallet address)
+  String? authorRawWalletFallback;
+  if (authorRaw is String && authorRaw.isNotEmpty) authorRawWalletFallback = authorRaw;
+  final rootAuthorWallet = json['authorWallet'] as String? ?? json['author_wallet'] as String? ?? json['createdByWallet'] as String? ?? json['created_by_wallet'] as String?;
+  final resolvedAuthorWallet = authorWallet ?? rootAuthorWallet ?? authorRawWalletFallback;
+
+  // Expand the fallback set for author id similar to community posts
+    final authorId = json['authorId'] as String?
+      ?? json['author_id']?.toString()
+      ?? normalizedAuthor['id'] as String?
+      ?? json['walletAddress'] as String?
+      ?? json['wallet_address'] as String?
+      ?? json['wallet'] as String?
+      ?? json['userId'] as String?
+      ?? json['user_id']?.toString()
+      ?? resolvedAuthorWallet
+      ?? 'unknown';
+
+  // Display name and username fallbacks
   final authorDisplayName = normalizedAuthor['displayName'] as String?
-    ?? normalizedAuthor['display_name'] as String?
-    ?? json['displayName'] as String?
-    ?? json['authorDisplayName'] as String?;
-  final rawUsername = json['username'] as String?
-    ?? json['authorName'] as String?
-    ?? normalizedAuthor['username'] as String?;
-  final authorName = (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
-    ? authorDisplayName.trim()
-    : ((rawUsername != null && rawUsername.trim().isNotEmpty) ? rawUsername.trim() : 'Anonymous');
+      ?? normalizedAuthor['display_name'] as String?
+      ?? json['displayName'] as String?
+      ?? json['authorDisplayName'] as String?;
+  final rootAuthorDisplayName = json['userDisplayName'] as String? ?? json['display_name'] as String? ?? json['author_name'] as String?;
 
-  final avatarCandidate = normalizedAuthor['avatar'] as String?
-    ?? normalizedAuthor['avatarUrl'] as String?
-    ?? normalizedAuthor['avatar_url'] as String?
-    ?? json['authorAvatar'] as String?;
+  final rawUsername = normalizedAuthor['username'] as String?
+      ?? json['authorUsername'] as String?
+      ?? json['authorName'] as String?
+      ?? json['username'] as String?;
+
+    final authorName = (authorDisplayName != null && authorDisplayName.trim().isNotEmpty)
+      ? authorDisplayName.trim()
+      : ((rawUsername != null && rawUsername.trim().isNotEmpty) ? rawUsername.trim() : (json['authorName'] as String?) ?? 'Anonymous');
+    final resolvedAuthorName = (authorName != 'Anonymous' && authorName.trim().isNotEmpty) ? authorName : (rootAuthorDisplayName?.trim() ?? authorName);
+
+  // Avatar candidate: check common fields used by the backend
+    final avatarCandidate = normalizedAuthor['avatar'] as String?
+      ?? normalizedAuthor['avatarUrl'] as String?
+      ?? normalizedAuthor['avatar_url'] as String?
+      ?? normalizedAuthor['profile_image'] as String?
+      ?? normalizedAuthor['profileImage'] as String?
+      ?? json['authorAvatar'] as String?
+      ?? json['avatar'] as String?;
 
   final authorUsername = json['authorUsername'] as String?
-    ?? normalizedAuthor['username'] as String?
-    ?? json['username'] as String?;
+      ?? normalizedAuthor['username'] as String?
+      ?? rawUsername;
 
+  try {
+    debugPrint('BackendApiService._commentFromBackendJson parsed: id=${json['id']}, authorId=$authorId, authorWallet=$resolvedAuthorWallet, authorName=$resolvedAuthorName, avatarCandidate=$avatarCandidate');
+  } catch (_) {}
   return Comment(
   id: (json['id'] ?? '').toString(),
   authorId: authorId,
-  authorName: authorName,
+  authorName: resolvedAuthorName,
   authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
   authorUsername: authorUsername,
-  authorWallet: authorWallet ?? authorId,
+  authorWallet: resolvedAuthorWallet ?? authorId,
   parentCommentId: json['parentCommentId'] as String? ?? json['parent_comment_id']?.toString(),
   content: json['content'] as String,
     timestamp: json['createdAt'] != null 
