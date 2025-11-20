@@ -143,8 +143,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       }
       if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
         final existing = _avatarUrlCache[trimmed];
-        if (existing == null || existing.isEmpty) {
-          _avatarUrlCache[trimmed] = _normalizeAvatar(avatarUrl.trim()) ?? avatarUrl.trim();
+        if (existing == null || existing.isEmpty || _isPlaceholderAvatar(existing, trimmed)) {
+          _assignAvatarIfBetter(trimmed, avatarUrl.trim());
         }
       }
     }
@@ -186,7 +186,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
         final current = _avatarUrlCache[wallet];
         if (current == null || current.isEmpty || _isPlaceholderAvatar(current, wallet)) {
-          _avatarUrlCache[wallet] = cachedAvatar;
+          _assignAvatarIfBetter(wallet, cachedAvatar);
         }
       }
       final cachedName = _cacheProvider.getDisplayName(wallet);
@@ -201,8 +201,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final avatarPayload = <String, String?>{};
     final displayPayload = <String, String?>{};
     _avatarUrlCache.forEach((wallet, url) {
-      if ((url ?? '').trim().isEmpty) return;
-      avatarPayload[wallet] = url!.trim();
+      final trimmed = url?.trim() ?? '';
+      if (trimmed.isEmpty) return;
+      if (_isPlaceholderAvatar(trimmed, wallet)) return;
+      avatarPayload[wallet] = trimmed;
     });
     _displayNameCache.forEach((wallet, name) {
       if ((name ?? '').trim().isEmpty || name == wallet) return;
@@ -228,7 +230,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
       final senderAvatar = message.senderAvatar;
       if (senderAvatar != null && senderAvatar.isNotEmpty) {
-        _avatarUrlCache[wallet] = _normalizeAvatar(senderAvatar) ?? senderAvatar;
+        _assignAvatarIfBetter(wallet, senderAvatar);
       }
 
       final senderName = message.senderDisplayName;
@@ -257,7 +259,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             : null;
 
         if (avatarCandidate != null && _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
-          _avatarUrlCache[wallet] = avatarCandidate;
+          _assignAvatarIfBetter(wallet, avatarCandidate);
         }
         if (_isPlaceholderName(_displayNameCache[wallet], wallet)) {
           _displayNameCache[wallet] = user.name;
@@ -287,7 +289,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ? (_normalizeAvatar(user.profileImageUrl) ?? user.profileImageUrl)
             : null;
         if (avatarCandidate != null && _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
-          _avatarUrlCache[wallet] = avatarCandidate;
+          _assignAvatarIfBetter(wallet, avatarCandidate);
         }
         if (_isPlaceholderName(_displayNameCache[wallet], wallet)) {
           _displayNameCache[wallet] = user.name;
@@ -308,10 +310,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
           final avatarCandidate = (user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty)
               ? (_normalizeAvatar(user.profileImageUrl) ?? user.profileImageUrl)
               : null;
-          _avatarUrlCache[wallet] = (avatarCandidate != null && avatarCandidate.isNotEmpty) ? avatarCandidate : null;
+          final applied = _assignAvatarIfBetter(wallet, avatarCandidate, allowOverrideReal: false);
+          if (!applied && _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet) && avatarCandidate == null) {
+            _avatarUrlCache.remove(wallet);
+          }
           _displayNameCache[wallet] = user?.name ?? '';
         } catch (_) {
-          _avatarUrlCache[wallet] = null;
+          if (_isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
+            _avatarUrlCache.remove(wallet);
+          }
           _displayNameCache[wallet] = null;
         }
       }
@@ -344,7 +351,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           if (w.isEmpty) continue;
           _hydrateFromGlobalCache(w);
               if (m.senderAvatar != null && m.senderAvatar!.isNotEmpty) {
-                _avatarUrlCache[w] = _normalizeAvatar(m.senderAvatar) ?? m.senderAvatar;
+                _assignAvatarIfBetter(w, m.senderAvatar);
               }
           if (m.senderDisplayName != null && m.senderDisplayName!.isNotEmpty) {
             _displayNameCache[w] = m.senderDisplayName;
@@ -371,7 +378,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           if (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) {
             final cur = _avatarUrlCache[w];
               final candidate = (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(cu.profileImageUrl) ?? cu.profileImageUrl) : null;
-              if (candidate != null && _isPlaceholderAvatar(cur, w)) _avatarUrlCache[w] = candidate;
+              if (candidate != null && _isPlaceholderAvatar(cur, w)) {
+                _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
+              }
           }
           if (cu.name.isNotEmpty) {
             final cur = _displayNameCache[w];
@@ -384,7 +393,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
             if (persisted.profileImageUrl != null && persisted.profileImageUrl!.isNotEmpty) {
               final cur = _avatarUrlCache[w];
               final candidate = (persisted.profileImageUrl != null && persisted.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(persisted.profileImageUrl) ?? persisted.profileImageUrl) : null;
-              if (candidate != null && _isPlaceholderAvatar(cur, w)) _avatarUrlCache[w] = candidate;
+              if (candidate != null && _isPlaceholderAvatar(cur, w)) {
+                _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
+              }
             }
             if (persisted.name.isNotEmpty) {
               final cur = _displayNameCache[w];
@@ -410,7 +421,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
               final p = (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(u.profileImageUrl) ?? u.profileImageUrl) : null;
             final curAv = _avatarUrlCache[key];
             final curName = _displayNameCache[key];
-              if (p != null && _isPlaceholderAvatar(curAv, key)) _avatarUrlCache[key] = p;
+              if (p != null && _isPlaceholderAvatar(curAv, key)) {
+                _assignAvatarIfBetter(key, p, allowOverrideReal: true);
+              }
             if (_isPlaceholderName(curName, key)) _displayNameCache[key] = u.name;
           }
         } catch (e) {
@@ -499,7 +512,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   if (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) {
                     final cur = _avatarUrlCache[cu.id];
                       final candidate = (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(cu.profileImageUrl) ?? cu.profileImageUrl) : null;
-                      if (candidate != null && _isPlaceholderAvatar(cur, cu.id)) _avatarUrlCache[cu.id] = candidate;
+                      if (candidate != null && _isPlaceholderAvatar(cur, cu.id)) {
+                        _assignAvatarIfBetter(cu.id, candidate, allowOverrideReal: true);
+                      }
                   }
                   if (cu.name.isNotEmpty) {
                     final cur = _displayNameCache[cu.id];
@@ -518,7 +533,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   final curName = _displayNameCache[key];
                   if (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty) {
                         final candidate = (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(u.profileImageUrl) ?? u.profileImageUrl) : null;
-                        if (candidate != null && _isPlaceholderAvatar(curAv, key)) _avatarUrlCache[key] = candidate;
+                        if (candidate != null && _isPlaceholderAvatar(curAv, key)) {
+                          _assignAvatarIfBetter(key, candidate, allowOverrideReal: true);
+                        }
                   }
                   if (u.name.isNotEmpty) if (_isPlaceholderName(curName, key)) _displayNameCache[key] = u.name;
                 }
@@ -575,6 +592,38 @@ class _ConversationScreenState extends State<ConversationScreen> {
       if (UserService.isPlaceholderAvatarUrl(current)) return true;
       try { return current == UserService.safeAvatarUrl(wallet); } catch (_) { return false; }
     }
+
+    String? _normalizeAndValidateAvatar(String wallet, String? avatar) {
+      if (wallet.isEmpty) return null;
+      final normalized = _normalizeAvatar(avatar);
+      if (normalized == null || normalized.isEmpty) return null;
+      if (_isPlaceholderAvatar(normalized, wallet)) return null;
+      return normalized;
+    }
+
+    bool _assignAvatarIfBetter(String wallet, String? avatar, {bool allowOverrideReal = false}) {
+      final normalized = _normalizeAndValidateAvatar(wallet, avatar);
+      if (normalized == null) return false;
+      final current = _avatarUrlCache[wallet];
+      final hasReal = current != null && current.isNotEmpty && !_isPlaceholderAvatar(current, wallet);
+      if (hasReal && !allowOverrideReal) return false;
+      if (current == normalized) return false;
+      _avatarUrlCache[wallet] = normalized;
+      _promoteConversationAvatar(wallet);
+      return true;
+    }
+
+    void _promoteConversationAvatar(String wallet) {
+      if (_conversationMembers.isEmpty) return;
+      final primary = _conversationMembers.first;
+      if (primary != wallet) return;
+      final candidate = _avatarUrlCache[wallet];
+      if (candidate == null || candidate.isEmpty) return;
+      if (_conversationAvatar == null || _isPlaceholderAvatar(_conversationAvatar, wallet)) {
+        _conversationAvatar = candidate;
+      }
+    }
+
     bool _isPlaceholderName(String? current, String wallet) {
       if (current == null || current.isEmpty) return true;
       return current == wallet || current == 'Conversation' || current == 'Group';
@@ -727,13 +776,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  Widget _buildAvatar(String? avatarUrl, String wallet, {double radius = 18}) {
+  Widget _buildAvatar(String? avatarUrl, String wallet, {double radius = 18, bool allowFabricatedFallback = false}) {
     // Delegate to safeAvatarWidget which handles network errors and fallbacks.
     final normalized = _normalizeAvatar(avatarUrl) ?? avatarUrl;
     try {
       debugPrint('ConversationScreen._buildAvatar: wallet=$wallet, avatarUrl=$normalized');
       final isLoading = (!_avatarUrlCache.containsKey(wallet) && _chatProvider.getCachedUser(wallet) == null && UserService.getCachedUser(wallet) == null && (avatarUrl == null || avatarUrl.isEmpty));
-      return AvatarWidget(avatarUrl: normalized, wallet: wallet, radius: radius, isLoading: isLoading, allowFabricatedFallback: true);
+      return AvatarWidget(avatarUrl: normalized, wallet: wallet, radius: radius, isLoading: isLoading, allowFabricatedFallback: allowFabricatedFallback);
     } catch (e, st) {
       debugPrint('ConversationScreen._buildAvatar: AvatarWidget build failed for $wallet, avatarUrl=$normalized: $e\n$st');
       // Return a simple initials-based fallback to avoid crash
@@ -931,24 +980,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Scroll to bottom on new message arrival if not already at bottom
+    // Auto-scroll behavior: when messages are present and user is near the bottom,
+    // keep the viewport anchored to the latest message. We use a reversed ListView
+    // so the newest message is at the bottom (scroll offset 0).
     if (_messages.isNotEmpty && _scrollController.hasClients) {
-      final pos = _scrollController.position;
-      if (pos.maxScrollExtent - pos.pixels <= 100) {
-        // Near bottom, allow scroll
-        _scrollController.jumpTo(pos.maxScrollExtent);
-      } else {
-        // Far from bottom, debounce scroll to avoid flicker
-        _scrollDebounce?.cancel();
-        _scrollDebounce = Timer(const Duration(milliseconds: 300), () {
-          if (_scrollController.hasClients) {
-            final pos = _scrollController.position;
-            if (pos.maxScrollExtent - pos.pixels <= 100) {
-              _scrollController.jumpTo(pos.maxScrollExtent);
-            }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!_scrollController.hasClients) return;
+        try {
+          final pos = _scrollController.position;
+          // If user is near the bottom (small scroll offset), auto-scroll to bottom (0)
+          if (pos.pixels <= 100) {
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
           }
-        });
-      }
+        } catch (_) {}
+      });
     }
 
     return Scaffold(
@@ -993,7 +1042,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               return Positioned(
                 left: offset,
                 top: index.isOdd ? 0 : 8,
-                child: _buildAvatar(UserService.safeAvatarUrl(wallet), wallet, radius: 10),
+                child: _buildAvatar(null, wallet, radius: 10),
               );
             }),
           ),
@@ -1064,10 +1113,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   debugPrint('ConversationScreen: fetching users for members dialog failed: $e');
                 }
                 final mappedMembers = members.map((m) {
-                  final wallet = (m['wallet_address'] as String?) ?? '';
+                  final wallet = (m['wallet_address'] as String?) ?? (m['wallet'] as String?) ?? (m['walletAddress'] as String?) ?? (m['id'] as String?) ?? '';
+                  final displayNameFromPayload = (m['displayName'] as String?) ?? (m['display_name'] as String?) ?? (m['name'] as String?);
+                  final avatarFromPayload = (m['avatar_url'] as String?) ?? (m['avatar'] as String?) ?? (m['profileImageUrl'] as String?);
                   User? matchedUser;
                   for (final candidate in users) {
-                    if (candidate.id == wallet) {
+                    if (candidate.id == wallet || candidate.username == wallet) {
                       matchedUser = candidate;
                       break;
                     }
@@ -1076,6 +1127,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     'user': matchedUser,
                     'role': m['role'] as String? ?? '',
                     'wallet': wallet,
+                    'displayName': displayNameFromPayload,
+                    'avatar': avatarFromPayload,
                   };
                 }).toList();
                 if (!mounted || !dialogContext.mounted) return;
@@ -1097,39 +1150,69 @@ class _ConversationScreenState extends State<ConversationScreen> {
               }
               break;
             case 'add_member':
-              if (!widget.conversation.isGroup) break;
               try {
                 final identifier = await showDialog<String?>(
                   context: context,
-                  builder: (ctx) => const _AddMemberDialog(),
+                  builder: (ctx) => _AddMemberDialog(),
                 );
+                debugPrint('ConversationScreen: add_member dialog returned: "$identifier"');
                 if (!context.mounted) return;
                 if (identifier == null || identifier.trim().isEmpty) return;
-                await _chatProvider.addMember(widget.conversation.id, identifier.trim());
+                final newConversation = await _chatProvider.addMember(widget.conversation.id, identifier.trim());
                 if (!mounted) return;
+                if (newConversation != null && newConversation.id != widget.conversation.id) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Created a new group chat for added members.')));
+                  if (!mounted) return;
+                  await Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => ConversationScreen(conversation: newConversation)));
+                  return;
+                }
                 await _load();
               } catch (e) {
                 debugPrint('ConversationScreen: add member via menu failed: $e');
               }
               break;
             case 'change_group_avatar':
-              if (!widget.conversation.isGroup) break;
               try {
-                final result = await FilePicker.platform.pickFiles(withData: true);
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.image,
+                  withData: true,
+                );
                 if (result == null || result.files.isEmpty) break;
                 final file = result.files.first;
                 if (file.bytes == null) break;
+                
+                // Show loading indicator
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Uploading avatar...')),
+                );
+                
                 await _chatProvider.uploadConversationAvatar(
                   widget.conversation.id,
                   file.bytes!,
                   file.name,
-                  file.extension ?? 'image/png',
+                  'image/${file.extension ?? 'png'}',
                 );
+                
+                // Refresh conversations and reload
                 await _chatProvider.refreshConversations();
                 if (!mounted) return;
+                
+                // Clear local avatar cache to force reload
+                _conversationAvatar = null;
                 await _load();
+                
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Avatar updated successfully')),
+                );
+                setState(() {}); // Force rebuild with new avatar
               } catch (e) {
                 debugPrint('ConversationScreen: change group avatar failed: $e');
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to update avatar: $e')),
+                );
               }
               break;
             case 'messages_overlay':
@@ -1154,10 +1237,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
         },
         itemBuilder: (ctx) => [
           const PopupMenuItem(value: 'members', child: Text('Members')),
-          if (widget.conversation.isGroup)
-            const PopupMenuItem(value: 'add_member', child: Text('Add member')),
-          if (widget.conversation.isGroup)
-            const PopupMenuItem(value: 'change_group_avatar', child: Text('Change group avatar')),
+          const PopupMenuItem(value: 'add_member', child: Text('Add member')),
+          const PopupMenuItem(value: 'rename', child: Text('Rename conversation')),
+          const PopupMenuItem(value: 'change_group_avatar', child: Text('Change group avatar')),
         ],
         icon: const Icon(Icons.more_vert),
       ),
@@ -1167,19 +1249,29 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildMessagesList() {
     final profile = Provider.of<ProfileProvider>(context);
     final myWallet = profile.currentUser?.walletAddress ?? '';
+    // Ensure chronological order (oldest -> newest)
+    // Chronological list oldest -> newest
+    final chrono = List<ChatMessage>.from(_messages);
+    chrono.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    // For display we want newest messages anchored at the bottom. Build a reversed
+    // view list so index 0 corresponds to the newest visible message when the
+    // ListView is reversed.
+    final display = chrono.reversed.toList();
+
     return ListView.builder(
       controller: _scrollController,
-      itemCount: _messages.length,
+      reverse: true,
+      itemCount: display.length,
       itemBuilder: (context, index) {
-        final message = _messages[index];
+        final message = display[index];
         final isMe = _normWallet(message.senderWallet) == _normWallet(myWallet);
-        final showAvatar = index == 0 || _messages[index - 1].senderWallet != message.senderWallet;
+        final showAvatar = index == 0 || display[index - 1].senderWallet != message.senderWallet;
         final shouldAnimate = !_animatedMessageIds.contains(message.id);
         final key = _messageKeys.putIfAbsent(message.id, () => GlobalKey());
         final built = _wrapWithAnimation(
           KeyedSubtree(
             key: key,
-            child: _buildMessageItem(message, isMe, showAvatar),
+            child: _buildMessageItem(message, isMe, showAvatar, chronoIndex: (display.length - 1 - index), chronoLength: display.length),
           ),
           shouldAnimate,
           messageId: message.id,
@@ -1200,18 +1292,32 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar) {
-    final isFirst = message == _messages.first;
-    final isLast = message == _messages.last;
+  Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar, {int? chronoIndex, int? chronoLength}) {
+    final bool isFirst = (chronoIndex != null && chronoLength != null)
+        ? chronoIndex == 0
+        : (_messages.isNotEmpty ? message == _messages.first : false);
+    final bool isLast = (chronoIndex != null && chronoLength != null)
+        ? chronoIndex == (chronoLength - 1)
+        : (_messages.isNotEmpty ? message == _messages.last : false);
     String? avatarUrl;
     String? displayName;
     if (!isMe) {
       avatarUrl = _avatarUrlCache[message.senderWallet];
+      if (avatarUrl != null && _isPlaceholderAvatar(avatarUrl, message.senderWallet)) {
+        avatarUrl = null;
+      }
       if (avatarUrl == null || avatarUrl.isEmpty) {
         final cached = _cacheProvider.getAvatar(message.senderWallet);
         if (cached != null && cached.isNotEmpty) {
-          avatarUrl = cached;
-          _avatarUrlCache[message.senderWallet] = cached;
+          final normalized = _normalizeAndValidateAvatar(message.senderWallet, cached);
+          if (normalized != null) {
+            avatarUrl = normalized;
+            final current = _avatarUrlCache[message.senderWallet];
+            if (current != normalized) {
+              _avatarUrlCache[message.senderWallet] = normalized;
+              _promoteConversationAvatar(message.senderWallet);
+            }
+          }
         }
       }
       displayName = _displayNameCache[message.senderWallet];
@@ -1331,61 +1437,49 @@ class _ConversationScreenState extends State<ConversationScreen> {
       _cacheProvider.getDisplayName(senderWallet) ??
       fallbackName;
     final resolvedName = nameSource.isNotEmpty ? nameSource : 'User';
-    final overlayBase = (isMe ? scheme.primary : scheme.surfaceContainerHighest).withValues(alpha: 0.25);
+    final overlayBase = isMe ? scheme.primaryContainer.withValues(alpha: 0.4) : scheme.surfaceContainerHighest;
     final accent = scheme.primary;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: Stack(
+    final textColor = isMe ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+    
+    return Container(
+      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: overlayBase,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(color: accent, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: overlayBase,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              Icon(Icons.reply, size: 14, color: accent),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
                   resolvedName,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: accent,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  reply.message ?? 'Message',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      accent.withValues(alpha: 0.14),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                  ),
-                  border: Border(
-                    left: BorderSide(color: accent, width: 3),
-                  ),
-                ),
               ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            reply.message ?? 'Message',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: textColor,
             ),
           ),
         ],
@@ -1395,40 +1489,24 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageContent(ChatMessage message, bool isMe) {
     final textColor = isMe ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface;
-    final bgColor = isMe ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest;
     final attachment = message.data?['attachment'] as Map<String, dynamic>?;
     final hasAttachment = attachment != null && ((attachment['url'] ?? attachment['remoteUrl'] ?? '').toString().isNotEmpty);
-
-    final replyPreview = message.replyTo != null
-        ? Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: _buildReplyOverlay(message, isMe),
-          )
-        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (replyPreview != null) replyPreview,
+        if (message.replyTo != null) _buildReplyOverlay(message, isMe),
         if (attachment != null && hasAttachment) _buildAttachmentBubble(attachment, isMe),
         if (!hasAttachment || message.message.trim().isNotEmpty)
-          Container(
-            margin: hasAttachment ? const EdgeInsets.only(top: 8) : EdgeInsets.zero,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: hasAttachment ? Theme.of(context).colorScheme.surfaceContainerHighest : bgColor,
-              borderRadius: BorderRadius.circular(12),
+          SelectableText(
+            message.message,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 14,
             ),
-            child: SelectableText(
-              message.message,
-              style: TextStyle(
-                color: hasAttachment ? Theme.of(context).colorScheme.onSurface : textColor,
-                fontSize: 14,
-              ),
-              showCursor: true,
-              cursorWidth: 2,
-              cursorColor: Theme.of(context).colorScheme.primary,
-            ),
+            showCursor: true,
+            cursorWidth: 2,
+            cursorColor: Theme.of(context).colorScheme.primary,
           ),
       ],
     );
@@ -1437,7 +1515,164 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildAttachmentBubble(Map<String, dynamic> attachment, bool isMe) {
     final url = (attachment['url'] ?? attachment['remoteUrl'] ?? '').toString();
     final fileName = (attachment['filename'] ?? attachment['name'] ?? 'Attachment').toString();
+    final contentType = (attachment['contentType'] ?? attachment['content_type'] ?? '').toString().toLowerCase();
     final sizeLabel = attachment['size']?.toString();
+    
+    final isImage = contentType.startsWith('image/') || 
+                    url.endsWith('.png') || url.endsWith('.jpg') || 
+                    url.endsWith('.jpeg') || url.endsWith('.webp') || url.endsWith('.gif');
+    final isVideo = contentType.startsWith('video/') || 
+                    url.endsWith('.mp4') || url.endsWith('.mov') || 
+                    url.endsWith('.webm') || url.endsWith('.avi');
+    
+    if (isImage) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: GestureDetector(
+          onTap: () async {
+            try {
+              final uri = Uri.parse(url);
+              if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } catch (e) {
+              debugPrint('Failed to open image: $e');
+            }
+          },
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 300, maxHeight: 400),
+            child: Stack(
+              children: [
+                Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      padding: const EdgeInsets.all(16),
+                      color: Theme.of(context).colorScheme.errorContainer,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image, size: 48, color: Theme.of(context).colorScheme.error),
+                          const SizedBox(height: 8),
+                          Text('Failed to load image', style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer)),
+                          Text(fileName, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onErrorContainer)),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Positioned(
+                  bottom: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.download, size: 16, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(fileName, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    if (isVideo) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isMe ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.play_circle_outline, size: 48, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        fileName,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      if (sizeLabel != null)
+                        Text(
+                          sizeLabel,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      Text(
+                        'Video',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  try {
+                    final uri = Uri.parse(url);
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } catch (e) {
+                    debugPrint('Failed to open video: $e');
+                  }
+                },
+                icon: const Icon(Icons.play_arrow, size: 20),
+                label: const Text('Play Video'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    // Generic file attachment
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1448,48 +1683,53 @@ class _ConversationScreenState extends State<ConversationScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            fileName,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          if (sizeLabel != null)
-            Text(
-              sizeLabel,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          const SizedBox(height: 8),
           Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.open_in_new, size: 18),
-                onPressed: url.isEmpty
-                    ? null
-                    : () async {
-                        try {
-                          final uri = Uri.parse(url);
-                          if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        } catch (e) {
-                          debugPrint('ConversationScreen: failed to launch attachment $url - $e');
-                        }
-                      },
-              ),
+              Icon(Icons.attach_file, size: 32, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  url,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      fileName,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    if (sizeLabel != null)
+                      Text(
+                        sizeLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                try {
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                } catch (e) {
+                  debugPrint('Failed to open file: $e');
+                }
+              },
+              icon: const Icon(Icons.download, size: 20),
+              label: const Text('Download'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
           ),
         ],
       ),
@@ -1537,15 +1777,59 @@ class _ConversationScreenState extends State<ConversationScreen> {
     try {
       final providerMessages = _chatProvider.messages[widget.conversation.id];
       if (providerMessages == null) return;
-      if (identical(providerMessages, _messages)) return;
+      // Compare a light-weight signature of messages (id + readersCount + readByCurrent)
+      // to detect changes even when the list instance reference didn't change.
+      String buildSig(List<ChatMessage> list) {
+        try {
+          return list.map((m) => '${m.id}:${m.readersCount}:${m.readByCurrent}').join('|');
+        } catch (_) { return ''; }
+      }
+      final provSig = buildSig(providerMessages);
+      final localSig = buildSig(_messages);
+      if (provSig == localSig) return;
 
       final profile = Provider.of<ProfileProvider>(context, listen: false);
       final myWallet = profile.currentUser?.walletAddress ?? '';
 
       if (mounted) {
         setState(() {
+          // Build maps to detect changes
+          final oldMessageIds = <String>{};
+          final oldMessageMap = <String, String>{};
+          for (final m in _messages) {
+            oldMessageIds.add(m.id);
+            oldMessageMap[m.id] = '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
+          }
+          
+          final changedIds = <String>{};
+          final newIds = <String>{};
+          for (final m in providerMessages) {
+            if (!oldMessageIds.contains(m.id)) {
+              // Truly new message - should animate
+              newIds.add(m.id);
+            } else {
+              // Existing message - check if metadata changed
+              final newSig = '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
+              final oldSig = oldMessageMap[m.id];
+              if (oldSig != newSig) {
+                changedIds.add(m.id);
+              }
+            }
+          }
+          
+          // Clear keys for metadata changes (will rebuild without animation)
+          for (final id in changedIds) {
+            _messageKeys.remove(id);
+            // Keep in _animatedMessageIds so it doesn't re-animate
+          }
+          
+          // Clear animation tracking for truly new messages (will animate once)
+          for (final id in newIds) {
+            _messageKeys.remove(id);
+            _animatedMessageIds.remove(id);
+          }
+          
           _messages = providerMessages;
-          _pruneMessageKeys(providerMessages);
         });
       }
 
@@ -1566,11 +1850,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  void _pruneMessageKeys(List<ChatMessage> activeMessages) {
-    final activeIds = activeMessages.map((m) => m.id).toSet();
-    _messageKeys.removeWhere((id, _) => !activeIds.contains(id));
-    _animatedMessageIds.removeWhere((id) => !activeIds.contains(id));
-  }
+  
 
   void _checkVisibleMessages() {
     if (!mounted) return;
@@ -1665,6 +1945,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
   final BackendApiService _api = BackendApiService();
   final List<Map<String, dynamic>> _suggestions = [];
   Timer? _debounce;
+  int _searchCounter = 0;
 
   @override
   void dispose() {
@@ -1677,72 +1958,112 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Add member by username'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            decoration: const InputDecoration(labelText: 'Username or wallet'),
-            onChanged: (value) {
-              _debounce?.cancel();
-              _debounce = Timer(const Duration(milliseconds: 300), () async {
-                final query = value.trim();
-                if (query.isEmpty) {
-                  if (_suggestions.isNotEmpty) {
-                    setState(() {
-                      _suggestions.clear();
+      content: Builder(
+        builder: (dialogCtx) {
+          try {
+            return SizedBox(
+              width: 360,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(labelText: 'Username or wallet'),
+                  onChanged: (value) {
+                    _debounce?.cancel();
+                    final currentValue = value;
+                    _debounce = Timer(const Duration(milliseconds: 300), () async {
+                      if (!mounted) return;
+                      final query = currentValue.trim();
+                      if (query.isEmpty) {
+                        if (_suggestions.isNotEmpty && mounted) {
+                          setState(() {
+                            _suggestions.clear();
+                          });
+                        }
+                        return;
+                      }
+
+                      final int seq = ++_searchCounter;
+                      try {
+                        final resp = await _api.search(query: query, type: 'profiles', limit: 8);
+                        if (!mounted) return;
+                        // discard if a newer search was issued
+                        if (seq != _searchCounter) return;
+                        final results = <Map<String, dynamic>>[];
+                        if (resp['success'] == true) {
+                          final data = resp['results'] as Map<String, dynamic>?;
+                          final profiles = data != null ? (data['profiles'] as List<dynamic>? ?? []) : (resp['data'] as List<dynamic>? ?? []);
+                          for (final entry in profiles) {
+                            if (entry is Map<String, dynamic>) results.add(entry);
+                          }
+                        }
+                        if (!mounted) return;
+                        // avoid applying stale results if the user continued typing
+                        if (_controller.text.trim() != query) return;
+                        setState(() {
+                          _suggestions
+                            ..clear()
+                            ..addAll(results);
+                        });
+                      } catch (e) {
+                        debugPrint('AddMemberDialog: search failed $e');
+                      }
                     });
-                  }
-                  return;
-                }
-                try {
-                  final resp = await _api.search(query: query, type: 'profiles', limit: 8);
-                  final results = <Map<String, dynamic>>[];
-                  if (resp['success'] == true) {
-                    final data = resp['results'] as Map<String, dynamic>?;
-                    final profiles = data != null ? (data['profiles'] as List<dynamic>? ?? []) : (resp['data'] as List<dynamic>? ?? []);
-                    for (final entry in profiles) {
-                      if (entry is Map<String, dynamic>) results.add(entry);
-                    }
-                  }
-                  setState(() {
-                    _suggestions
-                      ..clear()
-                      ..addAll(results);
-                  });
-                } catch (e) {
-                  debugPrint('AddMemberDialog: search failed $e');
-                }
-              });
-            },
-          ),
-          if (_suggestions.isNotEmpty)
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                itemCount: _suggestions.length,
-                itemBuilder: (ctx, index) {
-                  final suggestion = _suggestions[index];
-                  final username = suggestion['username']?.toString() ?? '';
-                  final wallet = suggestion['walletAddress']?.toString() ?? suggestion['wallet_address']?.toString() ?? '';
-                  final displayName = suggestion['displayName']?.toString() ?? suggestion['display_name']?.toString() ?? username;
-                  final avatarCandidate = suggestion['avatar'] ?? suggestion['avatar_url'];
-                  final effectiveAvatar = avatarCandidate != null && avatarCandidate.toString().isNotEmpty
-                      ? avatarCandidate.toString()
-                      : UserService.safeAvatarUrl(wallet.isNotEmpty ? wallet : username);
-                  return ListTile(
-                    leading: AvatarWidget(
-                      avatarUrl: effectiveAvatar,
-                      wallet: wallet.isNotEmpty ? wallet : username,
+                  },
+                ),
+                if (_suggestions.isNotEmpty)
+                  SizedBox(
+                    height: 200,
+                    child: ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: _suggestions.length,
+                      itemBuilder: (itemCtx, index) {
+                        final suggestion = _suggestions[index];
+                        final username = suggestion['username']?.toString() ?? '';
+                        final wallet = suggestion['walletAddress']?.toString() ?? suggestion['wallet_address']?.toString() ?? '';
+                        final displayName = suggestion['displayName']?.toString() ?? suggestion['display_name']?.toString() ?? username;
+                        final avatarCandidate = suggestion['avatar'] ?? suggestion['avatar_url'];
+                        final effectiveAvatar = avatarCandidate != null && avatarCandidate.toString().isNotEmpty
+                            ? avatarCandidate.toString()
+                            : null;
+                                return ListTile(
+                          leading: AvatarWidget(
+                            avatarUrl: effectiveAvatar,
+                            wallet: wallet.isNotEmpty ? wallet : username,
+                            allowFabricatedFallback: false,
+                          ),
+                          title: Text(displayName.isNotEmpty ? displayName : username),
+                          subtitle: Text(wallet.isNotEmpty ? wallet : username),
+                                  onTap: () {
+                                    final ret = wallet.isNotEmpty ? wallet : username;
+                                    debugPrint('AddMemberDialog: tapped suggestion -> username="$username" wallet="$wallet" returning="$ret"');
+                                    Navigator.of(dialogCtx).pop(ret);
+                                  },
+                        );
+                      },
                     ),
-                    title: Text(displayName.isNotEmpty ? displayName : username),
-                    subtitle: Text(wallet.isNotEmpty ? wallet : username),
-                    onTap: () => Navigator.of(context).pop(wallet.isNotEmpty ? wallet : username),
-                  );
-                },
-              ),
+                  ),
+              ],
             ),
-        ],
+          );
+          } catch (e, st) {
+            debugPrint('AddMemberDialog build failed: $e\n$st');
+            return SizedBox(
+              width: 320,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Failed to open dialog', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Text(e.toString(), maxLines: 6, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 12),
+                  ElevatedButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Close')),
+                ],
+              ),
+            );
+          }
+        },
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
@@ -1773,54 +2094,75 @@ class MembersDialog extends StatelessWidget {
             final user = member['user'] as User?;
             final role = member['role'] as String? ?? '';
             final wallet = (member['wallet'] as String?) ?? (user?.id ?? '');
-            final avatarUrl = user?.profileImageUrl;
-            final effectiveAvatar = (avatarUrl != null && avatarUrl.isNotEmpty)
-                ? avatarUrl
-                : UserService.safeAvatarUrl(wallet);
+            final displayName = (member['displayName'] as String?) ?? user?.name ?? wallet;
+            final avatarUrl = (member['avatar'] as String?) ?? user?.profileImageUrl;
+            final effectiveAvatar = (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null;
 
             return ListTile(
-              leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: wallet),
-              title: Text(user?.name ?? wallet),
-              subtitle: Text(role.isNotEmpty ? role : 'Member'),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isOwner && wallet != (Provider.of<ProfileProvider>(context, listen: false).currentUser?.walletAddress ?? ''))
-                    IconButton(
-                      icon: const Icon(Icons.person_add_alt_1),
-                      tooltip: 'Transfer ownership',
-                      onPressed: () async {
-                        final confirmed = await showDialog<bool>(
+              leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: wallet, allowFabricatedFallback: false),
+              title: Text(displayName),
+              subtitle: Text(role.isNotEmpty ? role : wallet.isNotEmpty ? wallet : 'Member'),
+              trailing: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (choice) async {
+                  try {
+                    switch (choice) {
+                      case 'manage':
+                        // Open a small dialog with explicit actions
+                        final action = await showDialog<String?>(
                           context: context,
                           builder: (c) => AlertDialog(
-                            title: const Text('Transfer ownership'),
-                            content: Text('Transfer conversation ownership to $wallet?'),
+                            title: const Text('Member options'),
+                            content: Text('Choose an action for $displayName'),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Cancel')),
-                              TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Transfer')),
+                              TextButton(onPressed: () => Navigator.of(c).pop('transfer'), child: const Text('Transfer ownership')),
+                              TextButton(onPressed: () => Navigator.of(c).pop('remove'), child: const Text('Remove member')),
+                              TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Cancel')),
                             ],
                           ),
                         );
-                        if (!context.mounted) return;
-                        if (confirmed == true) {
-                          try {
-                            await Provider.of<ChatProvider>(context, listen: false).transferOwnership(conversationId, wallet);
-                            if (context.mounted) Navigator.of(context).pop();
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Transfer failed: $e')),
-                              );
+
+                        if (action == null) return;
+                        if (action == 'remove') {
+                          // Return wallet to caller so it can perform removal
+                          Navigator.of(context).pop(wallet);
+                          return;
+                        }
+                        if (action == 'transfer') {
+                          // Confirm transfer
+                          final confirmed = await showDialog<bool>(
+                            context: context,
+                            builder: (c) => AlertDialog(
+                              title: const Text('Transfer ownership'),
+                              content: Text('Transfer conversation ownership to $displayName ($wallet)?'),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Cancel')),
+                                TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Transfer')),
+                              ],
+                            ),
+                          );
+                          if (!context.mounted) return;
+                          if (confirmed == true) {
+                            try {
+                              await Provider.of<ChatProvider>(context, listen: false).transferOwnership(conversationId, wallet);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ownership transferred')));
+                                // Close members dialog to surface updated ownership state
+                                Navigator.of(context).pop();
+                              }
+                            } catch (e) {
+                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer failed: $e')));
                             }
                           }
                         }
-                      },
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.remove_circle_outline),
-                    onPressed: () => Navigator.of(context).pop(wallet),
-                    tooltip: 'Remove member',
-                  ),
+                        break;
+                    }
+                  } catch (e) {
+                    debugPrint('MembersDialog menu action failed: $e');
+                  }
+                },
+                itemBuilder: (menuCtx) => [
+                  const PopupMenuItem(value: 'manage', child: Text('Manage member')),
                 ],
               ),
             );
@@ -1829,6 +2171,66 @@ class MembersDialog extends StatelessWidget {
       ),
       actions: [
         TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+      ],
+    );
+  }
+}
+
+class _RenameConversationDialog extends StatefulWidget {
+  final String currentTitle;
+
+  const _RenameConversationDialog({required this.currentTitle});
+
+  @override
+  State<_RenameConversationDialog> createState() => _RenameConversationDialogState();
+}
+
+class _RenameConversationDialogState extends State<_RenameConversationDialog> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.currentTitle);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rename Conversation'),
+      content: TextField(
+        controller: _controller,
+        decoration: const InputDecoration(
+          hintText: 'Enter new title',
+          labelText: 'Title',
+        ),
+        autofocus: true,
+        onSubmitted: (value) {
+          if (value.trim().isNotEmpty) {
+            Navigator.of(context).pop(value.trim());
+          }
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            final text = _controller.text.trim();
+            if (text.isNotEmpty) {
+              Navigator.of(context).pop(text);
+            }
+          },
+          child: const Text('Rename'),
+        ),
       ],
     );
   }

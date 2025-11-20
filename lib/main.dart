@@ -18,6 +18,7 @@ import 'providers/task_provider.dart';
 import 'providers/collectibles_provider.dart';
 import 'providers/platform_provider.dart';
 import 'providers/config_provider.dart';
+import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'core/app_initializer.dart';
@@ -167,6 +168,7 @@ class _AppLauncherState extends State<AppLauncher> {
       value: topTheme,
       child: MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
         ChangeNotifierProvider(create: (context) => ConfigProvider()),
         ChangeNotifierProvider(create: (context) => PlatformProvider()),
         ChangeNotifierProvider(create: (context) => ConnectionProvider()),
@@ -224,6 +226,19 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         final cp = Provider.of<ChatProvider>(context, listen: false);
         await cp.initialize();
         debugPrint('ArtKubus: ChatProvider.initialize called from ArtKubus.initState');
+        try {
+          // Bind NotificationProvider to AppRefreshProvider so screens can trigger
+          // notification refreshes centrally (home/community auto-refresh).
+          final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
+          final notif = Provider.of<NotificationProvider>(context, listen: false);
+          final profile = Provider.of<ProfileProvider>(context, listen: false);
+          final wallet = profile.currentUser?.walletAddress;
+          await notif.initialize(walletOverride: wallet);
+          notif.bindToRefresh(appRefresh);
+          debugPrint('ArtKubus: NotificationProvider bound to AppRefreshProvider');
+        } catch (e) {
+          debugPrint('ArtKubus: failed to bind NotificationProvider to AppRefreshProvider: $e');
+        }
       } catch (e) {
         debugPrint('ArtKubus.initState: ChatProvider.initialize failed: $e');
       }

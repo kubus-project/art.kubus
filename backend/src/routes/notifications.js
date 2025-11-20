@@ -6,6 +6,23 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
+function computeDedupeKey({type, senderWallet, targetWallet, targetType, targetId, postId, achievementId, extra}) {
+  try {
+    if (!type) return null;
+    const parts = [type];
+    if (senderWallet) parts.push((senderWallet || '').toString());
+    if (targetWallet) parts.push((targetWallet || '').toString());
+    if (targetType) parts.push((targetType || '').toString());
+    if (targetId) parts.push((targetId || '').toString());
+    if (postId) parts.push((postId || '').toString());
+    if (achievementId) parts.push((achievementId || '').toString());
+    if (extra) parts.push(JSON.stringify(extra));
+    return parts.join(':').replace(/\s+/g, '-').toLowerCase();
+  } catch (e) {
+    return String(Date.now());
+  }
+}
+
 /**
  * NOTIFICATIONS API
  * Manages user notifications (likes, comments, follows, achievements, etc.)
@@ -120,19 +137,23 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
     });
   }
 
+  const dedupeKey = req.body.dedupeKey || computeDedupeKey({ type, senderWallet, targetWallet, targetType: data?.targetType, targetId: data?.targetId });
   const result = await query(
-    `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, data, action_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, data, action_url, dedupe_key)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
-    [targetWallet, senderWallet, type, title, message, data || {}, actionUrl]
+    [targetWallet, senderWallet, type, title, message, data || {}, actionUrl, dedupeKey]
   );
 
   const notification = result.rows[0];
 
   // Emit WebSocket event if available
   const io = req.app.get('io');
-  if (io) {
-    io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
+    if (io) {
+      logger.info(`createLikeNotification: emitting like notification to ${targetWallet} (sender ${senderWallet})`);
+    const roomCanonical = `user:${(targetWallet || '').toString()}`;
+    const roomLower = `user:${(targetWallet || '').toString().toLowerCase()}`;
+    io.to(roomCanonical).emit('notification:new', {
       id: notification.id,
       type: notification.type,
       title: notification.title,
@@ -140,6 +161,16 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
       data: notification.data,
       createdAt: notification.created_at
     });
+    // Also emit to lower-cased variant (compat shim)
+    if (roomLower !== roomCanonical) {
+      try { io.to(roomLower).emit('notification:new', {
+        type: notification.type,
+        title: notification.title,
+        message: notification.message,
+        data: notification.data,
+        createdAt: notification.created_at
+      }); } catch (err) { logger.debug('notification:new lower-case emit failed', err && err.message); }
+    }
   }
 
   logger.info(`Notification created: ${notification.id} for user ${targetWallet}`);
@@ -293,9 +324,11 @@ async function createLikeNotification(targetWallet, senderWallet, targetType, ta
       actionUrl = `/artworks/${targetId}`;
     }
 
+    const dedupeKey = computeDedupeKey({type: 'like', senderWallet, targetWallet, targetType, targetId});
+    logger.debug(`createLikeNotification: dedupeKey=${dedupeKey} target=${targetWallet} sender=${senderWallet}`);
     await query(
-      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data, dedupe_key)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT DO NOTHING`,
       [
         targetWallet,
@@ -304,19 +337,32 @@ async function createLikeNotification(targetWallet, senderWallet, targetType, ta
         'New Like',
         message,
         actionUrl,
-        { targetType, targetId }
+        { targetType, targetId },
+        dedupeKey
       ]
     );
     // Emit WebSocket event if io provided
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
+        logger.info(`createCommentNotification: emitting comment notification to ${targetWallet} (sender ${senderWallet})`);
+        const roomCanonical = `user:${(targetWallet || '').toString()}`;
+        const roomLower = `user:${(targetWallet || '').toString().toLowerCase()}`;
+        io.to(roomCanonical).emit('notification:new', {
           type: 'like',
           title: 'New Like',
           message,
           data: { targetType, targetId },
           createdAt: new Date().toISOString(),
         });
+        if (roomLower !== roomCanonical) {
+          try { io.to(roomLower).emit('notification:new', {
+            type: 'like',
+            title: 'New Like',
+            message,
+            data: { targetType, targetId },
+            createdAt: new Date().toISOString()
+          }); } catch (err) { logger.debug('createLikeNotification lower-case emit failed', err && err.message); }
+        }
       }
     } catch (err) {
       logger.warn('createLikeNotification: failed to emit socket event', err.message);
@@ -340,9 +386,11 @@ async function createCommentNotification(targetWallet, senderWallet, postId, com
       ? (profileResult.rows[0].display_name || profileResult.rows[0].username)
       : 'Someone';
 
+    const dedupeKey = computeDedupeKey({type: 'comment', senderWallet, targetWallet, postId});
+    logger.debug(`createCommentNotification: dedupeKey=${dedupeKey} target=${targetWallet} sender=${senderWallet}`);
     await query(
-      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data, dedupe_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         targetWallet,
         senderWallet,
@@ -350,19 +398,32 @@ async function createCommentNotification(targetWallet, senderWallet, postId, com
         'New Comment',
         `${senderName} commented on your post`,
         `/community/posts/${postId}`,
-        { postId, commentPreview: commentContent.substring(0, 100) }
+        { postId, commentPreview: commentContent.substring(0, 100) },
+        dedupeKey
       ]
     );
     // Emit WebSocket event if io provided
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
+        logger.info(`createFollowNotification: emitting follow notification to ${targetWallet} (sender ${senderWallet})`);
+        const roomCanonical = `user:${(targetWallet || '').toString()}`;
+        const roomLower = `user:${(targetWallet || '').toString().toLowerCase()}`;
+        io.to(roomCanonical).emit('notification:new', {
           type: 'comment',
           title: 'New Comment',
           message: `${senderName} commented on your post`,
           data: { postId, commentPreview: commentContent.substring(0, 100) },
           createdAt: new Date().toISOString(),
         });
+        if (roomLower !== roomCanonical) {
+          try { io.to(roomLower).emit('notification:new', {
+            type: 'comment',
+            title: 'New Comment',
+            message: `${senderName} commented on your post`,
+            data: { postId, commentPreview: commentContent.substring(0, 100) },
+            createdAt: new Date().toISOString()
+          }); } catch (err) { logger.debug('createCommentNotification lower-case emit failed', err && err.message); }
+        }
       }
     } catch (err) {
       logger.warn('createCommentNotification: failed to emit socket event', err.message);
@@ -386,9 +447,11 @@ async function createFollowNotification(targetWallet, senderWallet, io = null) {
       ? (profileResult.rows[0].display_name || profileResult.rows[0].username)
       : 'Someone';
 
+    const dedupeKey = computeDedupeKey({type: 'follow', senderWallet, targetWallet});
+    logger.debug(`createFollowNotification: dedupeKey=${dedupeKey} target=${targetWallet} sender=${senderWallet}`);
     await query(
-      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data, dedupe_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         targetWallet,
         senderWallet,
@@ -396,19 +459,32 @@ async function createFollowNotification(targetWallet, senderWallet, io = null) {
         'New Follower',
         `${senderName} started following you`,
         `/profile/${senderWallet}`,
-        { followerWallet: senderWallet }
+        { followerWallet: senderWallet },
+        dedupeKey
       ]
     );
     // Emit WebSocket event if io provided
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
+        logger.info(`createShareNotification: emitting share notification to ${targetWallet} (sender ${senderWallet})`);
+        const roomCanonical = `user:${(targetWallet || '').toString()}`;
+        const roomLower = `user:${(targetWallet || '').toString().toLowerCase()}`;
+        io.to(roomCanonical).emit('notification:new', {
           type: 'follow',
           title: 'New Follower',
           message: `${senderName} started following you`,
           data: { followerWallet: senderWallet },
           createdAt: new Date().toISOString(),
         });
+        if (roomLower !== roomCanonical) {
+          try { io.to(roomLower).emit('notification:new', {
+            type: 'follow',
+            title: 'New Follower',
+            message: `${senderName} started following you`,
+            data: { followerWallet: senderWallet },
+            createdAt: new Date().toISOString()
+          }); } catch (err) { logger.debug('createFollowNotification lower-case emit failed', err && err.message); }
+        }
       }
     } catch (err) {
       logger.warn('createFollowNotification: failed to emit socket event', err.message);
@@ -435,9 +511,11 @@ async function createShareNotification(targetWallet, senderWallet, postId, io = 
     const message = `${senderName} shared your post`;
     const actionUrl = `/community/posts/${postId}`;
 
+    const dedupeKey = computeDedupeKey({type: 'share', senderWallet, targetWallet, postId});
+    logger.debug(`createShareNotification: dedupeKey=${dedupeKey} target=${targetWallet} sender=${senderWallet}`);
     await query(
-      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      `INSERT INTO notifications (user_wallet, sender_wallet, type, title, message, action_url, data, dedupe_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         targetWallet,
         senderWallet,
@@ -445,19 +523,31 @@ async function createShareNotification(targetWallet, senderWallet, postId, io = 
         'New Share',
         message,
         actionUrl,
-        { postId }
+        { postId },
+        dedupeKey
       ]
     );
 
     try {
       if (io) {
-        io.to(`user:${(targetWallet || '').toString()}`).emit('notification:new', {
+        const roomCanonical = `user:${(targetWallet || '').toString()}`;
+        const roomLower = `user:${(targetWallet || '').toString().toLowerCase()}`;
+        io.to(roomCanonical).emit('notification:new', {
           type: 'share',
           title: 'New Share',
           message,
           data: { postId },
           createdAt: new Date().toISOString(),
         });
+        if (roomLower !== roomCanonical) {
+          try { io.to(roomLower).emit('notification:new', {
+            type: 'share',
+            title: 'New Share',
+            message,
+            data: { postId },
+            createdAt: new Date().toISOString()
+          }); } catch (err) { logger.debug('createShareNotification lower-case emit failed', err && err.message); }
+        }
       }
     } catch (err) {
       logger.warn('createShareNotification: failed to emit socket event', err.message);
@@ -472,16 +562,19 @@ async function createShareNotification(targetWallet, senderWallet, postId, io = 
  */
 async function createAchievementNotification(userWallet, achievementId, achievementTitle, tokenReward) {
   try {
+    const dedupeKey = computeDedupeKey({type: 'achievement', targetWallet: userWallet, achievementId});
+    logger.debug(`createAchievementNotification: dedupeKey=${dedupeKey} target=${userWallet} achievement=${achievementId}`);
     await query(
-      `INSERT INTO notifications (user_wallet, type, title, message, action_url, data)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+      `INSERT INTO notifications (user_wallet, type, title, message, action_url, data, dedupe_key)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [
         userWallet,
         'achievement',
         'Achievement Unlocked!',
         `You've unlocked "${achievementTitle}" and earned ${tokenReward} KUB8 tokens!`,
         '/achievements',
-        { achievementId, tokenReward }
+          { achievementId, tokenReward },
+          dedupeKey
       ]
     );
   } catch (error) {

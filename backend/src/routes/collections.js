@@ -59,7 +59,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-        avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+        avatar: normalizeAvatarUrl(row.avatar_url)
     },
     createdAt: row.created_at,
     updatedAt: row.updated_at
@@ -135,7 +135,7 @@ router.get('/:id', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+      avatar: normalizeAvatarUrl(row.avatar_url)
     },
     artworks: artworksResult.rows.map(artwork => ({
       id: artwork.id,

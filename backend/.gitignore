@@ -153,6 +153,7 @@ docker-compose.override.yml
 .dynamodb/
 .tern-port
 .vscode-test
+.docs/
 
 # ==========================================
 # SECURITY SCAN RESULTS

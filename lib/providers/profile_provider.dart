@@ -322,7 +322,7 @@ class ProfileProvider extends ChangeNotifier {
         username: _generateUsername(walletAddress),
         displayName: _shortWallet(walletAddress),
         bio: '',
-        avatar: UserService.safeAvatarUrl(walletAddress),
+        avatar: '',
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -345,7 +345,7 @@ class ProfileProvider extends ChangeNotifier {
             username: normalized,
             displayName: user.name,
             bio: user.bio,
-            avatar: user.profileImageUrl ?? UserService.safeAvatarUrl(walletAddress),
+            avatar: user.profileImageUrl ?? '',
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
@@ -364,7 +364,7 @@ class ProfileProvider extends ChangeNotifier {
               username: _generateUsername(walletAddress),
               displayName: _shortWallet(walletAddress),
               bio: profileData['bio']?.toString() ?? '',
-              avatar: UserService.safeAvatarUrl(walletAddress),
+              avatar: profileData['avatar']?.toString() ?? '',
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
@@ -401,7 +401,7 @@ class ProfileProvider extends ChangeNotifier {
               username: normalized,
               displayName: user.name,
               bio: user.bio,
-              avatar: user.profileImageUrl ?? UserService.safeAvatarUrl(walletAddress),
+              avatar: user.profileImageUrl ?? '',
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );

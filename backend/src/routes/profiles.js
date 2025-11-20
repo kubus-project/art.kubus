@@ -7,7 +7,7 @@ const multer = require('multer');
 const storageService = require('../services/storageService');
 const { verifyToken, createUserRateLimit } = require('../middleware/auth');
 const { generateUsername } = require('../utils/usernameGenerator');
-const { normalizeAvatarUrl, buildAvatarProxyUrl } = require('../utils/avatar');
+const { normalizeAvatarUrl, ensureStoredDefaultAvatar } = require('../utils/avatar');
 
 // Multer config for avatar uploads (memory storage)
 const avatarUpload = multer({
@@ -59,10 +59,9 @@ router.get('/:walletAddress', async (req, res) => {
       });
     }
     
-    // Provide a default identicon avatar when none is set in the DB so clients
-    // immediately receive a stable avatar URL (avoids flicker and 410s).
+    // Do not inject identicon placeholders here; clients fall back to local initials when avatar is missing.
     const row = result.rows[0];
-    const avatarUrl = normalizeAvatarUrl(row.avatar_url, walletAddress);
+    const avatarUrl = normalizeAvatarUrl(row.avatar_url);
 
     const profile = {
       id: row.id,
@@ -110,7 +109,7 @@ router.get('/me', verifyToken, async (req, res) => {
     if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Profile not found' });
 
     const row = result.rows[0];
-    const avatarUrl = normalizeAvatarUrl(row.avatar_url, walletAddress);
+    const avatarUrl = normalizeAvatarUrl(row.avatar_url);
 
     const profile = {
       id: row.id,
@@ -154,7 +153,7 @@ router.post('/batch', async (req, res) => {
       walletAddress: r.wallet_address,
       username: r.username,
       displayName: r.display_name,
-      avatar: normalizeAvatarUrl(r.avatar_url, r.wallet_address)
+      avatar: normalizeAvatarUrl(r.avatar_url)
     }));
 
     res.json({ success: true, count: profiles.length, data: profiles });
@@ -209,15 +208,20 @@ router.post('/', async (req, res) => {
       finalUsername = provided || existingRes.rows[0].username || null;
     }
 
-    // Avatar handling: for new profiles, generate a DiceBear avatar seeded by the generated username
-    // For updates, if the client provided an avatar use it, otherwise preserve existing avatar (pass null so UPSERT COALESCE keeps it)
+    // Avatar handling: prefer client uploads; otherwise store a generated identicon asset so downstream clients receive a real URL.
     let finalAvatar = null;
-    if (!isUpdate) {
-      const seed = finalUsername || walletAddress;
-      finalAvatar = buildAvatarProxyUrl(seed, { style: 'identicon', format: 'png', raw: true });
+    const providedAvatar = (avatar || '').toString().trim();
+    if (providedAvatar.length > 0) {
+      finalAvatar = providedAvatar;
     } else {
-      const providedAvatar = (avatar || '').toString().trim();
-      finalAvatar = providedAvatar || null; // null -> DO UPDATE will COALESCE and keep existing avatar
+      const existingAvatar = isUpdate ? (existingRes.rows[0].avatar_url || '').toString().trim() : '';
+      if (existingAvatar.length === 0) {
+        try {
+          finalAvatar = await ensureStoredDefaultAvatar(finalUsername || walletAddress, { uploadFolder: 'avatars/system' });
+        } catch (err) {
+          logger.warn(`Failed to generate default avatar for ${walletAddress}: ${err.message}`);
+        }
+      }
     }
 
     // Display name handling: default to capitalized username with hash for new profiles.
@@ -278,7 +282,7 @@ router.post('/', async (req, res) => {
       username: result.rows[0].username,
       displayName: result.rows[0].display_name,
       bio: result.rows[0].bio,
-      avatar: normalizeAvatarUrl(result.rows[0].avatar_url, walletAddress),
+      avatar: normalizeAvatarUrl(result.rows[0].avatar_url),
       coverImage: result.rows[0].cover_image_url,
       social: {
         twitter: result.rows[0].twitter,
@@ -353,7 +357,7 @@ router.get('/artists/list', async (req, res) => {
       username: row.username,
       displayName: row.display_name,
       bio: row.bio,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
+      avatar: normalizeAvatarUrl(row.avatar_url),
       coverImage: row.cover_image_url,
       isArtist: row.is_artist,
       isVerified: row.is_verified,

@@ -60,7 +60,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
         username: row.username,
         displayName: row.display_name,
         bio: row.bio,
-        avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
+        avatar: normalizeAvatarUrl(row.avatar_url),
         stats: {
           followers: row.followers_count || 0,
           following: row.following_count || 0,
@@ -180,7 +180,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
           walletAddress: row.wallet_address,
           username: row.username,
           displayName: row.display_name,
-          avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+          avatar: normalizeAvatarUrl(row.avatar_url)
         }
       }));
     }
@@ -211,7 +211,7 @@ router.get('/', optionalAuth, asyncHandler(async (req, res) => {
           walletAddress: row.wallet_address,
           username: row.username,
           displayName: row.display_name,
-          avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+          avatar: normalizeAvatarUrl(row.avatar_url)
         },
         stats: {
           likes: row.likes_count || 0,

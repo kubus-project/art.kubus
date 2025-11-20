@@ -341,49 +341,228 @@ for (final marker in markers) {
 
 ---
 
-## Key Files Reference
+## Project Structure & Key Files
 
-### Configuration
-- `lib/config/config.dart` - Feature flags, environment config (70+ settings)
-- `lib/config/api_keys.dart` - API keys (gitignored, use template)
-- `pubspec.yaml` - Dependencies, versions (note: arkit_plugin disabled)
+### Flutter App Structure
+```
+lib/
+├── config/              # Configuration & API keys
+│   ├── config.dart      # Feature flags (70+ settings)
+│   └── api_keys.dart    # API keys (gitignored)
+├── core/                # Core app initialization
+│   └── app_initializer.dart  # Startup, routing, onboarding
+├── providers/           # State management (19 providers)
+│   ├── themeprovider.dart    # Theme & colors
+│   ├── web3provider.dart     # Web3 state
+│   ├── wallet_provider.dart  # Wallet management
+│   ├── artwork_provider.dart # Artwork data
+│   ├── config_provider.dart  # Runtime config toggle
+│   ├── dao_provider.dart     # DAO state
+│   ├── profile_provider.dart # User profiles
+│   └── ...               # notification, chat, task, etc.
+├── services/            # Business logic & integrations
+│   ├── backend_api_service.dart    # All backend calls
+│   ├── ar_service.dart             # Platform AR launcher
+│   ├── achievement_service.dart    # Token rewards
+│   ├── solana_wallet_service.dart  # Wallet operations
+│   ├── nft_minting_service.dart    # NFT creation
+│   └── ...               # notifications, socket, telemetry
+├── screens/             # Main app screens
+├── web3/                # Web3 feature modules
+│   ├── artist/          # Studio, gallery, analytics
+│   ├── dao/             # Governance, voting, proposals
+│   ├── institution/     # Hub, analytics, events
+│   ├── marketplace/     # NFT marketplace
+│   ├── wallet/          # Send, receive, connect
+│   └── achievements/    # Achievement system
+├── community/           # Social features
+├── onboarding/          # First-time user flow
+├── widgets/             # Reusable UI components
+├── models/              # Data models (artwork, user, etc.)
+└── utils/               # Helpers & utilities
+```
 
-### State Management
-- `lib/main.dart` - Provider setup with dependencies
-- `lib/core/app_initializer.dart` - App startup logic, route decisions
-- `lib/providers/themeprovider.dart` - Theme colors, dark/light mode
+### Backend Structure
+```
+backend/src/
+├── server.js            # Express app (Helmet, CORS, rate limit)
+├── routes/              # API endpoints (15 route files)
+│   ├── auth.js          # JWT authentication
+│   ├── artworks.js      # Artwork CRUD
+│   ├── arMarkers.js     # Geospatial AR markers
+│   ├── community.js     # Posts, likes, comments
+│   ├── achievements.js  # Achievement system
+│   ├── profiles.js      # User profiles
+│   ├── collections.js   # Collection management
+│   ├── messages.js      # Direct messaging
+│   ├── notifications.js # Push notifications
+│   ├── storage.js       # File uploads
+│   └── ...              # avatar, search, upload, health
+├── services/            # Business logic
+│   └── storageService.js  # IPFS/HTTP/Hybrid abstraction
+├── middleware/          # Auth, validation, error handling
+├── db/                  # Database layer (PostgreSQL)
+├── scripts/             # Utility scripts
+└── utils/               # Shared utilities
+```
 
-### Services
-- `lib/services/ar_service.dart` - Simple AR launcher (production-ready)
-- `lib/services/backend_api_service.dart` - All API calls (1078 lines)
-- `lib/services/achievement_service.dart` - Gamification logic
-- `lib/services/nft_minting_service.dart` - Solana NFT minting
+### Critical Files Reference
 
-### Backend
-- `backend/src/server.js` - Express app with security (Helmet, CORS, rate limiting)
-- `backend/src/services/storageService.js` - IPFS/HTTP abstraction
-- `backend/src/routes/` - RESTful API routes
+**Configuration:**
+- `lib/config/config.dart` - All feature flags & environment settings
+- `lib/config/api_keys.dart` - Backend/Solana/IPFS credentials
+- `pubspec.yaml` - Dependencies (arkit_plugin disabled, see ARKIT_FIX.md)
+- `backend/.env` - Backend environment variables
 
-### Documentation
-- `docs/AR_IMPLEMENTATION.md` - AR setup guide
-- `docs/BACKEND_API_SPEC.md` - API endpoints (401 lines)
-- `docs/ACHIEVEMENT_INTEGRATION_COMPLETE.md` - Achievement system guide
-- `docs/OPTIMIZATION_REPORT.md` - Project status
+**State Management:**
+- `lib/main.dart` - Provider dependency injection tree
+- `lib/core/app_initializer.dart` - App startup, onboarding logic
+- `lib/providers/config_provider.dart` - Runtime feature toggle
+
+**Key Services:**
+- `lib/services/backend_api_service.dart` - Single API client for all backend calls
+- `lib/services/ar_service.dart` - Platform-specific AR launcher (production-ready)
+- `lib/services/achievement_service.dart` - Token-based rewards
+- `lib/services/solana_wallet_service.dart` - Mnemonic wallet creation
+
+**Backend Core:**
+- `backend/src/server.js` - Express with security middleware
+- `backend/src/services/storageService.js` - Storage layer abstraction
+- `backend/src/routes/*.js` - RESTful API (15 endpoint files)
+
+**Documentation:**
+- `docs/OPTIMIZATION_REPORT.md` - Current project status
+- `docs/WEB3_FIXES_SUMMARY.md` - Recent fixes & solutions
+- `docs/ARKIT_FIX.md` - iOS AR compatibility issue
+- `docs/BACKEND_API_SPEC.md` - Complete API reference
 
 ---
 
-## Common Pitfalls
+## Common Pitfalls & Pain Points
 
-1. **Don't use simulator for AR** - Always test on physical device
-2. **Check feature flags** - Respect `AppConfig` settings, don't bypass
-3. **Handle IPFS URLs** - Convert ipfs:// to HTTP gateway before display/AR
-4. **Initialize providers** - Call `await initialize()` in AppInitializer, not in build()
-5. **Theme consistency** - Use `Theme.of(context)` instead of hardcoded colors
-6. **Backend auth** - Call `BackendApiService().setAuthToken()` after login
-7. **SharedPreferences keys** - Use constants from `PreferenceKeys` class
-8. **AR permissions** - Request camera permission before AR features (handled in ARService)
-9. **Network detection** - Backend uses Solana network from environment, not client
-10. **Mock data propagation** - Update all dependent providers when toggling mock mode
+### Critical Development Rules
+1. **AR testing** - MUST use physical device (ARCore/ARKit unavailable in simulator)
+2. **Feature flags** - Always check `AppConfig.isFeatureEnabled()`, never hardcode bypasses
+3. **Theme colors** - Use `Theme.of(context).colorScheme.*` - NO hardcoded colors (especially purple)
+4. **Provider init** - Call `await provider.initialize()` in AppInitializer, NOT in build()
+5. **IPFS URLs** - Convert `ipfs://CID` → `https://ipfs.io/ipfs/CID` before AR/display
+6. **Mock data** - Check `MockupDataProvider.isMockDataEnabled` in ALL data-fetching methods
+
+### Known Issues & Solutions
+
+**1. iOS AR (ARKit) - DISABLED** ⚠️
+- **Issue**: `arkit_plugin` incompatible with `vector_math` 2.1.4 (scaleByVector3 missing)
+- **Status**: iOS AR disabled in `pubspec.yaml`, code commented in `ar_manager.dart`
+- **Workaround**: Use `ar_service.dart` for simple AR (platform APIs work)
+- **Reference**: `docs/ARKIT_FIX.md`
+
+**2. Web3 Light Mode Text** ✅ FIXED
+- **Issue**: White text on light backgrounds (gradient headers)
+- **Solution**: All gradient headers now use `Colors.white`, regular text uses `onSurface`
+- **Reference**: `docs/WEB3_FIXES_SUMMARY.md`
+- **Files**: artist_studio.dart, governance_hub.dart, institution_hub.dart
+
+**3. Mock Data Toggle** ✅ FIXED
+- **Issue**: Mock data showing even when toggle OFF
+- **Solution**: All providers check `isMockDataEnabled` flag
+- **Affected**: WalletProvider, DAOProvider, Marketplace, ArtworkProvider, EventManager
+
+**4. Devnet Airdrop Limits**
+- **Issue**: Solana devnet rate-limits airdrops (2 SOL max)
+- **Solution**: Use `requestDevnetAirdrop(publicKey, amount: 1.0)` with retry logic
+- **Fallback**: Switch to testnet or use faucet websites
+
+**5. IPFS Gateway Timeouts**
+- **Issue**: ipfs.io gateway slow/unreliable
+- **Solution**: Backend supports `?targetStorage=hybrid` for redundancy
+- **Gateways**: Pinata → ipfs.io → Cloudflare → dweb.link (fallback chain)
+
+**6. Android Core Library Desugaring**
+- **Issue**: `flutter_local_notifications` requires Java 8+ features
+- **Solution**: Enabled coreLibraryDesugaring in `android/app/build.gradle`
+- **Required**: `coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.3'`
+
+### Architecture Gotchas
+7. **Provider dependencies** - Use `ProxyProvider` for provider-to-provider communication
+8. **Backend auth** - Set token with `BackendApiService().setAuthToken(jwt)` after login
+9. **SharedPreferences** - Use `PreferenceKeys` constants, not magic strings
+10. **Network switching** - Backend detects from env, client switches in `Web3Provider.switchNetwork()`
+11. **AR permissions** - ARService handles camera permission requests automatically
+12. **Onboarding flow** - Respects `skipOnboardingForReturningUsers` flag in config
+
+### Performance & Build
+13. **Web build** - Requires `--web-renderer html` for AR compatibility
+14. **Release builds** - Always `flutter clean; flutter pub get` before building
+15. **Hot reload limits** - Provider initialization changes require full restart
+
+---
+
+## Development Workflow
+
+### Quick Start
+```powershell
+# Initial setup
+flutter pub get
+cd backend; npm install --production; cd ..
+
+# Run app (debug - use physical device for AR)
+flutter run --debug
+
+# Backend dev server (from backend/)
+npm run dev  # Nodemon with auto-reload
+
+# Build & test
+flutter analyze              # Check for issues
+flutter test                 # Run unit tests
+flutter build apk --debug   # Test build
+```
+
+### Feature Development Pattern
+1. **Check existing**: Use grep_search/file_search BEFORE creating new files
+2. **Feature flag**: Add to `AppConfig` if new major feature
+3. **Provider setup**: Create provider in `lib/providers/`, add to main.dart
+4. **Service layer**: Business logic in `lib/services/`
+5. **UI screens**: Place in appropriate folder (screens/web3/community/)
+6. **Theme colors**: Use `Theme.of(context).colorScheme.*` only
+7. **Test**: Physical device for AR, emulator for general UI
+
+### Common Tasks
+```powershell
+# Toggle mock data (runtime - no rebuild needed)
+# Settings → Developer Options → "Use Mock Data"
+
+# Switch Solana network
+# Settings → Wallet & Web3 → Network Selection
+
+# Test AR features
+flutter run --release  # Debug mode has performance issues with AR
+
+# Check compilation errors
+flutter analyze lib/
+flutter analyze backend/  # If using Dart analysis
+
+# Format code
+flutter format lib/
+
+# Backend logs
+cd backend; pm2 logs artkubus-api  # Production
+tail -f logs/combined.log          # Development
+```
+
+### Debugging Web3 Issues
+```powershell
+# Check wallet connection
+# Settings → Wallet & Web3 → Connection Status
+
+# Verify Solana balance
+curl https://api.devnet.solana.com -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"getBalance","params":["YOUR_PUBLIC_KEY"]}'
+
+# Test backend connection
+curl https://api.art-kubus.io/health
+
+# View provider state
+# Add print() statements in provider methods temporarily
+```
 
 ---
 
@@ -605,60 +784,43 @@ npm run dev                           # Development mode with nodemon
 npm start                             # Production mode
 node src/server.js                    # Direct start
 
-# Backend Production (PM2)
-pm2 start src/server.js --name artkubus-api
-pm2 logs artkubus-api                 # View logs
-pm2 reload artkubus-api               # Zero-downtime restart
+# Backend PM2 (Process Management)
+pm2 start src/server.js --name artkubus-api  # Start app
 pm2 restart artkubus-api              # Restart with downtime
-pm2 monit                             # Real-time monitoring
-pm2 status                            # List processes
+pm2 reload artkubus-api               # Zero-downtime reload
+pm2 logs artkubus-api                 # View logs
+pm2 status                            # Check status
 
-# Database
-psql -U user -d artkubus_prod         # Connect to PostgreSQL
-pg_dump -U user artkubus_prod > backup.sql  # Backup database
+# Testing & Quality
+flutter test                          # Run unit tests
+flutter analyze lib/                  # Analyze Flutter code
+flutter doctor                        # Check Flutter setup
+
+# Debugging
+flutter run --debug --verbose         # Verbose debug output
+flutter logs                          # View device logs
+pm2 monit                             # Monitor backend processes
+
+# Docker (Backend)
+docker-compose up -d --build backend  # Build and start backend
+docker-compose logs -f backend        # Follow backend logs
+docker-compose down                   # Stop all containers
 ```
 
 ---
 
-## Development Workflow
+## Project Links & Info
 
-### Branch Strategy
-**Current**: Single `master` branch (monorepo approach)
-
-**Future** (post-launch):
-- `live` - Production branch (deployed to app stores + live backend)
-- `dev` - Development branch (staging environment)
-- Feature branches: `feature/ar-improvements`, `feature/web3-integration`
-
-**Recommended workflow**:
-```bash
-# Create feature branch
-git checkout -b feature/achievement-system
-
-# Make changes, commit frequently
-git add .
-git commit -m "Add KUB8 token rewards to achievements"
-
-# Push to GitHub
-git push origin feature/achievement-system
-
-# Merge to master (currently) or dev (post-launch)
-git checkout master
-git merge feature/achievement-system
-```
-
-### Code Review (Recommended)
-While not currently enforced, consider:
-1. Pull Requests for all features
-2. Review checklist:
-   - [ ] Feature flags respected (`AppConfig`)
-   - [ ] Theme colors used (no hardcoded colors)
-   - [ ] Provider initialization in correct order
-   - [ ] IPFS URLs converted to HTTP gateways
-   - [ ] AR tested on physical device
-   - [ ] Mock data toggle works
-   - [ ] Compilation errors: 0
-   - [ ] `flutter analyze` warnings addressed
+### Code Review Checklist
+When reviewing changes or before deployment:
+- [ ] Feature flags respected (`AppConfig`)
+- [ ] Theme colors used (no hardcoded colors, especially purple)
+- [ ] Provider initialization in correct order
+- [ ] IPFS URLs converted to HTTP gateways
+- [ ] AR tested on physical device
+- [ ] Mock data toggle works
+- [ ] Compilation errors: 0
+- [ ] `flutter analyze` warnings addressed
 
 ### Project Links
 - **Website**: https://art.kubus.site (project showcase + download links)
@@ -669,220 +831,7 @@ While not currently enforced, consider:
 
 ---
 
-## Code Health & Cleanup Guide
-
-### 🔴 Critical Issues (Fix Immediately)
-
-#### 1. Duplicate Service Classes
-**Problem**: `AchievementService` exists in TWO locations:
-- ✅ `lib/services/achievement_service.dart` (113 lines, comprehensive, KEEP THIS)
-- ❌ `lib/models/achievements.dart` (line 64, stub implementation, DELETE THIS)
-
-**Action**: Remove duplicate from `achievements.dart`, use import instead:
-```dart
-// In lib/models/achievements.dart - REMOVE class AchievementService
-// ADD: import '../services/achievement_service.dart';
-```
-
-#### 2. Duplicate Service Classes (Additional)
-**Problem**: `CommunityService` exists in model file:
-- ❌ `lib/community/community_interactions.dart` (line 111)
-- Should be in `lib/services/community_service.dart` (if not exists, create it)
-
-**Problem**: `TaskService` exists in model file:
-- ❌ `lib/models/task.dart` (line 99)
-- Should be in `lib/services/task_service.dart` (if not exists, create it)
-
-**Action**: Extract service logic from model files → Create dedicated service files
-
-#### 3. Vector3 Implementation Conflict
-**Problem**: Custom `Vector3` class in `lib/widgets/ar_view.dart` (line 856) conflicts with `vector_math` package
-```dart
-// Current: Custom implementation
-class Vector3 {
-  final double x, y, z;
-  const Vector3(this.x, this.y, this.z);
-}
-
-// Issue: arkit_plugin uses vector_math 2.1.4 which removed scaleByVector3
-```
-
-**Action**:
-- Keep custom `Vector3` for simple AR use cases
-- Use `vector_math.Vector3` (imported as `vector.Vector3`) for ARCore/ARKit plugins
-- Document when to use which (see AR integration section above)
-
-### 🟡 Important Cleanup (Next Sprint)
-
-#### 4. Replace `print()` with `debugPrint()` or Logger
-**Violations**: 50+ instances across codebase
-```dart
-// ❌ BAD
-print('Debug message');
-
-// ✅ GOOD - Use AppConfig helper
-AppConfig.debugPrint('Debug message');
-
-// ✅ GOOD - Use Flutter's debugPrint
-import 'package:flutter/foundation.dart';
-debugPrint('Debug message');
-
-// ✅ BEST - Use logger package
-final logger = Logger();
-logger.d('Debug message');
-```
-
-**Files with most violations**:
-- `lib/community/community_interactions.dart` (14 instances)
-- `lib/core/app_initializer.dart` (12 instances)
-- `lib/providers/mockup_data_provider.dart` (4 instances)
-
-#### 5. Fix Async BuildContext Usage
-**Problem**: Using `BuildContext` after `await` without checking `mounted`
-```dart
-// ❌ BAD
-await someAsyncOperation();
-Navigator.of(context).push(...);  // Context might be invalid
-
-// ✅ GOOD
-await someAsyncOperation();
-if (!mounted) return;
-Navigator.of(context).push(...);
-```
-
-**Violations in**:
-- `lib/core/app_initializer.dart` (multiple instances)
-- `lib/onboarding/permissions_screen.dart` (line 594)
-
-#### 6. Deprecated Color Methods
-**Problem**: Using `color.withOpacity()` instead of `color.withValues()`
-```dart
-// ❌ DEPRECATED
-color.withOpacity(0.5)
-
-// ✅ NEW (Flutter 3.27+)
-color.withValues(alpha: 0.5)
-```
-
-**Violations in**:
-- `lib/core/app_initializer.dart` (3 instances)
-- `lib/main_app.dart` (4 instances)
-
-#### 7. Constant Naming Convention
-**Problem**: Snake_case constants instead of lowerCamelCase
-```dart
-// ❌ BAD
-const platform_update = 'platform_update';
-const gallery_opening = 'gallery_opening';
-
-// ✅ GOOD
-const platformUpdate = 'platform_update';
-const galleryOpening = 'gallery_opening';
-```
-
-**Violations in**:
-- `lib/models/dao.dart` (2 instances)
-- `lib/models/institution.dart` (2 instances)
-- `lib/models/wallet.dart` (1 instance)
-
-### 🟢 Technical Debt (Plan for Refactor)
-
-#### 8. AR Service Fragmentation
-**Problem**: 4 separate AR-related services with overlapping responsibilities:
-- `ar_service.dart` (187 lines) - Simple platform API launcher ✅ KEEP
-- `ar_manager.dart` (130 lines) - Scene management (ARCore/ARKit) ✅ KEEP
-- `ar_integration_service.dart` (450+ lines) - High-level orchestration ⚠️ BLOATED
-- `ar_content_service.dart` (300+ lines) - IPFS/HTTP content loading ⚠️ BLOATED
-
-**Recommendation**:
-1. Keep `ar_service.dart` for simple use cases (production-ready)
-2. Keep `ar_manager.dart` for advanced in-app AR
-3. **Refactor**: Merge `ar_integration_service.dart` + `ar_content_service.dart` into single `AROrchestrator` class
-4. Extract IPFS logic to general `StorageService` (reusable for non-AR content)
-
-#### 9. Web3 Service Duplication
-**Services**: Multiple Web3-related services with unclear boundaries:
-- `solana_wallet_service.dart` - Mnemonic wallet operations
-- `solana_walletconnect_service.dart` - External wallet connections
-- `nft_minting_service.dart` (323 lines) - NFT operations + TradingService class
-- `web3provider.dart` (369 lines) - State management
-
-**Issue**: `nft_minting_service.dart` contains nested `TradingService` class (line 323) - should be separate file
-
-**Recommendation**:
-1. Extract `TradingService` to `lib/services/trading_service.dart`
-2. Create facade pattern: `Web3Service` that delegates to specialized services
-3. Keep providers thin (state only), move logic to services
-
-#### 10. Screen File Sizes
-**Large files** (potential to split):
-- `lib/screens/profile_screen.dart` (1375+ lines) - Contains nested `EditProfileScreen`
-- `lib/screens/home_screen.dart` (2107+ lines) - Contains nested `ActivityScreen`
-- `lib/web3/connectwallet.dart` (1640 lines)
-- `lib/services/backend_api_service.dart` (1078 lines)
-
-**Recommendation**:
-1. Extract nested screens to separate files
-2. Split large screens into widget files: `profile_screen.dart` + `profile_widgets.dart`
-3. Split `backend_api_service.dart` by domain: `artworks_api.dart`, `markers_api.dart`, etc.
-
-#### 11. Unused/Commented Code
-**Found**:
-- `lib/web3/marketplace/marketplace.dart` (line 2117): "Unused - keeping for reference"
-- `lib/web3/connectwallet.dart` (line 1437): "UNUSED function - kept for reference"
-
-**Action**: Remove commented code blocks (use git history if needed)
-
-#### 12. TODO Items Needing Implementation
-**High Priority TODOs**:
-- `lib/web3/wallet/wallet_home.dart:116` - Implement wallet connection
-- `lib/web3/wallet/wallet_home.dart:212` - Add clipboard functionality
-- `lib/services/push_notification_service.dart:715-773` - 6 notification types unimplemented:
-  - Auction notifications
-  - Collaboration notifications
-  - AR event notifications
-  - Challenge notifications
-  - Staking notifications
-
-### 🔧 Architecture Improvements
-
-#### 13. Service Layer Organization
-**Current structure**: Flat services directory (12 files)
-
-**Proposed structure**:
-```
-lib/services/
-  ├── ar/
-  │   ├── ar_service.dart (simple launcher)
-  │   ├── ar_manager.dart (scene management)
-  │   └── ar_orchestrator.dart (merged integration + content)
-  ├── web3/
-  │   ├── wallet_service.dart (renamed from solana_wallet_service)
-  │   ├── walletconnect_service.dart
-  │   ├── nft_service.dart (renamed from nft_minting)
-  │   └── trading_service.dart (extracted)
-  ├── backend/
-  │   ├── artworks_api.dart
-  │   ├── markers_api.dart
-  │   ├── community_api.dart
-  │   └── auth_api.dart
-  └── core/
-      ├── achievement_service.dart
-      ├── notification_service.dart (renamed from push_notification)
-      └── storage_service.dart (new - IPFS/HTTP abstraction)
-```
-
-#### 14. Model/Service Separation
-**Anti-pattern**: Service classes inside model files
-
-**Files to refactor**:
-- `lib/models/achievements.dart` → Remove `AchievementService` class
-- `lib/models/task.dart` → Extract `TaskService` to `lib/services/task_service.dart`
-- `lib/community/community_interactions.dart` → Extract `CommunityService` to `lib/services/community_service.dart`
-
-**Rule**: Models = data structures only. Services = business logic.
-
-**Last Updated:** November 12, 2025
+**Last Updated:** November 19, 2025
 **App Version:** 0.0.2
 **Flutter SDK:** >=3.3.4 <4.0.0
 **Node.js:** 20+

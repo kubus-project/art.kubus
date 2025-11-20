@@ -69,7 +69,7 @@ router.get('/posts', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+      avatar: normalizeAvatarUrl(row.avatar_url)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,
@@ -143,7 +143,7 @@ router.get('/posts/:id', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+      avatar: normalizeAvatarUrl(row.avatar_url)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,
@@ -456,18 +456,21 @@ router.get('/posts/:id/comments', optionalAuth, asyncHandler(async (req, res) =>
   const { id } = req.params;
   const { limit = 50, offset = 0 } = req.query;
 
+  const currentUserId = req.user ? req.user.id : null;
   const result = await query(
     `SELECT 
       c.id, c.content, c.likes_count, c.created_at, c.updated_at,
       c.parent_comment_id,
-      u.wallet_address, p.username, p.display_name, p.avatar_url
+      u.wallet_address, p.username, p.display_name, p.avatar_url,
+      c.author_name, c.author_avatar
+      , (CASE WHEN $4::uuid IS NULL THEN FALSE ELSE EXISTS(SELECT 1 FROM likes WHERE user_id = $4::uuid AND target_type = 'comment' AND target_id = c.id) END) as is_liked
     FROM comments c
     LEFT JOIN users u ON c.author_id = u.id
     LEFT JOIN profiles p ON u.wallet_address = p.wallet_address
     WHERE c.post_id = $1
     ORDER BY c.created_at ASC
     LIMIT $2 OFFSET $3`,
-    [id, parseInt(limit), parseInt(offset)]
+    [id, parseInt(limit), parseInt(offset), currentUserId]
   );
 
   const comments = result.rows.map(row => ({
@@ -477,10 +480,11 @@ router.get('/posts/:id/comments', optionalAuth, asyncHandler(async (req, res) =>
     parentCommentId: row.parent_comment_id,
     author: {
       walletAddress: row.wallet_address,
-      username: row.username,
-      displayName: row.display_name,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+      username: row.username || row.author_name,
+      displayName: row.display_name || row.author_name || 'Anonymous',
+      avatar: normalizeAvatarUrl(row.avatar_url || row.author_avatar)
     },
+    isLiked: row.is_liked || false,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }));
@@ -506,11 +510,20 @@ router.post('/posts/:id/comments', verifyToken, sanitizeInput, asyncHandler(asyn
     return res.status(400).json({ success: false, error: 'Content is required' });
   }
 
+  // Get author profile data to snapshot into the comment record
+  const profileRes = await query(
+    `SELECT u.wallet_address, p.username, p.display_name, p.avatar_url FROM users u LEFT JOIN profiles p ON u.wallet_address = p.wallet_address WHERE u.id = $1`,
+    [userId]
+  );
+  const profileRow = (profileRes.rows && profileRes.rows[0]) || {};
+  const authorName = profileRow.display_name || profileRow.username || profileRow.wallet_address || null;
+  const authorAvatar = profileRow.avatar_url || null;
+
   const result = await query(
-    `INSERT INTO comments (author_id, post_id, content, parent_comment_id)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO comments (author_id, post_id, content, parent_comment_id, author_name, author_avatar)
+     VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [userId, id, content, parentCommentId || null]
+    [userId, id, content, parentCommentId || null, authorName, authorAvatar]
   );
 
   // Update post comments count
@@ -519,10 +532,26 @@ router.post('/posts/:id/comments', verifyToken, sanitizeInput, asyncHandler(asyn
     [id]
   );
 
+  const inserted = result.rows[0];
+  // Build enriched comment response matching GET endpoint shape
+  const authorObj = {
+    walletAddress: profileRow.wallet_address,
+    username: profileRow.username || profileRow.display_name,
+    displayName: profileRow.display_name || profileRow.username || authorName,
+    avatar: normalizeAvatarUrl(profileRow.avatar_url || authorAvatar)
+  };
   res.status(201).json({
     success: true,
     message: 'Comment added successfully',
-    data: result.rows[0]
+    comment: {
+      id: inserted.id,
+      content: inserted.content,
+      likesCount: inserted.likes_count,
+      parentCommentId: inserted.parent_comment_id,
+      author: authorObj,
+      createdAt: inserted.created_at,
+      updatedAt: inserted.updated_at
+    }
   });
   // Create comment notification for post author
   try {
@@ -759,7 +788,7 @@ router.get('/followers/:walletAddress', optionalAuth, asyncHandler(async (req, r
     walletAddress: row.wallet_address,
     username: row.username,
     displayName: row.display_name,
-    avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
+    avatar: normalizeAvatarUrl(row.avatar_url),
     followedAt: row.followed_at
   }));
 
@@ -796,7 +825,7 @@ router.get('/following/:walletAddress', optionalAuth, asyncHandler(async (req, r
     walletAddress: row.wallet_address,
     username: row.username,
     displayName: row.display_name,
-    avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address),
+    avatar: normalizeAvatarUrl(row.avatar_url),
     followedAt: row.followed_at
   }));
 
@@ -854,7 +883,7 @@ router.get('/feed', verifyToken, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+      avatar: normalizeAvatarUrl(row.avatar_url)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,
@@ -916,7 +945,7 @@ router.get('/trending', optionalAuth, asyncHandler(async (req, res) => {
       walletAddress: row.wallet_address,
       username: row.username,
       displayName: row.display_name,
-      avatar: normalizeAvatarUrl(row.avatar_url, row.wallet_address)
+      avatar: normalizeAvatarUrl(row.avatar_url)
     },
     artwork: row.artwork_id ? {
       id: row.artwork_id,

@@ -7,6 +7,7 @@ import '../services/backend_api_service.dart';
 class CommunityPost {
   final String id;
   final String authorId;
+  final String? authorWallet;
   final String authorName;
   final String? authorAvatar;
   final String? authorUsername;
@@ -26,6 +27,7 @@ class CommunityPost {
   CommunityPost({
     required this.id,
     required this.authorId,
+    this.authorWallet,
     required this.authorName,
     this.authorAvatar,
     this.authorUsername,
@@ -54,10 +56,12 @@ class CommunityPost {
     int? commentCount,
     String? authorAvatar,
     String? authorUsername,
+    String? authorWallet,
   }) {
     return CommunityPost(
       id: id,
       authorId: authorId,
+      authorWallet: authorWallet ?? this.authorWallet,
       authorName: authorName,
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
@@ -113,14 +117,17 @@ class Comment {
     String? authorUsername,
     String? content,
     List<Comment>? replies,
+    String? authorName,
+    String? authorId,
+    String? authorWallet,
   }) {
     return Comment(
       id: id,
-      authorId: authorId,
-      authorName: authorName,
+      authorId: authorId ?? this.authorId,
+      authorName: authorName ?? this.authorName,
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
-      authorWallet: authorWallet,
+      authorWallet: authorWallet ?? this.authorWallet,
       parentCommentId: parentCommentId,
       content: content ?? this.content,
       timestamp: timestamp,

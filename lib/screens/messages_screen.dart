@@ -16,6 +16,7 @@ import '../widgets/avatar_widget.dart';
 import '../widgets/inline_loading.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/event_bus.dart';
+import '../utils/wallet_utils.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -66,9 +67,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final pre = _chatProvider.getPreloadedProfileMapsForConversation(c.id);
             final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
             final names = (pre['names'] as Map<String, String?>?) ?? {};
-            final membersList = (pre['members'] as List<String>? ?? []);
+            final membersList = (pre['members'] as List<dynamic>? ?? const []);
             if (membersList.isNotEmpty) {
-              _convToWalletList[c.id] = List<String>.from(membersList);
+              _setConversationMembers(c.id, membersList);
             }
             // Seed with provider preloaded maps first
             if (avatars.isNotEmpty) {
@@ -85,7 +86,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final convMap = _conversationAvatars[c.id];
             if (convMap == null || convMap.isEmpty) {
               if (membersList.isNotEmpty) {
-                final firstWallet = membersList.first;
+                final firstWallet = _resolveMemberWallet(membersList.first);
                 final cachedUser = UserService.getCachedUser(firstWallet) ?? _chatProvider.getCachedUser(firstWallet);
                 if (cachedUser != null) {
                   // Prefer an explicit profile image from cache; do not fabricate a placeholder here.
@@ -112,9 +113,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final pre = _chatProvider.getPreloadedProfileMapsForConversation(c.id);
             final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
             final names = (pre['names'] as Map<String, String?>?) ?? {};
-            final membersList = (pre['members'] as List<String>? ?? []);
+            final membersList = (pre['members'] as List<dynamic>? ?? const []);
             if (membersList.isNotEmpty) {
-              _convToWalletList[c.id] = List<String>.from(membersList);
+              _setConversationMembers(c.id, membersList);
             }
             if (avatars.isNotEmpty) {
               // For direct conversations choose the avatar associated with the first avatar entry
@@ -162,9 +163,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final pre = _chatProvider.getPreloadedProfileMapsForConversation(c.id);
             final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
             final names = (pre['names'] as Map<String, String?>?) ?? {};
-            final membersList = (pre['members'] as List<String>? ?? []);
+            final membersList = (pre['members'] as List<dynamic>? ?? const []);
             if (membersList.isNotEmpty) {
-              _convToWalletList[c.id] = List<String>.from(membersList);
+              _setConversationMembers(c.id, membersList);
             }
             if (avatars.isNotEmpty) {
               final firstKey = avatars.keys.isNotEmpty ? avatars.keys.first : null;
@@ -178,7 +179,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             }
             if ((_conversationAvatars[c.id] ?? '').isEmpty) {
               if (membersList.isNotEmpty) {
-                final firstWallet = membersList.first;
+                final firstWallet = _resolveMemberWallet(membersList.first);
                 final cached = UserService.getCachedUser(firstWallet) ?? _chatProvider.getCachedUser(firstWallet);
                 if (cached != null) {
                   _storeConversationAvatar(c.id, cached.profileImageUrl, walletHint: cached.id);
@@ -212,9 +213,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
           final pre = _chatProvider.getPreloadedProfileMapsForConversation(c.id);
           final avatars = (pre['avatars'] as Map<String, String?>?) ?? {};
           final names = (pre['names'] as Map<String, String?>?) ?? {};
-          final membersList = (pre['members'] as List<String>? ?? []);
+          final membersList = (pre['members'] as List<dynamic>? ?? const []);
           if (membersList.isNotEmpty) {
-            _convToWalletList[c.id] = List<String>.from(membersList);
+            _setConversationMembers(c.id, membersList);
           }
           if (avatars.isNotEmpty) {
             final firstKey = avatars.keys.isNotEmpty ? avatars.keys.first : null;
@@ -226,9 +227,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
             final firstKey = names.keys.isNotEmpty ? names.keys.first : null;
             if (firstKey != null) _conversationNames[c.id] = names[firstKey] ?? '';
           }
-          if ((_conversationAvatars[c.id] ?? '').isEmpty) {
-            if (membersList.isNotEmpty) {
-              final cachedUser = UserService.getCachedUser(membersList.first) ?? _chatProvider.getCachedUser(membersList.first);
+            if ((_conversationAvatars[c.id] ?? '').isEmpty) {
+              if (membersList.isNotEmpty) {
+                final firstWallet = _resolveMemberWallet(membersList.first);
+                final cachedUser = UserService.getCachedUser(firstWallet) ?? _chatProvider.getCachedUser(firstWallet);
               if (cachedUser != null) {
                 _storeConversationAvatar(c.id, cachedUser.profileImageUrl, walletHint: cachedUser.id);
                 _conversationNames[c.id] = cachedUser.name;
@@ -240,6 +242,38 @@ class _MessagesScreenState extends State<MessagesScreen> {
       }
       if (mounted) setState(() {});
     } catch (_) {}
+  }
+
+  void _setConversationMembers(String conversationId, Iterable<dynamic> members) {
+    final normalized = _normalizeWalletEntries(members);
+    if (normalized.isEmpty) return;
+    _convToWalletList[conversationId] = normalized;
+  }
+
+  List<String> _normalizeWalletEntries(Iterable<dynamic> source) {
+    final seen = <String>{};
+    final normalized = <String>[];
+    for (final entry in source) {
+      final wallet = _resolveMemberWallet(entry);
+      if (wallet.isEmpty) continue;
+      final canonical = WalletUtils.canonical(wallet);
+      if (canonical.isEmpty) continue;
+      if (seen.add(canonical)) normalized.add(wallet);
+    }
+    return normalized;
+  }
+
+  String _resolveMemberWallet(dynamic entry, {String? fallback}) {
+    if (entry == null) return WalletUtils.normalize(fallback);
+    if (entry is String) return WalletUtils.normalize(entry);
+    if (entry is Map<String, dynamic>) {
+      return WalletUtils.resolveFromMap(entry, fallback: fallback);
+    }
+    try {
+      return WalletUtils.normalize(entry.toString());
+    } catch (_) {
+      return WalletUtils.normalize(fallback);
+    }
   }
 
   String? _normalizeAvatarUrl(String? raw) {
@@ -285,7 +319,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
       return true;
     }
     try {
-      if (wallet != null && wallet.isNotEmpty && url == UserService.safeAvatarUrl(wallet)) {
+      final normalizedWallet = WalletUtils.canonical(wallet);
+      if (normalizedWallet.isNotEmpty && url == UserService.safeAvatarUrl(normalizedWallet)) {
         return true;
       }
     } catch (_) {}
@@ -298,20 +333,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
       if (convs.isEmpty) return;
       // Determine wallets to fetch (for one-to-one conversations use other member
       final profile = Provider.of<ProfileProvider>(context, listen: false);
-      final myWallet = (profile.currentUser?.walletAddress ?? '');
+      final myWallet = WalletUtils.normalize(profile.currentUser?.walletAddress);
       final Map<String, List<String>> convToWallet = {};
       final Set<String> wallets = {};
+      final Set<String> walletCanonicals = {};
       final futures = <Future>[];
       // Avoid fetching members for all conversations at once (throttle to avoid rate limits)
       final toFetch = convs.take(25).toList();
       for (final c in toFetch) {
         // fetch members for this conversation
           futures.add(_chatProvider.fetchMembers(c.id).then((mbrs) {
-          final others = (mbrs as List).map((e) => (e['wallet_address'] as String?)?.toString() ?? '').where((w) => w.isNotEmpty && w != myWallet).toList();
+          final others = (mbrs as List)
+              .map((entry) => _resolveMemberWallet(entry))
+              .where((w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet))
+              .toList();
           if (others.isNotEmpty) {
             convToWallet[c.id] = others;
             for (final w in others) {
-              wallets.add(w);
+              final canonical = WalletUtils.canonical(w);
+              if (canonical.isEmpty) continue;
+              if (walletCanonicals.add(canonical)) {
+                wallets.add(w);
+              }
             }
           }
         }).catchError((_) {}));
@@ -328,23 +371,29 @@ class _MessagesScreenState extends State<MessagesScreen> {
       try { EventBus().emitProfilesUpdated(users); } catch (_) {}
       for (final c in convToWallet.keys) {
         final walletsForConv = convToWallet[c]!;
-        _convToWalletList[c] = walletsForConv;
+        _setConversationMembers(c, walletsForConv);
         // For direct conv, find first other participant for avatar; for group, we'll use composite later
           if (walletsForConv.isNotEmpty) {
             for (final wallet in walletsForConv) {
               _hydrateConversationFromCache(c, wallet);
             }
             final wallet = walletsForConv.first;
-            final match = users.where((u) => u.id == wallet).toList();
-            final avatar = match.isNotEmpty ? (match.first.profileImageUrl ?? '') : '';
-            final name = match.isNotEmpty ? match.first.name : '';
+            User? matchedUser;
+            for (final candidate in users) {
+              if (WalletUtils.equals(candidate.id, wallet)) {
+                matchedUser = candidate;
+                break;
+              }
+            }
+            final avatar = matchedUser?.profileImageUrl ?? '';
+            final name = matchedUser?.name ?? '';
             // Only set avatar from a real profileImageUrl. Do not fabricate placeholders here — AvatarWidget will handle safe fallbacks.
             final currentAvatar = _conversationAvatars[c];
             final currentName = _conversationNames[c];
             if ((currentAvatar == null || currentAvatar.isEmpty) && avatar.isNotEmpty) {
               _storeConversationAvatar(c, avatar, walletHint: wallet);
             }
-            final shouldReplaceName = (currentName == null || currentName.isEmpty || currentName == wallet);
+            final shouldReplaceName = (currentName == null || currentName.isEmpty || WalletUtils.equals(currentName, wallet));
             if (shouldReplaceName) {
               _conversationNames[c] = name.isNotEmpty ? name : wallet;
             }
@@ -632,11 +681,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
       final mbrs = await _chatProvider.fetchMembers(conversationId);
       if (!mounted) return;
     
-      final profile = Provider.of<ProfileProvider>(context, listen: false);
-      final myWallet = (profile.currentUser?.walletAddress ?? '');
-      final wallets = (mbrs as List).map((e) => (e['wallet_address'] as String?)?.toString() ?? '').where((w) => w.isNotEmpty && w != myWallet).toList();
-      if (wallets.isEmpty) return;
-      _convToWalletList[conversationId] = wallets;
+        final profile = Provider.of<ProfileProvider>(context, listen: false);
+        final myWallet = WalletUtils.normalize(profile.currentUser?.walletAddress);
+        final wallets = (mbrs as List)
+          .map((entry) => _resolveMemberWallet(entry))
+          .where((w) => w.isNotEmpty && !WalletUtils.equals(w, myWallet))
+          .toList();
+        if (wallets.isEmpty) return;
+        _setConversationMembers(conversationId, wallets);
       for (final wallet in wallets) {
         _hydrateConversationFromCache(conversationId, wallet);
       }
@@ -655,7 +707,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
           if (shouldReplaceAvatar && avatar.isNotEmpty) {
             _storeConversationAvatar(conversationId, avatar, walletHint: cachedUser.id);
           }
-          final shouldReplaceName = (currentName == null || currentName.isEmpty || currentName == cachedUser.id);
+          final shouldReplaceName = (currentName == null || currentName.isEmpty || WalletUtils.equals(currentName, cachedUser.id));
           if (shouldReplaceName) {
             _conversationNames[conversationId] = cachedUser.name.isNotEmpty ? cachedUser.name : cachedUser.id;
           }
@@ -672,7 +724,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             if (shouldReplaceAvatar && avatar.isNotEmpty) {
               _storeConversationAvatar(conversationId, avatar, walletHint: u.id);
             }
-            final shouldReplaceName = (currentName == null || currentName.isEmpty || currentName == u.id);
+            final shouldReplaceName = (currentName == null || currentName.isEmpty || WalletUtils.equals(currentName, u.id));
             if (shouldReplaceName) {
               _conversationNames[conversationId] = u.name.isNotEmpty ? u.name : u.id;
             }
@@ -692,23 +744,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   void _hydrateConversationFromCache(String conversationId, String wallet) {
-    if (wallet.isEmpty) return;
-    final cachedAvatar = _cacheProvider.getAvatar(wallet);
+    final normalizedWallet = WalletUtils.normalize(wallet);
+    if (normalizedWallet.isEmpty) return;
+    final cachedAvatar = _cacheProvider.getAvatar(normalizedWallet);
     if ((cachedAvatar ?? '').isNotEmpty && ((_conversationAvatars[conversationId] ?? '').isEmpty)) {
-      _storeConversationAvatar(conversationId, cachedAvatar, walletHint: wallet);
+      _storeConversationAvatar(conversationId, cachedAvatar, walletHint: normalizedWallet);
     }
-    final cachedName = _cacheProvider.getDisplayName(wallet);
-    if ((cachedName ?? '').isNotEmpty && ((_conversationNames[conversationId] ?? '').isEmpty || _conversationNames[conversationId] == wallet)) {
+    final cachedName = _cacheProvider.getDisplayName(normalizedWallet);
+    if ((cachedName ?? '').isNotEmpty && ((_conversationNames[conversationId] ?? '').isEmpty || WalletUtils.equals(_conversationNames[conversationId], normalizedWallet))) {
       _conversationNames[conversationId] = cachedName;
     }
   }
 
   void _persistWalletProfile(String wallet, {String? avatar, String? displayName}) {
-    if (wallet.isEmpty) return;
+    final normalizedWallet = WalletUtils.normalize(wallet);
+    if (normalizedWallet.isEmpty) return;
     final avatarPayload = <String, String?>{};
     final namePayload = <String, String?>{};
-    if ((avatar ?? '').trim().isNotEmpty) avatarPayload[wallet] = avatar!.trim();
-    if ((displayName ?? '').trim().isNotEmpty) namePayload[wallet] = displayName!.trim();
+    if ((avatar ?? '').trim().isNotEmpty) avatarPayload[normalizedWallet] = avatar!.trim();
+    if ((displayName ?? '').trim().isNotEmpty) namePayload[normalizedWallet] = displayName!.trim();
     if (avatarPayload.isEmpty && namePayload.isEmpty) return;
     unawaited(_cacheProvider.mergeProfiles(
       avatars: avatarPayload.isEmpty ? null : avatarPayload,
@@ -759,16 +813,33 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
               return;
             }
             try {
-                final resp = await _api.search(query: v.trim(), type: 'profiles', limit: 6);
+              final resp = await _api.search(query: v.trim(), type: 'profiles', limit: 6);
               final list = <Map<String, dynamic>>[];
-              if (resp['success'] == true && resp['data'] != null) {
-                for (final d in resp['data']) {
-                  try { list.add(d as Map<String, dynamic>); } catch (_) {}
+              if (resp['success'] == true) {
+                // search may return results in different shapes; handle both
+                if (resp['results'] is Map<String, dynamic>) {
+                  final data = resp['results'] as Map<String, dynamic>;
+                  final profiles = (data['profiles'] as List<dynamic>?) ?? (data['results'] as List<dynamic>?) ?? [];
+                  for (final d in profiles) {
+                    try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                  }
+                } else if (resp['data'] is List) {
+                  for (final d in resp['data']) {
+                    try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                  }
+                } else if (resp['data'] is Map<String, dynamic>) {
+                  final data = resp['data'] as Map<String, dynamic>;
+                  final profiles = (data['profiles'] as List<dynamic>?) ?? [];
+                  for (final d in profiles) {
+                    try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                  }
                 }
               }
               if (!mounted) return;
-              setState(() => _memberSuggestions.clear());
-              setState(() => _memberSuggestions.addAll(list));
+              setState(() {
+                _memberSuggestions.clear();
+                _memberSuggestions.addAll(list);
+              });
             } catch (e) {
               debugPrint('CreateConversationDialog: profile search error: $e');
             }
@@ -779,8 +850,11 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             final display = s['displayName'] ?? s['display_name'] ?? '';
             final avatar = s['avatar'] ?? s['avatar_url'] ?? '';
             final effectiveAvatar = (avatar != null && avatar.toString().isNotEmpty) ? avatar.toString() : null;
-            return ListTile(title: Text(display ?? username), subtitle: Text(username ?? ''), leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: (username ?? '').toString(), radius: 20, allowFabricatedFallback: false, enableProfileNavigation: false), onTap: () {
-              if ((username ?? '').isNotEmpty) setState(() { _memberList.add(username.toString()); _members.clear(); _memberSuggestions.clear(); });
+            // Prefer adding the wallet address when available; otherwise fall back to username
+            final walletAddr = (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])?.toString() ?? '';
+            final addValue = walletAddr.isNotEmpty ? walletAddr : (username ?? '').toString();
+            return ListTile(title: Text(display ?? username), subtitle: Text(walletAddr.isNotEmpty ? walletAddr : (username ?? '')), leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: (walletAddr.isNotEmpty ? walletAddr : (username ?? '')).toString(), radius: 20, allowFabricatedFallback: false, enableProfileNavigation: false), onTap: () {
+              if ((addValue).isNotEmpty) setState(() { _memberList.add(addValue); _members.clear(); _memberSuggestions.clear(); });
             });
           }, itemCount: _memberSuggestions.length)),
           Row(children: [

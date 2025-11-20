@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/user_service.dart';
+import '../utils/wallet_utils.dart';
 
 /// Centralized cache for lightweight profile data (avatars, display names, etc.).
 /// Backed by [SharedPreferences] so multiple screens can reuse previously
@@ -30,6 +32,9 @@ class CacheProvider extends ChangeNotifier {
     _displayNameCache
       ..clear()
       ..addAll(_decodeMap(_prefs?.getString(_displayNameKey)));
+    if (_purgeInvalidAvatarEntries()) {
+      await _persist(_avatarKey, _avatarCache);
+    }
     _initialized = true;
   }
 
@@ -37,16 +42,16 @@ class CacheProvider extends ChangeNotifier {
     if (wallet.trim().isEmpty) return;
     await _ensureReady();
     final key = _normalizeWallet(wallet);
-    if (url == null || url.trim().isEmpty) {
+    final sanitized = _sanitizeAvatar(url);
+    if (sanitized == null) {
       if (_avatarCache.remove(key) != null) {
         await _persist(_avatarKey, _avatarCache);
         notifyListeners();
       }
       return;
     }
-    final candidate = url.trim();
-    if (_avatarCache[key] == candidate) return;
-    _avatarCache[key] = candidate;
+    if (_avatarCache[key] == sanitized) return;
+    _avatarCache[key] = sanitized;
     _prune(_avatarCache);
     await _persist(_avatarKey, _avatarCache);
     notifyListeners();
@@ -81,7 +86,7 @@ class CacheProvider extends ChangeNotifier {
     if (avatars != null && avatars.isNotEmpty) {
       for (final entry in avatars.entries) {
         final wallet = entry.key.trim();
-        final value = entry.value?.trim();
+        final value = _sanitizeAvatar(entry.value);
         if (wallet.isEmpty || value == null || value.isEmpty) continue;
         final key = _normalizeWallet(wallet);
         if (_avatarCache[key] == value) continue;
@@ -132,7 +137,14 @@ class CacheProvider extends ChangeNotifier {
     await initialize();
   }
 
-  String _normalizeWallet(String wallet) => wallet.trim().toLowerCase();
+  String _normalizeWallet(String wallet) => WalletUtils.canonical(wallet);
+
+  String? _sanitizeAvatar(String? url) {
+    final trimmed = url?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    if (UserService.isPlaceholderAvatarUrl(trimmed)) return null;
+    return trimmed;
+  }
 
   void _prune(Map<String, String> map) {
     if (map.length <= _maxEntries) return;
@@ -141,5 +153,20 @@ class CacheProvider extends ChangeNotifier {
     for (final key in keys) {
       map.remove(key);
     }
+  }
+
+  bool _purgeInvalidAvatarEntries() {
+    if (_avatarCache.isEmpty) return false;
+    final toRemove = <String>[];
+    _avatarCache.forEach((key, value) {
+      if (_sanitizeAvatar(value) == null) {
+        toRemove.add(key);
+      }
+    });
+    if (toRemove.isEmpty) return false;
+    for (final key in toRemove) {
+      _avatarCache.remove(key);
+    }
+    return true;
   }
 }

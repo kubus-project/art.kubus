@@ -159,7 +159,7 @@ router.get('/', verifyToken, asyncHandler(async (req, res) => {
 					const walletAddress = ((profile.wallet ?? profile.wallet_address ?? profile.walletAddress) ?? '').toString();
 					if (!walletAddress) return null;
 					const displayName = profile.display_name ?? profile.displayName ?? profile.name ?? walletAddress;
-					const avatarUrl = normalizeAvatarUrl(profile.avatar_url ?? profile.avatarUrl, walletAddress) || null;
+					const avatarUrl = normalizeAvatarUrl(profile.avatar_url ?? profile.avatarUrl) || null;
 					return { wallet: walletAddress, displayName, avatarUrl };
 				})
 				.filter(Boolean);
@@ -171,7 +171,7 @@ router.get('/', verifyToken, asyncHandler(async (req, res) => {
 					counterpartProfile = {
 						wallet: walletAddress,
 						displayName: counterpartRaw.display_name ?? counterpartRaw.displayName ?? walletAddress,
-						avatarUrl: normalizeAvatarUrl(counterpartRaw.avatar_url ?? counterpartRaw.avatarUrl, walletAddress) || null,
+						avatarUrl: normalizeAvatarUrl(counterpartRaw.avatar_url ?? counterpartRaw.avatarUrl) || null,
 					};
 				}
 			}
@@ -182,7 +182,7 @@ router.get('/', verifyToken, asyncHandler(async (req, res) => {
 				: (r.is_group === true
 					? 'Group chat'
 					: (otherProfile?.displayName || memberWallets.find(w => w && w !== wallet) || 'Conversation'));
-			const computedAvatar = normalizeAvatarUrl(r.avatar_url, r.id) || (r.is_group === true ? null : (otherProfile?.avatarUrl || null));
+			const computedAvatar = normalizeAvatarUrl(r.avatar_url) || (r.is_group === true ? null : (otherProfile?.avatarUrl || null));
 			return {
 				id: r.id,
 				title: resolvedTitle,
@@ -339,8 +339,8 @@ router.get('/:conversationId/messages', verifyToken, asyncHandler(async (req, re
 				senderUsername: r.sender_username,
 				sender_display_name: r.sender_display_name,
 				senderDisplayName: r.sender_display_name,
-				sender_avatar: normalizeAvatarUrl(r.sender_avatar, r.sender_wallet),
-				senderAvatar: normalizeAvatarUrl(r.sender_avatar, r.sender_wallet),
+				sender_avatar: normalizeAvatarUrl(r.sender_avatar),
+				senderAvatar: normalizeAvatarUrl(r.sender_avatar),
 				readers_count: parseInt(r.readers_count) || 0,
 				readersCount: parseInt(r.readers_count) || 0,
 				read_by_current: r.read_by_current === true,
@@ -349,7 +349,7 @@ router.get('/:conversationId/messages', verifyToken, asyncHandler(async (req, re
 					wallet_address: reader.wallet_address,
 					read_at: reader.read_at,
 					displayName: reader.display_name,
-					avatar_url: normalizeAvatarUrl(reader.avatar_url, reader.wallet_address)
+					avatar_url: normalizeAvatarUrl(reader.avatar_url)
 				}))
 			};
 		}));
@@ -557,12 +557,42 @@ router.post('/:conversationId/messages', verifyToken, upload.any(), asyncHandler
 			sender_username: r.sender_username || r.senderUsername || null,
 			senderDisplayName: r.senderDisplayName || r.sender_display_name || null,
 			sender_display_name: r.sender_display_name || r.senderDisplayName || null,
-			senderAvatar: normalizeAvatarUrl(r.senderAvatar || r.sender_avatar, r.sender_wallet) || null,
-			sender_avatar: normalizeAvatarUrl(r.senderAvatar || r.sender_avatar, r.sender_wallet) || null
+			senderAvatar: normalizeAvatarUrl(r.senderAvatar || r.sender_avatar) || null,
+			sender_avatar: normalizeAvatarUrl(r.senderAvatar || r.sender_avatar) || null
 		};
 
 		const io = req.app.get('io');
-		if (io) io.to(`conversation:${conversationId}`).emit('message:received', message);
+		if (io) {
+			// Emit to conversation room for real-time message display
+			io.to(`conversation:${conversationId}`).emit('message:received', message);
+			// Also emit to each member's user room for notification badges
+			try {
+				const membersRes = await query(
+					'SELECT wallet_address FROM conversation_members WHERE conversation_id = $1',
+					[conversationId]
+				);
+				for (const m of membersRes.rows) {
+					const memberWallet = m.wallet_address;
+					// Don't send notification to the sender
+					if (memberWallet !== sender) {
+						try {
+														const memberRoom = `user:${memberWallet}`;
+														const memberRoomLower = `user:${memberWallet.toString().toLowerCase()}`;
+														io.to(memberRoom).emit('chat:new-message', message);
+														logger.debug(`Emitted chat:new-message to ${memberRoom}`);
+														if (memberRoomLower !== memberRoom) {
+															try { io.to(memberRoomLower).emit('chat:new-message', message); logger.debug(`Emitted chat:new-message to ${memberRoomLower}`); } catch (_) {}
+														}
+							logger.debug(`Emitted chat:new-message to user:${memberWallet}`);
+						} catch (e) {
+							logger.debug('Failed to emit to user room', memberWallet, e?.message);
+						}
+					}
+				}
+			} catch (e) {
+				logger.debug('Failed to emit message to user rooms', e?.message);
+			}
+		}
 
 		res.status(201).json({ success: true, data: message });
 	} catch (e) {
@@ -630,9 +660,11 @@ router.put('/:conversationId/read', verifyToken, asyncHandler(async (req, res) =
 					for (const m of membersRes.rows) {
 						try {
 							const room = `user:${(m.wallet || '').toString()}`;
+							const roomLower = room.toLowerCase();
 							const payload = { wallet, conversationId, last_read_at: new Date().toISOString() };
 							logger.info(`Emitting conversation:member:read to ${room} payload=${JSON.stringify(payload)}`);
 							io.to(room).emit('conversation:member:read', payload);
+							if (roomLower !== room) { try { io.to(roomLower).emit('conversation:member:read', payload); } catch (_) {} }
 						} catch (e) {}
 					}
 				}
@@ -690,11 +722,14 @@ router.put('/:conversationId/messages/:messageId/read', verifyToken, asyncHandle
 				logger.info(`Emitting message:read to conversation:${conversationId}`);
 				io.to(`conversation:${conversationId}`).emit('message:read', payload);
 
-				// Also emit to each member's user room
+				// Also emit to each member's user room (emit to both canonical and lowercase variants)
 				const membersRes = await query('SELECT wallet_address FROM conversation_members WHERE conversation_id = $1', [conversationId]);
 				for (const m of membersRes.rows) {
 					const room = `user:${m.wallet_address}`;
+					const roomLower = room.toLowerCase();
 					io.to(room).emit('message:read', payload);
+					logger.info(`Emitted message:read to ${room}`);
+					if (roomLower !== room) { try { io.to(roomLower).emit('message:read', payload); logger.info(`Emitted message:read to ${roomLower}`); } catch (_) {} }
 				}
 			}
 		} catch (e) {
@@ -751,7 +786,10 @@ router.post('/:conversationId/messages/:messageId/reactions', verifyToken, async
 			const membersRes = await query('SELECT wallet_address FROM conversation_members WHERE conversation_id = $1', [conversationId]);
 			for (const member of membersRes.rows) {
 				const room = `user:${(member.wallet_address || '').toString()}`;
+				const roomLower = room.toLowerCase();
 				io.to(room).emit('message:reaction', payload);
+				logger.debug(`Emitted message:reaction to ${room}`);
+				if (roomLower !== room) { try { io.to(roomLower).emit('message:reaction', payload); logger.debug(`Emitted message:reaction to ${roomLower}`); } catch (_) {} }
 			}
 		} catch (e) {
 			logger.debug('Failed to emit reaction to user rooms', e?.message);
@@ -797,7 +835,9 @@ router.delete('/:conversationId/messages/:messageId/reactions', verifyToken, asy
 			const membersRes = await query('SELECT wallet_address FROM conversation_members WHERE conversation_id = $1', [conversationId]);
 			for (const member of membersRes.rows) {
 				const room = `user:${(member.wallet_address || '').toString()}`;
+				const roomLower = room.toLowerCase();
 				io.to(room).emit('message:reaction', payload);
+				if (roomLower !== room) { try { io.to(roomLower).emit('message:reaction', payload); } catch (_) {} }
 			}
 		} catch (e) {
 			logger.debug('Failed to emit reaction removal to user rooms', e?.message);
@@ -852,8 +892,8 @@ router.get('/:conversationId/members', verifyToken, asyncHandler(async (req, res
 					last_read_at: r.last_read_at,
 					displayName: r.displayName,
 					username: r.username,
-					avatar_url: normalizeAvatarUrl(r.avatar_url, r.wallet_address) || null,
-					avatar: normalizeAvatarUrl(r.avatar_url, r.wallet_address) || null,
+					avatar_url: normalizeAvatarUrl(r.avatar_url) || null,
+					avatar: normalizeAvatarUrl(r.avatar_url) || null,
 				}));
 
 				res.json({ success: true, count: rows.length, data: rows });
@@ -901,7 +941,12 @@ router.post('/:conversationId/members', verifyToken, asyncHandler(async (req, re
 					const io2 = req.app.get('io');
 					if (io2) {
 						for (const m of members.rows) {
-							try { io2.to(`user:${(m.wallet || '').toString()}`).emit('chat:members-updated', { conversationId, members: members.rows }); } catch (e) {}
+												try {
+													const emitRoom = `user:${(m.wallet || '').toString()}`;
+													const emitRoomLower = emitRoom.toLowerCase();
+													io2.to(emitRoom).emit('chat:members-updated', { conversationId, members: members.rows });
+													if (emitRoomLower !== emitRoom) { try { io2.to(emitRoomLower).emit('chat:members-updated', { conversationId, members: members.rows }); } catch (_) {} }
+												} catch (e) {}
 						}
 					}
 				} catch (e) {}
@@ -909,6 +954,77 @@ router.post('/:conversationId/members', verifyToken, asyncHandler(async (req, re
 	} catch (e) {
 		logger.debug('Add member fallback - DB insert failed', e?.message);
 		res.status(201).json({ success: true, data: [] });
+	}
+}));
+
+// Rename conversation (update title)
+router.patch('/:conversationId/rename', verifyToken, asyncHandler(async (req, res) => {
+	const { conversationId } = req.params;
+	const { title } = req.body || {};
+	const userWallet = req.user?.walletAddress || null;
+
+	if (!userWallet) return res.status(401).json({ success: false, error: 'Unauthorized' });
+	if (!title || typeof title !== 'string' || title.trim().length === 0) {
+		return res.status(400).json({ success: false, error: 'Title is required' });
+	}
+
+	try {
+		// Verify user is a member of the conversation
+		const memberCheck = await query(
+			'SELECT 1 FROM conversation_members WHERE conversation_id = $1 AND wallet_address = $2',
+			[conversationId, userWallet]
+		);
+		if (memberCheck.rows.length === 0) {
+			return res.status(403).json({ success: false, error: 'Not a member of this conversation' });
+		}
+
+		// Update conversation title
+		const result = await query(
+			'UPDATE conversations SET title = $1 WHERE id = $2 RETURNING id, title, created_at, is_group, avatar_url',
+			[title.trim(), conversationId]
+		);
+
+		if (result.rows.length === 0) {
+			return res.status(404).json({ success: false, error: 'Conversation not found' });
+		}
+
+		const updated = result.rows[0];
+
+		// Emit update to all members
+		try {
+			const io = req.app.get('io');
+			if (io) {
+				const membersRes = await query(
+					'SELECT wallet_address FROM conversation_members WHERE conversation_id = $1',
+					[conversationId]
+				);
+				const payload = {
+					conversationId,
+					title: updated.title,
+					updatedBy: userWallet,
+				};
+				for (const m of membersRes.rows) {
+					try {
+												const room = `user:${m.wallet_address}`;
+												const roomLower = `user:${m.wallet_address}`.toLowerCase();
+												io.to(room).emit('chat:conversation-renamed', payload);
+												logger.debug(`Emitted chat:conversation-renamed to ${room}`);
+												if (roomLower !== room) {
+													try { io.to(roomLower).emit('chat:conversation-renamed', payload); logger.debug(`Emitted chat:conversation-renamed to ${roomLower}`); } catch (_) {}
+												}
+					} catch (e) {
+						logger.debug('Failed to emit rename to member', m.wallet_address, e?.message);
+					}
+				}
+			}
+		} catch (e) {
+			logger.debug('Failed to emit conversation rename', e?.message);
+		}
+
+		res.json({ success: true, data: updated });
+	} catch (e) {
+		logger.error('Rename conversation failed', e);
+		res.status(500).json({ success: false, error: 'Failed to rename conversation' });
 	}
 }));
 
@@ -954,7 +1070,12 @@ router.post('/', verifyToken, asyncHandler(async (req, res) => {
 					if (io) {
 						const conversationPayload = { ...conv, members: uniqueMembers, is_group: conv.is_group === true, isGroup: conv.is_group === true };
 						for (const m of uniqueMembers) {
-							try { io.to(`user:${(m || '').toString()}`).emit('chat:new-conversation', conversationPayload); } catch (e) { logger.debug('Failed to emit new conversation to user', m, e?.message); }
+							try {
+								const memberRoom = `user:${(m || '').toString()}`;
+								const memberRoomLower = memberRoom.toLowerCase();
+								io.to(memberRoom).emit('chat:new-conversation', conversationPayload);
+								if (memberRoomLower != memberRoom) { try { io.to(memberRoomLower).emit('chat:new-conversation', conversationPayload); } catch (_) {} }
+							} catch (e) { logger.debug('Failed to emit new conversation to user', m, e?.message); }
 						}
 					}
 				} catch (e) { logger.debug('chat:new-conversation emit failed', e?.message); }
@@ -997,14 +1118,19 @@ router.post('/:conversationId/avatar', verifyToken, upload.single('file'), async
 		try {
 			const io = req.app.get('io');
 			if (io) {
-				const normalized = normalizeAvatarUrl(avatarUrl, conversationId);
+				const normalized = normalizeAvatarUrl(avatarUrl);
 				const payload = { conversationId, avatar: normalized, avatar_url: normalized, displayAvatar: normalized };
 				io.to(`conversation:${conversationId}`).emit('chat:conversation-updated', payload);
 				// Also notify user rooms by looking up members
 				try {
 					const membersRes = await query('SELECT wallet_address AS wallet FROM conversation_members WHERE conversation_id = $1', [conversationId]);
 					for (const m of membersRes.rows) {
-						try { io.to(`user:${(m.wallet || '').toString()}`).emit('chat:conversation-updated', payload); } catch (e) {}
+										try {
+											const mroom = `user:${(m.wallet || '').toString()}`;
+											const mroomLower = mroom.toLowerCase();
+											io.to(mroom).emit('chat:conversation-updated', payload);
+											if (mroomLower !== mroom) { try { io.to(mroomLower).emit('chat:conversation-updated', payload); } catch (_) {} }
+										} catch (e) {}
 					}
 				} catch (e) { logger.debug('Failed to fetch conversation members for avatar emit', e?.message); }
 			}

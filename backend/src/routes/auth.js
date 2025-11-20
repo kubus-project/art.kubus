@@ -9,6 +9,7 @@ const { validate } = require('../middleware/validation');
 const logger = require('../utils/logger');
 const { generateUsername } = require('../utils/usernameGenerator');
 const { query, getClient } = require('../db');
+const { ensureStoredDefaultAvatar, normalizeAvatarUrl } = require('../utils/avatar');
 
 const router = express.Router();
 
@@ -19,6 +20,24 @@ const CHALLENGE_EXPIRY_MS = parseInt(process.env.CHALLENGE_EXPIRY_MS) || 5 * 60 
 
 // Temporary in-memory user storage (replace with database in production)
 const users = new Map();
+
+async function generateAndStoreDefaultAvatar(seed, options = {}) {
+  const normalizedSeed = (seed || '').toString().trim() || `user_${Date.now()}`;
+  try {
+    const storedUrl = await ensureStoredDefaultAvatar(normalizedSeed, {
+      uploadFolder: 'avatars/system',
+      filenamePrefix: options.filenamePrefix || 'identicon'
+    });
+    if (storedUrl) {
+      return storedUrl;
+    }
+  } catch (error) {
+    logger.warn(`Falling back to DiceBear avatar for ${normalizedSeed}: ${error.message}`);
+  }
+  const seedEncoded = encodeURIComponent(normalizedSeed);
+  const dicebearVersion = process.env.DICEBEAR_VERSION || '9.x';
+  return `https://api.dicebear.com/${dicebearVersion}/identicon/png?seed=${seedEncoded}.png`;
+}
 
 /**
  * @route   POST /api/auth/register
@@ -82,9 +101,8 @@ router.post(
     const hashedPassword = null;
 
     // Use DiceBear identicon as the default avatar. Use the username as the seed.
-    const avatar_seed = username || `user${Date.now()}`;
-    const seedEncoded = encodeURIComponent(avatar_seed);
-    const avatarUrl = `https://api.dicebear.com/9.x/identicon/png?seed=${seedEncoded}.png`;
+    const avatarSeed = username || walletAddress || `user${Date.now()}`;
+    const avatarUrl = await generateAndStoreDefaultAvatar(avatarSeed, { filenamePrefix: 'register' });
 
     // Try to persist the user/profile in the database when available; fall back to in-memory map for tests
     let user = null;
@@ -101,7 +119,7 @@ router.post(
           const existingRow = existing.rows[0];
           await client.query('ROLLBACK');
           const profileRes = await client.query('SELECT avatar_url, display_name FROM profiles WHERE wallet_address = $1', [existingRow.wallet_address]);
-          const existingAvatar = profileRes.rows[0] ? profileRes.rows[0].avatar_url : null;
+          const existingAvatar = profileRes.rows[0] ? normalizeAvatarUrl(profileRes.rows[0].avatar_url) : null;
           const existingDisplay = profileRes.rows[0] ? profileRes.rows[0].display_name : null;
           const responseUser = {
             id: existingRow.id,
@@ -280,7 +298,7 @@ router.post(
       if (dbRes.rows.length > 0) {
         const row = dbRes.rows[0];
         const profileRes = await query('SELECT avatar_url, display_name FROM profiles WHERE user_id = $1', [row.id]);
-        const avatarUrl = profileRes.rows[0] ? profileRes.rows[0].avatar_url : null;
+        const avatarUrl = profileRes.rows[0] ? normalizeAvatarUrl(profileRes.rows[0].avatar_url) : null;
         const displayName = profileRes.rows[0] ? profileRes.rows[0].display_name : null;
         user = { id: row.id, walletAddress: row.wallet_address, username: row.username, displayName, role: row.role, avatar_url: avatarUrl };
       } else {
@@ -291,9 +309,8 @@ router.post(
           const genUsername = generateUsername();
           const insertUserRes = await client.query('INSERT INTO users (wallet_address, username, role) VALUES ($1,$2,$3) RETURNING id, wallet_address, username', [walletAddress, genUsername, 'user']);
           const inserted = insertUserRes.rows[0];
-          const avatar_seed = inserted.username || walletAddress;
-          const seedEncoded = encodeURIComponent(avatar_seed);
-          const avatarProxy = `https://api.dicebear.com/9.x/identicon/png?seed=${seedEncoded}.png`;
+          const avatarSeed = inserted.username || walletAddress;
+          const avatarProxy = await generateAndStoreDefaultAvatar(avatarSeed, { filenamePrefix: 'login' });
           // Compute display name
           const partsNew = (inserted.username || '').split('_');
           const nameNew = partsNew[0] || inserted.username || walletAddress;
@@ -316,8 +333,7 @@ router.post(
       if (!user) {
         // Create in-memory user
         const generatedUsername = generateUsername();
-        const seedEncoded = encodeURIComponent(generatedUsername);
-        const avatarProxy = `https://api.dicebear.com/9.x/identicon/png?seed=${seedEncoded}.png`;
+        const avatarProxy = await generateAndStoreDefaultAvatar(generatedUsername, { filenamePrefix: 'login-fallback' });
         // Compute display name for in-memory user
         const partsGen = (generatedUsername || '').split('_');
         const nameGen = partsGen[0] || generatedUsername || walletAddress;

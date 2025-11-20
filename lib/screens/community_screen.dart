@@ -845,8 +845,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             children: [
           Row(
             children: [
-              AvatarWidget(
-                wallet: post.authorId,
+                AvatarWidget(
+                  wallet: post.authorWallet ?? post.authorId,
                 avatarUrl: post.authorAvatar,
                 radius: 20,
                 allowFabricatedFallback: true,
@@ -2318,7 +2318,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         // Avatar (if available) or fallback initial avatar
                         AvatarWidget(
-                          wallet: post.comments[commentIndex].authorId,
+                          wallet: post.comments[commentIndex].authorWallet ?? post.comments[commentIndex].authorId,
                           avatarUrl: post.comments[commentIndex].authorAvatar,
                           radius: 16,
                           allowFabricatedFallback: false,
@@ -2445,7 +2445,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           AvatarWidget(
-                                            wallet: reply.authorId,
+                                            wallet: reply.authorWallet ?? reply.authorId,
                                             avatarUrl: reply.authorAvatar,
                                             radius: 12,
                                             allowFabricatedFallback: false,
@@ -2873,7 +2873,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => _viewUserProfile(post.authorId),
+                          onTap: () => _viewUserProfile(post.authorWallet ?? post.authorId),
                           child: post.authorAvatar != null && post.authorAvatar!.isNotEmpty
                               ? CircleAvatar(
                                   radius: 20,
@@ -2898,7 +2898,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         const SizedBox(width: 12),
                         Expanded(
                           child: GestureDetector(
-                            onTap: () => _viewUserProfile(post.authorId),
+                            onTap: () => _viewUserProfile(post.authorWallet ?? post.authorId),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [

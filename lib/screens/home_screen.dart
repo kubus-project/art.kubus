@@ -869,7 +869,7 @@ class _HomeScreenState extends State<HomeScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Web3 Features',
+                  'Community and Art',
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -890,7 +890,7 @@ class _HomeScreenState extends State<HomeScreen>
                         const Icon(Icons.lock, size: 12, color: Colors.orange),
                         const SizedBox(width: 4),
                         Text(
-                          'Wallet Required',
+                          'Account Required',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             color: Colors.orange,
