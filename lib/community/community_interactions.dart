@@ -220,6 +220,7 @@ class CommunityService {
   }
 
   // Like/Unlike comment
+  // NOTE: UI should do optimistic toggle BEFORE calling this. This function persists and syncs.
   static Future<void> toggleCommentLike(Comment comment, String postId) async {
     if (!AppConfig.enableLiking) return;
 
@@ -229,38 +230,36 @@ class CommunityService {
     final commentKey = '${postId}|${comment.id}';
     final backendApi = BackendApiService();
 
-    final wasLiked = comment.isLiked;
-    final originalCount = comment.likeCount;
+    // Store current state (which UI already toggled) for rollback
+    final currentIsLiked = comment.isLiked;
+    final currentCount = comment.likeCount;
 
-    if (wasLiked) {
-      likedComments.remove(commentKey);
-      comment.likeCount = (comment.likeCount - 1).clamp(0, double.infinity).toInt();
-      comment.isLiked = false;
-    } else {
+    // Persist the current (already-toggled) state
+    if (currentIsLiked) {
       if (!likedComments.contains(commentKey)) likedComments.add(commentKey);
-      comment.likeCount++;
-      comment.isLiked = true;
+    } else {
+      likedComments.remove(commentKey);
     }
 
     await prefs.setStringList(likesKey, likedComments);
 
     try {
-      if (comment.isLiked) {
+      if (currentIsLiked) {
         await backendApi.likeComment(comment.id);
       } else {
         await backendApi.unlikeComment(comment.id);
       }
     } catch (e) {
-      // Roll back state and persistence on failure
+      // Roll back state and persistence on failure - toggle back to opposite of current
+      comment.isLiked = !currentIsLiked;
+      comment.likeCount = currentIsLiked ? currentCount - 1 : currentCount + 1;
+      
       if (comment.isLiked) {
-        comment.likeCount = (comment.likeCount - 1).clamp(0, double.infinity).toInt();
-        likedComments.remove(commentKey);
-      } else {
-        comment.likeCount = originalCount;
         if (!likedComments.contains(commentKey)) likedComments.add(commentKey);
+      } else {
+        likedComments.remove(commentKey);
       }
-      comment.isLiked = wasLiked;
-      comment.likeCount = originalCount;
+      
       await prefs.setStringList(likesKey, likedComments);
       rethrow;
     }
@@ -273,6 +272,9 @@ class CommunityService {
     String authorName, {
     String? currentUserId,
     String? parentCommentId,
+    String? userName,
+    String? authorWallet,
+    String? authorAvatar,
   }) async {
     if (!AppConfig.enableCommenting) throw Exception('Commenting is disabled');
 

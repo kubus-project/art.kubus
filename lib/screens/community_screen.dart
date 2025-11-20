@@ -2321,7 +2321,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           wallet: post.comments[commentIndex].authorWallet ?? post.comments[commentIndex].authorId,
                           avatarUrl: post.comments[commentIndex].authorAvatar,
                           radius: 16,
-                          allowFabricatedFallback: false,
+                          allowFabricatedFallback: true,
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -2448,7 +2448,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                             wallet: reply.authorWallet ?? reply.authorId,
                                             avatarUrl: reply.authorAvatar,
                                             radius: 12,
-                                            allowFabricatedFallback: false,
+                                            allowFabricatedFallback: true,
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
@@ -2668,6 +2668,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   userName,
                                   currentUserId: currentUserId,
                                   parentCommentId: replyToCommentId, // Pass parent comment ID for nesting
+                                  authorWallet: currentUserId,
+                                  authorAvatar: AvatarWidget(wallet:  currentUserId).avatarUrl,
+
                                 );
                                 // Refresh comments from backend to ensure server state (avatars, real ids)
                                 try {
@@ -2747,6 +2750,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 userName,
                                 currentUserId: currentUserId,
                                 parentCommentId: replyToCommentId, // Pass parent comment ID for nesting
+                                authorWallet: currentUserId,
+                                authorAvatar: AvatarWidget(wallet:  currentUserId).avatarUrl,
                               );
                               // Refresh comments to reflect server state
                               try {

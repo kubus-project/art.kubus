@@ -457,37 +457,66 @@ router.get('/posts/:id/comments', optionalAuth, asyncHandler(async (req, res) =>
   const { limit = 50, offset = 0 } = req.query;
 
   const currentUserId = req.user ? req.user.id : null;
+  
+  // Debug: Log the raw query to see what we're actually selecting
+  logger.info(`GET comments - Fetching for post ${id}, currentUserId: ${currentUserId}`);
+  
   const result = await query(
     `SELECT 
       c.id, c.content, c.likes_count, c.created_at, c.updated_at,
-      c.parent_comment_id,
-      u.wallet_address, p.username, p.display_name, p.avatar_url,
+      c.parent_comment_id, c.author_id,
+      u.wallet_address,
+      COALESCE(p.username, u.username) as username,
+      COALESCE(p.display_name, u.username) as display_name,
+      p.avatar_url,
       c.author_name, c.author_avatar
       , (CASE WHEN $4::uuid IS NULL THEN FALSE ELSE EXISTS(SELECT 1 FROM likes WHERE user_id = $4::uuid AND target_type = 'comment' AND target_id = c.id) END) as is_liked
     FROM comments c
     LEFT JOIN users u ON c.author_id = u.id
-    LEFT JOIN profiles p ON u.wallet_address = p.wallet_address
+    LEFT JOIN profiles p ON u.wallet_address = p.wallet_address OR p.user_id = u.id
     WHERE c.post_id = $1
     ORDER BY c.created_at ASC
     LIMIT $2 OFFSET $3`,
     [id, parseInt(limit), parseInt(offset), currentUserId]
   );
+  
+  // Debug: Log first row to see what JOIN returned
+  if (result.rows.length > 0) {
+    const firstRow = result.rows[0];
+    logger.info(`GET comments - First row: author_id=${firstRow.author_id}, u.wallet_address=${firstRow.wallet_address}, display_name=${firstRow.display_name}, author_name=${firstRow.author_name}`);
+  }
 
-  const comments = result.rows.map(row => ({
-    id: row.id,
-    content: row.content,
-    likesCount: row.likes_count,
-    parentCommentId: row.parent_comment_id,
-    author: {
-      walletAddress: row.wallet_address,
-      username: row.username || row.author_name,
-      displayName: row.display_name || row.author_name || 'Anonymous',
-      avatar: normalizeAvatarUrl(row.avatar_url || row.author_avatar)
-    },
-    isLiked: row.is_liked || false,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at
-  }));
+  const comments = result.rows.map(row => {
+    // Prioritize profile data, fallback to snapshotted author data, then defaults
+    const walletAddress = row.wallet_address;
+    const displayName = row.display_name || row.author_name || row.username || 'User';
+    const username = row.username || row.author_name || (walletAddress ? walletAddress.substring(0, 8) : null);
+    let avatar = normalizeAvatarUrl(row.avatar_url || row.author_avatar);
+    
+    // If no avatar, generate a DiceBear fallback URL
+    if (!avatar) {
+      const avatarSeed = walletAddress || username || displayName || row.author_id || 'anonymous';
+      // Return a relative path that will be normalized by the client or use the avatar proxy endpoint
+      avatar = `/api/avatar/${encodeURIComponent(avatarSeed)}?style=identicon&format=png`;
+    }
+    
+    return {
+      id: row.id,
+      content: row.content,
+      likesCount: row.likes_count,
+      parentCommentId: row.parent_comment_id,
+      authorId: row.author_id, // FIXED: was missing, now included
+      author: {
+        walletAddress: walletAddress,
+        username: username,
+        displayName: displayName,
+        avatar: avatar
+      },
+      isLiked: row.is_liked || false,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  });
 
   res.json({
     success: true,
@@ -504,42 +533,88 @@ router.get('/posts/:id/comments', optionalAuth, asyncHandler(async (req, res) =>
 router.post('/posts/:id/comments', verifyToken, sanitizeInput, asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { content, parentCommentId } = req.body;
-  const userId = req.user.id;
+  
+  // Debug: Log entire JWT payload
+  logger.info(`POST comment - JWT payload keys: ${Object.keys(req.user).join(', ')}`);
+  logger.info(`POST comment - JWT payload: ${JSON.stringify(req.user)}`);
+  
+  // Handle both old tokens (only walletAddress) and new tokens (id + walletAddress)
+  const userWalletAddress = req.user.walletAddress || req.user.wallet;
+  let userId = req.user.id;
+  
+  // If no userId but we have wallet, look up user by wallet
+  if (!userId && userWalletAddress) {
+    const userLookup = await query('SELECT id FROM users WHERE wallet_address = $1', [userWalletAddress]);
+    if (userLookup.rows.length > 0) {
+      userId = userLookup.rows[0].id;
+      logger.info(`POST comment - Looked up userId from wallet: ${userId}`);
+    }
+  }
 
   if (!content || content.trim().length === 0) {
     return res.status(400).json({ success: false, error: 'Content is required' });
   }
 
   // Get author profile data to snapshot into the comment record
+  // Query both users and profiles tables, ensuring we get user_id from profiles if it exists
   const profileRes = await query(
-    `SELECT u.wallet_address, p.username, p.display_name, p.avatar_url FROM users u LEFT JOIN profiles p ON u.wallet_address = p.wallet_address WHERE u.id = $1`,
+    `SELECT 
+      u.id as user_id,
+      u.wallet_address,
+      COALESCE(p.username, u.username) as username,
+      COALESCE(p.display_name, u.username) as display_name,
+      p.avatar_url
+    FROM users u 
+    LEFT JOIN profiles p ON u.wallet_address = p.wallet_address OR p.user_id = u.id
+    WHERE u.id = $1`,
     [userId]
   );
   const profileRow = (profileRes.rows && profileRes.rows[0]) || {};
-  const authorName = profileRow.display_name || profileRow.username || profileRow.wallet_address || null;
+  
+  // Debug logging
+  logger.info(`POST comment - userId: ${userId}, JWT wallet: ${userWalletAddress}`);
+  logger.info(`POST comment - DB data: wallet=${profileRow.wallet_address}, username=${profileRow.username}, displayName=${profileRow.display_name}, avatar=${profileRow.avatar_url}`);
+  
+  // Use wallet from JWT if database doesn't have it
+  const walletAddress = profileRow.wallet_address || userWalletAddress;
+  const displayName = profileRow.display_name || profileRow.username || (walletAddress ? walletAddress.substring(0, 8) : 'User');
+  const username = profileRow.username || profileRow.display_name || (walletAddress ? walletAddress.substring(0, 8) : null);
   const authorAvatar = profileRow.avatar_url || null;
+  
+  logger.info(`POST comment - Final values: wallet=${walletAddress}, displayName=${displayName}, username=${username}, avatar=${authorAvatar}`);
 
-  const result = await query(
+  logger.info(`POST comment - About to INSERT with author_id=${userId} (type: ${typeof userId})`);
+  const insertResult = await query(
     `INSERT INTO comments (author_id, post_id, content, parent_comment_id, author_name, author_avatar)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING *`,
-    [userId, id, content, parentCommentId || null, authorName, authorAvatar]
+    [userId, id, content, parentCommentId || null, displayName, authorAvatar]
   );
+  
+  const inserted = insertResult.rows[0];
+  logger.info(`POST comment - INSERT returned: id=${inserted.id}, author_id=${inserted.author_id}, author_name=${inserted.author_name}`);
 
   // Update post comments count
   await query(
     `UPDATE community_posts SET comments_count = comments_count + 1 WHERE id = $1`,
     [id]
   );
-
-  const inserted = result.rows[0];
+  
+  // Generate avatar fallback if none exists
+  let finalAvatar = normalizeAvatarUrl(authorAvatar);
+  if (!finalAvatar) {
+    const avatarSeed = walletAddress || username || displayName || userId || 'anonymous';
+    finalAvatar = `/api/avatar/${encodeURIComponent(avatarSeed)}?style=identicon&format=png`;
+  }
+  
   // Build enriched comment response matching GET endpoint shape
   const authorObj = {
-    walletAddress: profileRow.wallet_address,
-    username: profileRow.username || profileRow.display_name,
-    displayName: profileRow.display_name || profileRow.username || authorName,
-    avatar: normalizeAvatarUrl(profileRow.avatar_url || authorAvatar)
+    walletAddress: walletAddress,
+    username: username,
+    displayName: displayName,
+    avatar: finalAvatar
   };
+  
   res.status(201).json({
     success: true,
     message: 'Comment added successfully',
@@ -548,17 +623,19 @@ router.post('/posts/:id/comments', verifyToken, sanitizeInput, asyncHandler(asyn
       content: inserted.content,
       likesCount: inserted.likes_count,
       parentCommentId: inserted.parent_comment_id,
+      authorId: userId,
       author: authorObj,
       createdAt: inserted.created_at,
       updatedAt: inserted.updated_at
     }
   });
+  
   // Create comment notification for post author
   try {
     const postOwner = await query('SELECT wallet_address FROM community_posts WHERE id = $1', [id]);
     if (postOwner.rows.length > 0) {
       const targetWallet = postOwner.rows[0].wallet_address;
-      const senderWallet = req.user.walletAddress;
+      const senderWallet = walletAddress; // Use the wallet we resolved above
       if (targetWallet && targetWallet.toLowerCase() !== (senderWallet || '').toLowerCase()) {
         await notifications.createCommentNotification(targetWallet, senderWallet, id, content, req.app.get('io'));
       }
