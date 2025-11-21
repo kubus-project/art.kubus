@@ -1,4 +1,4 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -15,7 +15,7 @@ class SocketService {
   factory SocketService() => _instance;
   SocketService._internal();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
   final List<NotificationCallback> _notificationListeners = [];
   final List<NotificationCallback> _messageListeners = [];
   final List<NotificationCallback> _messageReadListeners = [];
@@ -26,6 +26,8 @@ class SocketService {
   final StreamController<Map<String, dynamic>> _messageReadController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _conversationMemberReadController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _notificationController = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _postController = StreamController<Map<String, dynamic>>.broadcast();
+  final List<NotificationCallback> _postListeners = [];
   String? _currentSubscribedWallet;
   final Set<String> _subscribedConversations = {};
   bool _notificationHandlerRegistered = false;
@@ -102,6 +104,12 @@ class SocketService {
   Future<bool> connect([String? baseUrl]) async {
     try {
       final api = BackendApiService();
+      // Ensure auth token is loaded so we can supply it to the socket handshake
+      try {
+        await api.ensureAuthLoaded();
+      } catch (e) {
+        debugPrint('SocketService: ensureAuthLoaded failed: $e');
+      }
       final resolvedBase = (baseUrl ?? api.baseUrl).replaceAll(RegExp(r'/+$'), '');
       if (_socket != null && _socket!.connected) return true;
 
@@ -114,7 +122,7 @@ class SocketService {
         'extraHeaders': token != null ? {'Authorization': 'Bearer $token'} : {},
       };
 
-      _socket = IO.io(resolvedBase, options);
+      _socket = io.io(resolvedBase, options);
 
       final completer = Completer<bool>();
 
@@ -169,6 +177,17 @@ class SocketService {
   Stream<Map<String, dynamic>> get onMessageRead => _messageReadController.stream;
   Stream<Map<String, dynamic>> get onConversationMemberRead => _conversationMemberReadController.stream;
   Stream<Map<String, dynamic>> get onNotification => _notificationController.stream;
+  Stream<Map<String, dynamic>> get onPostCreated => _postController.stream;
+
+  void addPostListener(NotificationCallback cb) {
+    if (!_postListeners.contains(cb)) _postListeners.add(cb);
+    _log('addPostListener: total=${_postListeners.length}');
+  }
+
+  void removePostListener(NotificationCallback cb) {
+    _postListeners.remove(cb);
+    _log('removePostListener: total=${_postListeners.length}');
+  }
 
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
   Future<bool> connectAndSubscribe(String baseUrl, String walletAddress, {Duration timeout = const Duration(seconds: 6)}) async {
@@ -251,12 +270,12 @@ class SocketService {
     _currentSubscribedWallet = roomWallet;
     // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
-    debugPrint('SocketService: emitted subscribe:user for ${_currentSubscribedWallet}');
+    debugPrint('SocketService: emitted subscribe:user for $_currentSubscribedWallet');
     // Also emit subscribe for lowercase variant for compatibility with servers that track rooms in lower-case
     try {
       final lower = _currentSubscribedWallet!.toLowerCase();
       _socket!.emit('subscribe:user', lower);
-      debugPrint('SocketService: emitted subscribe:user for ${lower} (lowercase)');
+      debugPrint('SocketService: emitted subscribe:user for $lower (lowercase)');
     } catch (_) {}
 
     // Register handlers only once
@@ -329,6 +348,21 @@ class SocketService {
         }
       } catch (e) {
         debugPrint('SocketService: notification:new handler error: $e');
+      }
+    });
+    // Feed updates: new posts or reposts
+    _socket!.on('community:new_post', (data) {
+      try {
+        debugPrint('SocketService: Received community:new_post: $data');
+        final mapped = mapFromPayload(data);
+        if (mapped != null) {
+          for (final l in _postListeners) {
+            try { l(mapped); } catch (e) { debugPrint('SocketService: post listener error: $e'); }
+          }
+          try { _postController.add(mapped); _log('community:new_post -> controller.added'); } catch (e) { debugPrint('SocketService: post controller add error: $e'); }
+        }
+      } catch (e) {
+        debugPrint('SocketService: community:new_post handler error: $e');
       }
     });
     // Also handle read-all events

@@ -85,6 +85,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               child: Column(
                 children: [
                   _buildInstitutionHeader(),
+                  _buildInstitutionApplicationCard(),
                   _buildNavigationTabs(),
                 ],
               ),
@@ -147,6 +148,82 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstitutionApplicationCard() {
+    final surface = Theme.of(context).colorScheme.surface;
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.domain_add_rounded, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Institution application',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Submit your organization for DAO review and unlock institutional tooling.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showInstitutionApplicationModal,
+              icon: Icon(Icons.send_rounded, color: accent),
+              label: Text(
+                'Apply for review',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: accent,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: accent.withValues(alpha: 0.4)),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
         ],
@@ -234,6 +311,146 @@ class _InstitutionHubState extends State<InstitutionHub> {
         ),
       ),
     );
+  }
+
+  void _showInstitutionApplicationModal() {
+    final organizationController = TextEditingController();
+    final contactController = TextEditingController();
+    final missionController = TextEditingController();
+    final focusController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final scaffold = ScaffoldMessenger.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.only(bottom: viewInsets),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Institution application',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Share your mission, programming focus, and how you plan to collaborate with the DAO.',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: organizationController,
+                    decoration: const InputDecoration(
+                      labelText: 'Organization name',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().isEmpty)
+                        ? 'Please provide your organization name'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: contactController,
+                    decoration: const InputDecoration(
+                      labelText: 'Website or contact email',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().isEmpty)
+                        ? 'Share a website or contact email'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: focusController,
+                    decoration: const InputDecoration(
+                      labelText: 'Curation focus',
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().isEmpty)
+                        ? 'Let us know your programming focus'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: missionController,
+                    maxLines: 4,
+                    decoration: const InputDecoration(
+                      labelText: 'Mission and goals',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().length < 20)
+                        ? 'Describe your mission in at least 20 characters'
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (!formKey.currentState!.validate()) return;
+                        Navigator.pop(sheetContext);
+                        scaffold.showSnackBar(
+                          const SnackBar(
+                            content: Text('Application submitted to DAO reviewers.'),
+                            duration: Duration(seconds: 3),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Submit application',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      organizationController.dispose();
+      contactController.dispose();
+      missionController.dispose();
+      focusController.dispose();
+    });
   }
 }
 

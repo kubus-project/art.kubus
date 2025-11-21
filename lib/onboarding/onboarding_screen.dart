@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/gradient_icon_card.dart';
 import 'permissions_screen.dart';
 import '../main_app.dart';
 
@@ -25,7 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       description: 'Transform your surroundings with immersive AR artworks and join a global community of digital artists.',
       iconData: Icons.view_in_ar,
       gradient: const LinearGradient(
-        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        colors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -58,7 +59,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       description: 'Engage with a vibrant community of AR creators. Share ideas, collaborate on projects, and participate in exclusive events.',
       iconData: Icons.people,
       gradient: const LinearGradient(
-        colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)],
+        colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -189,27 +190,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 child: Column(
                   children: [
                     SizedBox(height: isVerySmallScreen ? 20 : effectiveSmallScreen ? 40 : 60),
-                    // Icon with gradient background
-                    Container(
+                    // Icon with gradient background (shared widget)
+                    GradientIconCard(
+                      start: page.gradient.colors.first,
+                      end: page.gradient.colors.length > 1 ? page.gradient.colors[1] : page.gradient.colors.first,
+                      icon: page.iconData,
                       width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
                       height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                      decoration: BoxDecoration(
-                        gradient: page.gradient,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: page.gradient.colors.first.withValues(alpha: 0.3),
-                            blurRadius: 30,
-                            spreadRadius: 0,
-                            offset: const Offset(0, 15),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        page.iconData,
-                        size: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
-                        color: Colors.white,
-                      ),
+                      radius: 20,
+                      iconSize: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
                     ),
                     SizedBox(height: isVerySmallScreen ? 30 : effectiveSmallScreen ? 40 : 48),
                     // Title

@@ -26,6 +26,8 @@ import '../services/achievement_service.dart';
 import '../models/ar_marker.dart';
 import 'art_detail_screen.dart';
 import 'ar_screen.dart';
+import 'user_profile_screen.dart';
+import '../widgets/avatar_widget.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -67,6 +69,9 @@ class _MapScreenState extends State<MapScreen>
   String _sortBy = 'distance'; // distance, rarity, name, newest
   bool _showListView = false;
   final DraggableScrollableController _sheetController = DraggableScrollableController();
+  // Profile search results for search bar suggestions
+  List<Map<String, dynamic>> _profileSearchResults = [];
+  bool _isProfileSearchLoading = false;
   
   // Discovery and Progress
   bool _isDiscoveryExpanded = false;
@@ -1039,6 +1044,7 @@ class _MapScreenState extends State<MapScreen>
                       _searchQuery = value;
                       _isSearching = value.isNotEmpty;
                     });
+                    if (value.trim().isNotEmpty) _performProfileSearch(value.trim());
                   },
                   onTap: () {
                     setState(() {
@@ -1091,7 +1097,11 @@ class _MapScreenState extends State<MapScreen>
       top: MediaQuery.of(context).padding.top + 80,
       left: 16,
       right: 16,
-      child: SizedBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         height: 40,
         child: ListView(
           scrollDirection: Axis.horizontal,
@@ -1122,7 +1132,88 @@ class _MapScreenState extends State<MapScreen>
           ],
         ),
       ),
+          // Inline profile suggestions under search bar (constrained height)
+          if (_isSearching && _searchQuery.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: SizedBox(
+                height: 200,
+                child: _isProfileSearchLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _profileSearchResults.length,
+                        itemBuilder: (ctx, idx) {
+                          final s = _profileSearchResults[idx];
+                          final username = s['username'] ?? s['wallet_address'] ?? s['wallet'];
+                          final display = s['displayName'] ?? s['display_name'] ?? '';
+                          final avatar = s['avatar'] ?? s['avatar_url'] ?? s['profileImageUrl'] ?? '';
+                          final walletAddr = (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])?.toString() ?? '';
+                          final title = (display ?? username)?.toString();
+                          final subtitle = walletAddr.isNotEmpty ? walletAddr : (username ?? '').toString();
+                          return ListTile(
+                            leading: AvatarWidget(avatarUrl: (avatar != null && avatar.toString().isNotEmpty) ? avatar.toString() : null, wallet: subtitle, radius: 18, allowFabricatedFallback: false),
+                            title: Text(title ?? ''),
+                            subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+                            onTap: () {
+                              if (walletAddr.isNotEmpty) {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileScreen(userId: walletAddr)));
+                              }
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _performProfileSearch(String q) async {
+    try {
+      setState(() => _isProfileSearchLoading = true);
+      final resp = await BackendApiService().search(query: q, type: 'profiles', limit: 8);
+      final list = <Map<String, dynamic>>[];
+      if (resp['success'] == true) {
+        if (resp['results'] is Map<String, dynamic>) {
+          final data = resp['results'] as Map<String, dynamic>;
+          final profiles = (data['profiles'] as List<dynamic>?) ?? (data['results'] as List<dynamic>?) ?? [];
+          for (final d in profiles) {
+            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+          }
+        } else if (resp['data'] is List) {
+          for (final d in resp['data']) {
+            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+          }
+        } else if (resp['data'] is Map<String, dynamic>) {
+          final data = resp['data'] as Map<String, dynamic>;
+          final profiles = (data['profiles'] as List<dynamic>?) ?? [];
+          for (final d in profiles) {
+            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+          }
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _profileSearchResults = list;
+        _isProfileSearchLoading = false;
+      });
+    } catch (e) {
+      debugPrint('MapScreen profile search failed: $e');
+      if (mounted) setState(() => _isProfileSearchLoading = false);
+    }
   }
 
   Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {

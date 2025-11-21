@@ -1606,7 +1606,7 @@ class _HomeScreenState extends State<HomeScreen>
         // Switch to map tab in main app
         DefaultTabController.of(context).animateTo(0);
         break;
-      case 'Community':
+      case 'Connect':
         navigationProvider.trackScreenVisit('community');
         // Switch to community tab in main app
         DefaultTabController.of(context).animateTo(3);

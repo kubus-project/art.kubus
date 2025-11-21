@@ -17,7 +17,7 @@ class StorageConfig {
   ];
 
   // Default HTTP backend
-  static const String defaultHttpBackend = AppConfig.isDevelopment ? 'http://localhost:3000/api/avatar' : 'https://api.kubus.site/api/avatar';
+  static const String defaultHttpBackend = AppConfig.baseApiUrl;
   
   // Custom backend URL (can be overridden)
   static String? customHttpBackend;

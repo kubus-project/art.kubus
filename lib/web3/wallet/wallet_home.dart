@@ -12,12 +12,13 @@ import 'nft_gallery.dart';
 import 'token_swap.dart';
 import 'send_token_screen.dart';
 import 'receive_token_screen.dart';
+import '../../widgets/empty_state_card.dart';
 
 class WalletHome extends StatefulWidget {
   const WalletHome({super.key});
 
   @override
-  _WalletHomeState createState() => _WalletHomeState();
+ State<WalletHome> createState() => _WalletHomeState();
 }
 
 class _WalletHomeState extends State<WalletHome> {
@@ -88,58 +89,23 @@ class _WalletHomeState extends State<WalletHome> {
               ],
             ),
             body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.account_balance_wallet,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.38),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No wallet connected',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Connect a wallet to get started',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () async {
-                      // Navigate to wallet connection screen
-                      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-                      if (!web3Provider.isConnected) {
-                        // Navigate to ConnectWallet screen
-                        Navigator.pushReplacementNamed(context, '/connect_wallet');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Wallet already connected!'),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Connect Wallet'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                child: EmptyStateCard(
+                  icon: Icons.account_balance_wallet_outlined,
+                  title: 'No wallet connected',
+                  description: 'Connect a wallet to get started',
+                  showAction: true,
+                  actionLabel: 'Connect Wallet',
+                  onAction: () {
+                    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+                    if (!web3Provider.isConnected) {
+                      Navigator.pushReplacementNamed(context, '/connect_wallet');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wallet already connected!')));
+                    }
+                  },
+                ),
               ),
             ),
           );
@@ -615,31 +581,15 @@ class _WalletHomeState extends State<WalletHome> {
         ),
         SizedBox(height: isSmallScreen ? 12 : 16),
         if (recentTransactions.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.history,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    size: 48,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No transactions yet',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: EmptyStateCard(
+              icon: Icons.history,
+              title: 'No transactions yet',
+              description: 'Your recent transactions will appear here',
+              showAction: true,
+              actionLabel: 'Transaction History',
+              onAction: () => _showComingSoon('Transaction History'),
             ),
           )
         else

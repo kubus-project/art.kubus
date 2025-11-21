@@ -6,6 +6,7 @@ import '../widgets/inline_loading.dart';
 import '../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/gradient_icon_card.dart';
 import '../main_app.dart';
 
 class PermissionsScreen extends StatefulWidget {
@@ -290,49 +291,37 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               child: Column(
                 children: [
                   SizedBox(height: isVerySmallScreen ? 20 : effectiveSmallScreen ? 30 : 40),
-                  // Icon with gradient background
-                  Container(
-                    width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                    height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
-                    decoration: BoxDecoration(
-                      gradient: page.gradient,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: page.gradient.colors.first.withValues(alpha: 0.3),
-                          blurRadius: 30,
-                          spreadRadius: 0,
-                          offset: const Offset(0, 15),
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(
-                          page.iconData,
-                          size: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
-                          color: Colors.white,
-                        ),
-                        if (isGranted)
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.check,
-                                size: 16,
-                                color: Colors.white,
-                              ),
+                  // Icon with gradient background (shared widget) + granted badge
+                  Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      GradientIconCard(
+                        start: page.gradient.colors.first,
+                        end: page.gradient.colors.length > 1 ? page.gradient.colors[1] : page.gradient.colors.first,
+                        icon: page.iconData,
+                        width: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
+                        height: isVerySmallScreen ? 100 : effectiveSmallScreen ? 110 : 120,
+                        radius: 20,
+                        iconSize: isVerySmallScreen ? 50 : effectiveSmallScreen ? 55 : 60,
+                      ),
+                      if (isGranted)
+                        Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.check,
+                              size: 16,
+                              color: Colors.white,
                             ),
                           ),
-                      ],
-                    ),
+                        ),
+                    ],
                   ),
                   SizedBox(height: isVerySmallScreen ? 24 : effectiveSmallScreen ? 32 : 40),
                   // Title

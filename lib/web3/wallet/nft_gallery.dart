@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import '../../widgets/app_loading.dart';
 import '../../services/backend_api_service.dart';
+import '../../widgets/empty_state_card.dart';
 
 class NFTGallery extends StatefulWidget {
   const NFTGallery({super.key});
@@ -126,33 +127,14 @@ class _NFTGalleryState extends State<NFTGallery> {
 
     if (_nfts.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.diamond_outlined,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No NFTs yet',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Mint some NFTs from artworks\nto see them here',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+          child: EmptyStateCard(
+            icon: Icons.diamond_outlined,
+            title: 'No NFTs yet',
+            description: 'Mint some NFTs from artworks to see them here',
+            showAction: false,
+          ),
         ),
       );
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../widgets/inline_loading.dart';
+import '../widgets/topbar_icon.dart';
 import '../providers/themeprovider.dart';
 
 class AdvancedStatsScreen extends StatefulWidget {
@@ -53,13 +54,15 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            onPressed: () => _showExportDialog(),
+          TopBarIcon(
             icon: const Icon(Icons.download),
+            onPressed: () => _showExportDialog(),
+            tooltip: 'Export',
           ),
-          IconButton(
-            onPressed: () => _showShareDialog(),
+          TopBarIcon(
             icon: const Icon(Icons.share),
+            onPressed: () => _showShareDialog(),
+            tooltip: 'Share',
           ),
         ],
       ),

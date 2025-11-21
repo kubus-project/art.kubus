@@ -324,19 +324,19 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
-  /// Load initial artworks (mock data for now)
+  /// Load initial artworks
   Future<void> loadArtworks() async {
-    if (!_useMockData) return; // Only load if mock data is enabled
-    
+
     _setLoading('load_artworks', true);
+    
     try {
-      // Mock data - replace with actual API calls
-      final mockArtworks = _generateMockArtworks();
+      // Load from API calls
+      final artworks = _loadArtwork();
       _artworks.clear();
-      _artworks.addAll(mockArtworks);
+      _artworks.addAll(artworks as List<Artwork>);
       
       // Load some mock comments
-      _loadMockComments();
+      _loadArtworkComments();
       
       notifyListeners();
       await _simulateApiDelay();
@@ -365,153 +365,6 @@ class ArtworkProvider extends ChangeNotifier {
 
   Future<void> _simulateApiDelay() async {
     await Future.delayed(const Duration(milliseconds: 500));
-  }
-
-  List<Artwork> _generateMockArtworks() {
-    return [
-      Artwork(
-        id: '1',
-        title: 'Digital Sculpture #1',
-        artist: 'CryptoArtist',
-        description: 'An interactive digital sculpture that responds to touch and sound.',
-        position: const LatLng(46.0569, 14.5058),
-        rarity: ArtworkRarity.rare,
-        status: ArtworkStatus.undiscovered,
-        arEnabled: true,
-        rewards: 150,
-        createdAt: DateTime.now().subtract(const Duration(days: 30)),
-        likesCount: 234,
-        commentsCount: 12,
-        viewsCount: 1500,
-        discoveryCount: 8,
-        tags: ['digital', 'sculpture', 'interactive'],
-        category: 'AR Sculpture',
-        averageRating: 4.2,
-        ratingsCount: 15,
-      ),
-      Artwork(
-        id: '2',
-        title: 'Neon Dreams',
-        artist: 'VirtualVisionary',
-        description: 'A mesmerizing neon light installation that pulses with the city\'s rhythm.',
-        position: const LatLng(46.0469, 14.5158),
-        rarity: ArtworkRarity.epic,
-        status: ArtworkStatus.discovered,
-        arEnabled: true,
-        rewards: 300,
-        createdAt: DateTime.now().subtract(const Duration(days: 45)),
-        discoveredAt: DateTime.now().subtract(const Duration(days: 5)),
-        discoveryUserId: 'user123',
-        likesCount: 567,
-        commentsCount: 34,
-        viewsCount: 3200,
-        discoveryCount: 23,
-        isLikedByCurrentUser: true,
-        tags: ['neon', 'light', 'installation'],
-        category: 'Interactive Art',
-        averageRating: 4.7,
-        ratingsCount: 28,
-      ),
-      Artwork(
-        id: '3',
-        title: 'Quantum Canvas',
-        artist: 'PixelPioneer',
-        description: 'A constantly evolving digital painting that changes based on quantum data.',
-        position: const LatLng(46.0469, 14.5038),
-        rarity: ArtworkRarity.common,
-        status: ArtworkStatus.undiscovered,
-        arEnabled: false,
-        rewards: 75,
-        createdAt: DateTime.now().subtract(const Duration(days: 60)),
-        likesCount: 123,
-        commentsCount: 21,
-        viewsCount: 890,
-        discoveryCount: 12,
-        tags: ['digital', 'painting', 'quantum'],
-        category: 'Digital Painting',
-        averageRating: 4.0,
-        ratingsCount: 31,
-      ),
-      Artwork(
-        id: '4',
-        title: 'Holographic Garden',
-        artist: 'NatureCode',
-        description: 'Experience a holographic garden that blooms as you explore.',
-        position: const LatLng(46.0599, 14.5058),
-        rarity: ArtworkRarity.legendary,
-        status: ArtworkStatus.undiscovered,
-        arEnabled: true,
-        rewards: 500,
-        createdAt: DateTime.now().subtract(const Duration(days: 20)),
-        likesCount: 789,
-        commentsCount: 45,
-        viewsCount: 4500,
-        discoveryCount: 5,
-        tags: ['holographic', 'nature', 'immersive'],
-        category: 'AR Experience',
-        averageRating: 4.9,
-        ratingsCount: 67,
-      ),
-      Artwork(
-        id: '5',
-        title: 'Sound Waves',
-        artist: 'AudioVisual',
-        description: 'Visualize sound as colorful waves that dance around you.',
-        position: const LatLng(46.0579, 14.5078),
-        rarity: ArtworkRarity.rare,
-        status: ArtworkStatus.discovered,
-        arEnabled: true,
-        rewards: 200,
-        createdAt: DateTime.now().subtract(const Duration(days: 35)),
-        discoveredAt: DateTime.now().subtract(const Duration(days: 10)),
-        discoveryUserId: 'user123',
-        likesCount: 456,
-        commentsCount: 28,
-        viewsCount: 2100,
-        discoveryCount: 15,
-        isLikedByCurrentUser: false,
-        tags: ['audio', 'visual', 'interactive'],
-        category: 'Interactive Art',
-        averageRating: 4.5,
-        ratingsCount: 42,
-      ),
-    ];
-  }
-
-  void _loadMockComments() {
-    _comments['1'] = [
-      ArtworkComment(
-        id: 'c1',
-        artworkId: '1',
-        userId: 'user456',
-        userName: 'Sarah Johnson',
-        content: 'This is absolutely beautiful! The way technology and nature blend together is mesmerizing.',
-        createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-        likesCount: 5,
-      ),
-      ArtworkComment(
-        id: 'c2',
-        artworkId: '1',
-        userId: 'user789',
-        userName: 'Mike Wilson',
-        content: 'Love the AR integration! Really makes the piece come alive.',
-        createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-        likesCount: 3,
-        isLikedByCurrentUser: true,
-      ),
-    ];
-
-    _comments['2'] = [
-      ArtworkComment(
-        id: 'c3',
-        artworkId: '2',
-        userId: 'user101',
-        userName: 'Emma Davis',
-        content: 'The colors are so vibrant! This brightens up the whole street.',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-        likesCount: 8,
-      ),
-    ];
   }
 
   // ===========================================
@@ -558,4 +411,12 @@ class ArtworkProvider extends ChangeNotifier {
     // In production: Call BackendApiService().likeComment(artworkId, commentId, isLiked)
     await Future.delayed(const Duration(milliseconds: 50));
   }
+}
+
+void _loadArtworkComments() {
+  // Placeholder to load some mock comments for artworks
+}
+  // In production, this would fetch comments from backend API
+void _loadArtwork() {
+  // Placeholder to load some mock comments for artworks
 }

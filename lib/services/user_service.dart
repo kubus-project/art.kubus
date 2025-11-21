@@ -35,6 +35,7 @@ class UserService {
       postsCount: 42,
       isFollowing: false,
       isVerified: true,
+      isArtist: true,
       joinedDate: 'Joined March 2024',
       achievementProgress: [
         AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
@@ -53,6 +54,7 @@ class UserService {
       postsCount: 67,
       isFollowing: false,
       isVerified: false,
+      isArtist: true,
       joinedDate: 'Joined January 2024',
       achievementProgress: [
         AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
@@ -70,6 +72,7 @@ class UserService {
       postsCount: 28,
       isFollowing: false,
       isVerified: true,
+      isArtist: true,
       joinedDate: 'Joined February 2024',
       achievementProgress: [
         AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
@@ -88,6 +91,7 @@ class UserService {
       postsCount: 91,
       isFollowing: false,
       isVerified: false,
+      isArtist: false,
       joinedDate: 'Joined April 2024',
       achievementProgress: [
         AchievementProgress(achievementId: 'first_ar_visit', currentProgress: 1, isCompleted: true),
@@ -128,6 +132,27 @@ class UserService {
 
       final followingList = await getFollowingUsers();
       final isFollowing = followingList.contains(userId);
+      final isArtist = (profile['isArtist'] == true) || (profile['is_artist'] == true);
+      final isInstitution = (profile['isInstitution'] == true) || (profile['is_institution'] == true);
+      final resolvedWallet = (profile['walletAddress'] ?? userId).toString();
+      // Try to parse embedded stats if the profile payload contains them
+      int followersFromProfile = 0;
+      int followingFromProfile = 0;
+      int postsFromProfile = 0;
+      try {
+        final stats = profile['stats'] ?? profile['statistics'] ?? profile['meta'];
+        if (stats is Map<String, dynamic>) {
+          followersFromProfile = _parseInt(stats['followers'] ?? stats['followersCount'] ?? stats['followers_count']);
+          followingFromProfile = _parseInt(stats['following'] ?? stats['followingCount'] ?? stats['following_count']);
+          postsFromProfile = _parseInt(stats['posts'] ?? stats['postsCount'] ?? stats['posts_count']);
+        }
+      } catch (_) {}
+      List<AchievementProgress> achievementProgress = const [];
+      try {
+        achievementProgress = await loadAchievementProgress(resolvedWallet);
+      } catch (e) {
+        debugPrint('UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
+      }
 
       // Convert backend profile to User model
       // Safely compute defaults, avoid substring errors when wallet length is short
@@ -135,19 +160,21 @@ class UserService {
       String shortWallet() => safeId.length > 8 ? safeId.substring(0, 8) : safeId;
       String rawUsername() => (profile['username'] ?? '').toString();
       final user = User(
-        id: (profile['walletAddress'] ?? userId).toString(),
+        id: resolvedWallet,
         name: profile['displayName']?.toString() ?? (rawUsername().isNotEmpty ? rawUsername() : 'Anonymous'),
         username: '@${rawUsername().isNotEmpty ? rawUsername() : shortWallet()}',
         bio: profile['bio']?.toString() ?? '',
-        followersCount: 0, // TODO: Get from backend followers API
-        followingCount: 0, // TODO: Get from backend following API
-        postsCount: 0, // TODO: Get from backend posts count
+        followersCount: followersFromProfile,
+        followingCount: followingFromProfile,
+        postsCount: postsFromProfile,
         isFollowing: isFollowing,
         isVerified: profile['isVerified'] ?? false,
+        isArtist: isArtist,
+        isInstitution: isInstitution,
         joinedDate: profile['createdAt'] != null 
             ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
             : 'Joined recently',
-        achievementProgress: [], // TODO: Load achievements from backend
+        achievementProgress: achievementProgress,
         profileImageUrl: _extractAvatarCandidate(profile['avatar'], userId),
       );
       try { debugPrint('UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}'); } catch (_) {}
@@ -157,6 +184,12 @@ class UserService {
           // Use the central cache setter to remain consistent and avoid direct cacheVersion bumps
           setUsersInCache([user]);
         }
+      } catch (_) {}
+      // Trigger a background refresh of authoritative stats. This is intentionally
+      // non-blocking so callers of getUserById stay fast. The background fetch
+      // will update the cached User when it completes.
+      try {
+        Future(() async { await fetchAndUpdateUserStats(resolvedWallet); });
       } catch (_) {}
       return user;
     } catch (e) {
@@ -174,11 +207,17 @@ class UserService {
       if (candidate is String) {
         url = candidate.isEmpty ? null : candidate;
       } else if (candidate is Map) {
-        if (candidate['url'] != null && candidate['url'].toString().isNotEmpty) url = candidate['url'].toString();
-        else if (candidate['httpUrl'] != null && candidate['httpUrl'].toString().isNotEmpty) url = candidate['httpUrl'].toString();
-        else if (candidate['ipfsUrl'] != null && candidate['ipfsUrl'].toString().isNotEmpty) url = candidate['ipfsUrl'].toString();
-        else if (candidate['path'] != null && candidate['path'].toString().isNotEmpty) url = candidate['path'].toString();
-        else url = candidate.toString();
+        if (candidate['url'] != null && candidate['url'].toString().isNotEmpty) {
+          url = candidate['url'].toString();
+        } else if (candidate['httpUrl'] != null && candidate['httpUrl'].toString().isNotEmpty) {
+          url = candidate['httpUrl'].toString();
+        } else if (candidate['ipfsUrl'] != null && candidate['ipfsUrl'].toString().isNotEmpty) {
+          url = candidate['ipfsUrl'].toString();
+        } else if (candidate['path'] != null && candidate['path'].toString().isNotEmpty) {
+          url = candidate['path'].toString();
+        } else {
+          url = candidate.toString();
+        }
       } else {
         url = candidate.toString();
       }
@@ -242,6 +281,8 @@ class UserService {
             'postsCount': u.postsCount,
             'isFollowing': u.isFollowing,
             'isVerified': u.isVerified,
+            'isArtist': u.isArtist,
+            'isInstitution': u.isInstitution,
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
             'cachedAt': _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
@@ -260,6 +301,8 @@ class UserService {
             'postsCount': u.postsCount,
             'isFollowing': u.isFollowing,
             'isVerified': u.isVerified,
+            'isArtist': u.isArtist,
+            'isInstitution': u.isInstitution,
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
             'cachedAt': _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
@@ -299,6 +342,8 @@ class UserService {
             postsCount: (v['postsCount'] is int) ? v['postsCount'] as int : int.tryParse((v['postsCount'] ?? '0').toString()) ?? 0,
             isFollowing: (v['isFollowing'] == true),
             isVerified: (v['isVerified'] == true),
+            isArtist: (v['isArtist'] == true),
+            isInstitution: (v['isInstitution'] == true),
             joinedDate: v['joinedDate']?.toString() ?? 'Joined recently',
             achievementProgress: [],
             profileImageUrl: v['profileImageUrl']?.toString(),
@@ -426,6 +471,15 @@ class UserService {
 
       final resolvedUsername = (profile['username'] ?? lookup).toString().replaceAll('@', '');
       final avatarCandidate = profile['avatar'] ?? profile['avatar_url'] ?? profile['avatarUrl'];
+      final isArtist = profile['isArtist'] == true || profile['is_artist'] == true;
+      final isInstitution = profile['isInstitution'] == true || profile['is_institution'] == true;
+
+      List<AchievementProgress> achievementProgress = const [];
+      try {
+        achievementProgress = await loadAchievementProgress(wallet);
+      } catch (e) {
+        debugPrint('UserService.getUserByUsername: failed to load achievements for $wallet: $e');
+      }
 
       final user = User(
         id: wallet,
@@ -437,8 +491,10 @@ class UserService {
         postsCount: 0,
         isFollowing: followingList.contains(wallet),
         isVerified: profile['isVerified'] == true,
+        isArtist: isArtist,
+        isInstitution: isInstitution,
         joinedDate: joinedDate,
-        achievementProgress: const [],
+        achievementProgress: achievementProgress,
         profileImageUrl: _extractAvatarCandidate(avatarCandidate, wallet),
       );
 
@@ -452,37 +508,52 @@ class UserService {
 
   static Future<List<String>> getFollowingUsers() async {
     final prefs = await SharedPreferences.getInstance();
-    final followingJson = prefs.getString(_followingKey) ?? '[]';
-    return List<String>.from(json.decode(followingJson));
-  }
-
-  static Future<void> followUser(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final followingList = await getFollowingUsers();
-    
-    if (!followingList.contains(userId)) {
-      followingList.add(userId);
-      await prefs.setString(_followingKey, json.encode(followingList));
+    final followingJson = prefs.getString(_followingKey);
+    if (followingJson == null || followingJson.isEmpty) return <String>[];
+    try {
+      return List<String>.from(json.decode(followingJson));
+    } catch (_) {
+      return <String>[];
     }
   }
 
-  static Future<void> unfollowUser(String userId) async {
+  static Future<void> _saveFollowingUsers(List<String> wallets) async {
     final prefs = await SharedPreferences.getInstance();
-    final followingList = await getFollowingUsers();
-    
-    followingList.remove(userId);
-    await prefs.setString(_followingKey, json.encode(followingList));
+    await prefs.setString(_followingKey, json.encode(wallets));
   }
 
-  static Future<bool> toggleFollow(String userId) async {
+  static Future<void> followUser(String walletAddress) async {
+    if (walletAddress.isEmpty) return;
     final followingList = await getFollowingUsers();
-    final isCurrentlyFollowing = followingList.contains(userId);
-    
+    if (!followingList.contains(walletAddress)) {
+      followingList.add(walletAddress);
+      await _saveFollowingUsers(followingList);
+    }
+  }
+
+  static Future<void> unfollowUser(String walletAddress) async {
+    if (walletAddress.isEmpty) return;
+    final followingList = await getFollowingUsers();
+    followingList.remove(walletAddress);
+    await _saveFollowingUsers(followingList);
+  }
+
+  static Future<bool> toggleFollow(String walletAddress) async {
+    if (walletAddress.isEmpty) return false;
+
+    final followingList = await getFollowingUsers();
+    final isCurrentlyFollowing = followingList.contains(walletAddress);
+    final backendApi = BackendApiService();
+
     if (isCurrentlyFollowing) {
-      await unfollowUser(userId);
+      await backendApi.unfollowUser(walletAddress);
+      followingList.remove(walletAddress);
+      await _saveFollowingUsers(followingList);
       return false;
     } else {
-      await followUser(userId);
+      await backendApi.followUser(walletAddress);
+      followingList.add(walletAddress);
+      await _saveFollowingUsers(followingList);
       return true;
     }
   }
@@ -547,6 +618,130 @@ class UserService {
     return false;
   }
 
+  /// Fetch detailed achievement progress for a given wallet from backend
+  static Future<List<AchievementProgress>> loadAchievementProgress(String walletAddress) async {
+    if (walletAddress.isEmpty) return const [];
+    try {
+      final resp = await BackendApiService().getUserAchievements(walletAddress);
+      final progressEntries = <String, AchievementProgress>{};
+
+      void addOrUpdate(Map<String, dynamic>? item, {bool forceCompleted = false}) {
+        if (item == null) return;
+        final idRaw = item['achievementId'] ?? item['achievement_id'] ?? item['id'];
+        if (idRaw == null) return;
+        final id = idRaw.toString();
+        if (id.isEmpty) return;
+
+        final achievement = getAchievementById(id);
+        final requiredProgress = achievement?.requiredProgress ?? 1;
+        final progressValue = _parseInt(item['currentProgress'] ?? item['current_progress'] ?? item['progress'])
+            .clamp(0, requiredProgress);
+        final completedFlag = forceCompleted || item['isCompleted'] == true || item['is_completed'] == true ||
+            (item['status']?.toString().toLowerCase() == 'completed');
+        final currentProgress = completedFlag ? requiredProgress : (progressValue == 0 ? 0 : progressValue);
+
+        DateTime? completedAt;
+        final completedRaw = item['completedAt'] ?? item['completed_at'] ?? item['unlockedAt'] ?? item['unlocked_at'];
+        if (completedRaw != null) {
+          try {
+            completedAt = DateTime.parse(completedRaw.toString());
+          } catch (_) {}
+        }
+
+        progressEntries[id] = AchievementProgress(
+          achievementId: id,
+          currentProgress: completedFlag && currentProgress < requiredProgress ? requiredProgress : currentProgress,
+          isCompleted: completedFlag,
+          completedDate: completedAt,
+        );
+      }
+
+      final progressList = resp['progress'] as List<dynamic>?;
+      if (progressList != null) {
+        for (final entry in progressList) {
+          if (entry is Map<String, dynamic>) {
+            addOrUpdate(entry);
+          }
+        }
+      }
+
+      final unlockedList = resp['unlocked'] as List<dynamic>?;
+      if (unlockedList != null) {
+        for (final entry in unlockedList) {
+          if (entry is Map<String, dynamic>) {
+            addOrUpdate(entry, forceCompleted: true);
+          } else if (entry is String) {
+            addOrUpdate({'achievementId': entry}, forceCompleted: true);
+          }
+        }
+      }
+
+      return progressEntries.values.toList();
+    } catch (e) {
+      debugPrint('UserService.loadAchievementProgress failed: $e');
+      return const [];
+    }
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    final parsed = int.tryParse(value.toString());
+    return parsed ?? 0;
+  }
+
+  /// Fetch authoritative follower/following/posts stats for a wallet and
+  /// update the internal cache. This is intended to be called in the
+  /// background (non-blocking) to avoid slowing down profile fetch paths.
+  static Future<void> fetchAndUpdateUserStats(String walletAddress) async {
+    if (walletAddress.isEmpty) return;
+    try {
+      final resp = await BackendApiService().getUserStats(walletAddress);
+      int followers = 0;
+      int following = 0;
+      int posts = 0;
+      try {
+        if (resp is Map<String, dynamic>) {
+          followers = _parseInt(resp['followers'] ?? resp['followersCount'] ?? resp['followers_count']);
+          following = _parseInt(resp['following'] ?? resp['followingCount'] ?? resp['following_count']);
+          posts = _parseInt(resp['posts'] ?? resp['postsCount'] ?? resp['posts_count']);
+        }
+      } catch (_) {}
+
+      final existing = _cache[walletAddress];
+      final isFollowing = (await getFollowingUsers()).contains(walletAddress);
+
+      final updated = existing != null
+          ? existing.copyWith(
+              followersCount: followers,
+              followingCount: following,
+              postsCount: posts,
+              isFollowing: isFollowing,
+            )
+          : User(
+              id: walletAddress,
+              name: walletAddress,
+              username: '@${walletAddress.substring(0, walletAddress.length > 8 ? 8 : walletAddress.length)}',
+              bio: '',
+              followersCount: followers,
+              followingCount: following,
+              postsCount: posts,
+              isFollowing: isFollowing,
+              isVerified: false,
+              isArtist: false,
+              isInstitution: false,
+              joinedDate: 'Joined recently',
+              achievementProgress: [],
+              profileImageUrl: null,
+            );
+
+      setUsersInCache([updated]);
+    } catch (e) {
+      debugPrint('UserService.fetchAndUpdateUserStats failed: $e');
+    }
+  }
+
   /// Fetches multiple users by wallet addresses. Returns a list of User objects (skips missing profiles).
   ///
   /// Parameters:
@@ -579,6 +774,8 @@ class UserService {
                 postsCount: 0,
                 isFollowing: false,
                 isVerified: profile['isVerified'] ?? false,
+                isArtist: profile['isArtist'] == true || profile['is_artist'] == true,
+                isInstitution: profile['isInstitution'] == true || profile['is_institution'] == true,
                 joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
                 achievementProgress: [],
                 profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
@@ -599,8 +796,9 @@ class UserService {
           if (w.isEmpty) continue;
           if (found.containsKey(w)) {
             results.add(found[w]!);
-          } else if (_cache.containsKey(w)) results.add(_cache[w]!);
-          else {
+          } else if (_cache.containsKey(w)) {
+            results.add(_cache[w]!);
+          } else {
             results.add(User(
               id: w,
               name: w,
@@ -611,6 +809,8 @@ class UserService {
               postsCount: 0,
               isFollowing: false,
               isVerified: false,
+              isArtist: false,
+              isInstitution: false,
               joinedDate: 'Joined recently',
               achievementProgress: [],
               profileImageUrl: null,
@@ -675,6 +875,8 @@ class UserService {
               postsCount: 0,
               isFollowing: false,
               isVerified: profile['isVerified'] ?? false,
+              isArtist: profile['isArtist'] == true || profile['is_artist'] == true,
+              isInstitution: profile['isInstitution'] == true || profile['is_institution'] == true,
               joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
               achievementProgress: [],
               profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
@@ -695,8 +897,9 @@ class UserService {
         if (w.isEmpty) continue;
         if (orderedCache.containsKey(w)) {
           results.add(orderedCache[w]!);
-        } else if (found.containsKey(w)) results.add(found[w]!);
-        else {
+        } else if (found.containsKey(w)) {
+          results.add(found[w]!);
+        } else {
           results.add(User(
             id: w,
             name: w,
@@ -707,6 +910,8 @@ class UserService {
             postsCount: 0,
             isFollowing: false,
             isVerified: false,
+            isArtist: false,
+            isInstitution: false,
             joinedDate: 'Joined recently',
             achievementProgress: [],
             profileImageUrl: null,
@@ -752,6 +957,7 @@ class UserService {
           postsCount: 0,
           isFollowing: false,
           isVerified: false,
+          isArtist: false,
           joinedDate: 'Joined recently',
           achievementProgress: [],
           profileImageUrl: null,

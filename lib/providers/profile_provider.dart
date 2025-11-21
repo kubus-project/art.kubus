@@ -21,6 +21,7 @@ class ProfileProvider extends ChangeNotifier {
   int _collectionsCount = 0;
   int _realFollowersCount = 0;
   int _realFollowingCount = 0;
+  int _realPostsCount = 0;
   late SharedPreferences _prefs;
   final BackendApiService _apiService = BackendApiService();
   Map<String, dynamic>? _lastUploadDebug;
@@ -218,15 +219,36 @@ class ProfileProvider extends ChangeNotifier {
   int get followersCount => _realFollowersCount;
     
   int get followingCount => _realFollowingCount;
+  
+  int get postsCount => _realPostsCount;
     
   String get formattedFollowersCount => _formatCount(followersCount);
   String get formattedFollowingCount => _formatCount(followingCount);
   String get formattedArtworksCount => _formatCount(artworksCount);
   String get formattedCollectionsCount => _formatCount(collectionsCount);
+  String get formattedPostsCount => _formatCount(postsCount);
   
   void setCurrentUser(UserProfile user) {
     _currentUser = user;
     _isSignedIn = true;
+    notifyListeners();
+    try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+  }
+
+  void setRoleFlags({bool? isArtist, bool? isInstitution}) {
+    if (_currentUser == null) return;
+    var updated = _currentUser!;
+    var changed = false;
+    if (isArtist != null && isArtist != updated.isArtist) {
+      updated = updated.copyWith(isArtist: isArtist);
+      changed = true;
+    }
+    if (isInstitution != null && isInstitution != updated.isInstitution) {
+      updated = updated.copyWith(isInstitution: isInstitution);
+      changed = true;
+    }
+    if (!changed) return;
+    _currentUser = updated;
     notifyListeners();
     try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
   }
@@ -302,6 +324,22 @@ class ProfileProvider extends ChangeNotifier {
         debugPrint('Error loading following: $e');
         _realFollowingCount = 0;
       }
+
+      // Load aggregated stats (posts, follower/following counts if available)
+      try {
+        final stats = await _apiService.getUserStats(walletAddress);
+        _realPostsCount = _parseCount(stats['postsCount'] ?? stats['posts']);
+        final statsFollowers = _parseCount(stats['followersCount'] ?? stats['followers']);
+        final statsFollowing = _parseCount(stats['followingCount'] ?? stats['following']);
+        if (statsFollowers > 0) {
+          _realFollowersCount = statsFollowers;
+        }
+        if (statsFollowing > 0) {
+          _realFollowingCount = statsFollowing;
+        }
+      } catch (e) {
+        debugPrint('Error loading user stats: $e');
+      }
       
       debugPrint('ProfileProvider: Stats loaded - Collections: $_collectionsCount, Followers: $_realFollowersCount, Following: $_realFollowingCount');
     } catch (e) {
@@ -346,6 +384,8 @@ class ProfileProvider extends ChangeNotifier {
             displayName: user.name,
             bio: user.bio,
             avatar: user.profileImageUrl ?? '',
+            isArtist: user.isArtist,
+            isInstitution: user.isInstitution,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
@@ -365,6 +405,8 @@ class ProfileProvider extends ChangeNotifier {
               displayName: _shortWallet(walletAddress),
               bio: profileData['bio']?.toString() ?? '',
               avatar: profileData['avatar']?.toString() ?? '',
+              isArtist: profileData['isArtist'] == true || profileData['is_artist'] == true,
+              isInstitution: profileData['isInstitution'] == true || profileData['is_institution'] == true,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
@@ -447,6 +489,7 @@ class ProfileProvider extends ChangeNotifier {
     String? coverImage,
     Map<String, String>? social,
     bool? isArtist,
+    bool? isInstitution,
   }) async {
     _isLoading = true;
     _error = null;
@@ -466,6 +509,7 @@ class ProfileProvider extends ChangeNotifier {
       final effectiveCover = coverImage ?? _currentUser?.coverImage;
       final effectiveSocial = social ?? _currentUser?.social;
       final effectiveIsArtist = isArtist ?? _currentUser?.isArtist;
+      final effectiveIsInstitution = isInstitution ?? _currentUser?.isInstitution;
 
       final profileData = {
         'walletAddress': walletAddress,
@@ -476,6 +520,7 @@ class ProfileProvider extends ChangeNotifier {
         if (effectiveCover != null) 'coverImage': effectiveCover,
         if (effectiveSocial != null) 'social': effectiveSocial,
         if (effectiveIsArtist != null) 'isArtist': effectiveIsArtist,
+        if (effectiveIsInstitution != null) 'isInstitution': effectiveIsInstitution,
       };
 
       // Always save to backend
@@ -500,6 +545,7 @@ class ProfileProvider extends ChangeNotifier {
           'avatar': profileData['avatar'] ?? _currentUser?.avatar ?? '',
           'social': profileData['social'] ?? _currentUser?.social ?? {},
           'isArtist': profileData['isArtist'] ?? _currentUser?.isArtist ?? false,
+          'isInstitution': profileData['isInstitution'] ?? _currentUser?.isInstitution ?? false,
           'createdAt': _currentUser?.createdAt.toIso8601String() ?? DateTime.now().toIso8601String(),
           'updatedAt': DateTime.now().toIso8601String(),
         };
@@ -540,6 +586,8 @@ class ProfileProvider extends ChangeNotifier {
             isVerified: false,
             joinedDate: u.createdAt.toIso8601String(),
             achievementProgress: [],
+            isArtist: u.isArtist,
+            isInstitution: u.isInstitution,
           )]);
         }
       } catch (_) {}
@@ -790,6 +838,13 @@ class ProfileProvider extends ChangeNotifier {
     }
     return count.toString();
   }
+
+  int _parseCount(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.round();
+    return int.tryParse(value.toString()) ?? 0;
+  }
   
   void signOut() {
     _currentUser = null;
@@ -813,10 +868,10 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
   
-  Future<void> unfollowUser(String userId) async {
+  Future<void> unfollowUser(String walletAddress) async {
     try {
-      await _apiService.unfollowUser(userId);
-      _followingUsers.removeWhere((user) => user.id == userId);
+      await _apiService.unfollowUser(walletAddress);
+      _followingUsers.removeWhere((user) => user.id == walletAddress || user.walletAddress == walletAddress);
       _realFollowingCount = _followingUsers.length;
       notifyListeners();
     } catch (e) {
@@ -829,12 +884,12 @@ class ProfileProvider extends ChangeNotifier {
     return _followingUsers.any((user) => user.id == userId || user.walletAddress == userId);
   }
   
-  Future<bool> checkIsFollowing(String userId) async {
+  Future<bool> checkIsFollowing(String walletAddress) async {
     try {
-      return await _apiService.isFollowing(userId);
+      return await _apiService.isFollowing(walletAddress);
     } catch (e) {
       debugPrint('Error checking follow status: $e');
-      return isFollowing(userId);
+      return isFollowing(walletAddress);
     }
   }
   

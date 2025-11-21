@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
-import 'inline_loading.dart';
 import '../screens/user_profile_screen.dart';
 import '../utils/wallet_utils.dart';
 
@@ -12,6 +11,7 @@ class AvatarWidget extends StatefulWidget {
   final bool isLoading;
   final bool allowFabricatedFallback;
   final bool enableProfileNavigation;
+  final String? heroTag;
 
   const AvatarWidget({
     super.key,
@@ -21,21 +21,25 @@ class AvatarWidget extends StatefulWidget {
     this.isLoading = false,
     this.allowFabricatedFallback = false,
     this.enableProfileNavigation = true,
+    this.heroTag,
   });
 
   @override
   State<AvatarWidget> createState() => _AvatarWidgetState();
 }
 
-class _AvatarWidgetState extends State<AvatarWidget> {
+class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderStateMixin {
   String? _effectiveUrl;
   bool _loading = false;
   final BackendApiService _api = BackendApiService();
+  late AnimationController _shimmerController;
+  String? _currentHeroTag;
 
   @override
   void initState() {
     super.initState();
     _setup();
+    _shimmerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat();
   }
 
   Future<void> _setup() async {
@@ -114,6 +118,14 @@ class _AvatarWidgetState extends State<AvatarWidget> {
   }
 
   @override
+  void dispose() {
+    try {
+      _shimmerController.dispose();
+    } catch (_) {}
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final effective = _effectiveUrl ?? '';
     final useNetwork = effective.isNotEmpty && (effective.startsWith('http') || effective.startsWith('https'));
@@ -165,34 +177,57 @@ class _AvatarWidgetState extends State<AvatarWidget> {
     }
 
     if (_loading || widget.isLoading) {
-      content = Stack(
-        alignment: Alignment.center,
-        children: [
-          content,
-          SizedBox(
-            width: radius,
-            height: radius,
-            child: InlineLoading(shape: BoxShape.circle, tileSize: (radius * 0.25).clamp(4.0, 10.0)),
-          ),
-        ],
+      content = ClipRRect(
+        borderRadius: borderRadius,
+        child: AnimatedBuilder(
+          animation: _shimmerController,
+          builder: (context, child) {
+            return ShaderMask(
+              blendMode: BlendMode.srcATop,
+              shaderCallback: (rect) {
+                return LinearGradient(
+                  colors: [Colors.grey[300]!, Colors.grey[100]!, Colors.grey[300]!],
+                  stops: const [0.1, 0.5, 0.9],
+                  begin: Alignment(-1.0 - 2.0 * _shimmerController.value, 0),
+                  end: Alignment(1.0 + 2.0 * _shimmerController.value, 0),
+                ).createShader(rect);
+              },
+              child: child,
+            );
+          },
+          child: content,
+        ),
       );
+    }
+
+    // Wrap content in Hero when a tag is present (temporary or provided)
+    final tag = widget.heroTag ?? _currentHeroTag;
+    Widget wrapped = content;
+    if (tag != null && tag.isNotEmpty) {
+      wrapped = Hero(tag: tag, child: content);
     }
 
     if (widget.enableProfileNavigation) {
       return GestureDetector(
         onTap: () {
+          // Generate unique hero tag for this navigation so each tap animates fresh
+          final newTag = 'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
+          setState(() { _currentHeroTag = newTag; });
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => UserProfileScreen(userId: widget.wallet),
+              builder: (context) => UserProfileScreen(userId: widget.wallet, heroTag: newTag),
             ),
-          );
+          ).then((_) {
+            // clear temporary hero tag after return
+            if (mounted) setState(() { _currentHeroTag = null; });
+          });
         },
-        child: content,
+        child: wrapped,
       );
     }
 
-    return content;
+    return wrapped;
   }
 
   String? _normalizeAvatar(String? raw) {

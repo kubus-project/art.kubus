@@ -15,6 +15,9 @@ class CommunityPost {
   final String? imageUrl;
   final DateTime timestamp;
   final List<String> tags;
+  final String? postType; // 'post', 'repost', 'shared_post'
+  final String? originalPostId; // If this is a repost
+  final CommunityPost? originalPost; // Nested original post for reposts
   int likeCount;
   int commentCount;
   int shareCount;
@@ -35,6 +38,9 @@ class CommunityPost {
     this.imageUrl,
     required this.timestamp,
     this.tags = const [],
+    this.postType,
+    this.originalPostId,
+    this.originalPost,
     this.likeCount = 0,
     this.commentCount = 0,
     this.shareCount = 0,
@@ -69,6 +75,9 @@ class CommunityPost {
       imageUrl: imageUrl,
       timestamp: timestamp,
       tags: tags,
+      postType: postType,
+      originalPostId: originalPostId,
+      originalPost: originalPost,
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
       shareCount: shareCount ?? this.shareCount,
@@ -138,84 +147,88 @@ class Comment {
   }
 }
 
+class CommunityLikeUser {
+  final String userId;
+  final String? walletAddress;
+  final String displayName;
+  final String? username;
+  final String? avatarUrl;
+  final DateTime? likedAt;
+
+  const CommunityLikeUser({
+    required this.userId,
+    required this.displayName,
+    this.walletAddress,
+    this.username,
+    this.avatarUrl,
+    this.likedAt,
+  });
+}
+
 // Community interaction service
 class CommunityService {
-  static const String _likesKey = 'community_likes';
   static const String _commentsKey = 'community_comments';
   static const String _sharesKey = 'community_shares';
   static const String _bookmarksKey = 'community_bookmarks';
+  static const String _likesKey = 'community_likes';
   static const String _followsKey = 'community_follows';
   static const String _viewsKey = 'community_views';
-  static const String _likeCountsKey = 'community_like_counts';
 
   // Like/Unlike post (with backend sync)
   static Future<void> togglePostLike(CommunityPost post, {String? currentUserId, String? currentUserName, String? currentUserWallet}) async {
     if (!AppConfig.enableLiking) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final likedPosts = prefs.getStringList(_likesKey) ?? [];
-    final likeCounts = prefs.getStringList(_likeCountsKey) ?? [];
     final backendApi = BackendApiService();
-    // Local notification service removed for actor-side; server will notify recipients.
+    final originalIsLiked = post.isLiked;
+    final originalLikeCount = post.likeCount;
 
-      // Store original state for rollback
-      final originalIsLiked = post.isLiked;
-      final originalLikeCount = post.likeCount;
+    // Optimistic toggle
+    post.isLiked = !post.isLiked;
+    post.likeCount = (post.likeCount + (post.isLiked ? 1 : -1)).clamp(0, 1 << 30);
 
-      // If UI did not pre-toggle, toggle here: flip the like state and adjust count
-      final toggledToLiked = !post.isLiked;
-      post.isLiked = toggledToLiked;
-      post.likeCount = (post.likeCount + (toggledToLiked ? 1 : -1)).clamp(0, 1 << 30);
-
-      // Persist local liked posts list
+    // Persist liked post id locally so different views can reflect the state immediately
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final liked = _loadLikedPostIds(prefs, walletAddress: currentUserWallet);
       if (post.isLiked) {
-        if (!likedPosts.contains(post.id)) likedPosts.add(post.id);
+        if (!liked.contains(post.id)) liked.add(post.id);
       } else {
-        likedPosts.remove(post.id);
+        liked.remove(post.id);
       }
+      await _saveLikedPostIds(prefs, liked, walletAddress: currentUserWallet);
+    } catch (e) {
+      debugPrint('Failed to persist like locally: $e');
+    }
 
-      // Update like counts persistence
-      likeCounts.removeWhere((item) => item.startsWith('${post.id}|'));
-      likeCounts.add('${post.id}|${post.likeCount}');
+    try {
+      final updatedCount = post.isLiked
+          ? await backendApi.likePost(post.id)
+          : await backendApi.unlikePost(post.id);
 
-      await prefs.setStringList(_likesKey, likedPosts);
-      await prefs.setStringList(_likeCountsKey, likeCounts);
+      if (updatedCount != null) {
+        post.likeCount = updatedCount;
+      }
 
       if (AppConfig.enableDebugPrints) {
         debugPrint('Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
       }
-
-    // Sync with backend (optimistic update)
-    try {
-      // Accept either explicit id or wallet param passed from UI
-      // Effective user ID not needed here; server-side notifications to recipients will be handled by backend.
-      if (post.isLiked) {
-        await backendApi.likePost(post.id);
-        // Server will create and emit a notification to the post author. No local push is required here for the actor.
-      } else {
-        await backendApi.unlikePost(post.id);
-      }
     } catch (e) {
-      // Rollback on error
       if (AppConfig.enableDebugPrints) {
         debugPrint('Failed to sync like with backend: $e. Rolling back.');
       }
-      
+      // Rollback optimistic state
       post.isLiked = originalIsLiked;
       post.likeCount = originalLikeCount;
-      
-      // Rollback local storage
-      if (originalIsLiked) {
-        if (!likedPosts.contains(post.id)) likedPosts.add(post.id);
-      } else {
-        likedPosts.remove(post.id);
-      }
-      
-      likeCounts.removeWhere((item) => item.startsWith('${post.id}|'));
-      likeCounts.add('${post.id}|$originalLikeCount');
-      
-      await prefs.setStringList(_likesKey, likedPosts);
-      await prefs.setStringList(_likeCountsKey, likeCounts);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final liked = _loadLikedPostIds(prefs, walletAddress: currentUserWallet);
+        if (post.isLiked) {
+          if (!liked.contains(post.id)) liked.add(post.id);
+        } else {
+          liked.remove(post.id);
+        }
+        await _saveLikedPostIds(prefs, liked, walletAddress: currentUserWallet);
+      } catch (_) {}
+      rethrow;
     }
   }
 
@@ -223,44 +236,26 @@ class CommunityService {
   // NOTE: UI should do optimistic toggle BEFORE calling this. This function persists and syncs.
   static Future<void> toggleCommentLike(Comment comment, String postId) async {
     if (!AppConfig.enableLiking) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final likesKey = '${_likesKey}_comments';
-    final likedComments = prefs.getStringList(likesKey) ?? [];
-    final commentKey = '${postId}|${comment.id}';
     final backendApi = BackendApiService();
 
-    // Store current state (which UI already toggled) for rollback
     final currentIsLiked = comment.isLiked;
     final currentCount = comment.likeCount;
-
-    // Persist the current (already-toggled) state
-    if (currentIsLiked) {
-      if (!likedComments.contains(commentKey)) likedComments.add(commentKey);
-    } else {
-      likedComments.remove(commentKey);
-    }
-
-    await prefs.setStringList(likesKey, likedComments);
+      final previousCount = currentIsLiked
+          ? (currentCount - 1).clamp(0, 1 << 30)
+          : (currentCount + 1).clamp(0, 1 << 30);
 
     try {
-      if (currentIsLiked) {
-        await backendApi.likeComment(comment.id);
-      } else {
-        await backendApi.unlikeComment(comment.id);
+      final updatedCount = currentIsLiked
+          ? await backendApi.likeComment(comment.id)
+          : await backendApi.unlikeComment(comment.id);
+
+      if (updatedCount != null) {
+        comment.likeCount = updatedCount;
       }
     } catch (e) {
       // Roll back state and persistence on failure - toggle back to opposite of current
       comment.isLiked = !currentIsLiked;
-      comment.likeCount = currentIsLiked ? currentCount - 1 : currentCount + 1;
-      
-      if (comment.isLiked) {
-        if (!likedComments.contains(commentKey)) likedComments.add(commentKey);
-      } else {
-        likedComments.remove(commentKey);
-      }
-      
-      await prefs.setStringList(likesKey, likedComments);
+        comment.likeCount = previousCount;
       rethrow;
     }
   }
@@ -399,37 +394,21 @@ class CommunityService {
   }
 
   // Load saved interactions
-  static Future<void> loadSavedInteractions(List<CommunityPost> posts) async {
+  static Future<void> loadSavedInteractions(List<CommunityPost> posts, {String? walletAddress}) async {
     final prefs = await SharedPreferences.getInstance();
-    final likedPosts = prefs.getStringList(_likesKey) ?? [];
-    final likedComments = prefs.getStringList('${_likesKey}_comments') ?? [];
     final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
-    final likeCounts = prefs.getStringList(_likeCountsKey) ?? [];
-
-    // Create a map for quick like count lookup
-    final likeCountMap = <String, int>{};
-    for (final countString in likeCounts) {
-      final parts = countString.split('|');
-      if (parts.length == 2) {
-        likeCountMap[parts[0]] = int.tryParse(parts[1]) ?? 0;
-      }
-    }
+    final likedPosts = _loadLikedPostIds(prefs, walletAddress: walletAddress);
 
     for (final post in posts) {
-      // Load likes
-      post.isLiked = likedPosts.contains(post.id);
-      
-      // Load like counts (override original mock data with saved counts)
-      if (likeCountMap.containsKey(post.id)) {
-        post.likeCount = likeCountMap[post.id]!;
-      }
-      
       // Load bookmarks
       post.isBookmarked = bookmarkedPosts.contains(post.id);
       
       // Load follows
       post.isFollowing = followedUsers.contains(post.authorId);
+
+      // Load likes
+      post.isLiked = likedPosts.contains(post.id) || post.isLiked;
 
       // Load comments
       final commentsData = prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
@@ -446,21 +425,11 @@ class CommunityService {
             timestamp: DateTime.fromMillisecondsSinceEpoch(int.parse(parts[3])),
           );
 
-          // Check if comment is liked
-          final commentKey = '${post.id}|${comment.id}';
-          comment.isLiked = likedComments.contains(commentKey);
-
           loadedComments.add(comment);
         }
       }
 
       post.comments = [...post.comments, ...loadedComments];
-      for (final comment in post.comments) {
-        final commentKey = '${post.id}|${comment.id}';
-        if (likedComments.contains(commentKey)) {
-          comment.isLiked = true;
-        }
-      }
       post.commentCount = post.comments.length;
     }
   }
@@ -509,7 +478,7 @@ class CommunityService {
 
   // Follow/Unfollow user (with backend sync)
   static Future<void> toggleFollow(
-    String userId,
+    String walletAddress,
     CommunityPost? post, {
     String? currentUserName,
   }) async {
@@ -517,35 +486,35 @@ class CommunityService {
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
     final backendApi = BackendApiService();
 
-    bool isFollowing = followedUsers.contains(userId);
+    bool isFollowing = followedUsers.contains(walletAddress);
     bool originalFollowState = isFollowing;
 
     // Optimistic update
     if (isFollowing) {
       // Unfollow
-      followedUsers.remove(userId);
+      followedUsers.remove(walletAddress);
       if (post != null) post.isFollowing = false;
     } else {
       // Follow
-      followedUsers.add(userId);
+      followedUsers.add(walletAddress);
       if (post != null) post.isFollowing = true;
     }
 
     await prefs.setStringList(_followsKey, followedUsers);
     
     if (AppConfig.enableDebugPrints) {
-      debugPrint('User $userId ${!isFollowing ? "followed" : "unfollowed"}');
+      debugPrint('User $walletAddress ${!isFollowing ? "followed" : "unfollowed"}');
     }
 
     // Sync with backend
     try {
       if (!originalFollowState) {
         // Was unfollowed, now following
-        await backendApi.followUser(userId);
+        await backendApi.followUser(walletAddress);
         // Server will emit follower notification to the followed user; no local push for actor.
       } else {
         // Was following, now unfollowing
-        await backendApi.unfollowUser(userId);
+        await backendApi.unfollowUser(walletAddress);
       }
     } catch (e) {
       // Rollback on error
@@ -555,11 +524,11 @@ class CommunityService {
       
       if (originalFollowState) {
         // Restore to following
-        if (!followedUsers.contains(userId)) followedUsers.add(userId);
+        if (!followedUsers.contains(walletAddress)) followedUsers.add(walletAddress);
         if (post != null) post.isFollowing = true;
       } else {
         // Restore to not following
-        followedUsers.remove(userId);
+        followedUsers.remove(walletAddress);
         if (post != null) post.isFollowing = false;
       }
       
@@ -721,5 +690,43 @@ class CommunityService {
       ..sort((a, b) => b.value.compareTo(a.value));
     
     return sortedTags.take(10).map((entry) => entry.key).toList();
+  }
+
+  static List<String> _loadLikedPostIds(SharedPreferences prefs, {String? walletAddress}) {
+    final key = _likesStorageKey(prefs, walletAddress: walletAddress);
+    final liked = prefs.getStringList(key);
+    if (liked != null) {
+      return List<String>.from(liked);
+    }
+    // Fallback legacy key (pre-wallet-specific). Assume it belongs to current wallet and migrate.
+    final legacy = prefs.getStringList(_likesKey);
+    if (legacy != null && legacy.isNotEmpty) {
+      prefs.setStringList(key, legacy);
+      prefs.remove(_likesKey);
+      return List<String>.from(legacy);
+    }
+    return <String>[];
+  }
+
+  static Future<void> _saveLikedPostIds(SharedPreferences prefs, List<String> liked, {String? walletAddress}) async {
+    final key = _likesStorageKey(prefs, walletAddress: walletAddress);
+    await prefs.setStringList(key, liked);
+  }
+
+  static String _likesStorageKey(SharedPreferences prefs, {String? walletAddress}) {
+    final identifier = _resolveWalletIdentifier(prefs, walletOverride: walletAddress);
+    return '${_likesKey}_$identifier';
+  }
+
+  static String _resolveWalletIdentifier(SharedPreferences prefs, {String? walletOverride}) {
+    final raw = walletOverride ??
+        prefs.getString('wallet_address') ??
+        prefs.getString('walletAddress') ??
+        prefs.getString('wallet') ??
+        prefs.getString('user_id');
+    if (raw == null || raw.isEmpty) {
+      return 'guest';
+    }
+    return raw.toLowerCase();
   }
 }

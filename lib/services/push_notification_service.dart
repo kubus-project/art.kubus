@@ -688,7 +688,7 @@ class PushNotificationService {
       case 'like':
         return {'title': '❤️ New Like', 'body': '$userName liked your post'};
       case 'comment':
-        final b = comment != null && comment.isNotEmpty ? '${comment.length > 60 ? comment.substring(0, 60) + '...' : comment}' : 'commented on your post';
+        final b = comment != null && comment.isNotEmpty ? comment.length > 60 ? '${comment.substring(0, 60)}...' : comment : 'commented on your post';
         return {'title': '💬 New Comment', 'body': '$userName: $b'};
       case 'share':
         return {'title': '🔄 Post Shared', 'body': '$userName shared your post'};

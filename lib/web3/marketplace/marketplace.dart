@@ -11,6 +11,7 @@ import '../../providers/web3provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../models/artwork.dart';
 import '../../models/collectible.dart';
+import '../../widgets/empty_state_card.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -314,33 +315,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               if (collectiblesProvider.isLoading)
                 const AppLoading()
               else if (featuredSeries.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.collections_outlined,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No NFT collections available yet',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Upload AR artwork to create your first NFT series',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ],
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: EmptyStateCard(
+                    icon: Icons.collections_outlined,
+                    title: 'No NFT collections available yet',
+                    description: 'Upload AR artwork to create your first NFT series',
+                    showAction: false,
                   ),
                 )
               else
@@ -395,24 +376,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               ),
               const SizedBox(height: 16),
               if (trendingSeries.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.trending_up,
-                        size: 48,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No trending collections yet',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: EmptyStateCard(
+                    icon: Icons.trending_up,
+                    title: 'No trending collections yet',
+                    description: 'Check back later for new drops',
+                    showAction: false,
                   ),
                 )
               else
@@ -505,50 +475,16 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
         if (myCollectibles.isEmpty) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 80,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No NFTs in your collection',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Mint NFTs from AR artworks to build your collection',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed('/ar');
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: themeProvider.accentColor,
-                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                  child: Text(
-                    'Explore AR Art',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+              child: EmptyStateCard(
+                icon: Icons.inventory_2_outlined,
+                title: 'No NFTs in your collection',
+                description: 'Mint NFTs from AR artworks to build your collection',
+                showAction: true,
+                actionLabel: 'Explore AR Art',
+                onAction: () => Navigator.of(context).pushNamed('/ar'),
+              ),
             ),
           );
         }

@@ -15,6 +15,7 @@ import '../web3/wallet.dart' as web3_wallet;
 import 'onboarding_reset_screen.dart';
 import 'profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
+import '../config/config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -738,6 +739,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildProfileSection() {
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final artistRole = profileProvider.currentUser?.isArtist ?? false;
+    final institutionRole = profileProvider.currentUser?.isInstitution ?? false;
+    final roleSummary = 'Artist: ${artistRole ? "On" : "Off"}, Institution: ${institutionRole ? "On" : "Off"}';
     return _buildSection(
       'Profile Settings',
       Icons.person_outline,
@@ -795,7 +800,105 @@ class _SettingsScreenState extends State<SettingsScreen>
             _showAccountManagementDialog();
           },
         ),
+        _buildSettingsTile(
+          'Role Simulation',
+          roleSummary,
+          Icons.workspace_premium,
+          onTap: _showRoleSimulationSheet,
+        ),
       ],
+    );
+  }
+
+  void _showRoleSimulationSheet() {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final initialArtist = profileProvider.currentUser?.isArtist ?? false;
+    final initialInstitution = profileProvider.currentUser?.isInstitution ?? false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        bool artist = initialArtist;
+        bool institution = initialInstitution;
+        return StatefulBuilder(
+          builder: (context, setState) => Container(
+            padding: EdgeInsets.only(
+              left: 24,
+              right: 24,
+              top: 16,
+              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Role Simulation',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Toggle roles to preview profile layouts locally. Changes are local to this device.',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SwitchListTile(
+                  title: Text('Artist profile', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Show artist sections (artworks, collections)', style: GoogleFonts.inter(fontSize: 13)),
+                  value: artist,
+                  activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  onChanged: (val) {
+                    setState(() => artist = val);
+                    profileProvider.setRoleFlags(isArtist: val, isInstitution: institution);
+                  },
+                ),
+                SwitchListTile(
+                  title: Text('Institution profile', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text('Show institution sections (events, collections)', style: GoogleFonts.inter(fontSize: 13)),
+                  value: institution,
+                  activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  onChanged: (val) {
+                    setState(() => institution = val);
+                    profileProvider.setRoleFlags(isArtist: artist, isInstitution: val);
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Close', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -969,7 +1072,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       [
         _buildSettingsTile(
           'Version',
-          '1.0.0+1',
+          AppInfo.version,
           Icons.app_registration,
           onTap: () => _showVersionDialog(),
         ),
@@ -2176,7 +2279,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'ART.KUBUS',
+              'art.kubus',
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -2185,20 +2288,20 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Version: 1.0.0+1',
+              'Version: ${AppInfo.version}',
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             Text(
-              'Build: 001',
+              'Build: ${AppInfo.buildNumber}',
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
             Text(
-              '© 2024 ART.KUBUS Team',
+              '© 2025 kubus',
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),

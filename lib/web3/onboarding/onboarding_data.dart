@@ -9,7 +9,7 @@ class DAOOnboardingData {
       title: 'Welcome to DAO Governance',
       description: 'Participate in decentralized decision-making for the Art.Kubus ecosystem. Your voice matters in shaping the future of digital art.',
       icon: Icons.account_balance,
-      gradientColors: [Color(0xFF6C63FF), Color(0xFF9C27B0)],
+      gradientColors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
       features: [
         'Vote on important community proposals',
         'Create and submit your own proposals',
@@ -21,7 +21,7 @@ class DAOOnboardingData {
       title: 'Your Voting Power',
       description: 'Your voting power is determined by your KUB8 token balance. The more tokens you hold, the greater your influence in governance decisions.',
       icon: Icons.how_to_vote,
-      gradientColors: [Color(0xFF9C27B0), Color(0xFFE91E63)],
+      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
       features: [
         'Voting power = Your KUB8 balance',
         'Vote on active proposals',
@@ -33,7 +33,7 @@ class DAOOnboardingData {
       title: 'Create Proposals',
       description: 'Have an idea to improve the platform? Submit proposals for new features, policy changes, or community initiatives.',
       icon: Icons.lightbulb_outline,
-      gradientColors: [Color(0xFFE91E63), Color(0xFFFF5722)],
+      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
       features: [
         'Submit detailed proposals with descriptions',
         'Set voting duration and requirements',
@@ -45,7 +45,7 @@ class DAOOnboardingData {
       title: 'Ready to Govern',
       description: 'You\'re all set to participate in DAO governance! Start by exploring active proposals or creating your first one.',
       icon: Icons.rocket_launch,
-      gradientColors: [Color(0xFFFF5722), Color(0xFF6C63FF)],
+      gradientColors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
       features: [
         'Browse and vote on active proposals',
         'Check your voting history',
@@ -64,7 +64,7 @@ class ArtistStudioOnboardingData {
       title: 'Welcome to Artist Studio',
       description: 'Your creative workspace for managing artworks, creating AR markers, and analyzing your artistic journey in the metaverse.',
       icon: Icons.palette,
-      gradientColors: [Color(0xFF00D4AA), Color(0xFF1DE9B6)],
+      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
       features: [
         'Manage your digital artwork collection',
         'Create interactive AR markers',
@@ -76,7 +76,7 @@ class ArtistStudioOnboardingData {
       title: 'Artwork Gallery',
       description: 'Showcase your digital creations and NFTs. Upload, organize, and display your artworks for the world to discover.',
       icon: Icons.photo_library,
-      gradientColors: [Color(0xFF1DE9B6), Color(0xFF4CAF50)],
+      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
       features: [
         'Upload and organize your artworks',
         'Create detailed artwork descriptions',
@@ -88,7 +88,7 @@ class ArtistStudioOnboardingData {
       title: 'AR Marker Creator',
       description: 'Transform your artworks into immersive AR experiences. Place markers in real-world locations for others to discover.',
       icon: Icons.view_in_ar,
-      gradientColors: [Color(0xFF4CAF50), Color(0xFF8BC34A)],
+      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
       features: [
         'Create geo-located AR markers',
         'Attach artworks to real locations',
@@ -100,7 +100,7 @@ class ArtistStudioOnboardingData {
       title: 'Analytics Dashboard',
       description: 'Track your artistic performance with detailed analytics on views, discoveries, earnings, and community engagement.',
       icon: Icons.analytics,
-      gradientColors: [Color(0xFF8BC34A), Color(0xFFCDDC39)],
+      gradientColors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
       features: [
         'Monitor artwork performance',
         'Track KUB8 earnings',
@@ -112,7 +112,7 @@ class ArtistStudioOnboardingData {
       title: 'Start Creating',
       description: 'Your studio is ready! Begin by uploading your first artwork or creating an AR marker to share with the community.',
       icon: Icons.create,
-      gradientColors: [Color(0xFFCDDC39), Color(0xFF00D4AA)],
+      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
       features: [
         'Upload your first artwork',
         'Create your first AR marker',
@@ -131,7 +131,7 @@ class InstitutionHubOnboardingData {
       title: 'Welcome to Institution Hub',
       description: 'Manage cultural events, exhibitions, and educational programs. Connect your institution with the digital art community.',
       icon: Icons.museum,
-      gradientColors: [Color(0xFFFFD93D), Color(0xFFFFC107)],
+      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
       features: [
         'Create and manage cultural events',
         'Host virtual exhibitions',
@@ -143,7 +143,7 @@ class InstitutionHubOnboardingData {
       title: 'Event Management',
       description: 'Organize exhibitions, workshops, and cultural events. Manage attendees, scheduling, and promotional activities.',
       icon: Icons.event,
-      gradientColors: [Color(0xFFFFC107), Color(0xFFFF9800)],
+      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
       features: [
         'Schedule exhibitions and workshops',
         'Manage event registration',
@@ -155,7 +155,7 @@ class InstitutionHubOnboardingData {
       title: 'Event Creation Tools',
       description: 'Design compelling events with rich descriptions, media content, and interactive elements to attract participants.',
       icon: Icons.create_new_folder,
-      gradientColors: [Color(0xFFFF9800), Color(0xFFFF5722)],
+      gradientColors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
       features: [
         'Design event pages with media',
         'Set capacity and pricing',
@@ -167,7 +167,7 @@ class InstitutionHubOnboardingData {
       title: 'Analytics & Insights',
       description: 'Measure the success of your events with comprehensive analytics on attendance, engagement, and community impact.',
       icon: Icons.insights,
-      gradientColors: [Color(0xFFFF5722), Color(0xFFE91E63)],
+      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
       features: [
         'Track attendance and engagement',
         'Monitor revenue and costs',
@@ -179,7 +179,7 @@ class InstitutionHubOnboardingData {
       title: 'Launch Your Events',
       description: 'Ready to connect with the art community! Start by creating your first event or exploring ongoing exhibitions.',
       icon: Icons.launch,
-      gradientColors: [Color(0xFFE91E63), Color(0xFFFFD93D)],
+      gradientColors: [Color(0xFFEC4899), Color(0xFF8B5CF6)],
       features: [
         'Create your first event',
         'Explore community events',
@@ -198,7 +198,7 @@ class MarketplaceOnboardingData {
       title: 'Welcome to NFT Marketplace',
       description: 'Discover, buy, and sell unique digital art NFTs in our vibrant marketplace. Connect with artists and collectors worldwide.',
       icon: Icons.store,
-      gradientColors: [Color(0xFFFF6B6B), Color(0xFF9C27B0)],
+      gradientColors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
       features: [
         'Browse thousands of unique NFTs',
         'Buy and sell with secure transactions',
@@ -210,7 +210,7 @@ class MarketplaceOnboardingData {
       title: 'Discover Amazing Art',
       description: 'Explore our curated collection of digital art from talented creators. Filter by style, price, rarity, and more.',
       icon: Icons.explore,
-      gradientColors: [Color(0xFF9C27B0), Color(0xFF6C63FF)],
+      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
       features: [
         'Filter by price, category, and rarity',
         'View detailed artwork information',
@@ -222,7 +222,7 @@ class MarketplaceOnboardingData {
       title: 'List Your Creations',
       description: 'Artists can easily list their NFTs for sale. Set your price, add descriptions, and reach collectors worldwide.',
       icon: Icons.sell,
-      gradientColors: [Color(0xFF6C63FF), Color(0xFF00D4AA)],
+      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
       features: [
         'Upload and mint your digital art',
         'Set fixed prices or enable auctions',
@@ -234,7 +234,7 @@ class MarketplaceOnboardingData {
       title: 'Start Trading',
       description: 'You\'re ready to dive into the NFT marketplace! Start exploring, buying, or listing your first digital artwork.',
       icon: Icons.shopping_cart,
-      gradientColors: [Color(0xFF00D4AA), Color(0xFFFF6B6B)],
+      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
       features: [
         'Explore featured collections',
         'Make your first purchase',

@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/platform_provider.dart';
 import '../providers/saved_items_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../services/ar_manager.dart';
 import '../services/ar_integration_service.dart';
 import '../services/achievement_service.dart';
@@ -1368,7 +1369,7 @@ Experience it in augmented reality!
 ''';
       
       // Use share_plus to share
-      await Share.share(shareText, subject: 'AR Artwork: ${artwork['title']}');
+      await SharePlus.instance.share(ShareParams(text: shareText));
       
       // Track share in community interactions
       final post = CommunityPost(
@@ -1418,6 +1419,7 @@ Experience it in augmented reality!
         _likedArtworks.add(artwork['id']);
       }
     });
+    final walletAddress = Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
     
     // Track like in community interactions
     final post = CommunityPost(
@@ -1429,7 +1431,10 @@ Experience it in augmented reality!
       isLiked: _likedArtworks.contains(artwork['id']),
     );
     
-    await CommunityService.togglePostLike(post);
+    await CommunityService.togglePostLike(
+      post,
+      currentUserWallet: walletAddress,
+    );
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

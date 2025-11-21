@@ -87,6 +87,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               child: Column(
                 children: [
                   _buildStudioHeader(),
+                  _buildArtistApplicationCard(),
                   _buildNavigationTabs(),
                 ],
               ),
@@ -149,6 +150,81 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArtistApplicationCard() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: themeProvider.accentColor.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: themeProvider.accentColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.brush_rounded, color: themeProvider.accentColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Artist application (DAO)',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Submit your practice for DAO review. Future releases will route approvals directly through governance.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showArtistApplicationModal,
+              icon: Icon(Icons.send_rounded, color: themeProvider.accentColor),
+              label: Text(
+                'Apply for DAO review',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  color: themeProvider.accentColor,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: BorderSide(color: themeProvider.accentColor.withValues(alpha: 0.4)),
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ),
         ],
@@ -236,6 +312,130 @@ class _ArtistStudioState extends State<ArtistStudio> {
         ),
       ),
     );
+  }
+
+  void _showArtistApplicationModal() {
+    final portfolioController = TextEditingController();
+    final mediumController = TextEditingController();
+    final statementController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final scaffold = ScaffoldMessenger.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (sheetContext) {
+        final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
+        return Padding(
+          padding: EdgeInsets.only(bottom: viewInsets),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Artist application',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Share a snapshot of your practice. Submissions will be routed to the DAO for review in upcoming releases.',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  TextFormField(
+                    controller: portfolioController,
+                    decoration: InputDecoration(
+                      labelText: 'Portfolio or website',
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().isEmpty)
+                        ? 'Please provide a link to your work'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: mediumController,
+                    decoration: InputDecoration(
+                      labelText: 'Primary medium or focus',
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().isEmpty)
+                        ? 'Let the DAO know what you create'
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: statementController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: 'Artist statement',
+                      alignLabelWithHint: true,
+                      border: const OutlineInputBorder(),
+                    ),
+                    validator: (value) => (value == null || value.trim().length < 20)
+                        ? 'Share at least 20 characters about your work'
+                        : null,
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        if (!formKey.currentState!.validate()) return;
+                        Navigator.pop(sheetContext);
+                        scaffold.showSnackBar(
+                          const SnackBar(
+                            content: Text('Artist application queued for DAO review (feature coming soon).'),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        'Submit application',
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).whenComplete(() {
+      portfolioController.dispose();
+      mediumController.dispose();
+      statementController.dispose();
+    });
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/config.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../widgets/gradient_icon_card.dart';
 
 class Web3OnboardingScreen extends StatefulWidget {
   final String featureName;
@@ -196,30 +197,14 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: isVerySmallScreen ? 80 : isSmallScreen ? 100 : isTablet ? 140 : isWideScreen ? 160 : 120,
-                    height: isVerySmallScreen ? 80 : isSmallScreen ? 100 : isTablet ? 140 : isWideScreen ? 160 : 120,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: page.gradientColors,
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: page.gradientColors.first.withValues(alpha: 0.3),
-                          blurRadius: isWideScreen ? 40 : isTablet ? 30 : 20,
-                          spreadRadius: 0,
-                          offset: Offset(0, isWideScreen ? 20 : isTablet ? 15 : 10),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      page.icon,
-                      size: isVerySmallScreen ? 40 : isSmallScreen ? 50 : isTablet ? 70 : isWideScreen ? 80 : 60,
-                      color: Colors.white,
-                    ),
+                  GradientIconCard(
+                    start: page.gradientColors.first,
+                    end: page.gradientColors.length > 1 ? page.gradientColors[1] : page.gradientColors.first,
+                    icon: page.icon,
+                    width: isVerySmallScreen ? 100 : isSmallScreen ? 110 : isTablet ? 140 : isWideScreen ? 160 : 120,
+                    height: isVerySmallScreen ? 100 : isSmallScreen ? 110 : isTablet ? 140 : isWideScreen ? 160 : 120,
+                    iconSize: isVerySmallScreen ? 50 : isSmallScreen ? 55 : isTablet ? 70 : isWideScreen ? 80 : 60,
+                    radius: 20,
                   ),
                   SizedBox(height: isVerySmallScreen ? 20 : isSmallScreen ? 30 : isTablet ? 48 : isWideScreen ? 56 : 40),
                   Text(
@@ -324,12 +309,13 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                   if (_currentPage > 0)
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _previousPage,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: Theme.of(context).colorScheme.outline),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                          onPressed: _previousPage,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          foregroundColor: Theme.of(context).colorScheme.onSurface,
                           padding: EdgeInsets.symmetric(
                             vertical: isWideScreen ? 18 : isTablet ? 16 : isSmallScreen ? 12 : 14,
                           ),
@@ -339,7 +325,6 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                           style: GoogleFonts.inter(
                             fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -350,7 +335,8 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                     child: ElevatedButton(
                       onPressed: _nextPage,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -364,7 +350,6 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                         style: GoogleFonts.inter(
                           fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),

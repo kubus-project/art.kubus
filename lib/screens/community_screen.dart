@@ -1,10 +1,12 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/app_loading.dart';
 import '../widgets/topbar_icon.dart';
 import '../widgets/avatar_widget.dart';
+import '../widgets/empty_state_card.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,16 +14,15 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:location/location.dart' as loc;
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:math' as math;
 import '../providers/themeprovider.dart';
 import '../providers/config_provider.dart';
+import '../providers/wallet_provider.dart';
 import '../providers/profile_provider.dart';
 import '../services/backend_api_service.dart';
-import '../models/artwork.dart';
 import '../services/push_notification_service.dart';
-import 'art_detail_screen.dart';
 import 'user_profile_screen.dart';
+import 'post_detail_screen.dart';
 import '../community/community_interactions.dart';
 import '../services/user_service.dart';
 import '../providers/app_refresh_provider.dart';
@@ -29,6 +30,11 @@ import '../services/socket_service.dart';
 import '../providers/notification_provider.dart';
 import '../providers/chat_provider.dart';
 import 'messages_screen.dart';
+
+enum CommunityFeedType {
+  following,
+  discover,
+}
 
 class CommunityScreen extends StatefulWidget {
   // Global key to allow other screens to request opening a post by id
@@ -54,24 +60,32 @@ class _CommunityScreenState extends State<CommunityScreen>
   
   late TabController _tabController;
   
-  final List<String> _tabs = ['Feed', 'Discover', 'Following', 'Collections'];
+  final List<String> _tabs = ['Following', 'Discover', 'Groups', 'Art'];
   
   // Community data
   List<CommunityPost> _communityPosts = [];
+  List<CommunityPost> _followingFeedPosts = [];
+  List<CommunityPost> _discoverFeedPosts = [];
   // How many posts to prefetch comments for (make configurable)
   final int _commentPrefetchCount = 8;
   final int _prefetchConcurrencyLimit = 3;
   final int _prefetchMaxRetries = 3;
   final int _prefetchBaseDelayMs = 300; // milliseconds
-  List<Artwork> _discoverArtworks = [];
   List<Map<String, dynamic>> _followingArtists = [];
   bool _isLoading = false;
-  bool _isLoadingDiscover = false;
+  bool _isLoadingFollowingFeed = false;
+  bool _isLoadingDiscoverFeed = false;
   bool _isLoadingFollowing = false;
+  CommunityFeedType _activeFeed = CommunityFeedType.following;
   // Deduplication and local push are now handled centrally by NotificationProvider
   final Map<int, bool> _bookmarkedPosts = {};
   // Avatar cache removed - ChatProvider or UserService are used for user avatars
   final Map<int, bool> _followedArtists = {};
+  // Scroll controller for the feed to detect when user is away from top
+  late ScrollController _feedScrollController;
+
+  // Buffered incoming posts when user is scrolled away from top
+  final List<CommunityPost> _bufferedIncomingPosts = [];
   
   // New post state
   final TextEditingController _newPostController = TextEditingController();
@@ -82,37 +96,6 @@ class _CommunityScreenState extends State<CommunityScreen>
   // Location selected by user when creating a new post; may be null.
   // selectedLocation removed; location name is used in the UI when creating posts
   String? _locationName;
-
-  Future<void> _loadDiscoverArtworks() async {
-    if (mounted) {
-      setState(() {
-        _isLoadingDiscover = true;
-      });
-    }
-
-    // appRefresh not needed here
-    try {
-      final artworks = await BackendApiService().getArtworks(
-        arEnabled: true,
-        page: 1,
-        limit: 20,
-      );
-      if (mounted) {
-        setState(() {
-          _discoverArtworks = artworks;
-          _isLoadingDiscover = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading discover artworks: $e');
-      if (mounted) {
-        setState(() {
-          _discoverArtworks = [];
-          _isLoadingDiscover = false;
-        });
-      }
-    }
-  }
 
   Future<void> _loadFollowingArtists() async {
     if (mounted) {
@@ -142,18 +125,33 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  Future<void> _loadCommunityData() async {
-    // Prevent multiple simultaneous loads
-    if (_isLoading) return;
-    
+  Future<void> _loadCommunityData({bool? followingOnly}) async {
+    final bool targetFollowing = followingOnly ?? (_activeFeed == CommunityFeedType.following);
+    final bool isActiveFeed = (_activeFeed == CommunityFeedType.following && targetFollowing) ||
+        (_activeFeed == CommunityFeedType.discover && !targetFollowing);
+
+    if (targetFollowing) {
+      if (_isLoadingFollowingFeed) return;
+    } else {
+      if (_isLoadingDiscoverFeed) return;
+    }
+
     if (mounted) {
       setState(() {
-        _isLoading = true;
+        if (targetFollowing) {
+          _isLoadingFollowingFeed = true;
+        } else {
+          _isLoadingDiscoverFeed = true;
+        }
+        if (isActiveFeed) {
+          _isLoading = true;
+        }
       });
     }
-    
+
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+
     try {
-      // Ensure auth token is loaded first
       final backendApi = BackendApiService();
       try {
         await backendApi.loadAuthToken();
@@ -161,34 +159,81 @@ class _CommunityScreenState extends State<CommunityScreen>
       } catch (e) {
         debugPrint('⚠️ No auth token: $e');
       }
-      
-      // Fetch community posts from backend API
+
       final posts = await backendApi.getCommunityPosts(
         page: 1,
         limit: 50,
+        followingOnly: targetFollowing,
       );
       debugPrint('📥 Loaded ${posts.length} posts from backend');
-      
-      // Load saved interactions (likes, bookmarks, follows) - this overrides backend isLiked with local state
-      await CommunityService.loadSavedInteractions(posts);
+
+      await CommunityService.loadSavedInteractions(
+        posts,
+        walletAddress: walletProvider.currentWalletAddress,
+      );
       debugPrint('✅ Restored local interaction state for posts');
-      
+
       if (mounted) {
         setState(() {
-          _communityPosts = posts;
-          _isLoading = false;
+          if (targetFollowing) {
+            _followingFeedPosts = posts;
+            _isLoadingFollowingFeed = false;
+            if (isActiveFeed) {
+              _communityPosts = _followingFeedPosts;
+              _isLoading = false;
+            }
+          } else {
+            _discoverFeedPosts = posts;
+            _isLoadingDiscoverFeed = false;
+            if (isActiveFeed) {
+              _communityPosts = _discoverFeedPosts;
+              _isLoading = false;
+            }
+          }
         });
-        // Prefetch comments for the first few posts in background for snappier UI
-        _prefetchComments();
+        if (targetFollowing && isActiveFeed) {
+          _prefetchComments();
+        }
       }
     } catch (e) {
       debugPrint('Error loading community data: $e');
-      // Keep empty list if error occurs
       if (mounted) {
         setState(() {
-          _communityPosts = [];
-          _isLoading = false;
+          if (targetFollowing) {
+            _isLoadingFollowingFeed = false;
+          } else {
+            _isLoadingDiscoverFeed = false;
+          }
+          if (isActiveFeed) {
+            _communityPosts = [];
+            _isLoading = false;
+          }
         });
+      }
+    }
+  }
+
+  void _activateFeed(CommunityFeedType target) {
+    if (!mounted) return;
+
+    setState(() {
+      _activeFeed = target;
+      if (target == CommunityFeedType.following) {
+        _communityPosts = _followingFeedPosts;
+        _isLoading = _isLoadingFollowingFeed;
+      } else {
+        _communityPosts = _discoverFeedPosts;
+        _isLoading = _isLoadingDiscoverFeed;
+      }
+    });
+
+    if (target == CommunityFeedType.following) {
+      if (_followingFeedPosts.isEmpty && !_isLoadingFollowingFeed) {
+        _loadCommunityData(followingOnly: true);
+      }
+    } else {
+      if (_discoverFeedPosts.isEmpty && !_isLoadingDiscoverFeed) {
+        _loadCommunityData(followingOnly: false);
       }
     }
   }
@@ -249,8 +294,21 @@ class _CommunityScreenState extends State<CommunityScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: _tabs.length, vsync: this);
-    _loadCommunityData();
-    _loadDiscoverArtworks();
+    // Load following feed by default
+    _communityPosts = _followingFeedPosts;
+    _activeFeed = CommunityFeedType.following;
+    _loadCommunityData(followingOnly: true);
+    // Listen for tab changes to load appropriate content
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) return;
+      final idx = _tabController.index;
+      if (idx == 0) {
+        _activateFeed(CommunityFeedType.following);
+      } else if (idx == 1) {
+        _activateFeed(CommunityFeedType.discover);
+      }
+      // Groups and Collections tabs currently show placeholders
+    });
     _loadFollowingArtists();
     
     // Initialize bookmark and follow data
@@ -287,6 +345,17 @@ class _CommunityScreenState extends State<CommunityScreen>
     
     _animationController.forward();
 
+    // Feed scroll controller to detect whether user is at top
+    _feedScrollController = ScrollController();
+    _feedScrollController.addListener(() {
+      try {
+        // If user scrolled to near-top and we have buffered posts, prepend them
+        if (_feedScrollController.hasClients && _feedScrollController.offset <= 120 && _bufferedIncomingPosts.isNotEmpty) {
+          _prependBufferedPosts();
+        }
+      } catch (_) {}
+    });
+
     _bellController = AnimationController(
       duration: const Duration(milliseconds: 450),
       vsync: this,
@@ -306,6 +375,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     // Listen for socket notifications to animate bell
     try {
       SocketService().addNotificationListener(_onSocketNotificationForCommunity);
+    } catch (_) {}
+    // Connect socket and listen for incoming posts to prepend to feed
+    try {
+      (() async {
+        await SocketService().connect();
+        SocketService().addPostListener(_handleIncomingPost);
+      })();
     } catch (_) {}
     
     // Load initial unread notification count via provider
@@ -334,6 +410,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final configProvider = Provider.of<ConfigProvider>(context, listen: false);
       configProvider.addListener(_onConfigChanged);
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+        walletProvider.addListener(_onWalletProviderChanged);
+      } catch (_) {}
     });
   }
   
@@ -370,8 +453,73 @@ class _CommunityScreenState extends State<CommunityScreen>
     _bellController.dispose();
     _messagePulseController.dispose();
     try { Provider.of<ChatProvider>(context, listen: false).removeListener(_onChatProviderChanged); } catch (_) {}
+    try { Provider.of<WalletProvider>(context, listen: false).removeListener(_onWalletProviderChanged); } catch (_) {}
+    try { SocketService().removePostListener(_handleIncomingPost); } catch (_) {}
+    try { _feedScrollController.dispose(); } catch (_) {}
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleIncomingPost(Map<String, dynamic> data) async {
+    try {
+      final id = (data['id'] ?? data['postId'] ?? data['post_id'])?.toString();
+      if (id == null) return;
+      if (_communityPosts.any((p) => p.id == id)) return;
+      try {
+        final post = await BackendApiService().getCommunityPostById(id);
+        if (!mounted) return;
+
+        final atTop = _feedScrollController.hasClients ? _feedScrollController.offset <= 120 : true;
+        if (atTop) {
+          setState(() {
+            _communityPosts.insert(0, post);
+          });
+        } else {
+          // Buffer incoming post and show indicator
+          setState(() {
+            // Avoid duplicates in buffer
+            if (!_bufferedIncomingPosts.any((p) => p.id == post.id)) {
+              _bufferedIncomingPosts.insert(0, post);
+            }
+          });
+        }
+      } catch (e) {
+        debugPrint('Failed to fetch incoming post $id: $e');
+      }
+    } catch (e) {
+      debugPrint('CommunityScreen incoming post handler error: $e');
+    }
+  }
+
+  void _prependBufferedPosts() {
+    if (_bufferedIncomingPosts.isEmpty) return;
+    setState(() {
+      // Prepend buffered posts preserving order: newest first
+      _communityPosts.insertAll(0, _bufferedIncomingPosts);
+      _bufferedIncomingPosts.clear();
+    });
+    // Scroll to top for visibility
+    try {
+      if (_feedScrollController.hasClients) {
+        _feedScrollController.animateTo(0.0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      }
+    } catch (_) {}
+  }
+
+  void _onWalletProviderChanged() async {
+    // When wallet/login state changes, reload saved likes state so UI reflects current account
+    try {
+      if (_communityPosts.isNotEmpty) {
+        await CommunityService.loadSavedInteractions(
+          _communityPosts,
+          walletAddress: Provider.of<WalletProvider>(context, listen: false).currentWalletAddress,
+        );
+        if (!mounted) return;
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('Failed to refresh saved interactions on wallet change: $e');
+    }
   }
 
   @override
@@ -420,7 +568,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       child: Row(
         children: [
           Text(
-            'Community',
+            'Connect',
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -434,7 +582,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             icon: Icon(
               Icons.search,
               color: Theme.of(context).colorScheme.onSurface,
-              size: isSmallScreen ? 22 : 26,
+              size: isSmallScreen ? 20 : 24,
             ),
             onPressed: _showSearchBottomSheet,
           ),
@@ -451,7 +599,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   child: Icon(
                     _bellUnreadCount > 0 ? Icons.notifications : Icons.notifications_outlined,
                     color: Theme.of(context).colorScheme.onSurface,
-                    size: isSmallScreen ? 18 : 20,
+                    size: isSmallScreen ? 20 : 24,
                   ),
                 );
               },
@@ -460,7 +608,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             badgeCount: _bellUnreadCount,
             badgeColor: themeProvider.accentColor,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           // Message icon - open messages screen as a full-screen modal
           Selector<ChatProvider, int>(
             selector: (_, cp) => cp.totalUnread,
@@ -478,7 +626,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   child: Icon(
                     totalUnread > 0 ? Icons.chat_bubble : Icons.chat_bubble_outline,
                     color: totalUnread > 0 ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface,
-                    size: isSmallScreen ? 18 : 20,
+                    size: isSmallScreen ? 20 : 24,
                   ),
                 ),
                 onPressed: () {
@@ -591,47 +739,47 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildFeedTab() {
+    return _buildPostTimeline(
+      onRefresh: () => _loadCommunityData(followingOnly: true),
+      emptyIcon: Icons.feed,
+      emptyTitle: 'No Posts Available',
+      emptySubtitle: 'Follow creators to see their updates here.',
+      showBufferedBanner: true,
+    );
+  }
+
+  Widget _buildDiscoverTab() {
+    return _buildPostTimeline(
+      onRefresh: () => _loadCommunityData(followingOnly: false),
+      emptyIcon: Icons.travel_explore,
+      emptyTitle: 'No Community Posts Yet',
+      emptySubtitle: 'Posts from across Kubus will appear here soon.',
+    );
+  }
+
+  Widget _buildPostTimeline({
+    required Future<void> Function() onRefresh,
+    required IconData emptyIcon,
+    required String emptyTitle,
+    required String emptySubtitle,
+    bool showBufferedBanner = false,
+  }) {
     if (_isLoading) {
       return const AppLoading();
     }
     
     if (_communityPosts.isEmpty) {
       return RefreshIndicator(
-        onRefresh: () async {
-          await _loadCommunityData();
-        },
+        onRefresh: onRefresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
+            child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.feed,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Posts Available',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Community posts will appear here when available',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              child: EmptyStateCard(
+                icon: emptyIcon,
+                title: emptyTitle,
+                description: emptySubtitle,
               ),
             ),
           ),
@@ -640,82 +788,40 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     return RefreshIndicator(
-      onRefresh: () async {
-        await _loadCommunityData();
-      },
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        itemCount: _communityPosts.length,
-        itemBuilder: (context, index) => _buildPostCard(index),
-      ),
-    );
-  }
-
-  Widget _buildDiscoverTab() {
-    if (_isLoadingDiscover) {
-      return const AppLoading();
-    }
-    
-    if (_discoverArtworks.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: () async {
-          await _loadDiscoverArtworks();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.explore,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Artworks to Discover',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      onRefresh: onRefresh,
+      child: Stack(
+        children: [
+          ListView.builder(
+            controller: showBufferedBanner ? _feedScrollController : null,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            itemCount: _communityPosts.length,
+            itemBuilder: (context, index) => _buildPostCard(index),
+          ),
+          if (showBufferedBanner && _bufferedIncomingPosts.isNotEmpty)
+            Positioned(
+              top: 8,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: _prependBufferedPosts,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6)],
+                    ),
+                    child: Text(
+                      '${_bufferedIncomingPosts.length} new post${_bufferedIncomingPosts.length > 1 ? 's' : ''} — Tap to show',
+                      style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700),
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'New artworks will appear here',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
               ),
             ),
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        await _loadDiscoverArtworks();
-      },
-      child: GridView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: _discoverArtworks.length,
-        itemBuilder: (context, index) => _buildDiscoverArtworkCard(_discoverArtworks[index]),
+        ],
       ),
     );
   }
@@ -732,36 +838,13 @@ class _CommunityScreenState extends State<CommunityScreen>
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
+            child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.people,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Artists Yet',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Discover and follow artists in the Discover tab',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+              child: EmptyStateCard(
+                icon: Icons.people,
+                title: 'No Artists Yet',
+                description: 'Discover and follow artists in the Discover tab',
               ),
             ),
           ),
@@ -784,33 +867,10 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildCollectionsTab() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.collections,
-            size: 64,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No Collections Available',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Curated collections will appear here when available',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: EmptyStateCard(
+        icon: Icons.collections,
+        title: 'No Collections Available',
+        description: 'Curated collections will appear here when available',
       ),
     );
   }
@@ -843,11 +903,13 @@ class _CommunityScreenState extends State<CommunityScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+          // (Removed repost indicator: top-level repost label and icon were redundant)
           Row(
             children: [
                 AvatarWidget(
-                  wallet: post.authorWallet ?? post.authorId,
-                avatarUrl: post.authorAvatar,
+                  // Always show reposter's avatar on the top-level post card
+                  wallet: (post.authorWallet ?? post.authorId),
+                  avatarUrl: post.authorAvatar,
                 radius: 20,
                 allowFabricatedFallback: true,
               ),
@@ -859,7 +921,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        post.authorName,
+                            post.authorName,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.bold,
@@ -880,7 +942,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
               ),
               const Spacer(),
-              Text(
+                Text(
                 _getTimeAgo(post.timestamp),
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 10 : 12,
@@ -891,22 +953,45 @@ class _CommunityScreenState extends State<CommunityScreen>
             ],
           ),
           const SizedBox(height: 16),
-          Text(
-            post.content,
-            style: GoogleFonts.inter(
-              fontSize: isSmallScreen ? 13 : 15,
-              height: 1.5,
-              color: Theme.of(context).colorScheme.onSurface,
+          
+          // Repost comment (if exists)
+          if (post.postType == 'repost' && post.content.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              post.content,
+              style: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 13 : 15,
+                height: 1.5,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-          ),
-          if (post.imageUrl != null) ...[
+            const SizedBox(height: 12),
+            Divider(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+          ],
+          // If this is a repost - show original post in its own inner card
+          if (post.postType == 'repost' && post.originalPost != null) ...[
+            _buildRepostInnerCard(post.originalPost!),
+          ] else ...[
+            Text(
+              post.content,
+              style: GoogleFonts.inter(
+                fontSize: isSmallScreen ? 13 : 15,
+                height: 1.5,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+          ],
+          if ((post.postType == 'repost' && post.originalPost?.imageUrl != null) || (post.postType != 'repost' && post.imageUrl != null)) ...[
             const SizedBox(height: 16),
             GestureDetector(
-              onTap: () => _showImageLightbox(post.imageUrl!),
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PostDetailScreen(post: (post.postType == 'repost' && post.originalPost != null) ? post.originalPost : post))),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  post.imageUrl!,
+                    (post.postType == 'repost' && post.originalPost != null)
+                      ? post.originalPost!.imageUrl!
+                      : post.imageUrl!,
                   height: 200,
                   width: double.infinity,
                   fit: BoxFit.cover,
@@ -956,6 +1041,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 post.isLiked ? Icons.favorite : Icons.favorite_border, 
                 '${post.likeCount}',
                 onTap: () => _toggleLike(index),
+                onCountTap: () => _showPostLikes(post.id),
                 isActive: post.isLiked,
               ),
               const SizedBox(width: 20),
@@ -966,9 +1052,26 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
               const SizedBox(width: 20),
               _buildInteractionButton(
+                Icons.repeat, 
+                '',
+                onTap: () {
+                  // Check if this is user's own repost
+                  final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+                  final currentWallet = walletProvider.currentWalletAddress;
+                  if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+                    // Show unrepost option
+                    _showRepostOptions(post);
+                  } else {
+                    _showRepostModal(post);
+                  }
+                },
+              ),
+              const SizedBox(width: 20),
+              _buildInteractionButton(
                 Icons.share_outlined, 
                 '${post.shareCount}',
                 onTap: () => _sharePost(index),
+                onCountTap: post.shareCount > 0 ? () => _viewRepostsList(post) : null,
               ),
               const Spacer(),
               IconButton(
@@ -992,7 +1095,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  Widget _buildInteractionButton(IconData icon, String count, {VoidCallback? onTap, bool isActive = false}) {
+  Widget _buildInteractionButton(IconData icon, String count, {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap}) {
     return GestureDetector(
       onTapDown: (_) {
         // Immediate haptic feedback and visual response
@@ -1003,40 +1106,37 @@ class _CommunityScreenState extends State<CommunityScreen>
         }
       },
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 100),
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: isActive 
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-        ),
         child: Row(
           children: [
             AnimatedScale(
-              scale: isActive ? 1.3 : 1.0,
+              scale: isActive ? 1.18 : 1.0,
               duration: const Duration(milliseconds: 100),
-              curve: Curves.bounceOut,
+              curve: Curves.easeOut,
               child: Icon(
                 icon,
                 color: isActive 
-                    ? Theme.of(context).colorScheme.primary 
+                    ? Provider.of<ThemeProvider>(context).accentColor 
                     : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 size: 20,
               ),
             ),
             const SizedBox(width: 6),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 100),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: onCountTap,
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 100),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: isActive
+                      ? Provider.of<ThemeProvider>(context).accentColor
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                ),
+                child: Text(count),
               ),
-              child: Text(count),
             ),
           ],
         ),
@@ -1044,123 +1144,84 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-
-
-
-
-
-  Widget _buildDiscoverArtworkCard(Artwork artwork) {
+  Widget _buildRepostInnerCard(CommunityPost originalPost) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+    final scheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-          ),
-        );
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PostDetailScreen(post: originalPost))),
       child: Container(
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outline),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Artwork Image
-            Expanded(
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: (artwork.imageUrl != null && artwork.imageUrl!.isNotEmpty)
-                    ? Image.network(
-                        artwork.imageUrl!,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                                child: SizedBox(width: 36, height: 36, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null)),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Theme.of(context).colorScheme.surface,
-                            child: Icon(
-                              Icons.image_not_supported,
-                              size: 48,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        color: Theme.of(context).colorScheme.surface,
-                        child: Icon(
-                          Icons.art_track,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                        ),
-                      ),
-              ),
-            ),
-            
-            // Artwork Info
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
+            Row(
+              children: [
+                AvatarWidget(
+                  wallet: originalPost.authorWallet ?? originalPost.authorId,
+                  avatarUrl: originalPost.authorAvatar,
+                  radius: 16,
+                  allowFabricatedFallback: true,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Text(
-                          artwork.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Text(
+                        originalPost.authorName,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (artwork.arMarkerId != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: themeProvider.accentColor.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.view_in_ar,
-                            size: 14,
-                            color: themeProvider.accentColor,
-                          ),
-                        ),
+                      Text(
+                        '@${originalPost.authorUsername}',
+                        style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    artwork.artist,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+                ),
+                Text(
+                  _getTimeAgo(originalPost.timestamp),
+                  style: GoogleFonts.inter(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.5)),
+                ),
+              ],
             ),
+            const SizedBox(height: 8),
+            Text(
+              originalPost.content,
+              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+            ),
+            if (originalPost.imageUrl != null) ...[
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  originalPost.imageUrl!,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    height: 140,
+                    color: themeProvider.accentColor.withValues(alpha: 0.1),
+                    child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+
+
 
   Widget _buildArtistCard(Map<String, dynamic> artist, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -1289,78 +1350,152 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _showSearchBottomSheet() {
     if (!mounted) return;
     final sheetContext = context;
+    // Basic profile search in bottom sheet. For now this displays profiles (users).
+    // TODO: Expand to include artworks, institutions, and in-app screen search.
+    final sheetSearchController = TextEditingController();
+    final backend = BackendApiService();
+    List<Map<String, dynamic>> results = [];
+    bool isLoading = false;
+
     showModalBottomSheet(
       context: sheetContext,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search artists, artworks, collections...',
-                  hintStyle: TextStyle(
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: TextField(
+                  controller: sheetSearchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search artists, artworks, collections...',
+                    hintStyle: TextStyle(
+                      fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
+                    ),
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.primaryContainer,
+                    contentPadding: EdgeInsets.symmetric(
+                      vertical: MediaQuery.of(context).size.width < 400 ? 12 : 16,
+                      horizontal: 16,
+                    ),
+                  ),
+                  style: TextStyle(
                     fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
                   ),
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: Theme.of(context).colorScheme.primaryContainer,
-                  contentPadding: EdgeInsets.symmetric(
-                    vertical: MediaQuery.of(context).size.width < 400 ? 12 : 16,
-                    horizontal: 16,
-                  ),
-                ),
-                style: TextStyle(
-                  fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
+                  onChanged: (q) async {
+                    final query = q.trim();
+                    if (query.isEmpty) {
+                      setModalState(() {
+                        results.clear();
+                      });
+                      return;
+                    }
+                    try {
+                      setModalState(() => isLoading = true);
+                      final resp = await backend.search(query: query, type: 'profiles', limit: 20);
+                      final list = <Map<String, dynamic>>[];
+                      if (resp['success'] == true) {
+                        if (resp['results'] is Map<String, dynamic>) {
+                          final data = resp['results'] as Map<String, dynamic>;
+                          final profiles = (data['profiles'] as List<dynamic>?) ?? (data['results'] as List<dynamic>?) ?? [];
+                          for (final d in profiles) {
+                            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                          }
+                        } else if (resp['data'] is List) {
+                          for (final d in resp['data']) {
+                            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                          }
+                        } else if (resp['data'] is Map<String, dynamic>) {
+                          final data = resp['data'] as Map<String, dynamic>;
+                          final profiles = (data['profiles'] as List<dynamic>?) ?? [];
+                          for (final d in profiles) {
+                            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                          }
+                        }
+                      }
+                      if (!mounted) return;
+                      setModalState(() {
+                        results = list;
+                        isLoading = false;
+                      });
+                    } catch (e) {
+                      debugPrint('Community search error: $e');
+                      if (mounted) setModalState(() => isLoading = false);
+                    }
+                  },
                 ),
               ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                itemCount: 0, // TODO: Implement search with backend
-                itemBuilder: (context, index) => _buildSearchResult(index),
+              Expanded(
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : results.isEmpty
+                        ? ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Text(
+                                  'No results',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14,
+                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            itemCount: results.length,
+                            itemBuilder: (ctx, idx) {
+                              final s = results[idx];
+                              final username = s['username'] ?? s['wallet_address'] ?? s['wallet'];
+                              final display = s['displayName'] ?? s['display_name'] ?? '';
+                              final avatar = s['avatar'] ?? s['avatar_url'] ?? s['profileImageUrl'] ?? '';
+                              final walletAddr = (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])?.toString() ?? '';
+                              final title = (display ?? username)?.toString();
+                              final subtitle = walletAddr.isNotEmpty ? walletAddr : (username ?? '').toString();
+                              return ListTile(
+                                leading: AvatarWidget(avatarUrl: (avatar != null && avatar.toString().isNotEmpty) ? avatar.toString() : null, wallet: subtitle, radius: 20, allowFabricatedFallback: false),
+                                title: Text(title ?? ''),
+                                subtitle: Text(subtitle),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  if (walletAddr.isNotEmpty) {
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileScreen(userId: walletAddr)));
+                                  }
+                                },
+                              );
+                            },
+                          ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-
-  Widget _buildSearchResult(int index) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Text(
-        'Search coming soon',
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
   Future<void> _showNotifications() async {
     final notificationService = PushNotificationService();
     final backend = BackendApiService();
@@ -1532,32 +1667,54 @@ class _CommunityScreenState extends State<CommunityScreen>
                               if (time.isNotEmpty) time = _getTimeAgo(DateTime.parse(time));
                             } catch (_) {}
                             final leadSeed = (sender?['wallet'] ?? sender?['wallet_address'] ?? sender?['walletAddress'] ?? user).toString();
-                            return ListTile(
-                              leading: AvatarWidget(wallet: leadSeed, radius: 20, allowFabricatedFallback: false),
-                              title: Text(
-                                type == 'like' ? '$user liked your post' : type == 'comment' ? '$user commented' : type == 'reply' ? '$user replied' : type == 'mention' ? '$user mentioned you' : (n['type'] ?? 'Notification').toString(),
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            return Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
                               ),
-                              subtitle: Text(body, maxLines: 2, overflow: TextOverflow.ellipsis),
-                              trailing: Text(time, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
-                              onTap: () {
-                                // Close and navigate to post or take appropriate action
-                                Navigator.pop(context);
-                                final postId = n['postId']?.toString();
-                                if (postId != null && postId.isNotEmpty) {
-                                  // attempt to find post in current feed and open comments
-                                  final idx = _communityPosts.indexWhere((p) => p.id == postId);
-                                  if (idx != -1) {
-                                    // open comments for that post
-                                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                                      _showComments(idx);
-                                    });
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  final postId = n['postId']?.toString();
+                                  if (postId != null && postId.isNotEmpty) {
+                                    final idx = _communityPosts.indexWhere((p) => p.id == postId);
+                                    if (idx != -1) {
+                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        _showComments(idx);
+                                      });
+                                    }
                                   }
-                                }
-                              },
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                child: Row(
+                                  children: [
+                                    AvatarWidget(wallet: leadSeed, radius: 20, allowFabricatedFallback: false),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            type == 'like' ? '$user liked your post' : type == 'comment' ? '$user commented' : type == 'reply' ? '$user replied' : type == 'mention' ? '$user mentioned you' : (n['type'] ?? 'Notification').toString(),
+                                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(body, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(time, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                                  ],
+                                ),
+                              ),
                             );
                           },
-                          separatorBuilder: (_, __) => const Divider(height: 1),
+                          separatorBuilder: (ctx, i) => Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
                           itemCount: combined.length,
                         ),
                       ),
@@ -1737,7 +1894,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             }
                             
                             // Create post via backend API (uses JWT auth for author info)
-                            await BackendApiService().createCommunityPost(
+                            final createdPost = await BackendApiService().createCommunityPost(
                               content: content.isEmpty ? (_selectedPostVideo != null ? '🎥' : '📷') : content,
                               mediaUrls: mediaUrls.isNotEmpty ? mediaUrls : null,
                               postType: postType,
@@ -1752,7 +1909,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                               _selectedPostImageBytes = null;
                               _selectedPostVideo = null;
                               _locationName = null;
-                              
+
+                              // Insert created post immediately at top of feed for instant feedback
+                              setState(() {
+                                _communityPosts.insert(0, createdPost);
+                              });
+
+                              // Optionally prefetch comments for the new post
+                              try { await BackendApiService().getComments(postId: createdPost.id); } catch (_) {}
+
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
@@ -1760,8 +1925,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   duration: Duration(seconds: 2),
                                 ),
                               );
-                              // Reload community feed
-                              _loadCommunityData();
                             }
                           } catch (e) {
                             setModalState(() => _isPostingNew = false);
@@ -2093,14 +2256,14 @@ class _CommunityScreenState extends State<CommunityScreen>
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
     debugPrint('DEBUG: Post ${post.id} was liked: $wasLiked, count: ${post.likeCount}');
+    final walletAddress = Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
 
     try {
-      // Get current user wallet from SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final currentUserWallet = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('user_id');
-
       // Let the service perform the toggle and persistence; it mutates `post` synchronously
-      await CommunityService.togglePostLike(post, currentUserWallet: currentUserWallet);
+      await CommunityService.togglePostLike(
+        post,
+        currentUserWallet: walletAddress,
+      );
       debugPrint('DEBUG: Service call completed successfully - liked: ${post.isLiked}, count: ${post.likeCount}');
 
       if (!mounted) return;
@@ -2129,6 +2292,189 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
+  void _showPostLikes(String postId) {
+    _showLikesDialog(
+      title: 'Post Likes',
+      loader: () => BackendApiService().getPostLikes(postId),
+    );
+  }
+
+  void _showCommentLikes(String commentId) {
+    _showLikesDialog(
+      title: 'Comment Likes',
+      loader: () => BackendApiService().getCommentLikes(commentId),
+    );
+  }
+
+  void _showLikesDialog({required String title, required Future<List<CommunityLikeUser>> Function() loader}) {
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    final future = loader();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      color: theme.colorScheme.onSurface,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<CommunityLikeUser>>(
+                  future: future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return Center(
+                        child: SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.error_outline, color: theme.colorScheme.error, size: 36),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Failed to load likes',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${snapshot.error}',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final likes = snapshot.data ?? <CommunityLikeUser>[];
+                    if (likes.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            'No likes yet',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      itemCount: likes.length,
+                      separatorBuilder: (_, __) => Divider(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                      itemBuilder: (context, index) {
+                        final user = likes[index];
+                        final subtitleParts = <String>[];
+                        if (user.username != null && user.username!.isNotEmpty) {
+                          subtitleParts.add('@${user.username}');
+                        }
+                        if (user.walletAddress != null && user.walletAddress!.isNotEmpty) {
+                          final wallet = user.walletAddress!;
+                          if (wallet.length > 8) {
+                            subtitleParts.add('${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}');
+                          } else {
+                            subtitleParts.add(wallet);
+                          }
+                        }
+                        if (user.likedAt != null) {
+                          subtitleParts.add(_getTimeAgo(user.likedAt!));
+                        }
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: AvatarWidget(
+                            wallet: user.walletAddress ?? user.userId,
+                            avatarUrl: user.avatarUrl,
+                            radius: 20,
+                            allowFabricatedFallback: true,
+                          ),
+                          title: Text(
+                            user.displayName.isNotEmpty ? user.displayName : 'Unnamed User',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          subtitle: subtitleParts.isNotEmpty
+                              ? Text(
+                                  subtitleParts.join(' • '),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _toggleBookmark(int index) async {
     if (index >= _communityPosts.length) return;
     
@@ -2155,15 +2501,15 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (index >= _followingArtists.length) return;
     
     final artist = _followingArtists[index];
-    final artistId = artist['id'] as String? ?? artist['publicKey'] as String? ?? '';
+    final artistWallet = (artist['walletAddress'] ?? artist['wallet_address'] ?? artist['publicKey'] ?? artist['public_key'] ?? artist['id'])?.toString() ?? '';
     final artistName = artist['name'] as String? ?? 'Artist';
     
-    if (artistId.isEmpty) return;
+    if (artistWallet.isEmpty) return;
     final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
     
     try {
       // Use centralized UserService.toggleFollow which handles backend sync + local fallback
-      final newState = await UserService.toggleFollow(artistId);
+      final newState = await UserService.toggleFollow(artistWallet);
 
       if (!mounted) return;
 
@@ -2171,7 +2517,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       final backend = BackendApiService();
       int updatedFollowers = (artist['followersCount'] as int?) ?? 0;
       try {
-        final stats = await backend.getUserStats(artistId);
+        final stats = await backend.getUserStats(artistWallet);
         updatedFollowers = stats['followers'] as int? ?? updatedFollowers;
       } catch (_) {}
       setState(() {
@@ -2226,27 +2572,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       // Replace current comments with backend-provided nested comments
       post.comments = backendComments;
       post.commentCount = totalComments;
-      
-      // Load liked state from SharedPreferences for all comments and replies
-      debugPrint('   📥 Loading liked state from SharedPreferences...');
-      final prefs = await SharedPreferences.getInstance();
-      final likedComments = prefs.getStringList('community_likes_comments') ?? [];
-      debugPrint('   Found ${likedComments.length} liked comments in local storage');
-      
-      void applyLikedState(Comment comment) {
-        final commentKey = '${post.id}|${comment.id}';
-        comment.isLiked = likedComments.contains(commentKey);
-        debugPrint('   Comment ${comment.id}: isLiked=${comment.isLiked}, key=$commentKey');
-        for (final reply in comment.replies) {
-          applyLikedState(reply);
-        }
-      }
-      
-      for (final comment in post.comments) {
-        applyLikedState(comment);
-      }
-      
-      debugPrint('   ✅ Liked state applied to all comments');
       
       if (mounted) setState(() {});
     } catch (e) {
@@ -2392,9 +2717,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     },
                                   ),
                                   const SizedBox(width: 4),
-                                  Text(
-                                    '${post.comments[commentIndex].likeCount}',
-                                    style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () => _showCommentLikes(post.comments[commentIndex].id),
+                                    child: Text(
+                                      '${post.comments[commentIndex].likeCount}',
+                                      style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   GestureDetector(
@@ -2463,42 +2792,51 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                   children: [
                                                     Text(_getTimeAgo(reply.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                                                     const SizedBox(width: 16),
-                                                    GestureDetector(
-                                                      onTap: () async {
-                                                        setModalState(() {
-                                                          reply.isLiked = !reply.isLiked;
-                                                          reply.likeCount += reply.isLiked ? 1 : -1;
-                                                        });
-                                                        try {
-                                                          await CommunityService.toggleCommentLike(reply, post.id);
-                                                        } catch (e) {
-                                                          setModalState(() {
-                                                            reply.isLiked = !reply.isLiked;
-                                                            reply.likeCount += reply.isLiked ? 1 : -1;
-                                                          });
-                                                          // Show error feedback
-                                                          if (context.mounted) {
-                                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                              SnackBar(
-                                                                content: Text('Failed to update like: $e'),
-                                                                backgroundColor: Colors.red,
-                                                                duration: const Duration(seconds: 2),
-                                                              ),
-                                                            );
-                                                          }
-                                                        }
-                                                      },
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(
+                                                    Row(
+                                                      children: [
+                                                        IconButton(
+                                                          padding: EdgeInsets.zero,
+                                                          constraints: const BoxConstraints(),
+                                                          icon: Icon(
                                                             reply.isLiked ? Icons.favorite : Icons.favorite_border,
                                                             size: 14,
                                                             color: reply.isLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                                           ),
-                                                          const SizedBox(width: 4),
-                                                          Text('${reply.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
-                                                        ],
-                                                      ),
+                                                          onPressed: () async {
+                                                            setModalState(() {
+                                                              reply.isLiked = !reply.isLiked;
+                                                              reply.likeCount += reply.isLiked ? 1 : -1;
+                                                            });
+                                                            try {
+                                                              await CommunityService.toggleCommentLike(reply, post.id);
+                                                            } catch (e) {
+                                                              setModalState(() {
+                                                                reply.isLiked = !reply.isLiked;
+                                                                reply.likeCount += reply.isLiked ? 1 : -1;
+                                                              });
+                                                              // Show error feedback
+                                                              if (context.mounted) {
+                                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                                  SnackBar(
+                                                                    content: Text('Failed to update like: $e'),
+                                                                    backgroundColor: Colors.red,
+                                                                    duration: const Duration(seconds: 2),
+                                                                  ),
+                                                                );
+                                                              }
+                                                            }
+                                                          },
+                                                        ),
+                                                        const SizedBox(width: 4),
+                                                        GestureDetector(
+                                                          behavior: HitTestBehavior.opaque,
+                                                          onTap: () => _showCommentLikes(reply.id),
+                                                          child: Text(
+                                                            '${reply.likeCount}',
+                                                            style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                                   ],
                                                 ),
@@ -2812,30 +3150,305 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _sharePost(int index) async {
     if (index >= _communityPosts.length) return;
-    
     final post = _communityPosts[index];
-    final prefs = await SharedPreferences.getInstance();
-    final userName = prefs.getString('username') ?? 'Current User';
+    _showShareModal(post);
+  }
 
-    // Share through service (with backend sync and notification)
-    await CommunityService.sharePost(post, currentUserName: userName);
-
-    // Use share_plus for actual platform sharing
-    final shareText = '${post.content}\n\n- ${post.authorName} on art.kubus\n\nDiscover more AR art on art.kubus!';
-    await SharePlus.instance.share(ShareParams(text: shareText));
+  void _showShareModal(CommunityPost post) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
+    final theme = Theme.of(context);
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> searchResults = [];
+    bool isSearching = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Share Post', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search for profiles...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: theme.colorScheme.primaryContainer,
+                  ),
+                  onChanged: (query) async {
+                        if (query.trim().isEmpty) {
+                          setModalState(() { searchResults.clear(); });
+                          return;
+                        }
+                        setModalState(() => isSearching = true);
+                        try {
+                          final resp = await BackendApiService().search(query: query, type: 'profiles', limit: 20);
+                          final list = <Map<String, dynamic>>[];
+                          if (resp['success'] == true && resp['results'] is Map) {
+                            final profiles = (resp['results']['profiles'] as List?) ?? [];
+                            for (final p in profiles) { try { list.add(p as Map<String, dynamic>); } catch (_) {} }
+                          }
+                          setModalState(() { searchResults = list; isSearching = false; });
+                        } catch (e) {
+                          setModalState(() => isSearching = false);
+                        }
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.link, color: theme.colorScheme.primary),
+                          title: Text('Copy Link', style: GoogleFonts.inter()),
+                          onTap: () async {
+                            await Clipboard.setData(ClipboardData(text: 'https://app.kubus.site/post/${post.id}'));
+                            Navigator.pop(sheetContext);
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+                            
+                            // Track analytics
+                            BackendApiService().trackAnalyticsEvent(
+                              eventType: 'share_copy_link',
+                              postId: post.id,
+                              metadata: {'method': 'copy_link'},
+                            );
+                          },
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.share, color: theme.colorScheme.primary),
+                      title: Text('Share via...', style: GoogleFonts.inter()),
+                      onTap: () async {
+                        Navigator.pop(sheetContext);
+                        final shareText = '${post.content}\n\n- ${post.authorName} on app.kubus\n\nhttps://app.kubus.site/post/${post.id}';
+                        await SharePlus.instance.share(ShareParams(text: shareText));
+                        BackendApiService().trackAnalyticsEvent(
+                          eventType: 'share_external',
+                          postId: post.id,
+                          metadata: {'method': 'platform_share'},
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              if (searchController.text.isNotEmpty) ...[
+                const Divider(),
+                Expanded(
+                  child: isSearching
+                      ? const Center(child: CircularProgressIndicator())
+                      : searchResults.isEmpty
+                          ? Center(child: Text('No profiles found', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))))
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              itemCount: searchResults.length,
+                              itemBuilder: (ctx, idx) {
+                                final profile = searchResults[idx];
+                                final walletAddr = profile['wallet_address'] ?? profile['walletAddress'] ?? profile['wallet'] ?? profile['walletAddr'];
+                                final username = profile['username'] ?? walletAddr ?? 'unknown';
+                                final display = profile['displayName'] ?? profile['display_name'] ?? username;
+                                final avatar = profile['avatar'] ?? profile['avatar_url'];
+                                return ListTile(
+                                  leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
+                                  title: Text(display ?? 'Unnamed', style: GoogleFonts.inter()),
+                                  subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                                  onTap: () async {
+                                    Navigator.pop(sheetContext);
+                                    
+                                    try {
+                                      // Share post via DM
+                                      await BackendApiService().sharePostViaDM(
+                                        postId: post.id,
+                                        recipientWallet: walletAddr ?? username,
+                                        message: 'Check out this post!',
+                                      );
+                                      BackendApiService().trackAnalyticsEvent(
+                                        eventType: 'share_dm',
+                                        postId: post.id,
+                                        metadata: {'recipient': walletAddr ?? username},
+                                      );
+                                      
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Shared post with @$username')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to share: $e')),
+                                        );
+                                      }
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRepostModal(CommunityPost post) {
     if (!mounted) return;
+    final theme = Theme.of(context);
+    final repostContentController = TextEditingController();
 
-    // Update UI immediately
-    setState(() {
-      // UI will reflect the updated share count from the service
-    });
-
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Post shared!'),
-        duration: Duration(seconds: 2),
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Repost', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Row(
+                      children: [
+                        TextButton(onPressed: () => Navigator.pop(sheetContext), child: Text('Cancel', style: GoogleFonts.inter())),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final content = repostContentController.text.trim();
+                            Navigator.pop(sheetContext);
+                            
+                            try {
+                              // Create repost via backend
+                              final createdRepost = await BackendApiService().createRepost(
+                                originalPostId: post.id,
+                                content: content.isNotEmpty ? content : null,
+                              );
+                              BackendApiService().trackAnalyticsEvent(
+                                eventType: 'repost_created',
+                                postId: post.id,
+                                metadata: {'has_comment': content.isNotEmpty},
+                              );
+                              
+                              if (mounted) {
+                                // Insert repost into feed immediately for instant feedback
+                                setState(() {
+                                  _communityPosts.insert(0, createdRepost);
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(content.isEmpty ? 'Reposted!' : 'Reposted with comment!')),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to repost: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: Text('Repost', style: GoogleFonts.inter()),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: repostContentController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Add your thoughts (optional)...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: theme.colorScheme.primaryContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Reposting:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(12),
+                          color: theme.colorScheme.surface,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                AvatarWidget(wallet: post.authorId, avatarUrl: post.authorAvatar, radius: 16, enableProfileNavigation: false),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(post.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                                      Text(_getTimeAgo(post.timestamp), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(post.content, style: GoogleFonts.inter(fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis),
+                            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(post.imageUrl!, fit: BoxFit.cover, height: 120, width: double.infinity),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2853,188 +3466,179 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
+  void _viewRepostsList(CommunityPost post) async {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Reposted by', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: BackendApiService().getPostReposts(postId: post.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error loading reposts', style: GoogleFonts.inter()));
+                  }
+                  final reposts = snapshot.data ?? [];
+                  if (reposts.isEmpty) {
+                    return Center(child: Text('No reposts yet', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))));
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: reposts.length,
+                    itemBuilder: (ctx, idx) {
+                      final repost = reposts[idx];
+                      final user = repost['user'] as Map<String, dynamic>?;
+                      final username = user?['username'] ?? user?['walletAddress'] ?? 'Unknown';
+                      final displayName = user?['displayName'] ?? username;
+                      final avatar = user?['avatar'];
+                      final comment = repost['repostComment'] as String?;
+                      final createdAt = DateTime.tryParse(repost['createdAt'] ?? '');
+
+                      return ListTile(
+                        leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
+                        title: Text(displayName, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                            if (comment != null && comment.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(comment, style: GoogleFonts.inter(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            ],
+                          ],
+                        ),
+                        trailing: createdAt != null ? Text(_getTimeAgo(createdAt), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))) : null,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRepostOptions(CommunityPost post) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: Text('Unrepost', style: GoogleFonts.inter(color: Colors.red)),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _unrepostPost(post);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.cancel, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              title: Text('Cancel', style: GoogleFonts.inter()),
+              onTap: () => Navigator.pop(sheetContext),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _unrepostPost(CommunityPost post) async {
+    if (!mounted) return;
+
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Unrepost', style: GoogleFonts.inter()),
+        content: Text('Are you sure you want to remove this repost?', style: GoogleFonts.inter()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Cancel', style: GoogleFonts.inter()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text('Unrepost', style: GoogleFonts.inter()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await BackendApiService().deleteRepost(post.id);
+      BackendApiService().trackAnalyticsEvent(
+        eventType: 'repost_deleted',
+        postId: post.originalPostId ?? post.id,
+        metadata: {'repost_id': post.id},
+      );
+
+      if (mounted) {
+        await _loadCommunityData();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Repost removed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to unrepost: $e')),
+        );
+      }
+    }
+  }
+
   void _viewPostDetail(int index) {
     if (index >= _communityPosts.length) return;
     
     final post = _communityPosts[index];
     
-    // Show post detail dialog
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setDialogState) {
-            return Dialog(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Container(
-                padding: const EdgeInsets.all(24),
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () => _viewUserProfile(post.authorWallet ?? post.authorId),
-                          child: post.authorAvatar != null && post.authorAvatar!.isNotEmpty
-                              ? CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: NetworkImage(post.authorAvatar!),
-                                  backgroundColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
-                                )
-                              : Container(
-                                  width: 40,
-                                  height: 40,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Provider.of<ThemeProvider>(context).accentColor,
-                                        Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Icon(Icons.person, color: Theme.of(context).colorScheme.onPrimary, size: 20),
-                                ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () => _viewUserProfile(post.authorWallet ?? post.authorId),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  post.authorName,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                                Text(
-                                  '@${post.authorUsername}',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.close),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      post.content,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        height: 1.5,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    if (post.imageUrl != null) ...[
-                      const SizedBox(height: 16),
-                      GestureDetector(
-                        onTap: () => _showImageLightbox(post.imageUrl!),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            post.imageUrl!,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
-                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Center(
-                                  child: SizedBox(width: 36, height: 36, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null)),
-                                ),
-                              );
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
-                                      Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Center(
-                                  child: Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.onPrimary, size: 60),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        _buildInteractionButton(
-                          index < _communityPosts.length ? 
-                            (_communityPosts[index].isLiked ? Icons.favorite : Icons.favorite_border) : 
-                            Icons.favorite_border, 
-                          index < _communityPosts.length ? '${_communityPosts[index].likeCount}' : '0',
-                          onTap: () {
-                            _toggleLike(index);
-                            setDialogState(() {
-                              // Update dialog state when like changes
-                            });
-                          },
-                          isActive: index < _communityPosts.length ? _communityPosts[index].isLiked : false,
-                        ),
-                        const SizedBox(width: 20),
-                        _buildInteractionButton(
-                          Icons.comment_outlined, 
-                          index < _communityPosts.length ? '${_communityPosts[index].commentCount}' : '0',
-                          onTap: () {
-                            Navigator.pop(context);
-                            _showComments(index);
-                          },
-                        ),
-                        const SizedBox(width: 20),
-                        _buildInteractionButton(
-                          Icons.share_outlined, 
-                          index < _communityPosts.length ? '${_communityPosts[index].shareCount}' : '0',
-                          onTap: () {
-                            _sharePost(index);
-                            setDialogState(() {
-                              // Update dialog state when share changes
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+    // Open full post detail screen instead of dialog
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
     );
   }
 
@@ -3055,70 +3659,4 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  void _showImageLightbox(String imageUrl) {
-    showDialog(
-      context: context,
-      barrierColor: Theme.of(context).colorScheme.onSurface.withAlpha(230),
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.zero,
-          child: Stack(
-            children: [
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: Container(
-                  color: Colors.transparent,
-                  width: double.infinity,
-                  height: double.infinity,
-                  child: InteractiveViewer(
-                    minScale: 0.5,
-                    maxScale: 4.0,
-                    child: Center(
-                      child: Image.network(
-                        imageUrl,
-                        fit: BoxFit.contain,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: SizedBox(width: 56, height: 56, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 8.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null, color: Theme.of(context).colorScheme.onSurface, highlight: Theme.of(context).colorScheme.surface)),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.error_outline, color: Theme.of(context).colorScheme.onSurface, size: 64),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Failed to load image',
-                                  style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface, fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 40,
-                right: 20,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.close, color: Theme.of(context).colorScheme.onSurface, size: 32),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 }

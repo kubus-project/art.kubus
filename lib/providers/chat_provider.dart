@@ -32,7 +32,7 @@ class ChatProvider extends ChangeNotifier {
   // Socket event handlers
   void _onMembersUpdated(Map<String, dynamic> data) {
     try {
-      debugPrint('ChatProvider._onMembersUpdated: payload=${data}');
+      debugPrint('ChatProvider._onMembersUpdated: payload=$data');
       // Refresh conversations so UI reflects membership changes
       refreshConversations().then((_) {
         debugPrint('ChatProvider._onMembersUpdated: refreshConversations completed');

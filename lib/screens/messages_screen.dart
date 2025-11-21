@@ -14,6 +14,7 @@ import '../models/conversation.dart';
 import '../core/conversation_navigator.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/inline_loading.dart';
+import '../widgets/empty_state_card.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/event_bus.dart';
 import '../utils/wallet_utils.dart';
@@ -22,7 +23,7 @@ class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
 
   @override
-  _MessagesScreenState createState() => _MessagesScreenState();
+  State<MessagesScreen> createState() => _MessagesScreenState();
 }
 
 class _MessagesScreenState extends State<MessagesScreen> {
@@ -450,7 +451,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
         builder: (context, cp, _) {
           final convs = cp.conversations;
           if (convs.isEmpty) {
-            return const Center(child: Text('No conversations')); 
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                child: EmptyStateCard(
+                  icon: Icons.chat_bubble_outline,
+                  title: 'No conversations',
+                  description: 'Start a conversation using the chat button below.',
+                  showAction: true,
+                  actionLabel: 'Start Chat',
+                  onAction: () async {
+                    final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => _CreateConversationDialog());
+                    if (!mounted) return;
+                    if (result != null && result['members'] != null) {
+                      await _chatProvider.createConversation(result['title'] as String? ?? '', result['isGroup'] as bool? ?? false, (result['members'] as List<String>));
+                    }
+                  },
+                ),
+              ),
+            );
           }
           return ListView.builder(
             itemCount: convs.length,
@@ -541,8 +560,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 if (!c.isGroup) {
                   final fallbackWallet = (_convToWalletList[c.id] != null && _convToWalletList[c.id]!.isNotEmpty) ? _convToWalletList[c.id]!.first : '';
                   final cached = (fallbackWallet.isNotEmpty) ? cp.getCachedUser(fallbackWallet) : null;
-                  if (cached != null && cached.name.isNotEmpty) titleText = cached.name;
-                  else {
+                  if (cached != null && cached.name.isNotEmpty) {
+                    titleText = cached.name;
+                  } else {
                     final persisted = UserService.getCachedUser(fallbackWallet);
                     if (persisted != null && persisted.name.isNotEmpty) titleText = persisted.name;
                   }
@@ -641,13 +661,19 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     if (!preAvatars.containsKey(primary) || (preAvatars[primary] == null || preAvatars[primary]!.isEmpty)) {
                       // prefer ChatProvider cache, then our screen-level avatar cache
                       final cached = cp.getCachedUser(primary);
-                      if (cached != null && (cached.profileImageUrl ?? '').isNotEmpty) preAvatars[primary] = cached.profileImageUrl;
-                      else if ((_conversationAvatars[c.id] ?? '').isNotEmpty) preAvatars[primary] ??= _conversationAvatars[c.id];
+                      if (cached != null && (cached.profileImageUrl ?? '').isNotEmpty) {
+                        preAvatars[primary] = cached.profileImageUrl;
+                      } else if ((_conversationAvatars[c.id] ?? '').isNotEmpty) {
+                        preAvatars[primary] ??= _conversationAvatars[c.id];
+                      }
                     }
                     if (!preNames.containsKey(primary) || (preNames[primary] == null || preNames[primary]!.isEmpty)) {
                       final cached = cp.getCachedUser(primary);
-                      if (cached != null && cached.name.isNotEmpty) preNames[primary] = cached.name;
-                      else if ((_conversationNames[c.id] ?? '').isNotEmpty) preNames[primary] ??= _conversationNames[c.id];
+                      if (cached != null && cached.name.isNotEmpty) {
+                        preNames[primary] = cached.name;
+                      } else if ((_conversationNames[c.id] ?? '').isNotEmpty) {
+                        preNames[primary] ??= _conversationNames[c.id];
+                      }
                     }
                   }
 
@@ -844,7 +870,11 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
               debugPrint('CreateConversationDialog: profile search error: $e');
             }
           }),
-              if (_memberSuggestions.isNotEmpty) SizedBox(height: 120, child: ListView.builder(itemBuilder: (ctx, idx) {
+              if (_memberSuggestions.isNotEmpty) SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  itemBuilder: (ctx, idx) {
             final s = _memberSuggestions[idx];
             final username = s['username'] ?? s['wallet_address'] ?? s['wallet'];
             final display = s['displayName'] ?? s['display_name'] ?? '';
@@ -856,7 +886,10 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             return ListTile(title: Text(display ?? username), subtitle: Text(walletAddr.isNotEmpty ? walletAddr : (username ?? '')), leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: (walletAddr.isNotEmpty ? walletAddr : (username ?? '')).toString(), radius: 20, allowFabricatedFallback: false, enableProfileNavigation: false), onTap: () {
               if ((addValue).isNotEmpty) setState(() { _memberList.add(addValue); _members.clear(); _memberSuggestions.clear(); });
             });
-          }, itemCount: _memberSuggestions.length)),
+                  },
+                  itemCount: _memberSuggestions.length,
+                ),
+              ),
           Row(children: [
             ElevatedButton.icon(icon: Icon(Icons.upload_file), label: Text('Group avatar (optional)'), onPressed: () async {
                 try {

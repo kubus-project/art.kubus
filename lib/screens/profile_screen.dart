@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
-import '../providers/wallet_provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/task_provider.dart';
@@ -19,6 +18,9 @@ import 'profile_screen_methods.dart';
 import '../models/achievements.dart';
 import 'profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
+import '../widgets/topbar_icon.dart';
+import '../widgets/empty_state_card.dart';
+import 'post_detail_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -32,9 +34,14 @@ class _ProfileScreenState extends State<ProfileScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
-  late TabController _tabController;
-  final List<String> _tabs = ['Activity', 'Stats'];
+  Future<List<CommunityPost>>? _postsFuture;
+  bool _didScheduleDataFetch = false;
+  bool _artistDataRequested = false;
+  bool _artistDataLoading = false;
+  bool _artistDataLoaded = false;
+  List<Map<String, dynamic>> _artistArtworks = [];
+  List<Map<String, dynamic>> _artistCollections = [];
+  List<Map<String, dynamic>> _artistEvents = [];
   
   // Privacy settings state
   bool _privateProfile = false;
@@ -45,8 +52,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
-    
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -73,15 +78,39 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    if (!_didScheduleDataFetch) {
+      _didScheduleDataFetch = true;
+      _postsFuture = _loadUserPosts();
+      // Trigger a background refresh of aggregated stats (followers/following/posts)
+      // so the counts on the profile header update shortly after open.
+      try {
+        Future(() async {
+          try {
+            await profileProvider.refreshStats();
+          } catch (e) {
+            debugPrint('ProfileScreen: refreshStats failed: $e');
+          }
+        });
+      } catch (_) {}
+    }
+    _maybeLoadArtistData();
+  }
+
+  @override
   void dispose() {
     _animationController.dispose();
-    _tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final isArtist = profileProvider.currentUser?.isArtist ?? false;
+    final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
     
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode 
@@ -95,27 +124,35 @@ class _ProfileScreenState extends State<ProfileScreen>
               opacity: _fadeAnimation,
               child: SlideTransition(
                 position: _slideAnimation,
-                child: CustomScrollView(
-                  slivers: [
-                    _buildProfileHeader(),
-                    _buildStatsSection(),
-                    SliverToBoxAdapter(
-                      child: SizedBox(height: 24),
-                    ),
-                    _buildTabBar(),
-                    SliverToBoxAdapter(
-                      child: SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.6,
-                        child: TabBarView(
-                          controller: _tabController,
-                          children: [
-                            _buildActivityTab(),
-                            _buildStatsTab(),
-                          ],
-                        ),
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  color: themeProvider.accentColor,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    slivers: [
+                      _buildProfileHeader(),
+                      _buildStatsSection(),
+                      SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      if (isArtist) ...[
+                        SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
+                        SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      ],
+                      SliverToBoxAdapter(
+                        child: isInstitution
+                            ? _buildInstitutionHighlightsSection()
+                            : _buildAchievementsSection(),
                       ),
-                    ),
-                  ],
+                      SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      SliverToBoxAdapter(child: _buildPerformanceStats()),
+                      SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      SliverToBoxAdapter(child: _buildPostsSection()),
+                      if (isArtist) ...[
+                        SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
+                      ],
+                      SliverToBoxAdapter(child: SizedBox(height: 32)),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -157,28 +194,29 @@ class _ProfileScreenState extends State<ProfileScreen>
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        IconButton(
-                          onPressed: () {
-                            _shareProfile();
-                          },
+                        TopBarIcon(
                           icon: Icon(
-                            Icons.share,
-                            color: themeProvider.accentColor,
+                            Icons.share_outlined,
+                            color: Theme.of(context).colorScheme.onSurface,
                             size: isSmallScreen ? 22 : 24,
                           ),
+                          onPressed: () => _shareProfile(),
+                          tooltip: 'Share',
                         ),
-                        IconButton(
+                        SizedBox(width: 8),
+                        TopBarIcon(
+                          icon: Icon(
+                            Icons.settings_outlined,
+                            color: Theme.of(context).colorScheme.onSurface,
+                            size: isSmallScreen ? 22 : 24,
+                          ),
                           onPressed: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (context) => const SettingsScreen()),
                             );
                           },
-                          icon: Icon(
-                            Icons.settings,
-                            color: themeProvider.accentColor,
-                            size: isSmallScreen ? 22 : 24,
-                          ),
+                          tooltip: 'Settings',
                         ),
                       ],
                     ),
@@ -192,15 +230,33 @@ class _ProfileScreenState extends State<ProfileScreen>
                   enableProfileNavigation: false,
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 20),
-                Text(
-                  profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username ?? 'Anonymous Artist',
-                  style: GoogleFonts.inter(
-                    fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 22 : 24,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                Align(
+                  alignment: Alignment.center,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username ?? 'Art Enthusiast',
+                          style: GoogleFonts.inter(
+                            fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 22 : 24,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          textAlign: TextAlign.center,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (profileProvider.currentUser?.isArtist == true) ...[
+                        SizedBox(width: isSmallScreen ? 6 : 8),
+                        _buildArtistBadge(),
+                      ],
+                      if (profileProvider.currentUser?.isInstitution == true) ...[
+                        SizedBox(width: isSmallScreen ? 6 : 8),
+                        _buildInstitutionBadge(),
+                      ],
+                    ],
                   ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (profileProvider.currentUser?.username != null && profileProvider.currentUser?.displayName != null) ...[  
                   SizedBox(height: isSmallScreen ? 4 : 6),
@@ -378,12 +434,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildStatsSection() {
-    final web3Provider = Provider.of<Web3Provider>(context);
-    
     return SliverToBoxAdapter(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          bool isSmallScreen = constraints.maxWidth < 375;
+          final profileProvider = Provider.of<ProfileProvider>(context);
+          final isSmallScreen = constraints.maxWidth < 360;
           
           return Container(
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
@@ -397,252 +452,55 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             child: Column(
               children: [
-                if (web3Provider.isConnected) ...[
-                  Consumer<WalletProvider>(
-                    builder: (context, walletProvider, child) {
-                      // Get KUB8 balance
-                      final kub8Balance = walletProvider.tokens
-                          .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                          .isNotEmpty 
-                          ? walletProvider.tokens
-                              .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                              .first.balance 
-                          : 0.0;
-                      
-                      // Get SOL balance  
-                      final solBalance = walletProvider.tokens
-                          .where((token) => token.symbol.toUpperCase() == 'SOL')
-                          .isNotEmpty 
-                          ? walletProvider.tokens
-                              .where((token) => token.symbol.toUpperCase() == 'SOL')
-                              .first.balance 
-                          : 0.0;
-
-                      return isSmallScreen && constraints.maxWidth < 300
-                        ? Column(
-                            children: [
-                              _buildBalanceCard(
-                                'KUB8 Balance',
-                                kub8Balance.toStringAsFixed(2),
-                                Icons.currency_bitcoin,
-                                isSmallScreen: isSmallScreen,
-                              ),
-                              const SizedBox(height: 12),
-                              _buildBalanceCard(
-                                'SOL Balance',
-                                solBalance.toStringAsFixed(3),
-                                Icons.account_balance_wallet,
-                                isSmallScreen: isSmallScreen,
-                              ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              Expanded(
-                                child: _buildBalanceCard(
-                                  'KUB8 Balance',
-                                  kub8Balance.toStringAsFixed(2),
-                                  Icons.currency_bitcoin,
-                                  isSmallScreen: isSmallScreen,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _buildBalanceCard(
-                                  'SOL Balance',
-                                  solBalance.toStringAsFixed(3),
-                                  Icons.account_balance_wallet,
-                                  isSmallScreen: isSmallScreen,
-                                ),
-                              ),
-                            ],
-                          );
-                    },
-                  ),
-                  SizedBox(height: isSmallScreen ? 16 : 20),
-                ],
-                isSmallScreen
-                  ? Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Consumer<ProfileProvider>(
-                                builder: (context, profileProvider, child) {
-                                  return _buildStatCard(
-                                    'Artworks',
-                                    profileProvider.formattedArtworksCount,
-                                    Icons.palette,
-                                    isSmallScreen: isSmallScreen,
-                                    onTap: () => ProfileScreenMethods.showArtworks(context),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Consumer<ProfileProvider>(
-                                builder: (context, profileProvider, child) {
-                                  return _buildStatCard(
-                                    'Collections',
-                                    profileProvider.formattedCollectionsCount,
-                                    Icons.collections,
-                                    isSmallScreen: isSmallScreen,
-                                    onTap: () => ProfileScreenMethods.showCollections(context),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Consumer<ProfileProvider>(
-                                builder: (context, profileProvider, child) {
-                                  return _buildStatCard(
-                                    'Followers',
-                                    profileProvider.formattedFollowersCount,
-                                    Icons.people,
-                                    isSmallScreen: isSmallScreen,
-                                    onTap: () => ProfileScreenMethods.showFollowers(context),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Consumer<ProfileProvider>(
-                                builder: (context, profileProvider, child) {
-                                  return _buildStatCard(
-                                    'Following',
-                                    profileProvider.formattedFollowingCount,
-                                    Icons.person_add,
-                                    isSmallScreen: isSmallScreen,
-                                    onTap: () => ProfileScreenMethods.showFollowing(context),
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: Consumer<ProfileProvider>(
-                            builder: (context, profileProvider, child) {
-                              return _buildStatCard(
-                                'Artworks',
-                                profileProvider.formattedArtworksCount,
-                                Icons.palette,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => ProfileScreenMethods.showArtworks(context),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Consumer<ProfileProvider>(
-                            builder: (context, profileProvider, child) {
-                              return _buildStatCard(
-                                'Collections',
-                                profileProvider.formattedCollectionsCount,
-                                Icons.collections,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => ProfileScreenMethods.showCollections(context),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Consumer<ProfileProvider>(
-                            builder: (context, profileProvider, child) {
-                              return _buildStatCard(
-                                'Followers',
-                                profileProvider.formattedFollowersCount,
-                                Icons.people,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => ProfileScreenMethods.showFollowers(context),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Consumer<ProfileProvider>(
-                            builder: (context, profileProvider, child) {
-                              return _buildStatCard(
-                                'Following',
-                                profileProvider.formattedFollowingCount,
-                                Icons.person_add,
-                                isSmallScreen: isSmallScreen,
-                                onTap: () => ProfileScreenMethods.showFollowing(context),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
+                Row(
+                  children: [
+                    _buildInlineStat(
+                      label: 'Posts',
+                      value: profileProvider.formattedPostsCount,
+                      isCompact: isSmallScreen,
                     ),
+                    _buildInlineStat(
+                      label: 'Followers',
+                      value: profileProvider.formattedFollowersCount,
+                      isCompact: isSmallScreen,
+                      onTap: () => ProfileScreenMethods.showFollowers(context),
+                    ),
+                    _buildInlineStat(
+                      label: 'Following',
+                      value: profileProvider.formattedFollowingCount,
+                      isCompact: isSmallScreen,
+                      onTap: () => ProfileScreenMethods.showFollowing(context),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isSmallScreen ? 16 : 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Artworks',
+                        profileProvider.formattedArtworksCount,
+                        Icons.palette,
+                        isSmallScreen: isSmallScreen,
+                        onTap: () => ProfileScreenMethods.showArtworks(context),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Collections',
+                        profileProvider.formattedCollectionsCount,
+                        Icons.collections,
+                        isSmallScreen: isSmallScreen,
+                        onTap: () => ProfileScreenMethods.showCollections(context),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           );
         },
-      ),
-    );
-  }
-
-  Widget _buildBalanceCard(String title, String value, IconData icon, {bool isSmallScreen = false}) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const Wallet()),
-        );
-      },
-      child: Container(
-        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-        decoration: BoxDecoration(
-          color: themeProvider.accentColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-          border: Border.all(
-            color: themeProvider.accentColor.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: themeProvider.accentColor,
-              size: isSmallScreen ? 20 : 24,
-            ),
-            SizedBox(height: isSmallScreen ? 6 : 8),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 16 : 18,
-                fontWeight: FontWeight.bold,
-                color: themeProvider.accentColor,
-              ),
-            ),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 8 : 10,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -691,295 +549,652 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildTabBar() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
-    return SliverToBoxAdapter(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isSmallScreen = constraints.maxWidth < 375;
-          
-          return Container(
-            margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: false, // Make tabs full width
-              tabAlignment: TabAlignment.fill, // Ensure full width distribution
-              tabs: _tabs.map((tab) => Tab(
-                child: Text(
-                  tab,
+  Widget _buildInlineStat({
+    required String label,
+    required String value,
+    bool isCompact = false,
+    VoidCallback? onTap,
+  }) {
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.inter(
+            fontSize: isCompact ? 16 : 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: isCompact ? 12 : 13,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ],
+    );
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {
+      _postsFuture = _loadUserPosts();
+      _artistDataRequested = false;
+      _artistDataLoaded = false;
+    });
+    try {
+      await _postsFuture;
+    } catch (_) {}
+    await _maybeLoadArtistData(force: true);
+  }
+
+  Future<String?> _resolveCurrentWallet() async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = profileProvider.currentUser?.walletAddress;
+    if (wallet != null && wallet.isNotEmpty) {
+      return wallet;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final storedWallet = prefs.getString('wallet_address');
+    if (storedWallet != null && storedWallet.isNotEmpty) {
+      return storedWallet;
+    }
+    return null;
+  }
+
+  Future<List<CommunityPost>> _loadUserPosts({String? walletOverride}) async {
+    final wallet = walletOverride ?? await _resolveCurrentWallet();
+    if (wallet == null || wallet.isEmpty) {
+      return [];
+    }
+    try {
+      final posts = await BackendApiService().getCommunityPosts(
+        page: 1,
+        limit: 50,
+        authorWallet: wallet,
+      );
+      await CommunityService.loadSavedInteractions(
+        posts,
+        walletAddress: wallet,
+      );
+      return posts;
+    } catch (e) {
+      debugPrint('Error loading user posts: $e');
+      rethrow;
+    }
+  }
+
+  Widget _buildPostsSection() {
+    final future = _postsFuture ?? _loadUserPosts();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: FutureBuilder<List<CommunityPost>>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const AppLoading();
+          }
+
+          if (snapshot.hasError) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Posts',
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 12 : 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              )).toList(),
-              indicator: BoxDecoration(
-                color: themeProvider.accentColor,
-                borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 12),
+                _buildErrorCard(
+                  message: 'Could not load your posts.',
+                  onRetry: () {
+                    setState(() {
+                      _postsFuture = _loadUserPosts();
+                    });
+                  },
+                ),
+              ],
+            );
+          }
+
+          final posts = snapshot.data ?? [];
+
+          if (posts.isEmpty) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Posts',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _buildEmptyStateCard(
+                  title: 'No posts yet',
+                  description: 'Share your perspective with the community to see it here.',
+                  icon: Icons.article,
+                ),
+              ],
+            );
+          }
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Posts',
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
-              indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: Colors.white,
-              unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              labelStyle: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 12 : 14,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 16),
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: posts.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  return _buildPostCard(posts[index]);
+                },
               ),
-              unselectedLabelStyle: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 12 : 14,
-                fontWeight: FontWeight.normal,
-              ),
-              dividerHeight: 0,
-            ),
+            ],
           );
         },
       ),
     );
   }
 
-  Widget _buildActivityTab() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        bool isSmallScreen = constraints.maxWidth < 375;
-        
-        return Padding(
-          padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-          child: FutureBuilder<Map<String, List<dynamic>>>(
-            future: _loadUserActivity(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const AppLoading();
-              }
-              
-              if (snapshot.hasError) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error Loading Activity',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              final activityData = snapshot.data ?? {};
-              final activities = _buildActivityList(activityData);
-              
-              if (activities.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.timeline,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No Activity Yet',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Start creating and interacting to see your activity here',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                );
-              }
-              
-              return ListView.builder(
-                itemCount: activities.length,
-                itemBuilder: (context, index) => _buildRealActivityItem(activities[index]),
-              );
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildStatsTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+  Widget _buildErrorCard({required String message, required VoidCallback onRetry}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildAchievementsSection(),
-          const SizedBox(height: 24),
-          _buildPerformanceStats(),
+          Text(
+            message,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onRetry,
+            child: const Text('Try again'),
+          ),
         ],
       ),
     );
   }
 
-  /// Load user activity from backend (posts, likes, comments, saved items)
-  Future<Map<String, List<dynamic>>> _loadUserActivity() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final walletAddress = prefs.getString('wallet_address');
-      
-      if (walletAddress == null || walletAddress.isEmpty) {
-        return {};
-      }
-
-      // Load user's posts (filtered by wallet address)
-      final posts = await BackendApiService().getCommunityPosts(
-        page: 1,
-        limit: 50,
-        authorWallet: walletAddress,
-      );
-
-      // Load liked posts (from local storage)
-      final likedPostIds = prefs.getStringList('liked_posts') ?? [];
-      
-      // Load bookmarked posts
-      final bookmarkedPostIds = prefs.getStringList('bookmarked_posts') ?? [];
-      
-      // Load saved artworks
-      final savedArtworkIds = prefs.getStringList('saved_artwork_ids') ?? [];
-
-      return {
-        'posts': posts,
-        'likes': likedPostIds,
-        'bookmarks': bookmarkedPostIds,
-        'savedArtworks': savedArtworkIds,
-      };
-    } catch (e) {
-      debugPrint('Error loading user activity: $e');
-      return {};
-    }
+  Widget _buildEmptyStateCard({
+    required String title,
+    required String description,
+    IconData icon = Icons.info_outline,
+    bool showAction = false,
+    String actionLabel = 'Retry',
+    Future<void> Function()? onActionTap,
+  }) {
+    return EmptyStateCard(
+      icon: icon,
+      title: title,
+      description: description,
+      showAction: showAction,
+      actionLabel: showAction ? actionLabel : null,
+      onAction: onActionTap != null ? () => onActionTap() : null,
+    );
   }
 
-  /// Build activity list from backend data
-  List<Map<String, dynamic>> _buildActivityList(Map<String, List<dynamic>> activityData) {
-    final activities = <Map<String, dynamic>>[];
-    
-    // Add posts
-    final posts = activityData['posts'] ?? [];
-    for (final post in posts) {
-      if (post is CommunityPost) {
-        activities.add({
-          'type': 'post',
-          'icon': Icons.create,
-          'title': 'Created a post',
-          'description': post.content.length > 50 
-              ? '${post.content.substring(0, 50)}...' 
-              : post.content,
-          'timestamp': post.timestamp,
-        });
-      }
-    }
-    
-    // Add likes
-    final likes = activityData['likes'] ?? [];
-    if (likes.isNotEmpty) {
-      activities.add({
-        'type': 'likes',
-        'icon': Icons.favorite,
-        'title': 'Liked ${likes.length} posts',
-        'description': 'You\'ve been active in the community',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 1)),
-      });
-    }
-    
-    // Add bookmarks
-    final bookmarks = activityData['bookmarks'] ?? [];
-    if (bookmarks.isNotEmpty) {
-      activities.add({
-        'type': 'bookmarks',
-        'icon': Icons.bookmark,
-        'title': 'Saved ${bookmarks.length} posts',
-        'description': 'Building your collection',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 2)),
-      });
-    }
-    
-    // Add saved artworks
-    final savedArtworks = activityData['savedArtworks'] ?? [];
-    if (savedArtworks.isNotEmpty) {
-      activities.add({
-        'type': 'saved',
-        'icon': Icons.collections,
-        'title': 'Saved ${savedArtworks.length} artworks',
-        'description': 'Curating your favorites',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 3)),
-      });
-    }
-    
-    // Sort by timestamp (newest first)
-    activities.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
-    
-    return activities;
-  }
-
-  /// Build activity item widget from real data
-  Widget _buildRealActivityItem(Map<String, dynamic> activity) {
-    final icon = activity['icon'] as IconData;
-    final title = activity['title'] as String;
-    final description = activity['description'] as String;
-    final timestamp = activity['timestamp'] as DateTime;
-    final timeAgo = _getTimeAgo(timestamp);
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
+  Widget _buildPostCard(CommunityPost post) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AvatarWidget(
+                  wallet: post.authorId,
+                  avatarUrl: post.authorAvatar,
+                  radius: 18,
+                  enableProfileNavigation: false,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.authorName,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _formatRelativeTime(post.timestamp),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            child: Icon(
-              icon,
-              color: Provider.of<ThemeProvider>(context).accentColor,
-              size: 20,
+            const SizedBox(height: 12),
+            Text(
+              post.content,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                height: 1.4,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  post.imageUrl!,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(
+                  post.isLiked ? Icons.favorite : Icons.favorite_border,
+                  size: 18,
+                  color: post.isLiked
+                      ? themeProvider.accentColor
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  post.likeCount.toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: post.isLiked
+                        ? themeProvider.accentColor
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Icon(
+                  Icons.comment_outlined,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  post.commentCount.toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _maybeLoadArtistData({bool force = false}) async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = profileProvider.currentUser?.walletAddress;
+    final isCreator = (profileProvider.currentUser?.isArtist ?? false) ||
+        (profileProvider.currentUser?.isInstitution ?? false);
+    if (!isCreator || wallet == null || wallet.isEmpty) {
+      return;
+    }
+    if (_artistDataLoading && !force) {
+      return;
+    }
+    if (_artistDataRequested && !force) {
+      return;
+    }
+    _artistDataRequested = true;
+    await _loadArtistData(wallet, force: force);
+  }
+
+  Future<void> _loadArtistData(String walletAddress, {bool force = false}) async {
+    if (!mounted) return;
+    setState(() {
+      _artistDataLoading = true;
+      if (force) {
+        _artistArtworks = [];
+        _artistCollections = [];
+        _artistEvents = [];
+      }
+    });
+    try {
+      final api = BackendApiService();
+      final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
+      final collections = await api.getCollections(walletAddress: walletAddress, limit: 6);
+      final eventsResponse = await api.listEvents(limit: 100);
+      final lowerWallet = walletAddress.toLowerCase();
+      final filteredEvents = eventsResponse.where((event) {
+        final createdBy = (event['createdBy'] ?? event['created_by'] ?? '').toString().toLowerCase();
+        final artistIdsDynamic = event['artistIds'] ?? event['artist_ids'] ?? [];
+        final artistIds = artistIdsDynamic is List
+            ? artistIdsDynamic.map((e) => e.toString().toLowerCase()).toList()
+            : <String>[];
+        return createdBy == lowerWallet || artistIds.contains(lowerWallet);
+      }).take(6).map((e) => Map<String, dynamic>.from(e)).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _artistArtworks = artworks;
+        _artistCollections = collections;
+        _artistEvents = filteredEvents;
+        _artistDataLoaded = true;
+      });
+    } catch (e) {
+      debugPrint('Error loading artist data: $e');
+      if (!mounted) return;
+      setState(() {
+        _artistDataLoaded = true;
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _artistDataLoading = false;
+      });
+    }
+  }
+
+  Widget _buildArtistEventsShowcase() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Events',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
+          const SizedBox(height: 12),
+          _buildShowcaseSection(
+            title: 'Upcoming events',
+            items: _artistEvents,
+            emptyLabel: 'Plan an event or workshop to engage your audience.',
+            builder: _buildEventCard,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArtistHighlightsGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Artist Highlights',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Keep your artworks and collections front and center.',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildShowcaseSection(
+            title: 'Artworks',
+            items: _artistArtworks,
+            emptyLabel: 'Upload your first artwork to showcase it here.',
+            builder: _buildArtworkCard,
+          ),
+          const SizedBox(height: 24),
+          _buildShowcaseSection(
+            title: 'Collections',
+            items: _artistCollections,
+            emptyLabel: 'Create a collection to curate your story.',
+            builder: _buildCollectionCard,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstitutionHighlightsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Institution Highlights',
+            style: GoogleFonts.inter(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Promote upcoming programs and featured collections.',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildShowcaseSection(
+            title: 'Events',
+            items: _artistEvents,
+            emptyLabel: 'Share your next exhibition or gathering here.',
+            builder: _buildEventCard,
+          ),
+          const SizedBox(height: 24),
+          _buildShowcaseSection(
+            title: 'Collections',
+            items: _artistCollections,
+            emptyLabel: 'Curate institutional collections to highlight.',
+            builder: _buildCollectionCard,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShowcaseSection({
+    required String title,
+    required List<Map<String, dynamic>> items,
+    required Widget Function(Map<String, dynamic>) builder,
+    required String emptyLabel,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_artistDataLoading && !_artistDataLoaded)
+          Container(
+            height: 160,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+            ),
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          )
+        else if (items.isEmpty)
+          _buildEmptyStateCard(
+            title: 'No $title',
+            description: emptyLabel,
+            icon: (() {
+              final lower = title.toLowerCase();
+              if (lower.contains('artwork')) return Icons.image_outlined;
+              if (lower.contains('collection')) return Icons.collections_outlined;
+              if (lower.contains('event')) return Icons.event;
+              if (lower.contains('post') || lower.contains('posts')) return Icons.article;
+              return Icons.info_outline;
+            })(),
+          )
+        else
+          SizedBox(
+            height: 210,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) => builder(items[index]),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildArtworkCard(Map<String, dynamic> data) {
+    final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
+    final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
+    final medium = (data['category'] ?? data['medium'] ?? 'Digital art').toString();
+    return _buildShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: medium,
+      footer: '${data['likesCount'] ?? data['likes'] ?? 0} likes',
+    );
+  }
+
+  Widget _buildCollectionCard(Map<String, dynamic> data) {
+    final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
+    final title = (data['name'] ?? 'New Collection').toString();
+    final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
+    return _buildShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: '$count artworks',
+      footer: (data['description'] ?? 'Curated by you').toString(),
+    );
+  }
+
+  Widget _buildEventCard(Map<String, dynamic> data) {
+    final imageUrl = _extractImageUrl(data, ['bannerUrl', 'image']);
+    final title = (data['title'] ?? 'Event').toString();
+    final date = _formatDateLabel(data['startDate'] ?? data['start_date']);
+    final location = (data['location'] ?? 'TBA').toString();
+    return _buildShowcaseCard(
+      imageUrl: imageUrl,
+      title: title,
+      subtitle: date,
+      footer: location,
+    );
+  }
+
+  Widget _buildShowcaseCard({
+    String? imageUrl,
+    required String title,
+    required String subtitle,
+    required String footer,
+  }) {
+    final normalizedImage = _normalizeMediaUrl(imageUrl);
+    return Container(
+      width: 200,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (normalizedImage != null)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: Image.network(
+                normalizedImage,
+                height: 110,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            )
+          else
+            Container(
+              height: 110,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              ),
+              child: const Center(child: Icon(Icons.image_not_supported)),
+            ),
+          Padding(
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -988,23 +1203,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  description,
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  footer,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            timeAgo,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -1012,11 +1229,53 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  String _getTimeAgo(DateTime timestamp) {
+  String? _extractImageUrl(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value is String && value.isNotEmpty) {
+        return value;
+      }
+    }
+    final images = data['imageUrls'] ?? data['image_urls'] ?? data['images'];
+    if (images is List && images.isNotEmpty) {
+      final first = images.first;
+      if (first is String && first.isNotEmpty) {
+        return first;
+      }
+    }
+    return null;
+  }
+
+  String? _normalizeMediaUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    if (url.startsWith('ipfs://')) {
+      final cid = url.replaceFirst('ipfs://', '');
+      return 'https://ipfs.io/ipfs/$cid';
+    }
+    return url;
+  }
+
+  String _formatDateLabel(dynamic value) {
+    if (value == null) return 'TBA';
+    try {
+      final date = value is DateTime ? value : DateTime.parse(value.toString());
+      return '${_monthShort(date.month)} ${date.day}, ${date.year}';
+    } catch (_) {
+      return 'TBA';
+    }
+  }
+
+  String _monthShort(int month) {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (month < 1 || month > 12) return '';
+    return months[month - 1];
+  }
+
+  String _formatRelativeTime(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
 
-    if (difference.inDays > 7) {
+    if (difference.inDays >= 7) {
       return '${(difference.inDays / 7).floor()}w ago';
     } else if (difference.inDays > 0) {
       return '${difference.inDays}d ago';
@@ -1024,14 +1283,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       return '${difference.inHours}h ago';
     } else if (difference.inMinutes > 0) {
       return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
     }
+    return 'Just now';
   }
 
+
   Widget _buildAchievementsSection() {
-    return Consumer2<TaskProvider, ConfigProvider>(
-      builder: (context, taskProvider, configProvider, child) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Consumer2<TaskProvider, ConfigProvider>(
+        builder: (context, taskProvider, configProvider, child) {
         if (!configProvider.useMockData) {
           // Show real achievement data when mock data is disabled
           final achievements = taskProvider.achievementProgress;
@@ -1083,34 +1344,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               const SizedBox(height: 16),
               achievements.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.emoji_events,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No Achievements Yet',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Start exploring to unlock achievements',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ],
-                    ),
+                ? _buildEmptyStateCard(
+                    title: 'No Achievements Yet',
+                    description: 'Start exploring to unlock achievements',
+                    icon: Icons.emoji_events,
                   )
                 : Wrap(
                     spacing: 12,
@@ -1193,22 +1430,23 @@ class _ProfileScreenState extends State<ProfileScreen>
             ],
           );
         }
-      },
+        },
+      ),
     );
   }
 
   Widget _buildAchievementBadge(String title, IconData icon, bool unlocked) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: unlocked 
+        color: unlocked
             ? themeProvider.accentColor.withValues(alpha: 0.1)
             : Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: unlocked 
+          color: unlocked
               ? themeProvider.accentColor.withValues(alpha: 0.3)
               : Theme.of(context).colorScheme.outline,
         ),
@@ -1217,7 +1455,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           Icon(
             icon,
-            color: unlocked 
+            color: unlocked
                 ? themeProvider.accentColor
                 : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
             size: 24,
@@ -1239,10 +1477,34 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPerformanceStats() {
-    return Consumer<ConfigProvider>(
-      builder: (context, config, child) {
-        if (!config.useMockData) {
-          // Real stats would come from providers/API
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Consumer<ConfigProvider>(
+        builder: (context, config, child) {
+          if (!config.useMockData) {
+            // Real stats would come from providers/API
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Performance',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildEmptyStateCard(
+                  icon: Icons.analytics,
+                  title: 'No Stats Available',
+                  description: 'Performance stats will appear as you interact with the platform',
+                ),
+              ],
+            );
+          }
+
+          // Mock data for demo purposes
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1255,62 +1517,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              Center(
-                child: Column(
-                  children: [
-                Icon(
-                  Icons.analytics,
-                  size: 64,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'No Stats Available',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[400],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Performance stats will appear as you interact with the platform',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Colors.grey[500],
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Mock data for demo purposes
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Performance',
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 16),
-        _buildPerformanceCard('Total Views', '2,456', Icons.visibility, '+12%'),
-        const SizedBox(height: 12),
-        _buildPerformanceCard('Likes Received', '389', Icons.favorite, '+8%'),
-        const SizedBox(height: 12),
-        _buildPerformanceCard('KUB8 Earned', '156.7', Icons.currency_bitcoin, '+23%'),
-        const SizedBox(height: 12),
-        _buildPerformanceCard('Discoveries', '42', Icons.location_on, '+15%'),
-      ],
-    );
-      },
+              _buildPerformanceCard('Total Views', '2,456', Icons.visibility, '+12%'),
+              const SizedBox(height: 12),
+              _buildPerformanceCard('Likes Received', '389', Icons.favorite, '+8%'),
+              const SizedBox(height: 12),
+              _buildPerformanceCard('KUB8 Earned', '156.7', Icons.currency_bitcoin, '+23%'),
+              const SizedBox(height: 12),
+              _buildPerformanceCard('Discoveries', '42', Icons.location_on, '+15%'),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -1393,6 +1610,50 @@ class _ProfileScreenState extends State<ProfileScreen>
     }
     
     return cardContent;
+  }
+
+  Widget _buildArtistBadge() {
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    return Tooltip(
+      message: 'Artist profile',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: accent.withValues(alpha: 0.4)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.brush, size: 14, color: accent),
+            const SizedBox(width: 2),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstitutionBadge() {
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    return Tooltip(
+      message: 'Institution profile',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: accent.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.apartment_rounded, size: 14, color: accent),
+            const SizedBox(width: 4),
+          ],
+        ),
+      ),
+    );
   }
 
   // Navigation and interaction methods

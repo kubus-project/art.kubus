@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
@@ -27,8 +26,8 @@ class _MainAppState extends State<MainApp> {
     _screens = [
       const MapScreen(),
       const ARScreen(),
-      const HomeScreen(),
       const CommunityScreen(),
+      const HomeScreen(),
       const ProfileScreen(),
     ];
   }
@@ -150,16 +149,16 @@ class _MainAppState extends State<MainApp> {
             child: Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: isSmallScreen ? 4 : 8, 
-                vertical: isSmallScreen ? 6 : 8,
+                vertical: isSmallScreen ? 2 : 4,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildNavItem(0, Icons.map, 'Explore', isSmallScreen),
-                  _buildNavItem(1, Icons.view_in_ar, 'AR', isSmallScreen),
-                  _buildNavItem(2, Icons.home, 'Home', isSmallScreen),
-                  _buildNavItem(3, Icons.people, 'Community', isSmallScreen),
-                  _buildNavItem(4, Icons.person, 'Profile', isSmallScreen),
+                  _buildNavItem(0, Icons.explore, isSmallScreen),
+                  _buildNavItem(1, Icons.view_in_ar, isSmallScreen),
+                  _buildNavItem(2, Icons.people, isSmallScreen),
+                  _buildNavItem(3, Icons.home, isSmallScreen),
+                  _buildNavItem(4, Icons.person, isSmallScreen),
                 ],
               ),
             ),
@@ -169,7 +168,7 @@ class _MainAppState extends State<MainApp> {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label, bool isSmallScreen) {
+  Widget _buildNavItem(int index, IconData icon, bool isSmallScreen) {
     final isSelected = _currentIndex == index;
     final themeProvider = Provider.of<ThemeProvider>(context);
     
@@ -201,20 +200,6 @@ class _MainAppState extends State<MainApp> {
                     ? themeProvider.accentColor
                     : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 size: isSmallScreen ? 18 : 22,
-              ),
-              SizedBox(height: isSmallScreen ? 1 : 2),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 8 : 10,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected 
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -11,6 +11,7 @@ class UserProfile {
   final String? coverImage;
   final Map<String, String> social;
   final bool isArtist;
+  final bool isInstitution;
   final ArtistInfo? artistInfo;
   final ProfilePreferences? preferences;
   final UserStats? stats;
@@ -27,6 +28,7 @@ class UserProfile {
     this.coverImage,
     this.social = const {},
     this.isArtist = false,
+    this.isInstitution = false,
     this.artistInfo,
     this.preferences,
     this.stats,
@@ -44,6 +46,7 @@ class UserProfile {
     String? coverImage,
     Map<String, String>? social,
     bool? isArtist,
+    bool? isInstitution,
     ArtistInfo? artistInfo,
     ProfilePreferences? preferences,
     UserStats? stats,
@@ -60,6 +63,7 @@ class UserProfile {
       coverImage: coverImage ?? this.coverImage,
       social: social ?? this.social,
       isArtist: isArtist ?? this.isArtist,
+      isInstitution: isInstitution ?? this.isInstitution,
       artistInfo: artistInfo ?? this.artistInfo,
       preferences: preferences ?? this.preferences,
       stats: stats ?? this.stats,
@@ -102,6 +106,7 @@ class UserProfile {
       coverImage: coverRaw?.toString(),
       social: socialMap,
       isArtist: json['isArtist'] ?? json['is_artist'] ?? false,
+      isInstitution: json['isInstitution'] ?? json['is_institution'] ?? false,
       artistInfo: json['artistInfo'] != null ? ArtistInfo.fromJson(json['artistInfo']) : null,
       preferences: json['preferences'] != null ? ProfilePreferences.fromJson(json['preferences']) : null,
       stats: json['stats'] != null ? UserStats.fromJson(json['stats']) : null,
@@ -121,6 +126,7 @@ class UserProfile {
       'coverImage': coverImage,
       'social': social,
       'isArtist': isArtist,
+      'isInstitution': isInstitution,
       'artistInfo': artistInfo?.toJson(),
       'preferences': preferences?.toJson(),
       'createdAt': createdAt.toIso8601String(),
@@ -297,6 +303,6 @@ String _backendAvatarBase() {
     final svc = BackendApiService();
     return '${svc.baseUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
   } catch (_) {
-    return AppConfig.isDevelopment ? 'http://localhost:3000/api/avatar' : 'https://api.kubus.site/api/avatar';
+    return '${AppConfig.baseApiUrl.replaceAll(RegExp(r'/$'), '')}/api/avatar';
   }
 }

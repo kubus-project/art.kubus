@@ -1,31 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_loading.dart';
+import '../widgets/avatar_widget.dart';
 import 'package:provider/provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/profile_provider.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_service.dart';
 import 'user_profile_screen.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
   static void showFollowers(BuildContext context, {String? userId}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _FollowersBottomSheet(userId: userId),
-    );
+    // Prefetch stats so parent UI can update counts before showing list
+    (() async {
+      try {
+        if (userId == null) {
+          try { await Provider.of<ProfileProvider>(context, listen: false).refreshStats(); } catch (_) {}
+        } else {
+          try { await UserService.fetchAndUpdateUserStats(userId); } catch (_) {}
+        }
+      } catch (_) {}
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _FollowersBottomSheet(userId: userId),
+      );
+    })();
   }
 
   static void showFollowing(BuildContext context, {String? userId}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _FollowingBottomSheet(userId: userId),
-    );
+    // Prefetch stats so parent UI can update counts before showing list
+    (() async {
+      try {
+        if (userId == null) {
+          try { await Provider.of<ProfileProvider>(context, listen: false).refreshStats(); } catch (_) {}
+        } else {
+          try { await UserService.fetchAndUpdateUserStats(userId); } catch (_) {}
+        }
+      } catch (_) {}
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _FollowingBottomSheet(userId: userId),
+      );
+    })();
   }
 
   static void showArtworks(BuildContext context) {
@@ -170,9 +193,11 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
       itemCount: _followers!.length,
       itemBuilder: (context, index) {
         final follower = _followers![index];
-        final username = follower['username'] as String? ?? 'Anonymous';
+        final username = follower['username'] as String? ?? 'anonymous';
+        final displayName = (follower['displayName'] ?? follower['display_name'] ?? follower['name']) as String? ?? username;
         final walletAddress = follower['walletAddress'] as String? ?? follower['id'] as String? ?? '';
         final isVerified = follower['isVerified'] as bool? ?? false;
+        final avatarUrl = (follower['profileImageUrl'] ?? follower['avatar'] ?? follower['avatarUrl'] ?? follower['avatar_url']) as String?;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -189,39 +214,31 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                 ),
               );
             },
-            leading: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeProvider.accentColor,
-                    themeProvider.accentColor.withValues(alpha: 0.7),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: const Icon(Icons.person, color: Colors.white, size: 24),
+            leading: AvatarWidget(
+              wallet: walletAddress,
+              avatarUrl: avatarUrl,
+              radius: 25,
             ),
             title: Row(
               children: [
-                Text(
-                  username,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
+                Flexible(
+                  child: Text(
+                    displayName,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 if (isVerified) ...[
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Icon(Icons.verified, size: 16, color: themeProvider.accentColor),
                 ],
               ],
             ),
             subtitle: Text(
-              walletAddress.length > 20 
-                  ? '${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}'
-                  : walletAddress,
+              '@$username',
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,
@@ -422,9 +439,11 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
       itemCount: _following!.length,
       itemBuilder: (context, index) {
         final user = _following![index];
-        final username = user['username'] as String? ?? 'Anonymous';
+        final username = user['username'] as String? ?? 'anonymous';
+        final displayName = (user['displayName'] ?? user['display_name'] ?? user['name']) as String? ?? username;
         final walletAddress = user['walletAddress'] as String? ?? user['id'] as String? ?? '';
         final isVerified = user['isVerified'] as bool? ?? false;
+        final avatarUrl = (user['profileImageUrl'] ?? user['avatar'] ?? user['avatarUrl'] ?? user['avatar_url']) as String?;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -441,39 +460,31 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                 ),
               );
             },
-            leading: Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeProvider.accentColor,
-                    themeProvider.accentColor.withValues(alpha: 0.7),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(25),
-              ),
-              child: const Icon(Icons.person, color: Colors.white, size: 24),
+            leading: AvatarWidget(
+              wallet: walletAddress,
+              avatarUrl: avatarUrl,
+              radius: 25,
             ),
             title: Row(
               children: [
-                Text(
-                  username,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.w600,
-                    color: theme.colorScheme.onSurface,
+                Flexible(
+                  child: Text(
+                    displayName,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 if (isVerified) ...[
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Icon(Icons.verified, size: 16, color: themeProvider.accentColor),
                 ],
               ],
             ),
             subtitle: Text(
-              walletAddress.length > 20 
-                  ? '${walletAddress.substring(0, 8)}...${walletAddress.substring(walletAddress.length - 8)}'
-                  : walletAddress,
+              '@$username',
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 12,

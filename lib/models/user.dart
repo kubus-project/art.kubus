@@ -11,6 +11,8 @@ class User {
   final int postsCount;
   final bool isFollowing;
   final bool isVerified;
+  final bool isArtist;
+  final bool isInstitution;
   final String joinedDate;
   final List<AchievementProgress> achievementProgress;
 
@@ -25,6 +27,8 @@ class User {
     required this.postsCount,
     required this.isFollowing,
     required this.isVerified,
+    this.isArtist = false,
+    this.isInstitution = false,
     required this.joinedDate,
     this.achievementProgress = const [],
   });
@@ -64,6 +68,8 @@ class User {
     int? postsCount,
     bool? isFollowing,
     bool? isVerified,
+    bool? isArtist,
+    bool? isInstitution,
     String? joinedDate,
     List<AchievementProgress>? achievementProgress,
   }) {
@@ -78,6 +84,8 @@ class User {
       postsCount: postsCount ?? this.postsCount,
       isFollowing: isFollowing ?? this.isFollowing,
       isVerified: isVerified ?? this.isVerified,
+      isArtist: isArtist ?? this.isArtist,
+      isInstitution: isInstitution ?? this.isInstitution,
       joinedDate: joinedDate ?? this.joinedDate,
       achievementProgress: achievementProgress ?? this.achievementProgress,
     );

@@ -1094,8 +1094,10 @@ class BackendApiService {
     int limit = 20,
     bool? arOnly,
     String? authorWallet,
+    bool? followingOnly,
   }) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -1103,6 +1105,7 @@ class BackendApiService {
 
       if (arOnly != null) queryParams['arOnly'] = arOnly.toString();
       if (authorWallet != null) queryParams['authorWallet'] = authorWallet;
+      if (followingOnly != null) queryParams['followingOnly'] = followingOnly.toString();
 
       final uri = Uri.parse('$baseUrl/api/community/posts').replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: _getHeaders());
@@ -1116,6 +1119,30 @@ class BackendApiService {
       }
     } catch (e) {
       debugPrint('Error getting community posts: $e');
+      rethrow;
+    }
+  }
+
+  /// Get a single community post by id
+  /// GET /api/community/posts/:id
+  Future<CommunityPost> getCommunityPostById(String postId) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/community/posts/$postId');
+      final response = await http.get(uri, headers: _getHeaders());
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          final payload = data['data'] ?? data;
+          return _communityPostFromBackendJson(payload as Map<String, dynamic>);
+        }
+        throw Exception('Unexpected post payload');
+      } else {
+        throw Exception('Failed to get post: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting community post by id: $e');
       rethrow;
     }
   }
@@ -1163,19 +1190,26 @@ class BackendApiService {
 
   /// Like a post
   /// POST /api/community/posts/:id/like
-  Future<void> likePost(String postId) async {
+  Future<int?> likePost(String postId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      await http.post(
+      final response = await http.post(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
       );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is Map<String, dynamic> ? data['likesCount'] as int? : null;
+      }
+      throw Exception('Failed to like post (${response.statusCode})');
     } catch (e) {
       debugPrint('Error liking post: $e');
+      rethrow;
     }
   }
 
-  /// Share a post
+  /// Share a post (increment share counter)
   /// POST /api/community/posts/:id/share
   Future<void> sharePost(String postId) async {
     try {
@@ -1188,17 +1222,154 @@ class BackendApiService {
     }
   }
 
-  /// Unlike a post
-  /// DELETE /api/community/posts/:id/like
-  Future<void> unlikePost(String postId) async {
+  /// Create a repost with optional comment
+  /// POST /api/community/posts/repost
+  Future<CommunityPost> createRepost({
+    required String originalPostId,
+    String? content,
+  }) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      await http.delete(
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/community/posts/repost'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'originalPostId': originalPostId,
+          if (content != null && content.isNotEmpty) 'content': content,
+        }),
+      );
+
+      if (response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+      } else {
+        throw Exception('Failed to create repost: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error creating repost: $e');
+      rethrow;
+    }
+  }
+
+  /// Share a post via direct message
+  /// POST /api/community/messages/share
+  Future<void> sharePostViaDM({
+    required String postId,
+    required String recipientWallet,
+    String? message,
+  }) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/community/messages/share'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'postId': postId,
+          'recipientWallet': recipientWallet,
+          if (message != null && message.isNotEmpty) 'message': message,
+        }),
+      );
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Failed to share post via DM: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error sharing post via DM: $e');
+      rethrow;
+    }
+  }
+
+  /// Get list of users who reposted a post
+  /// GET /api/community/posts/:id/reposts
+  Future<List<Map<String, dynamic>>> getPostReposts({
+    required String postId,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/community/posts/$postId/reposts?page=$page&limit=$limit'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final reposts = (data['data'] as List?) ?? [];
+        return reposts.map((r) => r as Map<String, dynamic>).toList();
+      } else {
+        throw Exception('Failed to get reposts: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting reposts: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a repost (unrepost)
+  /// DELETE /api/community/posts/:id/repost
+  Future<void> deleteRepost(String repostId) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/community/posts/$repostId/repost'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to delete repost: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error deleting repost: $e');
+      rethrow;
+    }
+  }
+
+  /// Track analytics event
+  /// POST /api/community/analytics/event
+  Future<void> trackAnalyticsEvent({
+    required String eventType,
+    String? postId,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/community/analytics/event'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'eventType': eventType,
+          if (postId != null) 'postId': postId,
+          if (metadata != null) 'metadata': metadata,
+        }),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        debugPrint('Failed to track analytics event: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error tracking analytics event: $e');
+      // Don't rethrow - analytics failures shouldn't break user experience
+    }
+  }
+
+  /// Unlike a post
+  /// DELETE /api/community/posts/:id/like
+  Future<int?> unlikePost(String postId) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.delete(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
       );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is Map<String, dynamic> ? data['likesCount'] as int? : null;
+      }
+      throw Exception('Failed to unlike post (${response.statusCode})');
     } catch (e) {
       debugPrint('Error unliking post: $e');
+      rethrow;
     }
   }
 
@@ -1397,40 +1568,111 @@ class BackendApiService {
 
   /// Like a comment
   /// POST /api/community/comments/:id/like
-  Future<void> likeComment(String commentId) async {
+  Future<int?> likeComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      await http.post(
+      final response = await http.post(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
       );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is Map<String, dynamic> ? data['likesCount'] as int? : null;
+      }
+      throw Exception('Failed to like comment (${response.statusCode})');
     } catch (e) {
       debugPrint('Error liking comment: $e');
+      rethrow;
     }
   }
 
   /// Unlike a comment
   /// DELETE /api/community/comments/:id/like
-  Future<void> unlikeComment(String commentId) async {
+  Future<int?> unlikeComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      await http.delete(
+      final response = await http.delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
       );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is Map<String, dynamic> ? data['likesCount'] as int? : null;
+      }
+      throw Exception('Failed to unlike comment (${response.statusCode})');
     } catch (e) {
       debugPrint('Error unliking comment: $e');
+      rethrow;
+    }
+  }
+
+  /// Get users who liked a post
+  Future<List<CommunityLikeUser>> getPostLikes(String postId, {int limit = 50, int offset = 0}) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/community/posts/$postId/likes').replace(queryParameters: {
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      });
+
+      final response = await http.get(uri, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic> && payload['data'] is List) {
+          final list = payload['data'] as List<dynamic>;
+          return list
+              .whereType<Map<String, dynamic>>()
+              .map(_communityLikeUserFromBackendJson)
+              .toList();
+        }
+        return <CommunityLikeUser>[];
+      }
+      throw Exception('Failed to fetch post likes (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error fetching post likes: $e');
+      rethrow;
+    }
+  }
+
+  /// Get users who liked a comment
+  Future<List<CommunityLikeUser>> getCommentLikes(String commentId, {int limit = 50, int offset = 0}) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/community/comments/$commentId/likes').replace(queryParameters: {
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      });
+
+      final response = await http.get(uri, headers: _getHeaders());
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic> && payload['data'] is List) {
+          final list = payload['data'] as List<dynamic>;
+          return list
+              .whereType<Map<String, dynamic>>()
+              .map(_communityLikeUserFromBackendJson)
+              .toList();
+        }
+        return <CommunityLikeUser>[];
+      }
+      throw Exception('Failed to fetch comment likes (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error fetching comment likes: $e');
+      rethrow;
     }
   }
 
   // ==================== Follow Endpoints ====================
 
   /// Follow a user
-  /// POST /api/users/:id/follow
-  Future<void> followUser(String userId) async {
+  /// POST /api/community/follow/:walletAddress
+  Future<void> followUser(String walletAddress) async {
+    final encoded = Uri.encodeComponent(walletAddress);
     try {
       await http.post(
-        Uri.parse('$baseUrl/api/users/$userId/follow'),
+        Uri.parse('$baseUrl/api/community/follow/$encoded'),
         headers: _getHeaders(),
       );
     } catch (e) {
@@ -1440,11 +1682,12 @@ class BackendApiService {
   }
 
   /// Unfollow a user
-  /// DELETE /api/users/:id/follow
-  Future<void> unfollowUser(String userId) async {
+  /// DELETE /api/community/follow/:walletAddress
+  Future<void> unfollowUser(String walletAddress) async {
+    final encoded = Uri.encodeComponent(walletAddress);
     try {
       await http.delete(
-        Uri.parse('$baseUrl/api/users/$userId/follow'),
+        Uri.parse('$baseUrl/api/community/follow/$encoded'),
         headers: _getHeaders(),
       );
     } catch (e) {
@@ -1471,10 +1714,15 @@ class BackendApiService {
       final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return (data['followers'] as List<dynamic>)
-            .map((json) => json as Map<String, dynamic>)
-            .toList();
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final raw = payload['followers'] ?? payload['data'] ?? payload['result'] ?? payload['payload'] ?? [];
+          if (raw is List) {
+            return raw.whereType<Map<String, dynamic>>().toList();
+          }
+        }
+        // If payload shape unexpected, return empty list instead of throwing
+        return <Map<String, dynamic>>[];
       } else {
         throw Exception('Failed to get followers: ${response.statusCode}');
       }
@@ -1502,10 +1750,14 @@ class BackendApiService {
       final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return (data['following'] as List<dynamic>)
-            .map((json) => json as Map<String, dynamic>)
-            .toList();
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final raw = payload['following'] ?? payload['data'] ?? payload['result'] ?? payload['payload'] ?? [];
+          if (raw is List) {
+            return raw.whereType<Map<String, dynamic>>().toList();
+          }
+        }
+        return <Map<String, dynamic>>[];
       } else {
         throw Exception('Failed to get following: ${response.statusCode}');
       }
@@ -1516,20 +1768,20 @@ class BackendApiService {
   }
 
   /// Check if current user is following a user
-  /// GET /api/users/:id/is-following
-  Future<bool> isFollowing(String userId) async {
+  /// GET /api/community/follow/:walletAddress/status
+  Future<bool> isFollowing(String walletAddress) async {
+    final encoded = Uri.encodeComponent(walletAddress);
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/users/$userId/is-following'),
+        Uri.parse('$baseUrl/api/community/follow/$encoded/status'),
         headers: _getHeaders(),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return data['isFollowing'] as bool;
-      } else {
-        return false;
+        return data['isFollowing'] as bool? ?? false;
       }
+      return false;
     } catch (e) {
       debugPrint('Error checking follow status: $e');
       return false;
@@ -2806,6 +3058,33 @@ String? _normalizeBackendAvatarUrl(String? raw) {
   return candidate;
 }
 
+CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
+  final wallet = json['walletAddress'] as String? ?? json['wallet_address'] as String?;
+  final username = json['username'] as String?;
+  final displayName = json['displayName'] as String?
+      ?? json['display_name'] as String?
+      ?? username
+      ?? (wallet != null && wallet.length >= 8 ? wallet.substring(0, 8) : 'User');
+  final avatarCandidate = json['avatar'] as String?
+      ?? json['avatarUrl'] as String?
+      ?? json['avatar_url'] as String?;
+
+  DateTime? likedAt;
+  final likedAtRaw = json['likedAt'] ?? json['liked_at'];
+  if (likedAtRaw is String) {
+    likedAt = DateTime.tryParse(likedAtRaw);
+  }
+
+  return CommunityLikeUser(
+    userId: (json['userId'] ?? json['user_id'] ?? json['id'] ?? 'unknown').toString(),
+    walletAddress: wallet,
+    displayName: displayName,
+    username: username,
+    avatarUrl: _normalizeBackendAvatarUrl(avatarCandidate),
+    likedAt: likedAt,
+  );
+}
+
 CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   // Extract nested author object if present - can be a map or a string (wallet address)
   final authorRaw = json['author'];
@@ -2830,6 +3109,29 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
       ?? json['wallet'] as String?
       ?? (authorRaw is String ? authorRaw : null);
 
+  // Parse original post for reposts
+  CommunityPost? originalPost;
+  if (json['originalPost'] != null && json['originalPost'] is Map<String, dynamic>) {
+    final origJson = json['originalPost'] as Map<String, dynamic>;
+    final origAuthor = origJson['author'] as Map<String, dynamic>?;
+    
+    originalPost = CommunityPost(
+      id: origJson['id'] as String,
+      authorId: origJson['walletAddress'] as String? ?? 'unknown',
+      authorWallet: origJson['walletAddress'] as String?,
+      authorName: origAuthor?['displayName'] as String? ?? origAuthor?['username'] as String? ?? 'Anonymous',
+      authorAvatar: _normalizeBackendAvatarUrl(origAuthor?['avatar'] as String?),
+      authorUsername: origAuthor?['username'] as String?,
+      content: origJson['content'] as String,
+      imageUrl: origJson['mediaUrls'] != null && (origJson['mediaUrls'] as List).isNotEmpty 
+          ? (origJson['mediaUrls'] as List).first as String? 
+          : null,
+      timestamp: origJson['createdAt'] != null 
+          ? DateTime.parse(origJson['createdAt'] as String)
+          : DateTime.now(),
+    );
+  }
+
   return CommunityPost(
     id: json['id'] as String,
     authorId: json['authorId'] as String? ?? json['walletAddress'] as String? ?? json['userId'] as String? ?? 'unknown',
@@ -2850,6 +3152,9 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     tags: json['tags'] != null 
       ? (json['tags'] as List<dynamic>).map((e) => e as String).toList()
       : [],
+    postType: json['postType'] as String?,
+    originalPostId: json['originalPostId'] as String?,
+    originalPost: originalPost,
     likeCount: stats?['likes'] as int? ?? json['likes'] as int? ?? json['likeCount'] as int? ?? 0,
     shareCount: stats?['shares'] as int? ?? json['shares'] as int? ?? json['shareCount'] as int? ?? 0,
     commentCount: stats?['comments'] as int? ?? json['comments'] as int? ?? json['commentCount'] as int? ?? 0,

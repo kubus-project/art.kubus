@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/inline_loading.dart';
 import 'package:provider/provider.dart';
+import '../widgets/topbar_icon.dart';
 import '../providers/themeprovider.dart';
 
 class AdvancedAnalyticsScreen extends StatefulWidget {
@@ -71,9 +72,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             ),
           ),
           actions: [
-            IconButton(
+            TopBarIcon(
               icon: const Icon(Icons.share, color: Colors.white),
               onPressed: _shareAnalytics,
+              tooltip: 'Share',
             ),
           ],
         ),
