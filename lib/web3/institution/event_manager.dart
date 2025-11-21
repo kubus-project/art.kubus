@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/empty_state_card.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -253,30 +254,10 @@ class _EventManagerState extends State<EventManager>
   Widget _buildEventsList(List<Event> events) {
     if (events.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.event_busy,
-              size: 48,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'No events found',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-            Text(
-              'Create your first event to get started',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
+        child: EmptyStateCard(
+          icon: Icons.event_busy,
+          title: 'No events found',
+          description: 'Create your first event to get started',
         ),
       );
     }

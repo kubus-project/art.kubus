@@ -15,6 +15,7 @@ import '../web3/wallet.dart' as web3_wallet;
 import 'onboarding_reset_screen.dart';
 import 'profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
+import '../widgets/empty_state_card.dart';
 import '../config/config.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -2139,33 +2140,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ],
               )
-            : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.receipt_long,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No Transactions Found',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your transaction history will appear here when you start making transactions.',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+            : Center(
+                child: EmptyStateCard(
+                  icon: Icons.receipt_long,
+                  title: 'No Transactions Found',
+                  description: 'Your transaction history will appear here when you start making transactions.',
+                ),
               ),
         ),
         actions: [

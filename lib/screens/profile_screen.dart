@@ -316,14 +316,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     overflow: TextOverflow.ellipsis,
                   )
                 else
-                  Text(
-                    'No bio yet. Tap "Edit Profile" to add one.',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
-                      height: 1.5,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      fontStyle: FontStyle.italic,
+                  Center(
+                    child: EmptyStateCard(
+                      icon: Icons.person_outline,
+                      title: 'No bio yet',
+                      description: 'Tap "Edit Profile" to add a short bio about yourself.',
+                      showAction: true,
+                      actionLabel: 'Edit Profile',
+                      onAction: _editProfile,
                     ),
                   ),
                 SizedBox(height: isSmallScreen ? 20 : 24),

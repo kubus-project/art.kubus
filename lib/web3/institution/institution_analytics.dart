@@ -5,6 +5,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/empty_state_card.dart';
 
 
 class InstitutionAnalytics extends StatefulWidget {
@@ -188,23 +189,11 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 ),
               ),
               const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.analytics_outlined, size: 48, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No analytics data available',
-                        style: GoogleFonts.inter(fontSize: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-                      ),
-                    ],
-                  ),
+              Center(
+                child: EmptyStateCard(
+                  icon: Icons.analytics_outlined,
+                  title: 'No analytics data available',
+                  description: 'There is no analytics data for this institution yet.',
                 ),
               ),
             ],

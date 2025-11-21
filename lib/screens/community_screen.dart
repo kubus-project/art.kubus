@@ -38,7 +38,8 @@ enum CommunityFeedType {
 
 class CommunityScreen extends StatefulWidget {
   // Global key to allow other screens to request opening a post by id
-  static final GlobalKey<_CommunityScreenState> globalKey = GlobalKey<_CommunityScreenState>();
+  static final GlobalKey<_CommunityScreenState> globalKey =
+      GlobalKey<_CommunityScreenState>();
 
   const CommunityScreen({super.key});
 
@@ -57,11 +58,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   late Animation<double> _messageScale;
   int _messageUnreadCount = 0;
   int _bellUnreadCount = 0;
-  
+
   late TabController _tabController;
-  
+
   final List<String> _tabs = ['Following', 'Discover', 'Groups', 'Art'];
-  
+
   // Community data
   List<CommunityPost> _communityPosts = [];
   List<CommunityPost> _followingFeedPosts = [];
@@ -86,7 +87,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   // Buffered incoming posts when user is scrolled away from top
   final List<CommunityPost> _bufferedIncomingPosts = [];
-  
+  // Keep ids of posts we just created locally to suppress duplicate socket echoes
+  final Set<String> _recentlyCreatedPostIds = <String>{};
+
   // New post state
   final TextEditingController _newPostController = TextEditingController();
   bool _isPostingNew = false;
@@ -126,9 +129,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Future<void> _loadCommunityData({bool? followingOnly}) async {
-    final bool targetFollowing = followingOnly ?? (_activeFeed == CommunityFeedType.following);
-    final bool isActiveFeed = (_activeFeed == CommunityFeedType.following && targetFollowing) ||
-        (_activeFeed == CommunityFeedType.discover && !targetFollowing);
+    final bool targetFollowing =
+        followingOnly ?? (_activeFeed == CommunityFeedType.following);
+    final bool isActiveFeed =
+        (_activeFeed == CommunityFeedType.following && targetFollowing) ||
+            (_activeFeed == CommunityFeedType.discover && !targetFollowing);
 
     if (targetFollowing) {
       if (_isLoadingFollowingFeed) return;
@@ -240,7 +245,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Future<void> _prefetchComments() async {
     try {
-      final prefetchCount = math.min(_commentPrefetchCount, _communityPosts.length);
+      final prefetchCount =
+          math.min(_commentPrefetchCount, _communityPosts.length);
       final concurrency = _prefetchConcurrencyLimit;
       for (var i = 0; i < prefetchCount; i += concurrency) {
         final end = math.min(i + concurrency, prefetchCount);
@@ -249,7 +255,8 @@ class _CommunityScreenState extends State<CommunityScreen>
           int attempt = 0;
           while (attempt < _prefetchMaxRetries) {
             try {
-              final comments = await BackendApiService().getComments(postId: post.id);
+              final comments =
+                  await BackendApiService().getComments(postId: post.id);
               post.comments = comments;
               post.commentCount = post.comments.length;
               if (mounted) setState(() {});
@@ -257,7 +264,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             } catch (e) {
               attempt++;
               final delayMs = _prefetchBaseDelayMs * (1 << (attempt - 1));
-              debugPrint('Prefetch comments failed for post ${post.id} (attempt $attempt): $e. Retrying in ${delayMs}ms');
+              debugPrint(
+                  'Prefetch comments failed for post ${post.id} (attempt $attempt): $e. Retrying in ${delayMs}ms');
               await Future.delayed(Duration(milliseconds: delayMs));
             }
           }
@@ -289,7 +297,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       })();
     }
   }
-  
+
   @override
   void initState() {
     super.initState();
@@ -310,23 +318,23 @@ class _CommunityScreenState extends State<CommunityScreen>
       // Groups and Collections tabs currently show placeholders
     });
     _loadFollowingArtists();
-    
+
     // Initialize bookmark and follow data
     for (int i = 0; i < 10; i++) {
       _bookmarkedPosts[i] = false;
     }
-    
+
     // Initialize artist follow status
     final followingStatus = [true, false, true, false];
     for (int i = 0; i < 8; i++) {
       _followedArtists[i] = followingStatus[i % followingStatus.length];
     }
-    
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -334,7 +342,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -342,7 +350,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       parent: _animationController,
       curve: Curves.easeOutBack,
     ));
-    
+
     _animationController.forward();
 
     // Feed scroll controller to detect whether user is at top
@@ -350,7 +358,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     _feedScrollController.addListener(() {
       try {
         // If user scrolled to near-top and we have buffered posts, prepend them
-        if (_feedScrollController.hasClients && _feedScrollController.offset <= 120 && _bufferedIncomingPosts.isNotEmpty) {
+        if (_feedScrollController.hasClients &&
+            _feedScrollController.offset <= 120 &&
+            _bufferedIncomingPosts.isNotEmpty) {
           _prependBufferedPosts();
         }
       } catch (_) {}
@@ -370,11 +380,14 @@ class _CommunityScreenState extends State<CommunityScreen>
       duration: const Duration(milliseconds: 420),
       vsync: this,
     );
-    _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(CurvedAnimation(parent: _messagePulseController, curve: Curves.easeOut));
+    _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(
+        CurvedAnimation(
+            parent: _messagePulseController, curve: Curves.easeOut));
 
     // Listen for socket notifications to animate bell
     try {
-      SocketService().addNotificationListener(_onSocketNotificationForCommunity);
+      SocketService()
+          .addNotificationListener(_onSocketNotificationForCommunity);
     } catch (_) {}
     // Connect socket and listen for incoming posts to prepend to feed
     try {
@@ -383,14 +396,17 @@ class _CommunityScreenState extends State<CommunityScreen>
         SocketService().addPostListener(_handleIncomingPost);
       })();
     } catch (_) {}
-    
+
     // Load initial unread notification count via provider
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        final provider = Provider.of<NotificationProvider>(context, listen: false);
+        final provider =
+            Provider.of<NotificationProvider>(context, listen: false);
         await provider.refresh();
         if (!mounted) return;
-        setState(() { _bellUnreadCount = provider.unreadCount; });
+        setState(() {
+          _bellUnreadCount = provider.unreadCount;
+        });
         provider.addListener(_onNotificationProviderChange);
       } catch (_) {}
     });
@@ -399,39 +415,44 @@ class _CommunityScreenState extends State<CommunityScreen>
       try {
         final cp = Provider.of<ChatProvider>(context, listen: false);
         // Ensure ChatProvider is initialized so socket subscriptions and unread counts are active
-        try { await cp.initialize(); } catch (_) {}
+        try {
+          await cp.initialize();
+        } catch (_) {}
         if (!mounted) return;
         _messageUnreadCount = cp.totalUnread;
         cp.addListener(_onChatProviderChanged);
       } catch (_) {}
     });
-    
+
     // Listen for config provider changes to reload data
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+      final configProvider =
+          Provider.of<ConfigProvider>(context, listen: false);
       configProvider.addListener(_onConfigChanged);
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+        final walletProvider =
+            Provider.of<WalletProvider>(context, listen: false);
         walletProvider.addListener(_onWalletProviderChanged);
       } catch (_) {}
     });
   }
-  
+
   DateTime? _lastConfigChange;
-  
+
   void _onConfigChanged() {
     // Debounce: only reload if at least 1 second has passed since last change
     final now = DateTime.now();
-    if (_lastConfigChange != null && now.difference(_lastConfigChange!).inSeconds < 1) {
+    if (_lastConfigChange != null &&
+        now.difference(_lastConfigChange!).inSeconds < 1) {
       return;
     }
     _lastConfigChange = now;
     _loadCommunityData();
   }
-  
+
   // Helper to get user avatar from backend
   // _getUserAvatar removed (unused) — avatars are now resolved via UserService and ChatProvider caching
 
@@ -439,23 +460,38 @@ class _CommunityScreenState extends State<CommunityScreen>
   void dispose() {
     // Remove config provider listener
     try {
-      final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+      final configProvider =
+          Provider.of<ConfigProvider>(context, listen: false);
       configProvider.removeListener(_onConfigChanged);
     } catch (e) {
       // Provider may not be available during dispose
     }
-    
+
     _animationController.dispose();
     try {
-      SocketService().removeNotificationListener(_onSocketNotificationForCommunity);
+      SocketService()
+          .removeNotificationListener(_onSocketNotificationForCommunity);
     } catch (_) {}
-    try { Provider.of<NotificationProvider>(context, listen: false).removeListener(_onNotificationProviderChange); } catch (_) {}
+    try {
+      Provider.of<NotificationProvider>(context, listen: false)
+          .removeListener(_onNotificationProviderChange);
+    } catch (_) {}
     _bellController.dispose();
     _messagePulseController.dispose();
-    try { Provider.of<ChatProvider>(context, listen: false).removeListener(_onChatProviderChanged); } catch (_) {}
-    try { Provider.of<WalletProvider>(context, listen: false).removeListener(_onWalletProviderChanged); } catch (_) {}
-    try { SocketService().removePostListener(_handleIncomingPost); } catch (_) {}
-    try { _feedScrollController.dispose(); } catch (_) {}
+    try {
+      Provider.of<ChatProvider>(context, listen: false)
+          .removeListener(_onChatProviderChanged);
+    } catch (_) {}
+    try {
+      Provider.of<WalletProvider>(context, listen: false)
+          .removeListener(_onWalletProviderChanged);
+    } catch (_) {}
+    try {
+      SocketService().removePostListener(_handleIncomingPost);
+    } catch (_) {}
+    try {
+      _feedScrollController.dispose();
+    } catch (_) {}
     _tabController.dispose();
     super.dispose();
   }
@@ -464,12 +500,15 @@ class _CommunityScreenState extends State<CommunityScreen>
     try {
       final id = (data['id'] ?? data['postId'] ?? data['post_id'])?.toString();
       if (id == null) return;
+      if (_recentlyCreatedPostIds.remove(id)) return;
       if (_communityPosts.any((p) => p.id == id)) return;
       try {
         final post = await BackendApiService().getCommunityPostById(id);
         if (!mounted) return;
 
-        final atTop = _feedScrollController.hasClients ? _feedScrollController.offset <= 120 : true;
+        final atTop = _feedScrollController.hasClients
+            ? _feedScrollController.offset <= 120
+            : true;
         if (atTop) {
           setState(() {
             _communityPosts.insert(0, post);
@@ -501,7 +540,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     // Scroll to top for visibility
     try {
       if (_feedScrollController.hasClients) {
-        _feedScrollController.animateTo(0.0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+        _feedScrollController.animateTo(0.0,
+            duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
       }
     } catch (_) {}
   }
@@ -512,7 +552,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       if (_communityPosts.isNotEmpty) {
         await CommunityService.loadSavedInteractions(
           _communityPosts,
-          walletAddress: Provider.of<WalletProvider>(context, listen: false).currentWalletAddress,
+          walletAddress: Provider.of<WalletProvider>(context, listen: false)
+              .currentWalletAddress,
         );
         if (!mounted) return;
         setState(() {});
@@ -597,7 +638,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                 return Transform.scale(
                   scale: scale,
                   child: Icon(
-                    _bellUnreadCount > 0 ? Icons.notifications : Icons.notifications_outlined,
+                    _bellUnreadCount > 0
+                        ? Icons.notifications
+                        : Icons.notifications_outlined,
                     color: Theme.of(context).colorScheme.onSurface,
                     size: isSmallScreen ? 20 : 24,
                   ),
@@ -624,8 +667,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                 icon: ScaleTransition(
                   scale: _messageScale,
                   child: Icon(
-                    totalUnread > 0 ? Icons.chat_bubble : Icons.chat_bubble_outline,
-                    color: totalUnread > 0 ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface,
+                    totalUnread > 0
+                        ? Icons.chat_bubble
+                        : Icons.chat_bubble_outline,
+                    color: totalUnread > 0
+                        ? themeProvider.accentColor
+                        : Theme.of(context).colorScheme.onSurface,
                     size: isSmallScreen ? 20 : 24,
                   ),
                 ),
@@ -634,13 +681,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                     context: context,
                     barrierDismissible: true,
                     barrierLabel: 'Messages',
-                    barrierColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
+                    barrierColor: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withAlpha(179),
                     transitionDuration: const Duration(milliseconds: 300),
                     pageBuilder: (ctx, a1, a2) => const MessagesScreen(),
                     transitionBuilder: (ctx, anim1, anim2, child) {
                       final curved = Curves.easeOut.transform(anim1.value);
                       return Transform.translate(
-                        offset: Offset(0, (1 - curved) * MediaQuery.of(context).size.height),
+                        offset: Offset(0,
+                            (1 - curved) * MediaQuery.of(context).size.height),
                         child: Opacity(opacity: anim1.value, child: child),
                       );
                     },
@@ -656,7 +707,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  Future<void> _onSocketNotificationForCommunity(Map<String, dynamic> data) async {
+  Future<void> _onSocketNotificationForCommunity(
+      Map<String, dynamic> data) async {
     if (!mounted) return;
     try {
       _bellController.forward(from: 0.0);
@@ -668,8 +720,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _onNotificationProviderChange() {
     if (!mounted) return;
     try {
-      final provider = Provider.of<NotificationProvider>(context, listen: false);
-      setState(() { _bellUnreadCount = provider.unreadCount; });
+      final provider =
+          Provider.of<NotificationProvider>(context, listen: false);
+      setState(() {
+        _bellUnreadCount = provider.unreadCount;
+      });
     } catch (_) {}
   }
 
@@ -689,11 +744,11 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildTabBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
-        
+
         return Container(
           margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
           decoration: BoxDecoration(
@@ -703,18 +758,21 @@ class _CommunityScreenState extends State<CommunityScreen>
           child: TabBar(
             controller: _tabController,
             isScrollable: isSmallScreen,
-            tabAlignment: isSmallScreen ? TabAlignment.start : TabAlignment.fill,
-            tabs: _tabs.map((tab) => Tab(
-              child: Text(
-                tab,
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 9 : 10,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            )).toList(),
+            tabAlignment:
+                isSmallScreen ? TabAlignment.start : TabAlignment.fill,
+            tabs: _tabs
+                .map((tab) => Tab(
+                      child: Text(
+                        tab,
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 9 : 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ))
+                .toList(),
             indicator: BoxDecoration(
               color: themeProvider.accentColor,
               borderRadius: BorderRadius.circular(12),
@@ -722,7 +780,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             indicatorPadding: EdgeInsets.all(isSmallScreen ? 2 : 4),
             indicatorSize: TabBarIndicatorSize.tab,
             labelColor: Theme.of(context).colorScheme.onPrimary,
-            unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            unselectedLabelColor:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             labelStyle: GoogleFonts.inter(
               fontSize: isSmallScreen ? 9 : 10,
               fontWeight: FontWeight.w600,
@@ -767,13 +826,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (_isLoading) {
       return const AppLoading();
     }
-    
+
     if (_communityPosts.isEmpty) {
       return RefreshIndicator(
         onRefresh: onRefresh,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
+          child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: Center(
               child: EmptyStateCard(
@@ -807,15 +866,22 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: GestureDetector(
                   onTap: _prependBufferedPosts,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(24),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6)],
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 6)
+                      ],
                     ),
                     child: Text(
                       '${_bufferedIncomingPosts.length} new post${_bufferedIncomingPosts.length > 1 ? 's' : ''} — Tap to show',
-                      style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700),
+                      style: GoogleFonts.inter(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -830,7 +896,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (_isLoadingFollowing) {
       return const AppLoading();
     }
-    
+
     if (_followingArtists.isEmpty) {
       return RefreshIndicator(
         onRefresh: () async {
@@ -838,7 +904,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-            child: SizedBox(
+          child: SizedBox(
             height: MediaQuery.of(context).size.height * 0.6,
             child: Center(
               child: EmptyStateCard(
@@ -860,7 +926,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
         itemCount: _followingArtists.length,
-        itemBuilder: (context, index) => _buildArtistCard(_followingArtists[index], index),
+        itemBuilder: (context, index) =>
+            _buildArtistCard(_followingArtists[index], index),
       ),
     );
   }
@@ -877,225 +944,285 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildPostCard(int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     // Use actual post data from backend
     if (index >= _communityPosts.length) {
       return const SizedBox.shrink();
     }
-    
+
     final post = _communityPosts[index];
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
-        
+
         return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: GestureDetector(
-        onTap: () => _viewPostDetail(index),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.outline),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-          // (Removed repost indicator: top-level repost label and icon were redundant)
-          Row(
-            children: [
-                AvatarWidget(
-                  // Always show reposter's avatar on the top-level post card
-                  wallet: (post.authorWallet ?? post.authorId),
-                  avatarUrl: post.authorAvatar,
-                radius: 20,
-                allowFabricatedFallback: true,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => _viewUserProfile(post.authorId),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                            post.authorName,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '@${post.authorUsername}',
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 12 : 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const Spacer(),
-                Text(
-                _getTimeAgo(post.timestamp),
-                style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 10 : 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Repost comment (if exists)
-          if (post.postType == 'repost' && post.content.isNotEmpty) ...[
-            const SizedBox(height: 6),
-            Text(
-              post.content,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 13 : 15,
-                height: 1.5,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Divider(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-          ],
-          // If this is a repost - show original post in its own inner card
-          if (post.postType == 'repost' && post.originalPost != null) ...[
-            _buildRepostInnerCard(post.originalPost!),
-          ] else ...[
-            Text(
-              post.content,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 13 : 15,
-                height: 1.5,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
-          if ((post.postType == 'repost' && post.originalPost?.imageUrl != null) || (post.postType != 'repost' && post.imageUrl != null)) ...[
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PostDetailScreen(post: (post.postType == 'repost' && post.originalPost != null) ? post.originalPost : post))),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                    (post.postType == 'repost' && post.originalPost != null)
-                      ? post.originalPost!.imageUrl!
-                      : post.imageUrl!,
-                  height: 200,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            themeProvider.accentColor.withValues(alpha: 0.3),
-                            themeProvider.accentColor.withValues(alpha: 0.1),
+            margin: const EdgeInsets.only(bottom: 20),
+            child: GestureDetector(
+                onTap: () => _viewPostDetail(index),
+                child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                          color: Theme.of(context).colorScheme.outline),
+                    ),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // (Removed repost indicator: top-level repost label and icon were redundant)
+                          Row(
+                            children: [
+                              AvatarWidget(
+                                // Always show reposter's avatar on the top-level post card
+                                wallet: (post.authorWallet ?? post.authorId),
+                                avatarUrl: post.authorAvatar,
+                                radius: 20,
+                                allowFabricatedFallback: true,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () => _viewUserProfile(post.authorId),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        post.authorName,
+                                        style: GoogleFonts.inter(
+                                          fontSize: isSmallScreen ? 14 : 16,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        '@${post.authorUsername}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: isSmallScreen ? 12 : 14,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                _getTimeAgo(post.timestamp),
+                                style: GoogleFonts.inter(
+                                  fontSize: isSmallScreen ? 10 : 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Repost comment (if exists)
+                          if (post.postType == 'repost' &&
+                              post.content.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              post.content,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 13 : 15,
+                                height: 1.5,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Divider(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withValues(alpha: 0.5)),
+                            const SizedBox(height: 12),
                           ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: SizedBox(width: 36, height: 36, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, progress: loadingProgress.expectedTotalBytes != null ? (loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!) : null)),
-                      ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            themeProvider.accentColor.withValues(alpha: 0.3),
-                            themeProvider.accentColor.withValues(alpha: 0.1),
+                          // If this is a repost - show original post in its own inner card
+                          if (post.postType == 'repost' &&
+                              post.originalPost != null) ...[
+                            _buildRepostInnerCard(post.originalPost!),
+                          ] else ...[
+                            Text(
+                              post.content,
+                              style: GoogleFonts.inter(
+                                fontSize: isSmallScreen ? 13 : 15,
+                                height: 1.5,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
                           ],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Icon(Icons.image_not_supported, color: Theme.of(context).colorScheme.onPrimary, size: 60),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildInteractionButton(
-                post.isLiked ? Icons.favorite : Icons.favorite_border, 
-                '${post.likeCount}',
-                onTap: () => _toggleLike(index),
-                onCountTap: () => _showPostLikes(post.id),
-                isActive: post.isLiked,
-              ),
-              const SizedBox(width: 20),
-              _buildInteractionButton(
-                Icons.comment_outlined, 
-                '${post.commentCount}',
-                onTap: () => _showComments(index),
-              ),
-              const SizedBox(width: 20),
-              _buildInteractionButton(
-                Icons.repeat, 
-                '',
-                onTap: () {
-                  // Check if this is user's own repost
-                  final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-                  final currentWallet = walletProvider.currentWalletAddress;
-                  if (post.postType == 'repost' && post.authorWallet == currentWallet) {
-                    // Show unrepost option
-                    _showRepostOptions(post);
-                  } else {
-                    _showRepostModal(post);
-                  }
-                },
-              ),
-              const SizedBox(width: 20),
-              _buildInteractionButton(
-                Icons.share_outlined, 
-                '${post.shareCount}',
-                onTap: () => _sharePost(index),
-                onCountTap: post.shareCount > 0 ? () => _viewRepostsList(post) : null,
-              ),
-              const Spacer(),
-              IconButton(
-                onPressed: () => _toggleBookmark(index),
-                icon: Icon(
-                  post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
-                  color: post.isBookmarked
-                      ? Theme.of(context).colorScheme.primary
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-        ]
-        )
-        )
-        )
-          );
+                          if ((post.postType == 'repost' &&
+                                  post.originalPost?.imageUrl != null) ||
+                              (post.postType != 'repost' &&
+                                  post.imageUrl != null)) ...[
+                            const SizedBox(height: 16),
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => PostDetailScreen(
+                                          post: (post.postType == 'repost' &&
+                                                  post.originalPost != null)
+                                              ? post.originalPost
+                                              : post))),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  (post.postType == 'repost' &&
+                                          post.originalPost != null)
+                                      ? post.originalPost!.imageUrl!
+                                      : post.imageUrl!,
+                                  height: 200,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      height: 200,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            themeProvider.accentColor
+                                                .withValues(alpha: 0.3),
+                                            themeProvider.accentColor
+                                                .withValues(alpha: 0.1),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: SizedBox(
+                                            width: 36,
+                                            height: 36,
+                                            child: InlineLoading(
+                                                expand: true,
+                                                shape: BoxShape.circle,
+                                                tileSize: 4.0,
+                                                progress: loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? (loadingProgress
+                                                            .cumulativeBytesLoaded /
+                                                        loadingProgress
+                                                            .expectedTotalBytes!)
+                                                    : null)),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 200,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          colors: [
+                                            themeProvider.accentColor
+                                                .withValues(alpha: 0.3),
+                                            themeProvider.accentColor
+                                                .withValues(alpha: 0.1),
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Center(
+                                        child: Icon(Icons.image_not_supported,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onPrimary,
+                                            size: 60),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              _buildInteractionButton(
+                                post.isLiked
+                                    ? Icons.favorite
+                                    : Icons.favorite_border,
+                                '${post.likeCount}',
+                                onTap: () => _toggleLike(index),
+                                onCountTap: () => _showPostLikes(post.id),
+                                isActive: post.isLiked,
+                              ),
+                              const SizedBox(width: 20),
+                              _buildInteractionButton(
+                                Icons.comment_outlined,
+                                '${post.commentCount}',
+                                onTap: () => _showComments(index),
+                              ),
+                              const SizedBox(width: 20),
+                              _buildInteractionButton(
+                                Icons.repeat,
+                                '',
+                                onTap: () {
+                                  // Check if this is user's own repost
+                                  final walletProvider =
+                                      Provider.of<WalletProvider>(context,
+                                          listen: false);
+                                  final currentWallet =
+                                      walletProvider.currentWalletAddress;
+                                  if (post.postType == 'repost' &&
+                                      post.authorWallet == currentWallet) {
+                                    // Show unrepost option
+                                    _showRepostOptions(post);
+                                  } else {
+                                    _showRepostModal(post);
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 20),
+                              _buildInteractionButton(
+                                Icons.share_outlined,
+                                '${post.shareCount}',
+                                onTap: () => _sharePost(index),
+                                onCountTap: post.shareCount > 0
+                                    ? () => _viewRepostsList(post)
+                                    : null,
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                onPressed: () => _toggleBookmark(index),
+                                icon: Icon(
+                                  post.isBookmarked
+                                      ? Icons.bookmark
+                                      : Icons.bookmark_border,
+                                  color: post.isBookmarked
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ]))));
       },
     );
   }
 
-  Widget _buildInteractionButton(IconData icon, String count, {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap}) {
+  Widget _buildInteractionButton(IconData icon, String count,
+      {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap}) {
     return GestureDetector(
       onTapDown: (_) {
         // Immediate haptic feedback and visual response
@@ -1116,9 +1243,12 @@ class _CommunityScreenState extends State<CommunityScreen>
               curve: Curves.easeOut,
               child: Icon(
                 icon,
-                color: isActive 
-                    ? Provider.of<ThemeProvider>(context).accentColor 
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: isActive
+                    ? Provider.of<ThemeProvider>(context).accentColor
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                 size: 20,
               ),
             ),
@@ -1132,7 +1262,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                   fontSize: 12,
                   color: isActive
                       ? Provider.of<ThemeProvider>(context).accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                   fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(count),
@@ -1149,7 +1282,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     final scheme = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => PostDetailScreen(post: originalPost))),
+      onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (context) => PostDetailScreen(post: originalPost))),
       child: Container(
         margin: const EdgeInsets.only(top: 8),
         padding: const EdgeInsets.all(12),
@@ -1176,12 +1312,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                     children: [
                       Text(
                         originalPost.authorName,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 13, color: scheme.onSurface),
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: scheme.onSurface),
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
                         '@${originalPost.authorUsername}',
-                        style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+                        style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.6)),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -1189,7 +1330,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
                 Text(
                   _getTimeAgo(originalPost.timestamp),
-                  style: GoogleFonts.inter(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.5)),
+                  style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: scheme.onSurface.withValues(alpha: 0.5)),
                 ),
               ],
             ),
@@ -1210,7 +1353,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 140,
                     color: themeProvider.accentColor.withValues(alpha: 0.1),
-                    child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+                    child: Icon(Icons.image_not_supported,
+                        color: themeProvider.accentColor),
                   ),
                 ),
               ),
@@ -1221,16 +1365,15 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-
-
   Widget _buildArtistCard(Map<String, dynamic> artist, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final artistName = artist['name'] as String? ?? 'Unknown Artist';
-    final username = artist['username'] as String? ?? artist['publicKey'] as String? ?? '';
+    final username =
+        artist['username'] as String? ?? artist['publicKey'] as String? ?? '';
     final followersCount = artist['followersCount'] as int? ?? 0;
     final artworksCount = artist['artworksCount'] as int? ?? 0;
     final isFollowing = _followedArtists[index] ?? false;
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -1261,7 +1404,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
           ),
           const SizedBox(width: 16),
-          
+
           // Artist Info
           Expanded(
             child: Column(
@@ -1282,7 +1425,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                   '@${username.length > 15 ? username.substring(0, 15) : username}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1292,18 +1438,21 @@ class _CommunityScreenState extends State<CommunityScreen>
                   '$artworksCount artworks • $followersCount followers',
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
               ],
             ),
           ),
-          
+
           // Follow Button
           ElevatedButton(
             onPressed: () => _toggleFollowArtist(index),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isFollowing 
+              backgroundColor: isFollowing
                   ? Theme.of(context).colorScheme.surface
                   : themeProvider.accentColor,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -1332,7 +1481,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildFloatingActionButton() {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return FloatingActionButton(
       onPressed: () {
         _createNewPost();
@@ -1386,7 +1535,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   decoration: InputDecoration(
                     hintText: 'Search artists, artworks, collections...',
                     hintStyle: TextStyle(
-                      fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
+                      fontSize:
+                          MediaQuery.of(context).size.width < 400 ? 14 : 16,
                     ),
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
@@ -1395,7 +1545,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     filled: true,
                     fillColor: Theme.of(context).colorScheme.primaryContainer,
                     contentPadding: EdgeInsets.symmetric(
-                      vertical: MediaQuery.of(context).size.width < 400 ? 12 : 16,
+                      vertical:
+                          MediaQuery.of(context).size.width < 400 ? 12 : 16,
                       horizontal: 16,
                     ),
                   ),
@@ -1412,24 +1563,35 @@ class _CommunityScreenState extends State<CommunityScreen>
                     }
                     try {
                       setModalState(() => isLoading = true);
-                      final resp = await backend.search(query: query, type: 'profiles', limit: 20);
+                      final resp = await backend.search(
+                          query: query, type: 'profiles', limit: 20);
                       final list = <Map<String, dynamic>>[];
                       if (resp['success'] == true) {
                         if (resp['results'] is Map<String, dynamic>) {
                           final data = resp['results'] as Map<String, dynamic>;
-                          final profiles = (data['profiles'] as List<dynamic>?) ?? (data['results'] as List<dynamic>?) ?? [];
+                          final profiles =
+                              (data['profiles'] as List<dynamic>?) ??
+                                  (data['results'] as List<dynamic>?) ??
+                                  [];
                           for (final d in profiles) {
-                            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                            try {
+                              list.add(d as Map<String, dynamic>);
+                            } catch (_) {}
                           }
                         } else if (resp['data'] is List) {
                           for (final d in resp['data']) {
-                            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                            try {
+                              list.add(d as Map<String, dynamic>);
+                            } catch (_) {}
                           }
                         } else if (resp['data'] is Map<String, dynamic>) {
                           final data = resp['data'] as Map<String, dynamic>;
-                          final profiles = (data['profiles'] as List<dynamic>?) ?? [];
+                          final profiles =
+                              (data['profiles'] as List<dynamic>?) ?? [];
                           for (final d in profiles) {
-                            try { list.add(d as Map<String, dynamic>); } catch (_) {}
+                            try {
+                              list.add(d as Map<String, dynamic>);
+                            } catch (_) {}
                           }
                         }
                       }
@@ -1458,7 +1620,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   'No results',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.4),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -1470,20 +1635,43 @@ class _CommunityScreenState extends State<CommunityScreen>
                             itemCount: results.length,
                             itemBuilder: (ctx, idx) {
                               final s = results[idx];
-                              final username = s['username'] ?? s['wallet_address'] ?? s['wallet'];
-                              final display = s['displayName'] ?? s['display_name'] ?? '';
-                              final avatar = s['avatar'] ?? s['avatar_url'] ?? s['profileImageUrl'] ?? '';
-                              final walletAddr = (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])?.toString() ?? '';
+                              final username = s['username'] ??
+                                  s['wallet_address'] ??
+                                  s['wallet'];
+                              final display =
+                                  s['displayName'] ?? s['display_name'] ?? '';
+                              final avatar = s['avatar'] ??
+                                  s['avatar_url'] ??
+                                  s['profileImageUrl'] ??
+                                  '';
+                              final walletAddr = (s['wallet_address'] ??
+                                          s['wallet'] ??
+                                          s['walletAddress'])
+                                      ?.toString() ??
+                                  '';
                               final title = (display ?? username)?.toString();
-                              final subtitle = walletAddr.isNotEmpty ? walletAddr : (username ?? '').toString();
+                              final subtitle = walletAddr.isNotEmpty
+                                  ? walletAddr
+                                  : (username ?? '').toString();
                               return ListTile(
-                                leading: AvatarWidget(avatarUrl: (avatar != null && avatar.toString().isNotEmpty) ? avatar.toString() : null, wallet: subtitle, radius: 20, allowFabricatedFallback: false),
+                                leading: AvatarWidget(
+                                    avatarUrl: (avatar != null &&
+                                            avatar.toString().isNotEmpty)
+                                        ? avatar.toString()
+                                        : null,
+                                    wallet: subtitle,
+                                    radius: 20,
+                                    allowFabricatedFallback: false),
                                 title: Text(title ?? ''),
                                 subtitle: Text(subtitle),
                                 onTap: () {
                                   Navigator.pop(context);
                                   if (walletAddr.isNotEmpty) {
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileScreen(userId: walletAddr)));
+                                    Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                            builder: (_) => UserProfileScreen(
+                                                userId: walletAddr)));
                                   }
                                 },
                               );
@@ -1496,11 +1684,12 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
     );
   }
+
   Future<void> _showNotifications() async {
     final notificationService = PushNotificationService();
     final backend = BackendApiService();
     List<Map<String, dynamic>> combined = [];
-    
+
     // Initial load function
     Future<List<Map<String, dynamic>>> loadNotifications() async {
       try {
@@ -1508,25 +1697,29 @@ class _CommunityScreenState extends State<CommunityScreen>
         try {
           await backend.loadAuthToken();
           final token = backend.getAuthToken();
-          debugPrint('🔐 Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
+          debugPrint(
+              '🔐 Auth token loaded for notifications: ${token != null ? (token.length > 16 ? '${token.substring(0, 8)}...' : token) : "<none>"}');
           // Optionally fetch which wallet this token maps to
           try {
             final me = await backend.getMyProfile();
-            debugPrint('🔍 Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
+            debugPrint(
+                '🔍 Token maps to wallet: ${me['wallet'] ?? me['wallet_address']}');
           } catch (e) {
             debugPrint('⚠️ Unable to map token to profile: $e');
           }
         } catch (e) {
           debugPrint('⚠️ No auth token available: $e');
         }
-        
+
         // Load local in-app notifications
         final local = await notificationService.getInAppNotifications();
         // Load server notifications (if authenticated)
         final remote = await backend.getNotifications(limit: 50);
-        debugPrint('📥 Loaded ${local.length} local + ${remote.length} remote notifications');
+        debugPrint(
+            '📥 Loaded ${local.length} local + ${remote.length} remote notifications');
         // Normalize remote (ensure Map<String,dynamic>)
-        final remapped = remote.map((e) => Map<String, dynamic>.from(e)).toList();
+        final remapped =
+            remote.map((e) => Map<String, dynamic>.from(e)).toList();
         final notifications = [...local, ...remapped];
         // Sort by timestamp desc if available
         notifications.sort((a, b) {
@@ -1546,13 +1739,15 @@ class _CommunityScreenState extends State<CommunityScreen>
         return [];
       }
     }
-    
+
     combined = await loadNotifications();
     if (!mounted) return;
 
     // Clear bell unread count when opening notifications
     try {
-      setState(() { _bellUnreadCount = 0; });
+      setState(() {
+        _bellUnreadCount = 0;
+      });
       Provider.of<NotificationProvider>(context, listen: false).markViewed();
     } catch (_) {}
 
@@ -1617,7 +1812,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     Icon(
                                       Icons.notifications_none,
                                       size: 64,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.3),
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
@@ -1625,7 +1823,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       style: GoogleFonts.inter(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
                                       ),
                                     ),
                                     const SizedBox(height: 8),
@@ -1633,7 +1834,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       'You\'re all caught up!',
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.5),
                                       ),
                                       textAlign: TextAlign.center,
                                     ),
@@ -1653,37 +1857,64 @@ class _CommunityScreenState extends State<CommunityScreen>
                         },
                         child: ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
                           itemBuilder: (ctx, i) {
                             final n = combined[i];
-                            final type = (n['interactionType'] ?? n['type'] ?? '').toString();
+                            final type =
+                                (n['interactionType'] ?? n['type'] ?? '')
+                                    .toString();
                             // Extract sender info from backend notification structure
                             final sender = n['sender'] as Map<String, dynamic>?;
-                            final user = sender?['displayName'] as String? ?? sender?['username'] as String? ?? (n['userName'] ?? n['authorName'] ?? 'Someone').toString();
-                            final body = (n['comment'] ?? n['message'] ?? n['content'] ?? '').toString();
-                            final ts = (n['timestamp'] ?? n['createdAt'] ?? '').toString();
+                            final user = sender?['displayName'] as String? ??
+                                sender?['username'] as String? ??
+                                (n['userName'] ?? n['authorName'] ?? 'Someone')
+                                    .toString();
+                            final body = (n['comment'] ??
+                                    n['message'] ??
+                                    n['content'] ??
+                                    '')
+                                .toString();
+                            final ts = (n['timestamp'] ?? n['createdAt'] ?? '')
+                                .toString();
                             String time = ts.isNotEmpty ? ts : '';
                             try {
-                              if (time.isNotEmpty) time = _getTimeAgo(DateTime.parse(time));
+                              if (time.isNotEmpty)
+                                time = _getTimeAgo(DateTime.parse(time));
                             } catch (_) {}
-                            final leadSeed = (sender?['wallet'] ?? sender?['wallet_address'] ?? sender?['walletAddress'] ?? user).toString();
+                            final leadSeed = (sender?['wallet'] ??
+                                    sender?['wallet_address'] ??
+                                    sender?['walletAddress'] ??
+                                    user)
+                                .toString();
                             return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.surface,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6)],
+                                border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.06)),
+                                boxShadow: [
+                                  BoxShadow(
+                                      color: Colors.black.withOpacity(0.02),
+                                      blurRadius: 6)
+                                ],
                               ),
                               child: InkWell(
                                 onTap: () {
                                   Navigator.pop(context);
                                   final postId = n['postId']?.toString();
                                   if (postId != null && postId.isNotEmpty) {
-                                    final idx = _communityPosts.indexWhere((p) => p.id == postId);
+                                    final idx = _communityPosts
+                                        .indexWhere((p) => p.id == postId);
                                     if (idx != -1) {
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) {
                                         _showComments(idx);
                                       });
                                     }
@@ -1692,29 +1923,62 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 borderRadius: BorderRadius.circular(12),
                                 child: Row(
                                   children: [
-                                    AvatarWidget(wallet: leadSeed, radius: 20, allowFabricatedFallback: false),
+                                    AvatarWidget(
+                                        wallet: leadSeed,
+                                        radius: 20,
+                                        allowFabricatedFallback: false),
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            type == 'like' ? '$user liked your post' : type == 'comment' ? '$user commented' : type == 'reply' ? '$user replied' : type == 'mention' ? '$user mentioned you' : (n['type'] ?? 'Notification').toString(),
-                                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                            type == 'like'
+                                                ? '$user liked your post'
+                                                : type == 'comment'
+                                                    ? '$user commented'
+                                                    : type == 'reply'
+                                                        ? '$user replied'
+                                                        : type == 'mention'
+                                                            ? '$user mentioned you'
+                                                            : (n['type'] ??
+                                                                    'Notification')
+                                                                .toString(),
+                                            style: GoogleFonts.inter(
+                                                fontWeight: FontWeight.w600),
                                           ),
                                           const SizedBox(height: 6),
-                                          Text(body, maxLines: 2, overflow: TextOverflow.ellipsis, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+                                          Text(body,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.inter(
+                                                  color: Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.7))),
                                         ],
                                       ),
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(time, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                                    Text(time,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.5))),
                                   ],
                                 ),
                               ),
                             );
                           },
-                          separatorBuilder: (ctx, i) => Divider(height: 1, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+                          separatorBuilder: (ctx, i) => Divider(
+                              height: 1,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.06)),
                           itemCount: combined.length,
                         ),
                       ),
@@ -1726,15 +1990,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-
-
   void _createNewPost() {
     _newPostController.clear();
     _selectedPostImage = null;
     _selectedPostImageBytes = null;
     _selectedPostVideo = null;
     _locationName = null;
-    
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1774,57 +2036,76 @@ class _CommunityScreenState extends State<CommunityScreen>
                       SizedBox(
                         width: 20,
                         height: 20,
-                        child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 3.5),
+                        child: InlineLoading(
+                            expand: true,
+                            shape: BoxShape.circle,
+                            tileSize: 3.5),
                       )
                     else
                       TextButton(
                         onPressed: () async {
                           final content = _newPostController.text.trim();
-                          if (content.isEmpty && _selectedPostImage == null && _selectedPostVideo == null) {
+                          if (content.isEmpty &&
+                              _selectedPostImage == null &&
+                              _selectedPostVideo == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Please add content, an image, or a video')),
+                              const SnackBar(
+                                  content: Text(
+                                      'Please add content, an image, or a video')),
                             );
                             return;
                           }
-                          
+
                           // Check if user has auth token
                           try {
                             final prefs = await SharedPreferences.getInstance();
-                            final walletAddress = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('walletAddress');
+                            final walletAddress = prefs.getString('wallet') ??
+                                prefs.getString('wallet_address') ??
+                                prefs.getString('walletAddress');
 
-                            if (walletAddress == null || walletAddress.isEmpty) {
+                            if (walletAddress == null ||
+                                walletAddress.isEmpty) {
                               if (context.mounted) {
                                 final messenger = ScaffoldMessenger.of(context);
                                 messenger.showSnackBar(
-                                  const SnackBar(content: Text('Please connect your wallet first')),
+                                  const SnackBar(
+                                      content: Text(
+                                          'Please connect your wallet first')),
                                 );
                               }
                               return;
                             }
-                            
+
                             // Ensure user is registered and has JWT token
                             await BackendApiService().loadAuthToken();
-                            
+
                             // If no token, try to register/login
                             final secureStorage = const FlutterSecureStorage();
-                            final token = await secureStorage.read(key: 'jwt_token');
-                            
+                            final token =
+                                await secureStorage.read(key: 'jwt_token');
+
                             if (token == null || token.isEmpty) {
                               // Auto-register user
-                              debugPrint('No JWT token found, auto-registering user');
+                              debugPrint(
+                                  'No JWT token found, auto-registering user');
                               try {
                                 // Use auth/register so server creates user+profile and returns a JWT
-                                final reg = await BackendApiService().registerWallet(
+                                final reg =
+                                    await BackendApiService().registerWallet(
                                   walletAddress: walletAddress,
-                                  username: 'user_${walletAddress.substring(0, 8)}',
+                                  username:
+                                      'user_${walletAddress.substring(0, 8)}',
                                 );
-                                debugPrint('Auto-register (auth) response: $reg');
+                                debugPrint(
+                                    'Auto-register (auth) response: $reg');
                                 // Token is stored by registerWallet on success
                               } catch (e) {
                                 debugPrint('Auto-registration failed: $e');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed to authenticate: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Failed to authenticate: $e')),
                                   );
                                 }
                                 return;
@@ -1833,58 +2114,70 @@ class _CommunityScreenState extends State<CommunityScreen>
                           } catch (e) {
                             debugPrint('Error checking authentication: $e');
                           }
-                          
+
                           setModalState(() => _isPostingNew = true);
-                          
+
                           try {
                             List<String> mediaUrls = [];
-                            
+
                             // Upload image if selected
-                            if (_selectedPostImage != null && _selectedPostImageBytes != null) {
+                            if (_selectedPostImage != null &&
+                                _selectedPostImageBytes != null) {
                               try {
                                 final fileName = _selectedPostImage!.name;
-                                
-                                final uploadResult = await BackendApiService().uploadFile(
+
+                                final uploadResult =
+                                    await BackendApiService().uploadFile(
                                   fileBytes: _selectedPostImageBytes!,
                                   fileName: fileName,
-                                  fileType: 'post-image', // Use post-image to store in profiles/posts folder
+                                  fileType:
+                                      'post-image', // Use post-image to store in profiles/posts folder
                                 );
-                                final url = uploadResult['uploadedUrl'] as String?;
+                                final url =
+                                    uploadResult['uploadedUrl'] as String?;
                                 if (url != null) {
                                   mediaUrls.add(url);
-                                  debugPrint('Image uploaded successfully: $url');
+                                  debugPrint(
+                                      'Image uploaded successfully: $url');
                                 } else {
-                                  debugPrint('Warning: Upload succeeded but no URL returned. Result: $uploadResult');
+                                  debugPrint(
+                                      'Warning: Upload succeeded but no URL returned. Result: $uploadResult');
                                 }
                               } catch (e) {
                                 debugPrint('Error uploading image: $e');
                                 if (context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Failed to upload image: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Failed to upload image: $e')),
                                   );
                                 }
                               }
                             }
-                            
+
                             // Upload video if selected
                             if (_selectedPostVideo != null) {
                               try {
-                                final videoFile = File(_selectedPostVideo!.path);
+                                final videoFile =
+                                    File(_selectedPostVideo!.path);
                                 final fileBytes = await videoFile.readAsBytes();
                                 final fileName = _selectedPostVideo!.name;
-                                
-                                final uploadResult = await BackendApiService().uploadFile(
+
+                                final uploadResult =
+                                    await BackendApiService().uploadFile(
                                   fileBytes: fileBytes,
                                   fileName: fileName,
-                                  fileType: 'post-video', // Use post-video to store in profiles/posts folder
+                                  fileType:
+                                      'post-video', // Use post-video to store in profiles/posts folder
                                 );
-                                final url = uploadResult['uploadedUrl'] as String?;
+                                final url =
+                                    uploadResult['uploadedUrl'] as String?;
                                 if (url != null) mediaUrls.add(url);
                               } catch (e) {
                                 debugPrint('Error uploading video: $e');
                               }
                             }
-                            
+
                             // Determine post type
                             String postType = 'text';
                             if (_selectedPostVideo != null) {
@@ -1892,16 +2185,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                             } else if (_selectedPostImage != null) {
                               postType = 'image';
                             }
-                            
+
                             // Create post via backend API (uses JWT auth for author info)
-                            final createdPost = await BackendApiService().createCommunityPost(
-                              content: content.isEmpty ? (_selectedPostVideo != null ? '🎥' : '📷') : content,
-                              mediaUrls: mediaUrls.isNotEmpty ? mediaUrls : null,
+                            final createdPost =
+                                await BackendApiService().createCommunityPost(
+                              content: content.isEmpty
+                                  ? (_selectedPostVideo != null ? '🎥' : '📷')
+                                  : content,
+                              mediaUrls:
+                                  mediaUrls.isNotEmpty ? mediaUrls : null,
                               postType: postType,
                             );
-                            
+
                             setModalState(() => _isPostingNew = false);
-                            
+
                             if (context.mounted) {
                               // Clear post state
                               _newPostController.clear();
@@ -1912,11 +2209,17 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                               // Insert created post immediately at top of feed for instant feedback
                               setState(() {
+                                if (createdPost.id.isNotEmpty) {
+                                  _recentlyCreatedPostIds.add(createdPost.id);
+                                }
                                 _communityPosts.insert(0, createdPost);
                               });
 
                               // Optionally prefetch comments for the new post
-                              try { await BackendApiService().getComments(postId: createdPost.id); } catch (_) {}
+                              try {
+                                await BackendApiService()
+                                    .getComments(postId: createdPost.id);
+                              } catch (_) {}
 
                               Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -1930,7 +2233,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             setModalState(() => _isPostingNew = false);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to create post: $e')),
+                                SnackBar(
+                                    content: Text('Failed to create post: $e')),
                               );
                             }
                           }
@@ -1940,7 +2244,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Provider.of<ThemeProvider>(context).accentColor,
+                            color:
+                                Provider.of<ThemeProvider>(context).accentColor,
                           ),
                         ),
                       ),
@@ -1957,27 +2262,35 @@ class _CommunityScreenState extends State<CommunityScreen>
                         controller: _newPostController,
                         maxLines: 5,
                         decoration: InputDecoration(
-                          hintText: 'Share your thoughts about art, AR, or your latest creation...',
+                          hintText:
+                              'Share your thoughts about art, AR, or your latest creation...',
                           hintStyle: TextStyle(
-                            fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
+                            fontSize: MediaQuery.of(context).size.width < 400
+                                ? 14
+                                : 16,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.primaryContainer,
+                          fillColor:
+                              Theme.of(context).colorScheme.primaryContainer,
                           contentPadding: EdgeInsets.symmetric(
-                            vertical: MediaQuery.of(context).size.width < 400 ? 12 : 16,
+                            vertical: MediaQuery.of(context).size.width < 400
+                                ? 12
+                                : 16,
                             horizontal: 16,
                           ),
                         ),
                         style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
+                          fontSize:
+                              MediaQuery.of(context).size.width < 400 ? 14 : 16,
                         ),
                       ),
                       const SizedBox(height: 16),
                       // Selected image preview
-                      if (_selectedPostImage != null && _selectedPostImageBytes != null)
+                      if (_selectedPostImage != null &&
+                          _selectedPostImageBytes != null)
                         Stack(
                           children: [
                             ClipRRect(
@@ -2001,20 +2314,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 },
                                 icon: const Icon(Icons.close),
                                 style: IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
-                                  foregroundColor: Theme.of(context).colorScheme.onSurface,
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .primaryContainer
+                                      .withAlpha(179),
+                                  foregroundColor:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                      if (_selectedPostImage != null) const SizedBox(height: 16),
+                      if (_selectedPostImage != null)
+                        const SizedBox(height: 16),
                       // Selected video preview
                       if (_selectedPostVideo != null)
                         Container(
                           height: 200,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Stack(
@@ -2022,18 +2341,21 @@ class _CommunityScreenState extends State<CommunityScreen>
                               Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                               children: [
+                                  children: [
                                     Icon(
                                       Icons.videocam,
                                       size: 48,
-                                      color: Provider.of<ThemeProvider>(context).accentColor,
+                                      color: Provider.of<ThemeProvider>(context)
+                                          .accentColor,
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       _selectedPostVideo!.name,
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
-                                        color: Provider.of<ThemeProvider>(context).accentColor,
+                                        color:
+                                            Provider.of<ThemeProvider>(context)
+                                                .accentColor,
                                       ),
                                       textAlign: TextAlign.center,
                                       maxLines: 2,
@@ -2053,28 +2375,35 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   },
                                   icon: const Icon(Icons.close),
                                   style: IconButton.styleFrom(
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer.withAlpha(179),
-                                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                                    backgroundColor: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                        .withAlpha(179),
+                                    foregroundColor:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      if (_selectedPostVideo != null) const SizedBox(height: 16),
+                      if (_selectedPostVideo != null)
+                        const SizedBox(height: 16),
                       // Location display
                       if (_locationName != null)
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.location_on,
-                                color: Provider.of<ThemeProvider>(context).accentColor,
+                                color: Provider.of<ThemeProvider>(context)
+                                    .accentColor,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
@@ -2083,7 +2412,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   _locationName!,
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -2118,7 +2448,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   setModalState(() {
                                     _selectedPostImage = image;
                                     _selectedPostImageBytes = bytes;
-                                    _selectedPostVideo = null; // Clear video if image selected
+                                    _selectedPostVideo =
+                                        null; // Clear video if image selected
                                   });
                                 }
                               },
@@ -2138,7 +2469,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 if (video != null) {
                                   setModalState(() {
                                     _selectedPostVideo = video;
-                                    _selectedPostImage = null; // Clear image if video selected
+                                    _selectedPostImage =
+                                        null; // Clear image if video selected
                                     _selectedPostImageBytes = null;
                                   });
                                 }
@@ -2153,46 +2485,62 @@ class _CommunityScreenState extends State<CommunityScreen>
                               onTap: () async {
                                 try {
                                   final location = loc.Location();
-                                  
+
                                   // Check if location service is enabled
-                                  bool serviceEnabled = await location.serviceEnabled();
+                                  bool serviceEnabled =
+                                      await location.serviceEnabled();
                                   if (!serviceEnabled) {
-                                    serviceEnabled = await location.requestService();
+                                    serviceEnabled =
+                                        await location.requestService();
                                     if (!serviceEnabled) {
                                       if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Location service disabled')),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          const SnackBar(
+                                              content: Text(
+                                                  'Location service disabled')),
                                         );
                                       }
                                       return;
                                     }
                                   }
-                                  
+
                                   // Check permission
-                                  loc.PermissionStatus permissionGranted = await location.hasPermission();
-                                  if (permissionGranted == loc.PermissionStatus.denied) {
-                                    permissionGranted = await location.requestPermission();
+                                  loc.PermissionStatus permissionGranted =
+                                      await location.hasPermission();
+                                  if (permissionGranted ==
+                                      loc.PermissionStatus.denied) {
+                                    permissionGranted =
+                                        await location.requestPermission();
                                   }
-                                  
-                                  if (permissionGranted != loc.PermissionStatus.granted) {
+
+                                  if (permissionGranted !=
+                                      loc.PermissionStatus.granted) {
                                     if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Location permission denied')),
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        const SnackBar(
+                                            content: Text(
+                                                'Location permission denied')),
                                       );
                                     }
                                     return;
                                   }
-                                  
+
                                   // Get current location
-                                  final locationData = await location.getLocation();
+                                  final locationData =
+                                      await location.getLocation();
                                   setModalState(() {
-                                    _locationName = 'Current Location (${locationData.latitude?.toStringAsFixed(4)}, ${locationData.longitude?.toStringAsFixed(4)})';
+                                    _locationName =
+                                        'Current Location (${locationData.latitude?.toStringAsFixed(4)}, ${locationData.longitude?.toStringAsFixed(4)})';
                                   });
                                 } catch (e) {
                                   debugPrint('Error getting location: $e');
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Failed to get location: $e')),
+                                      SnackBar(
+                                          content: Text(
+                                              'Failed to get location: $e')),
                                     );
                                   }
                                 }
@@ -2249,14 +2597,17 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _toggleLike(int index) async {
     debugPrint('DEBUG: _toggleLike called for index: $index');
     if (index >= _communityPosts.length) {
-    debugPrint('DEBUG: Index $index is out of bounds (posts length: ${_communityPosts.length})');
+      debugPrint(
+          'DEBUG: Index $index is out of bounds (posts length: ${_communityPosts.length})');
       return;
     }
-    
+
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
-    debugPrint('DEBUG: Post ${post.id} was liked: $wasLiked, count: ${post.likeCount}');
-    final walletAddress = Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+    debugPrint(
+        'DEBUG: Post ${post.id} was liked: $wasLiked, count: ${post.likeCount}');
+    final walletAddress = Provider.of<WalletProvider>(context, listen: false)
+        .currentWalletAddress;
 
     try {
       // Let the service perform the toggle and persistence; it mutates `post` synchronously
@@ -2264,7 +2615,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         post,
         currentUserWallet: walletAddress,
       );
-      debugPrint('DEBUG: Service call completed successfully - liked: ${post.isLiked}, count: ${post.likeCount}');
+      debugPrint(
+          'DEBUG: Service call completed successfully - liked: ${post.isLiked}, count: ${post.likeCount}');
 
       if (!mounted) return;
       // Rebuild UI to reflect the updated post state
@@ -2306,7 +2658,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  void _showLikesDialog({required String title, required Future<List<CommunityLikeUser>> Function() loader}) {
+  void _showLikesDialog(
+      {required String title,
+      required Future<List<CommunityLikeUser>> Function() loader}) {
     if (!mounted) return;
 
     final theme = Theme.of(context);
@@ -2334,7 +2688,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -2363,7 +2718,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                         child: SizedBox(
                           width: 32,
                           height: 32,
-                          child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0),
+                          child: InlineLoading(
+                              expand: true,
+                              shape: BoxShape.circle,
+                              tileSize: 4.0),
                         ),
                       );
                     }
@@ -2375,7 +2733,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.error_outline, color: theme.colorScheme.error, size: 36),
+                              Icon(Icons.error_outline,
+                                  color: theme.colorScheme.error, size: 36),
                               const SizedBox(height: 12),
                               Text(
                                 'Failed to load likes',
@@ -2390,7 +2749,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -2402,33 +2762,34 @@ class _CommunityScreenState extends State<CommunityScreen>
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
                       return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'No likes yet',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
+                        child: EmptyStateCard(
+                          icon: Icons.favorite_border,
+                          title: 'No likes yet',
+                          description: 'Be the first to like this post.',
                         ),
                       );
                     }
 
                     return ListView.separated(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
                       itemCount: likes.length,
-                      separatorBuilder: (_, __) => Divider(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                      separatorBuilder: (_, __) => Divider(
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.3)),
                       itemBuilder: (context, index) {
                         final user = likes[index];
                         final subtitleParts = <String>[];
-                        if (user.username != null && user.username!.isNotEmpty) {
+                        if (user.username != null &&
+                            user.username!.isNotEmpty) {
                           subtitleParts.add('@${user.username}');
                         }
-                        if (user.walletAddress != null && user.walletAddress!.isNotEmpty) {
+                        if (user.walletAddress != null &&
+                            user.walletAddress!.isNotEmpty) {
                           final wallet = user.walletAddress!;
                           if (wallet.length > 8) {
-                            subtitleParts.add('${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}');
+                            subtitleParts.add(
+                                '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}');
                           } else {
                             subtitleParts.add(wallet);
                           }
@@ -2446,7 +2807,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                             allowFabricatedFallback: true,
                           ),
                           title: Text(
-                            user.displayName.isNotEmpty ? user.displayName : 'Unnamed User',
+                            user.displayName.isNotEmpty
+                                ? user.displayName
+                                : 'Unnamed User',
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -2458,7 +2821,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   subtitleParts.join(' • '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
-                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 )
                               : null,
@@ -2475,23 +2839,66 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
+  Future<_CommentAuthorContext?> _resolveCommentAuthorContext() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? currentUserId = prefs.getString('user_id');
+    final username = prefs.getString('username') ?? 'Current User';
+    String? walletAddress = prefs.getString('wallet') ??
+        prefs.getString('wallet_address') ??
+        prefs.getString('walletAddress');
+
+    if ((currentUserId == null || currentUserId.isEmpty) &&
+        walletAddress != null &&
+        walletAddress.isNotEmpty) {
+      currentUserId = walletAddress;
+    }
+
+    if (currentUserId == null || currentUserId.isEmpty) {
+      return null;
+    }
+
+    final String resolvedUserId = currentUserId;
+
+    final String? resolvedWallet =
+        (walletAddress != null && walletAddress.isNotEmpty)
+            ? walletAddress
+            : currentUserId;
+    final String canonicalWallet = resolvedWallet ?? '';
+    String? cachedAvatar;
+    try {
+      cachedAvatar = canonicalWallet.isNotEmpty
+          ? UserService.getCachedUser(canonicalWallet)?.profileImageUrl
+          : null;
+    } catch (_) {
+      cachedAvatar = null;
+    }
+
+    return _CommentAuthorContext(
+      userId: resolvedUserId,
+      walletAddress: canonicalWallet.isNotEmpty ? canonicalWallet : null,
+      displayName: username.isNotEmpty ? username : 'Current User',
+      avatarUrl: cachedAvatar,
+    );
+  }
+
   void _toggleBookmark(int index) async {
     if (index >= _communityPosts.length) return;
-    
+
     final post = _communityPosts[index];
-    
+
     // Update through service
     await CommunityService.toggleBookmark(post);
     if (!mounted) return;
-    
+
     // Update local state
     setState(() {
       _bookmarkedPosts[index] = post.isBookmarked;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(post.isBookmarked ? 'Post bookmarked!' : 'Bookmark removed!'),
+        content:
+            Text(post.isBookmarked ? 'Post bookmarked!' : 'Bookmark removed!'),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -2499,14 +2906,20 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _toggleFollowArtist(int index) async {
     if (index >= _followingArtists.length) return;
-    
+
     final artist = _followingArtists[index];
-    final artistWallet = (artist['walletAddress'] ?? artist['wallet_address'] ?? artist['publicKey'] ?? artist['public_key'] ?? artist['id'])?.toString() ?? '';
+    final artistWallet = (artist['walletAddress'] ??
+                artist['wallet_address'] ??
+                artist['publicKey'] ??
+                artist['public_key'] ??
+                artist['id'])
+            ?.toString() ??
+        '';
     final artistName = artist['name'] as String? ?? 'Artist';
-    
+
     if (artistWallet.isEmpty) return;
     final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
-    
+
     try {
       // Use centralized UserService.toggleFollow which handles backend sync + local fallback
       final newState = await UserService.toggleFollow(artistWallet);
@@ -2526,12 +2939,16 @@ class _CommunityScreenState extends State<CommunityScreen>
       });
 
       // Trigger global refresh so other UIs update
-      try { appRefresh.triggerCommunity(); } catch (_) {}
+      try {
+        appRefresh.triggerCommunity();
+      } catch (_) {}
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
         SnackBar(
-          content: Text(newState ? 'Now following $artistName!' : 'Unfollowed $artistName'),
+          content: Text(newState
+              ? 'Now following $artistName!'
+              : 'Unfollowed $artistName'),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -2551,36 +2968,39 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _showComments(int index) async {
     if (index >= _communityPosts.length) return;
-    
+
     final post = _communityPosts[index];
     debugPrint('🔵 _showComments called for post ${post.id}');
-    
+
     // Fetch comments from backend to ensure we have fresh, nested replies and author avatars
     try {
       debugPrint('   📥 Fetching comments from backend...');
-      final backendComments = await BackendApiService().getComments(postId: post.id);
-      debugPrint('   ✅ Received ${backendComments.length} root comments from backend');
-      
+      final backendComments =
+          await BackendApiService().getComments(postId: post.id);
+      debugPrint(
+          '   ✅ Received ${backendComments.length} root comments from backend');
+
       // Count total comments including nested replies
       int totalComments = backendComments.length;
       for (final comment in backendComments) {
         totalComments += comment.replies.length;
-        debugPrint('   Comment ${comment.id} has ${comment.replies.length} replies');
+        debugPrint(
+            '   Comment ${comment.id} has ${comment.replies.length} replies');
       }
       debugPrint('   Total comments (including nested): $totalComments');
-      
+
       // Replace current comments with backend-provided nested comments
       post.comments = backendComments;
       post.commentCount = totalComments;
-      
+
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('❌ Failed to load backend comments for post ${post.id}: $e');
     }
-    
+
     final TextEditingController commentController = TextEditingController();
     String? replyToCommentId; // Track which comment is being replied to
-    
+
     if (!mounted) return;
     showModalBottomSheet(
       context: context,
@@ -2621,7 +3041,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                       '${post.commentCount} comments',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -2643,7 +3066,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         // Avatar (if available) or fallback initial avatar
                         AvatarWidget(
-                          wallet: post.comments[commentIndex].authorWallet ?? post.comments[commentIndex].authorId,
+                          wallet: post.comments[commentIndex].authorWallet ??
+                              post.comments[commentIndex].authorId,
                           avatarUrl: post.comments[commentIndex].authorAvatar,
                           radius: 16,
                           allowFabricatedFallback: true,
@@ -2658,7 +3082,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -2666,15 +3091,22 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 post.comments[commentIndex].content,
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.8),
                                 ),
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                _getTimeAgo(post.comments[commentIndex].timestamp),
+                                _getTimeAgo(
+                                    post.comments[commentIndex].timestamp),
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -2685,31 +3117,56 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                     icon: Icon(
-                                      post.comments[commentIndex].isLiked ? Icons.favorite : Icons.favorite_border,
+                                      post.comments[commentIndex].isLiked
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
                                       size: 18,
-                                      color: post.comments[commentIndex].isLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: post.comments[commentIndex].isLiked
+                                          ? Colors.red
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                     ),
                                     onPressed: () async {
                                       // Optimistic toggle
                                       setModalState(() {
-                                        post.comments[commentIndex].isLiked = !post.comments[commentIndex].isLiked;
-                                        post.comments[commentIndex].likeCount += post.comments[commentIndex].isLiked ? 1 : -1;
+                                        post.comments[commentIndex].isLiked =
+                                            !post
+                                                .comments[commentIndex].isLiked;
+                                        post.comments[commentIndex].likeCount +=
+                                            post.comments[commentIndex].isLiked
+                                                ? 1
+                                                : -1;
                                       });
                                       try {
-                                        await CommunityService.toggleCommentLike(post.comments[commentIndex], post.id);
+                                        await CommunityService
+                                            .toggleCommentLike(
+                                                post.comments[commentIndex],
+                                                post.id);
                                       } catch (e) {
                                         // rollback on error
                                         setModalState(() {
-                                          post.comments[commentIndex].isLiked = !post.comments[commentIndex].isLiked;
-                                          post.comments[commentIndex].likeCount += post.comments[commentIndex].isLiked ? 1 : -1;
+                                          post.comments[commentIndex].isLiked =
+                                              !post.comments[commentIndex]
+                                                  .isLiked;
+                                          post.comments[commentIndex]
+                                              .likeCount += post
+                                                  .comments[commentIndex]
+                                                  .isLiked
+                                              ? 1
+                                              : -1;
                                         });
                                         // Show error feedback
                                         if (context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             SnackBar(
-                                              content: Text('Failed to update like: $e'),
+                                              content: Text(
+                                                  'Failed to update like: $e'),
                                               backgroundColor: Colors.red,
-                                              duration: const Duration(seconds: 2),
+                                              duration:
+                                                  const Duration(seconds: 2),
                                             ),
                                           );
                                         }
@@ -2719,62 +3176,96 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   const SizedBox(width: 4),
                                   GestureDetector(
                                     behavior: HitTestBehavior.opaque,
-                                    onTap: () => _showCommentLikes(post.comments[commentIndex].id),
+                                    onTap: () => _showCommentLikes(
+                                        post.comments[commentIndex].id),
                                     child: Text(
                                       '${post.comments[commentIndex].likeCount}',
-                                      style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                      style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6)),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   GestureDetector(
                                     onTap: () {
                                       // Set reply parent and prefill mention
-                                      final authorName = post.comments[commentIndex].authorName;
-                                      final fallbackId = post.comments[commentIndex].authorId;
+                                      final authorName = post
+                                          .comments[commentIndex].authorName;
+                                      final fallbackId =
+                                          post.comments[commentIndex].authorId;
                                       String mention;
                                       if (authorName.isNotEmpty) {
-                                        final sanitized = authorName.replaceAll(' ', '');
-                                        mention = '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
+                                        final sanitized =
+                                            authorName.replaceAll(' ', '');
+                                        mention =
+                                            '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
                                       } else if (fallbackId.isNotEmpty) {
-                                        mention = '@${fallbackId.substring(0, 8)} ';
+                                        mention =
+                                            '@${fallbackId.substring(0, 8)} ';
                                       } else {
                                         mention = '';
                                       }
                                       setModalState(() {
-                                        replyToCommentId = post.comments[commentIndex].id; // Track parent comment
+                                        replyToCommentId = post
+                                            .comments[commentIndex]
+                                            .id; // Track parent comment
                                         commentController.text = mention;
                                         // place cursor at end
-                                        commentController.selection = TextSelection.fromPosition(TextPosition(offset: commentController.text.length));
+                                        commentController.selection =
+                                            TextSelection.fromPosition(
+                                                TextPosition(
+                                                    offset: commentController
+                                                        .text.length));
                                       });
                                     },
                                     child: Row(
                                       children: [
-                                        Icon(Icons.reply_outlined, size: 18, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                        Icon(Icons.reply_outlined,
+                                            size: 18,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6)),
                                         const SizedBox(width: 6),
-                                        Text('Reply', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                                        Text('Reply',
+                                            style: GoogleFonts.inter(
+                                                fontSize: 12,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6))),
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
                               // Nested replies (rendered indented)
-                              if (post.comments[commentIndex].replies.isNotEmpty) ...[
+                              if (post.comments[commentIndex].replies
+                                  .isNotEmpty) ...[
                                 const SizedBox(height: 8),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: post.comments[commentIndex].replies.map((reply) {
+                                  children: post.comments[commentIndex].replies
+                                      .map((reply) {
                                     return Container(
                                       margin: const EdgeInsets.only(top: 8),
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.surface,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surface,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           AvatarWidget(
-                                            wallet: reply.authorWallet ?? reply.authorId,
+                                            wallet: reply.authorWallet ??
+                                                reply.authorId,
                                             avatarUrl: reply.authorAvatar,
                                             radius: 12,
                                             allowFabricatedFallback: true,
@@ -2782,58 +3273,131 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                Text(reply.authorName, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+                                                Text(reply.authorName,
+                                                    style: GoogleFonts.inter(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface)),
                                                 const SizedBox(height: 4),
-                                                Text(reply.content, style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8))),
+                                                Text(reply.content,
+                                                    style: GoogleFonts.inter(
+                                                        fontSize: 13,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .onSurface
+                                                            .withValues(
+                                                                alpha: 0.8))),
                                                 const SizedBox(height: 6),
                                                 Row(
                                                   children: [
-                                                    Text(_getTimeAgo(reply.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                                                    Text(
+                                                        _getTimeAgo(
+                                                            reply.timestamp),
+                                                        style: GoogleFonts.inter(
+                                                            fontSize: 12,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withValues(
+                                                                    alpha:
+                                                                        0.5))),
                                                     const SizedBox(width: 16),
                                                     Row(
                                                       children: [
                                                         IconButton(
-                                                          padding: EdgeInsets.zero,
-                                                          constraints: const BoxConstraints(),
+                                                          padding:
+                                                              EdgeInsets.zero,
+                                                          constraints:
+                                                              const BoxConstraints(),
                                                           icon: Icon(
-                                                            reply.isLiked ? Icons.favorite : Icons.favorite_border,
+                                                            reply.isLiked
+                                                                ? Icons.favorite
+                                                                : Icons
+                                                                    .favorite_border,
                                                             size: 14,
-                                                            color: reply.isLiked ? Colors.red : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                            color: reply.isLiked
+                                                                ? Colors.red
+                                                                : Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .onSurface
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.6),
                                                           ),
                                                           onPressed: () async {
                                                             setModalState(() {
-                                                              reply.isLiked = !reply.isLiked;
-                                                              reply.likeCount += reply.isLiked ? 1 : -1;
+                                                              reply.isLiked =
+                                                                  !reply
+                                                                      .isLiked;
+                                                              reply.likeCount +=
+                                                                  reply.isLiked
+                                                                      ? 1
+                                                                      : -1;
                                                             });
                                                             try {
-                                                              await CommunityService.toggleCommentLike(reply, post.id);
+                                                              await CommunityService
+                                                                  .toggleCommentLike(
+                                                                      reply,
+                                                                      post.id);
                                                             } catch (e) {
                                                               setModalState(() {
-                                                                reply.isLiked = !reply.isLiked;
-                                                                reply.likeCount += reply.isLiked ? 1 : -1;
+                                                                reply.isLiked =
+                                                                    !reply
+                                                                        .isLiked;
+                                                                reply.likeCount +=
+                                                                    reply.isLiked
+                                                                        ? 1
+                                                                        : -1;
                                                               });
                                                               // Show error feedback
-                                                              if (context.mounted) {
-                                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                              if (context
+                                                                  .mounted) {
+                                                                ScaffoldMessenger.of(
+                                                                        context)
+                                                                    .showSnackBar(
                                                                   SnackBar(
-                                                                    content: Text('Failed to update like: $e'),
-                                                                    backgroundColor: Colors.red,
-                                                                    duration: const Duration(seconds: 2),
+                                                                    content: Text(
+                                                                        'Failed to update like: $e'),
+                                                                    backgroundColor:
+                                                                        Colors
+                                                                            .red,
+                                                                    duration: const Duration(
+                                                                        seconds:
+                                                                            2),
                                                                   ),
                                                                 );
                                                               }
                                                             }
                                                           },
                                                         ),
-                                                        const SizedBox(width: 4),
+                                                        const SizedBox(
+                                                            width: 4),
                                                         GestureDetector(
-                                                          behavior: HitTestBehavior.opaque,
-                                                          onTap: () => _showCommentLikes(reply.id),
+                                                          behavior:
+                                                              HitTestBehavior
+                                                                  .opaque,
+                                                          onTap: () =>
+                                                              _showCommentLikes(
+                                                                  reply.id),
                                                           child: Text(
                                                             '${reply.likeCount}',
-                                                            style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                                            style: GoogleFonts.inter(
+                                                                fontSize: 12,
+                                                                color: Theme.of(
+                                                                        context)
+                                                                    .colorScheme
+                                                                    .onSurface
+                                                                    .withValues(
+                                                                        alpha:
+                                                                            0.6)),
                                                           ),
                                                         ),
                                                       ],
@@ -2868,7 +3432,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                 decoration: BoxDecoration(
                   border: Border(
                     top: BorderSide(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.1),
                       width: 1,
                     ),
                   ),
@@ -2879,21 +3446,28 @@ class _CommunityScreenState extends State<CommunityScreen>
                     // Reply indicator (shows when replying to a comment)
                     if (replyToCommentId != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
-                          color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                          color: Provider.of<ThemeProvider>(context)
+                              .accentColor
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.reply, size: 16, color: Provider.of<ThemeProvider>(context).accentColor),
+                            Icon(Icons.reply,
+                                size: 16,
+                                color: Provider.of<ThemeProvider>(context)
+                                    .accentColor),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Replying to comment',
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
-                                  color: Provider.of<ThemeProvider>(context).accentColor,
+                                  color: Provider.of<ThemeProvider>(context)
+                                      .accentColor,
                                 ),
                               ),
                             ),
@@ -2915,233 +3489,253 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         // Current user avatar
                         Consumer<ProfileProvider>(
-                      builder: (context, profileProvider, _) {
-                        final currentUser = profileProvider.currentUser;
-                        final avatarUrl = currentUser?.avatar;
-                        final displayName = currentUser?.displayName ?? currentUser?.username ?? 'U';
-                        
-                        return CircleAvatar(
-                          radius: 16,
-                          backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-                          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                              ? NetworkImage(avatarUrl)
-                              : null,
-                          child: avatarUrl == null || avatarUrl.isEmpty
-                              ? Text(
-                                  displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
-                                  style: TextStyle(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                )
-                              : null,
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: commentController,
-                        decoration: InputDecoration(
-                          hintText: 'Add a comment...',
-                          hintStyle: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(
-                              color: Provider.of<ThemeProvider>(context).accentColor,
-                            ),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
+                          builder: (context, profileProvider, _) {
+                            final currentUser = profileProvider.currentUser;
+                            final avatarUrl = currentUser?.avatar;
+                            final displayName = currentUser?.displayName ??
+                                currentUser?.username ??
+                                'U';
+
+                            return CircleAvatar(
+                              radius: 16,
+                              backgroundColor:
+                                  Provider.of<ThemeProvider>(context)
+                                      .accentColor,
+                              backgroundImage:
+                                  avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? NetworkImage(avatarUrl)
+                                      : null,
+                              child: avatarUrl == null || avatarUrl.isEmpty
+                                  ? Text(
+                                      displayName.isNotEmpty
+                                          ? displayName[0].toUpperCase()
+                                          : 'U',
+                                      style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    )
+                                  : null,
+                            );
+                          },
                         ),
-                        maxLines: null,
-                        textInputAction: TextInputAction.send,
-                        onSubmitted: (value) async {
-                          if (value.trim().isNotEmpty) {
-                            final messenger = ScaffoldMessenger.of(context);
-                            try {
-                                final prefs = await SharedPreferences.getInstance();
-                                var currentUserId = prefs.getString('user_id');
-                                var userName = prefs.getString('username') ?? 'Current User';
-                                if (currentUserId == null || currentUserId.isEmpty) {
-                                  // Allow commenting if wallet is connected (mnemonic or wallet_address present)
-                                  final walletAddress = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('walletAddress');
-                                  if (walletAddress != null && walletAddress.isNotEmpty) {
-                                    currentUserId = walletAddress;
-                                    userName = prefs.getString('username') ?? 'user_${walletAddress.substring(0, 8)}';
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: commentController,
+                            decoration: InputDecoration(
+                              hintText: 'Add a comment...',
+                              hintStyle: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.2),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.2),
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(25),
+                                borderSide: BorderSide(
+                                  color: Provider.of<ThemeProvider>(context)
+                                      .accentColor,
+                                ),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
+                            maxLines: null,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (value) async {
+                              if (value.trim().isNotEmpty) {
+                                final messenger = ScaffoldMessenger.of(context);
+                                try {
+                                  final authorContext =
+                                      await _resolveCommentAuthorContext();
+                                  if (authorContext == null) {
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Please complete onboarding or re-login to comment.'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                    return;
                                   }
-                                }
-                                if (currentUserId == null || currentUserId.isEmpty) {
+                                  debugPrint(
+                                      '💬 Adding comment with parentCommentId: $replyToCommentId');
+                                  await CommunityService.addComment(
+                                    post,
+                                    value.trim(),
+                                    authorContext.displayName,
+                                    currentUserId: authorContext.userId,
+                                    parentCommentId:
+                                        replyToCommentId, // Pass parent comment ID for nesting
+                                    userName: authorContext.displayName,
+                                    authorWallet: authorContext.walletAddress,
+                                    authorAvatar: authorContext.avatarUrl,
+                                  );
+                                  // Refresh comments from backend to ensure server state (avatars, real ids)
+                                  try {
+                                    final backendComments =
+                                        await BackendApiService()
+                                            .getComments(postId: post.id);
+                                    post.comments = backendComments;
+                                    post.commentCount = post.comments.length;
+                                  } catch (e) {
+                                    debugPrint(
+                                        'Warning: failed to refresh comments after submit: $e');
+                                  }
                                   if (!mounted) return;
+                                  // Reset reply state
+                                  replyToCommentId = null;
+                                  setModalState(() {});
+                                  setState(() {});
+                                  commentController.clear();
+
                                   messenger.showSnackBar(
                                     const SnackBar(
-                                      content: Text('Please complete onboarding or re-login to comment.'),
+                                      content: Text('Comment added!'),
                                       duration: Duration(seconds: 2),
                                     ),
                                   );
-                                  return;
-                                }
-                                debugPrint('💬 Adding comment with parentCommentId: $replyToCommentId');
-                                await CommunityService.addComment(
-                                  post,
-                                  value.trim(),
-                                  userName,
-                                  currentUserId: currentUserId,
-                                  parentCommentId: replyToCommentId, // Pass parent comment ID for nesting
-                                  authorWallet: currentUserId,
-                                  authorAvatar: AvatarWidget(wallet:  currentUserId).avatarUrl,
-
-                                );
-                                // Refresh comments from backend to ensure server state (avatars, real ids)
-                                try {
-                                  final backendComments = await BackendApiService().getComments(postId: post.id);
-                                  post.comments = backendComments;
-                                  post.commentCount = post.comments.length;
                                 } catch (e) {
-                                  debugPrint('Warning: failed to refresh comments after submit: $e');
-                                }
-                              if (!mounted) return;
-                              // Reset reply state
-                              replyToCommentId = null;
-                              setModalState(() {});
-                              setState(() {});
-                              commentController.clear();
-                              
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Comment added!'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            } catch (e) {
-                              if (!mounted) return;
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to add comment: $e'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Provider.of<ThemeProvider>(context).accentColor,
-                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.8),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: IconButton(
-                        onPressed: () async {
-                            if (commentController.text.trim().isNotEmpty) {
-                            final messenger = ScaffoldMessenger.of(context);
-                            try {
-                              final prefs = await SharedPreferences.getInstance();
-                              var currentUserId = prefs.getString('user_id');
-                              var userName = prefs.getString('username') ?? 'Current User';
-                              final commentText = commentController.text.trim();
-                              if (currentUserId == null || currentUserId.isEmpty) {
-                                final walletAddress = prefs.getString('wallet') ?? prefs.getString('wallet_address') ?? prefs.getString('walletAddress');
-                                if (walletAddress != null && walletAddress.isNotEmpty) {
-                                  currentUserId = walletAddress;
-                                  userName = prefs.getString('username') ?? 'user_${walletAddress.substring(0, 8)}';
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('Failed to add comment: $e'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
                                 }
                               }
-                              if (currentUserId == null || currentUserId.isEmpty) {
-                                if (!mounted) return;
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Please complete onboarding or re-login to comment.'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                                return;
-                              }
-                              debugPrint('💬 Adding comment (button) with parentCommentId: $replyToCommentId');
-                              await CommunityService.addComment(
-                                post,
-                                commentText,
-                                userName,
-                                currentUserId: currentUserId,
-                                parentCommentId: replyToCommentId, // Pass parent comment ID for nesting
-                                authorWallet: currentUserId,
-                                authorAvatar: AvatarWidget(wallet:  currentUserId).avatarUrl,
-                              );
-                              // Refresh comments to reflect server state
-                              try {
-                                final backendComments = await BackendApiService().getComments(postId: post.id);
-                                post.comments = backendComments;
-                                post.commentCount = post.comments.length;
-                              } catch (e) {
-                                debugPrint('Warning: failed to refresh comments after send: $e');
-                              }
-                              if (!mounted) return;
-                              
-                              // Reset reply state
-                              replyToCommentId = null;
-                              setModalState(() {});
-                              setState(() {});
-                              commentController.clear();
-                              
-                              messenger.showSnackBar(
-                                const SnackBar(
-                                  content: Text('Comment added!'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            } catch (e) {
-                              if (!mounted) return;
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to add comment: $e'),
-                                  duration: const Duration(seconds: 2),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                        icon: Icon(
-                          Icons.send,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          size: 20,
+                            },
+                          ),
                         ),
-                        padding: const EdgeInsets.all(8),
-                        constraints: const BoxConstraints(
-                          minWidth: 36,
-                          minHeight: 36,
+                        const SizedBox(width: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Provider.of<ThemeProvider>(context).accentColor,
+                                Provider.of<ThemeProvider>(context)
+                                    .accentColor
+                                    .withValues(alpha: 0.8),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: IconButton(
+                            onPressed: () async {
+                              if (commentController.text.trim().isNotEmpty) {
+                                final messenger = ScaffoldMessenger.of(context);
+                                try {
+                                  final commentText =
+                                      commentController.text.trim();
+                                  final authorContext =
+                                      await _resolveCommentAuthorContext();
+                                  if (authorContext == null) {
+                                    if (!mounted) return;
+                                    messenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Please complete onboarding or re-login to comment.'),
+                                        duration: Duration(seconds: 2),
+                                      ),
+                                    );
+                                    return;
+                                  }
+                                  debugPrint(
+                                      '💬 Adding comment (button) with parentCommentId: $replyToCommentId');
+                                  await CommunityService.addComment(
+                                    post,
+                                    commentText,
+                                    authorContext.displayName,
+                                    currentUserId: authorContext.userId,
+                                    parentCommentId:
+                                        replyToCommentId, // Pass parent comment ID for nesting
+                                    userName: authorContext.displayName,
+                                    authorWallet: authorContext.walletAddress,
+                                    authorAvatar: authorContext.avatarUrl,
+                                  );
+                                  // Refresh comments to reflect server state
+                                  try {
+                                    final backendComments =
+                                        await BackendApiService()
+                                            .getComments(postId: post.id);
+                                    post.comments = backendComments;
+                                    post.commentCount = post.comments.length;
+                                  } catch (e) {
+                                    debugPrint(
+                                        'Warning: failed to refresh comments after send: $e');
+                                  }
+                                  if (!mounted) return;
+
+                                  // Reset reply state
+                                  replyToCommentId = null;
+                                  setModalState(() {});
+                                  setState(() {});
+                                  commentController.clear();
+
+                                  messenger.showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Comment added!'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content:
+                                          Text('Failed to add comment: $e'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            icon: Icon(
+                              Icons.send,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              size: 20,
+                            ),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(
+                              minWidth: 36,
+                              minHeight: 36,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                  ], // End of Row children
-                ), // End of Row
-              ], // End of Column children
-            ), // End of Column
-          ), // End of Container
-        ], // End of main Column children
+                      ], // End of Row children
+                    ), // End of Row
+                  ], // End of Column children
+                ), // End of Column
+              ), // End of Container
+            ], // End of main Column children
           ),
         ),
       ),
@@ -3174,75 +3768,110 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           child: Column(
             children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                      color: theme.colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2))),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Share Post', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
+                    Text('Share Post',
+                        style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface)),
+                    IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(sheetContext)),
                   ],
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: TextField(
                   controller: searchController,
                   decoration: InputDecoration(
                     hintText: 'Search for profiles...',
                     prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
                     filled: true,
                     fillColor: theme.colorScheme.primaryContainer,
                   ),
                   onChanged: (query) async {
-                        if (query.trim().isEmpty) {
-                          setModalState(() { searchResults.clear(); });
-                          return;
+                    if (query.trim().isEmpty) {
+                      setModalState(() {
+                        searchResults.clear();
+                      });
+                      return;
+                    }
+                    setModalState(() => isSearching = true);
+                    try {
+                      final resp = await BackendApiService()
+                          .search(query: query, type: 'profiles', limit: 20);
+                      final list = <Map<String, dynamic>>[];
+                      if (resp['success'] == true && resp['results'] is Map) {
+                        final profiles =
+                            (resp['results']['profiles'] as List?) ?? [];
+                        for (final p in profiles) {
+                          try {
+                            list.add(p as Map<String, dynamic>);
+                          } catch (_) {}
                         }
-                        setModalState(() => isSearching = true);
-                        try {
-                          final resp = await BackendApiService().search(query: query, type: 'profiles', limit: 20);
-                          final list = <Map<String, dynamic>>[];
-                          if (resp['success'] == true && resp['results'] is Map) {
-                            final profiles = (resp['results']['profiles'] as List?) ?? [];
-                            for (final p in profiles) { try { list.add(p as Map<String, dynamic>); } catch (_) {} }
-                          }
-                          setModalState(() { searchResults = list; isSearching = false; });
-                        } catch (e) {
-                          setModalState(() => isSearching = false);
-                        }
+                      }
+                      setModalState(() {
+                        searchResults = list;
+                        isSearching = false;
+                      });
+                    } catch (e) {
+                      setModalState(() => isSearching = false);
+                    }
+                  },
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading:
+                          Icon(Icons.link, color: theme.colorScheme.primary),
+                      title: Text('Copy Link', style: GoogleFonts.inter()),
+                      onTap: () async {
+                        await Clipboard.setData(ClipboardData(
+                            text: 'https://app.kubus.site/post/${post.id}'));
+                        Navigator.pop(sheetContext);
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Link copied to clipboard')));
+
+                        // Track analytics
+                        BackendApiService().trackAnalyticsEvent(
+                          eventType: 'share_copy_link',
+                          postId: post.id,
+                          metadata: {'method': 'copy_link'},
+                        );
                       },
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          leading: Icon(Icons.link, color: theme.colorScheme.primary),
-                          title: Text('Copy Link', style: GoogleFonts.inter()),
-                          onTap: () async {
-                            await Clipboard.setData(ClipboardData(text: 'https://app.kubus.site/post/${post.id}'));
-                            Navigator.pop(sheetContext);
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
-                            
-                            // Track analytics
-                            BackendApiService().trackAnalyticsEvent(
-                              eventType: 'share_copy_link',
-                              postId: post.id,
-                              metadata: {'method': 'copy_link'},
-                            );
-                          },
-                    ),
                     ListTile(
-                      leading: Icon(Icons.share, color: theme.colorScheme.primary),
+                      leading:
+                          Icon(Icons.share, color: theme.colorScheme.primary),
                       title: Text('Share via...', style: GoogleFonts.inter()),
                       onTap: () async {
                         Navigator.pop(sheetContext);
-                        final shareText = '${post.content}\n\n- ${post.authorName} on app.kubus\n\nhttps://app.kubus.site/post/${post.id}';
-                        await SharePlus.instance.share(ShareParams(text: shareText));
+                        final shareText =
+                            '${post.content}\n\n- ${post.authorName} on app.kubus\n\nhttps://app.kubus.site/post/${post.id}';
+                        await SharePlus.instance
+                            .share(ShareParams(text: shareText));
                         BackendApiService().trackAnalyticsEvent(
                           eventType: 'share_external',
                           postId: post.id,
@@ -3259,23 +3888,43 @@ class _CommunityScreenState extends State<CommunityScreen>
                   child: isSearching
                       ? const Center(child: CircularProgressIndicator())
                       : searchResults.isEmpty
-                          ? Center(child: Text('No profiles found', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))))
+                          ? Center(
+                              child: EmptyStateCard(
+                                icon: Icons.person_search,
+                                title: 'No profiles found',
+                                description: 'Try a different search term',
+                              ),
+                            )
                           : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
                               itemCount: searchResults.length,
                               itemBuilder: (ctx, idx) {
                                 final profile = searchResults[idx];
-                                final walletAddr = profile['wallet_address'] ?? profile['walletAddress'] ?? profile['wallet'] ?? profile['walletAddr'];
-                                final username = profile['username'] ?? walletAddr ?? 'unknown';
-                                final display = profile['displayName'] ?? profile['display_name'] ?? username;
-                                final avatar = profile['avatar'] ?? profile['avatar_url'];
+                                final walletAddr = profile['wallet_address'] ??
+                                    profile['walletAddress'] ??
+                                    profile['wallet'] ??
+                                    profile['walletAddr'];
+                                final username = profile['username'] ??
+                                    walletAddr ??
+                                    'unknown';
+                                final display = profile['displayName'] ??
+                                    profile['display_name'] ??
+                                    username;
+                                final avatar =
+                                    profile['avatar'] ?? profile['avatar_url'];
                                 return ListTile(
-                                  leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
-                                  title: Text(display ?? 'Unnamed', style: GoogleFonts.inter()),
-                                  subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                                  leading: AvatarWidget(
+                                      wallet: username,
+                                      avatarUrl: avatar,
+                                      radius: 20),
+                                  title: Text(display ?? 'Unnamed',
+                                      style: GoogleFonts.inter()),
+                                  subtitle: Text('@$username',
+                                      style: GoogleFonts.inter(fontSize: 12)),
                                   onTap: () async {
                                     Navigator.pop(sheetContext);
-                                    
+
                                     try {
                                       // Share post via DM
                                       await BackendApiService().sharePostViaDM(
@@ -3286,18 +3935,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       BackendApiService().trackAnalyticsEvent(
                                         eventType: 'share_dm',
                                         postId: post.id,
-                                        metadata: {'recipient': walletAddr ?? username},
+                                        metadata: {
+                                          'recipient': walletAddr ?? username
+                                        },
                                       );
-                                      
+
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Shared post with @$username')),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content: Text(
+                                                  'Shared post with @$username')),
                                         );
                                       }
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Failed to share: $e')),
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                              content:
+                                                  Text('Failed to share: $e')),
                                         );
                                       }
                                     }
@@ -3324,7 +3981,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
@@ -3333,25 +3991,39 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           child: Column(
             children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                      color: theme.colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2))),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Repost', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text('Repost',
+                        style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface)),
                     Row(
                       children: [
-                        TextButton(onPressed: () => Navigator.pop(sheetContext), child: Text('Cancel', style: GoogleFonts.inter())),
+                        TextButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            child: Text('Cancel', style: GoogleFonts.inter())),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
                             final content = repostContentController.text.trim();
                             Navigator.pop(sheetContext);
-                            
+
                             try {
                               // Create repost via backend
-                              final createdRepost = await BackendApiService().createRepost(
+                              final createdRepost =
+                                  await BackendApiService().createRepost(
                                 originalPostId: post.id,
                                 content: content.isNotEmpty ? content : null,
                               );
@@ -3360,20 +4032,24 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 postId: post.id,
                                 metadata: {'has_comment': content.isNotEmpty},
                               );
-                              
+
                               if (mounted) {
                                 // Insert repost into feed immediately for instant feedback
                                 setState(() {
                                   _communityPosts.insert(0, createdRepost);
                                 });
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(content.isEmpty ? 'Reposted!' : 'Reposted with comment!')),
+                                  SnackBar(
+                                      content: Text(content.isEmpty
+                                          ? 'Reposted!'
+                                          : 'Reposted with comment!')),
                                 );
                               }
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Failed to repost: $e')),
+                                  SnackBar(
+                                      content: Text('Failed to repost: $e')),
                                 );
                               }
                             }
@@ -3397,18 +4073,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                         maxLines: 3,
                         decoration: InputDecoration(
                           hintText: 'Add your thoughts (optional)...',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text('Reposting:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                      Text('Reposting:',
+                          style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7))),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                          border: Border.all(
+                              color: theme.colorScheme.outline
+                                  .withValues(alpha: 0.3)),
                           borderRadius: BorderRadius.circular(12),
                           color: theme.colorScheme.surface,
                         ),
@@ -3417,26 +4101,45 @@ class _CommunityScreenState extends State<CommunityScreen>
                           children: [
                             Row(
                               children: [
-                                AvatarWidget(wallet: post.authorId, avatarUrl: post.authorAvatar, radius: 16, enableProfileNavigation: false),
+                                AvatarWidget(
+                                    wallet: post.authorId,
+                                    avatarUrl: post.authorAvatar,
+                                    radius: 16,
+                                    enableProfileNavigation: false),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(post.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
-                                      Text(_getTimeAgo(post.timestamp), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                                      Text(post.authorName,
+                                          style: GoogleFonts.inter(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 14)),
+                                      Text(_getTimeAgo(post.timestamp),
+                                          style: GoogleFonts.inter(
+                                              fontSize: 11,
+                                              color: theme.colorScheme.onSurface
+                                                  .withValues(alpha: 0.5))),
                                     ],
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text(post.content, style: GoogleFonts.inter(fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis),
-                            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                            Text(post.content,
+                                style: GoogleFonts.inter(fontSize: 14),
+                                maxLines: 5,
+                                overflow: TextOverflow.ellipsis),
+                            if (post.imageUrl != null &&
+                                post.imageUrl!.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(post.imageUrl!, fit: BoxFit.cover, height: 120, width: double.infinity),
+                                child: Image.network(post.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    height: 120,
+                                    width: double.infinity),
                               ),
                             ],
                           ],
@@ -3452,8 +4155,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
     );
   }
-
-
 
   void _viewUserProfile(String userId) {
     Navigator.push(
@@ -3482,14 +4183,26 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         child: Column(
           children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                    color: theme.colorScheme.outline,
+                    borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Reposted by', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
+                  Text('Reposted by',
+                      style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface)),
+                  IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(sheetContext)),
                 ],
               ),
             ),
@@ -3502,11 +4215,19 @@ class _CommunityScreenState extends State<CommunityScreen>
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return Center(child: Text('Error loading reposts', style: GoogleFonts.inter()));
+                    return Center(
+                        child: Text('Error loading reposts',
+                            style: GoogleFonts.inter()));
                   }
                   final reposts = snapshot.data ?? [];
                   if (reposts.isEmpty) {
-                    return Center(child: Text('No reposts yet', style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))));
+                    return Center(
+                      child: EmptyStateCard(
+                        icon: Icons.repeat,
+                        title: 'No reposts yet',
+                        description: 'This post has not been reposted yet.',
+                      ),
+                    );
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -3514,26 +4235,42 @@ class _CommunityScreenState extends State<CommunityScreen>
                     itemBuilder: (ctx, idx) {
                       final repost = reposts[idx];
                       final user = repost['user'] as Map<String, dynamic>?;
-                      final username = user?['username'] ?? user?['walletAddress'] ?? 'Unknown';
+                      final username = user?['username'] ??
+                          user?['walletAddress'] ??
+                          'Unknown';
                       final displayName = user?['displayName'] ?? username;
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
-                      final createdAt = DateTime.tryParse(repost['createdAt'] ?? '');
+                      final createdAt =
+                          DateTime.tryParse(repost['createdAt'] ?? '');
 
                       return ListTile(
-                        leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
-                        title: Text(displayName, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                        leading: AvatarWidget(
+                            wallet: username, avatarUrl: avatar, radius: 20),
+                        title: Text(displayName,
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.w600)),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                            Text('@$username',
+                                style: GoogleFonts.inter(fontSize: 12)),
                             if (comment != null && comment.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text(comment, style: GoogleFonts.inter(fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                              Text(comment,
+                                  style: GoogleFonts.inter(fontSize: 12),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis),
                             ],
                           ],
                         ),
-                        trailing: createdAt != null ? Text(_getTimeAgo(createdAt), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))) : null,
+                        trailing: createdAt != null
+                            ? Text(_getTimeAgo(createdAt),
+                                style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.5)))
+                            : null,
                       );
                     },
                   );
@@ -3561,17 +4298,25 @@ class _CommunityScreenState extends State<CommunityScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                    color: theme.colorScheme.outline,
+                    borderRadius: BorderRadius.circular(2))),
             ListTile(
               leading: const Icon(Icons.delete_outline, color: Colors.red),
-              title: Text('Unrepost', style: GoogleFonts.inter(color: Colors.red)),
+              title:
+                  Text('Unrepost', style: GoogleFonts.inter(color: Colors.red)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _unrepostPost(post);
               },
             ),
             ListTile(
-              leading: Icon(Icons.cancel, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              leading: Icon(Icons.cancel,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
               title: Text('Cancel', style: GoogleFonts.inter()),
               onTap: () => Navigator.pop(sheetContext),
             ),
@@ -3590,7 +4335,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Unrepost', style: GoogleFonts.inter()),
-        content: Text('Are you sure you want to remove this repost?', style: GoogleFonts.inter()),
+        content: Text('Are you sure you want to remove this repost?',
+            style: GoogleFonts.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -3632,9 +4378,9 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _viewPostDetail(int index) {
     if (index >= _communityPosts.length) return;
-    
+
     final post = _communityPosts[index];
-    
+
     // Open full post detail screen instead of dialog
     Navigator.push(
       context,
@@ -3658,5 +4404,18 @@ class _CommunityScreenState extends State<CommunityScreen>
       return 'Just now';
     }
   }
+}
 
+class _CommentAuthorContext {
+  final String userId;
+  final String? walletAddress;
+  final String displayName;
+  final String? avatarUrl;
+
+  const _CommentAuthorContext({
+    required this.userId,
+    required this.displayName,
+    this.walletAddress,
+    this.avatarUrl,
+  });
 }

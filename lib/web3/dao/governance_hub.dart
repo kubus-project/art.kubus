@@ -5,6 +5,7 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../providers/dao_provider.dart';
+import '../../widgets/empty_state_card.dart';
 
 
 class GovernanceHub extends StatefulWidget {
@@ -324,40 +325,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         
         // Show empty state if no proposals
         if (activeProposals.isEmpty) {
-          return Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.how_to_vote,
-                      size: 64,
-                      color: Colors.grey[600],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No active proposals',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Enable mock data to view proposals',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+          return Center(
+            child: EmptyStateCard(
+              icon: Icons.how_to_vote,
+              title: 'No active proposals',
+              description: 'Enable mock data to view proposals',
             ),
           );
         }
@@ -554,26 +526,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         
         // Show placeholder if no voting history
         if (votingHistory.isEmpty) {
-          return Container(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            padding: const EdgeInsets.all(32),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.how_to_vote, size: 64, color: Colors.grey[600]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No voting history yet',
-                    style: GoogleFonts.inter(fontSize: 16, color: Colors.grey[500]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Cast your first vote on an active proposal',
-                    style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
+          return Center(
+            child: EmptyStateCard(
+              icon: Icons.how_to_vote,
+              title: 'No voting history yet',
+              description: 'Cast your first vote on an active proposal',
             ),
           );
         }
@@ -1114,31 +1071,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             ),
             const SizedBox(height: 16),
             if (transactions.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[800]!),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.history,
-                        color: Colors.grey[600],
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No recent transactions',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
+              Center(
+                child: EmptyStateCard(
+                  icon: Icons.history,
+                  title: 'No recent transactions',
+                  description: '',
                 ),
               )
             else
@@ -1471,31 +1408,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             ),
             const SizedBox(height: 16),
             if (delegates.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(32),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[800]!),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.people,
-                        color: Colors.grey[600],
-                        size: 48,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No delegates yet',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ),
+              Center(
+                child: EmptyStateCard(
+                  icon: Icons.people,
+                  title: 'No delegates yet',
+                  description: 'No delegates have been registered yet.',
                 ),
               )
             else

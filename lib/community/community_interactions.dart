@@ -175,7 +175,10 @@ class CommunityService {
   static const String _viewsKey = 'community_views';
 
   // Like/Unlike post (with backend sync)
-  static Future<void> togglePostLike(CommunityPost post, {String? currentUserId, String? currentUserName, String? currentUserWallet}) async {
+  static Future<void> togglePostLike(CommunityPost post,
+      {String? currentUserId,
+      String? currentUserName,
+      String? currentUserWallet}) async {
     if (!AppConfig.enableLiking) return;
     final backendApi = BackendApiService();
     final originalIsLiked = post.isLiked;
@@ -183,7 +186,8 @@ class CommunityService {
 
     // Optimistic toggle
     post.isLiked = !post.isLiked;
-    post.likeCount = (post.likeCount + (post.isLiked ? 1 : -1)).clamp(0, 1 << 30);
+    post.likeCount =
+        (post.likeCount + (post.isLiked ? 1 : -1)).clamp(0, 1 << 30);
 
     // Persist liked post id locally so different views can reflect the state immediately
     try {
@@ -209,7 +213,8 @@ class CommunityService {
       }
 
       if (AppConfig.enableDebugPrints) {
-        debugPrint('Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
+        debugPrint(
+            'Post ${post.id} ${post.isLiked ? "liked" : "unliked"}. Total likes: ${post.likeCount}');
       }
     } catch (e) {
       if (AppConfig.enableDebugPrints) {
@@ -220,7 +225,8 @@ class CommunityService {
       post.likeCount = originalLikeCount;
       try {
         final prefs = await SharedPreferences.getInstance();
-        final liked = _loadLikedPostIds(prefs, walletAddress: currentUserWallet);
+        final liked =
+            _loadLikedPostIds(prefs, walletAddress: currentUserWallet);
         if (post.isLiked) {
           if (!liked.contains(post.id)) liked.add(post.id);
         } else {
@@ -240,9 +246,9 @@ class CommunityService {
 
     final currentIsLiked = comment.isLiked;
     final currentCount = comment.likeCount;
-      final previousCount = currentIsLiked
-          ? (currentCount - 1).clamp(0, 1 << 30)
-          : (currentCount + 1).clamp(0, 1 << 30);
+    final previousCount = currentIsLiked
+        ? (currentCount - 1).clamp(0, 1 << 30)
+        : (currentCount + 1).clamp(0, 1 << 30);
 
     try {
       final updatedCount = currentIsLiked
@@ -255,7 +261,7 @@ class CommunityService {
     } catch (e) {
       // Roll back state and persistence on failure - toggle back to opposite of current
       comment.isLiked = !currentIsLiked;
-        comment.likeCount = previousCount;
+      comment.likeCount = previousCount;
       rethrow;
     }
   }
@@ -274,12 +280,26 @@ class CommunityService {
     if (!AppConfig.enableCommenting) throw Exception('Commenting is disabled');
 
     final backendApi = BackendApiService();
+    final normalizedWallet =
+        (authorWallet != null && authorWallet.trim().isNotEmpty)
+            ? authorWallet
+            : null;
+    final normalizedAvatar =
+        (authorAvatar != null && authorAvatar.trim().isNotEmpty)
+            ? authorAvatar
+            : null;
+    final authorId = currentUserId?.isNotEmpty == true
+        ? currentUserId!
+        : (normalizedWallet ?? 'current_user');
 
     // Optimistic UI update
     final tempComment = Comment(
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-      authorId: currentUserId ?? 'current_user',
+      authorId: authorId,
       authorName: authorName,
+      authorUsername: userName,
+      authorWallet: normalizedWallet,
+      authorAvatar: normalizedAvatar,
       parentCommentId: parentCommentId,
       content: content,
       timestamp: DateTime.now(),
@@ -289,7 +309,8 @@ class CommunityService {
     if (parentCommentId == null || parentCommentId.isEmpty) {
       post.comments = [...post.comments, tempComment];
     } else {
-      final inserted = _appendReply(post.comments, parentCommentId, tempComment);
+      final inserted =
+          _appendReply(post.comments, parentCommentId, tempComment);
       if (!inserted) {
         // Fallback to root insertion if parent isn't present locally yet
         post.comments = [...post.comments, tempComment];
@@ -305,13 +326,18 @@ class CommunityService {
         parentCommentId: parentCommentId,
       );
 
-      final replaced = _replaceComment(post.comments, tempComment.id, backendComment);
+      final replaced =
+          _replaceComment(post.comments, tempComment.id, backendComment);
       if (!replaced) {
         // If we somehow lost the temp comment reference, append freshly fetched one
         if (parentCommentId == null || parentCommentId.isEmpty) {
-          post.comments = [...post.comments.where((c) => c.id != backendComment.id), backendComment];
+          post.comments = [
+            ...post.comments.where((c) => c.id != backendComment.id),
+            backendComment
+          ];
         } else {
-          final inserted = _appendReply(post.comments, parentCommentId, backendComment);
+          final inserted =
+              _appendReply(post.comments, parentCommentId, backendComment);
           if (!inserted) post.comments = [...post.comments, backendComment];
         }
       }
@@ -319,12 +345,15 @@ class CommunityService {
 
       // Save to local preferences for persistence
       final prefs = await SharedPreferences.getInstance();
-      final commentsData = prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
-      commentsData.add('${backendComment.id}|${backendComment.authorName}|${backendComment.content}|${backendComment.timestamp.millisecondsSinceEpoch}');
+      final commentsData =
+          prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
+      commentsData.add(
+          '${backendComment.id}|${backendComment.authorName}|${backendComment.content}|${backendComment.timestamp.millisecondsSinceEpoch}');
       await prefs.setStringList('${_commentsKey}_${post.id}', commentsData);
 
       if (AppConfig.enableDebugPrints) {
-        debugPrint('Comment added to post ${post.id}. Total comments: ${post.commentCount}');
+        debugPrint(
+            'Comment added to post ${post.id}. Total comments: ${post.commentCount}');
       }
 
       // Server will create notification for the post author; client-side push is not shown for actor.
@@ -335,15 +364,16 @@ class CommunityService {
       if (AppConfig.enableDebugPrints) {
         debugPrint('Failed to create comment on backend: $e. Rolling back.');
       }
-      
+
       _removeComment(post.comments, tempComment.id);
       post.commentCount = _countComments(post.comments);
-      
+
       rethrow;
     }
   }
 
-  static bool _appendReply(List<Comment> comments, String parentId, Comment reply) {
+  static bool _appendReply(
+      List<Comment> comments, String parentId, Comment reply) {
     for (final comment in comments) {
       if (comment.id == parentId) {
         comment.replies = [...comment.replies, reply];
@@ -357,14 +387,16 @@ class CommunityService {
     return false;
   }
 
-  static bool _replaceComment(List<Comment> comments, String targetId, Comment replacement) {
+  static bool _replaceComment(
+      List<Comment> comments, String targetId, Comment replacement) {
     for (var i = 0; i < comments.length; i++) {
       if (comments[i].id == targetId) {
         comments[i] = replacement;
         return true;
       }
       if (comments[i].replies.isNotEmpty) {
-        final replaced = _replaceComment(comments[i].replies, targetId, replacement);
+        final replaced =
+            _replaceComment(comments[i].replies, targetId, replacement);
         if (replaced) return true;
       }
     }
@@ -394,7 +426,8 @@ class CommunityService {
   }
 
   // Load saved interactions
-  static Future<void> loadSavedInteractions(List<CommunityPost> posts, {String? walletAddress}) async {
+  static Future<void> loadSavedInteractions(List<CommunityPost> posts,
+      {String? walletAddress}) async {
     final prefs = await SharedPreferences.getInstance();
     final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
     final followedUsers = prefs.getStringList(_followsKey) ?? [];
@@ -403,7 +436,7 @@ class CommunityService {
     for (final post in posts) {
       // Load bookmarks
       post.isBookmarked = bookmarkedPosts.contains(post.id);
-      
+
       // Load follows
       post.isFollowing = followedUsers.contains(post.authorId);
 
@@ -411,7 +444,8 @@ class CommunityService {
       post.isLiked = likedPosts.contains(post.id) || post.isLiked;
 
       // Load comments
-      final commentsData = prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
+      final commentsData =
+          prefs.getStringList('${_commentsKey}_${post.id}') ?? [];
       final loadedComments = <Comment>[];
 
       for (final commentString in commentsData) {
@@ -442,12 +476,13 @@ class CommunityService {
 
     final prefs = await SharedPreferences.getInstance();
     final reports = prefs.getStringList('reported_posts') ?? [];
-    final reportData = '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
-    
+    final reportData =
+        '${post.id}|$reason|${DateTime.now().millisecondsSinceEpoch}';
+
     if (!reports.contains(reportData)) {
       reports.add(reportData);
       await prefs.setStringList('reported_posts', reports);
-      
+
       if (AppConfig.enableDebugPrints) {
         debugPrint('Post ${post.id} reported for: $reason');
       }
@@ -470,9 +505,10 @@ class CommunityService {
     }
 
     await prefs.setStringList(_bookmarksKey, bookmarkedPosts);
-    
+
     if (AppConfig.enableDebugPrints) {
-      debugPrint('Post ${post.id} ${post.isBookmarked ? "bookmarked" : "unbookmarked"}');
+      debugPrint(
+          'Post ${post.id} ${post.isBookmarked ? "bookmarked" : "unbookmarked"}');
     }
   }
 
@@ -501,9 +537,10 @@ class CommunityService {
     }
 
     await prefs.setStringList(_followsKey, followedUsers);
-    
+
     if (AppConfig.enableDebugPrints) {
-      debugPrint('User $walletAddress ${!isFollowing ? "followed" : "unfollowed"}');
+      debugPrint(
+          'User $walletAddress ${!isFollowing ? "followed" : "unfollowed"}');
     }
 
     // Sync with backend
@@ -521,17 +558,18 @@ class CommunityService {
       if (AppConfig.enableDebugPrints) {
         debugPrint('Failed to sync follow with backend: $e. Rolling back.');
       }
-      
+
       if (originalFollowState) {
         // Restore to following
-        if (!followedUsers.contains(walletAddress)) followedUsers.add(walletAddress);
+        if (!followedUsers.contains(walletAddress))
+          followedUsers.add(walletAddress);
         if (post != null) post.isFollowing = true;
       } else {
         // Restore to not following
         followedUsers.remove(walletAddress);
         if (post != null) post.isFollowing = false;
       }
-      
+
       await prefs.setStringList(_followsKey, followedUsers);
     }
   }
@@ -553,7 +591,7 @@ class CommunityService {
       viewedPosts.add(viewKey);
       post.viewCount++;
       await prefs.setStringList(_viewsKey, viewedPosts);
-      
+
       if (AppConfig.enableDebugPrints) {
         debugPrint('Post ${post.id} viewed. Total views: ${post.viewCount}');
       }
@@ -573,14 +611,15 @@ class CommunityService {
   }
 
   // Share post functionality (enhanced with backend sync)
-  static Future<void> sharePost(CommunityPost post, {String? currentUserName}) async {
+  static Future<void> sharePost(CommunityPost post,
+      {String? currentUserName}) async {
     if (!AppConfig.enableSharing) return;
 
     final prefs = await SharedPreferences.getInstance();
     final sharedPosts = prefs.getStringList(_sharesKey) ?? [];
     final shareKey = '${post.id}_${DateTime.now().millisecondsSinceEpoch}';
     final backendApi = BackendApiService();
-    
+
     // Optimistic update
     sharedPosts.add(shareKey);
     final originalShareCount = post.shareCount;
@@ -589,7 +628,7 @@ class CommunityService {
 
     // In a real app, this would integrate with platform sharing
     final shareText = '${post.content}\n\n- ${post.authorName} on art.kubus';
-    
+
     if (AppConfig.enableDebugPrints) {
       debugPrint('Sharing post: $shareText');
       debugPrint('Post ${post.id} shared. Total shares: ${post.shareCount}');
@@ -598,32 +637,35 @@ class CommunityService {
     // Sync with backend
     try {
       await backendApi.sharePost(post.id);
-      
+
       // Server will create and emit notification to the post author. No local push for actor.
     } catch (e) {
       // Rollback on error
       if (AppConfig.enableDebugPrints) {
         debugPrint('Failed to sync share with backend: $e. Rolling back.');
       }
-      
+
       sharedPosts.remove(shareKey);
       post.shareCount = originalShareCount;
       await prefs.setStringList(_sharesKey, sharedPosts);
     }
-    
+
     // Mock sharing action
     await Future.delayed(const Duration(milliseconds: 500));
   }
 
   // Delete comment
-  static Future<void> deleteComment(CommunityPost post, String commentId) async {
+  static Future<void> deleteComment(
+      CommunityPost post, String commentId) async {
     post.comments.removeWhere((comment) => comment.id == commentId);
     post.commentCount = post.comments.length;
 
     // Update persistence
     final prefs = await SharedPreferences.getInstance();
-    final commentsData = post.comments.map((comment) =>
-        '${comment.id}|${comment.authorName}|${comment.content}|${comment.timestamp.millisecondsSinceEpoch}').toList();
+    final commentsData = post.comments
+        .map((comment) =>
+            '${comment.id}|${comment.authorName}|${comment.content}|${comment.timestamp.millisecondsSinceEpoch}')
+        .toList();
     await prefs.setStringList('${_commentsKey}_${post.id}', commentsData);
 
     if (AppConfig.enableDebugPrints) {
@@ -635,7 +677,7 @@ class CommunityService {
   static Future<void> editComment(Comment comment, String newContent) async {
     // Note: In a real app, you'd want to track edit history
     comment.content = newContent;
-    
+
     if (AppConfig.enableDebugPrints) {
       debugPrint('Comment ${comment.id} edited');
     }
@@ -643,8 +685,11 @@ class CommunityService {
 
   // Get post analytics
   static Map<String, dynamic> getPostAnalytics(CommunityPost post) {
-    final engagementRate = post.viewCount > 0 
-        ? ((post.likeCount + post.commentCount + post.shareCount) / post.viewCount * 100).toStringAsFixed(1)
+    final engagementRate = post.viewCount > 0
+        ? ((post.likeCount + post.commentCount + post.shareCount) /
+                post.viewCount *
+                100)
+            .toStringAsFixed(1)
         : '0.0';
 
     return {
@@ -658,41 +703,47 @@ class CommunityService {
   }
 
   // Search posts by content or tags
-  static List<CommunityPost> searchPosts(List<CommunityPost> posts, String query) {
+  static List<CommunityPost> searchPosts(
+      List<CommunityPost> posts, String query) {
     if (query.isEmpty) return posts;
-    
+
     final lowercaseQuery = query.toLowerCase();
     return posts.where((post) {
-      final matchesContent = post.content.toLowerCase().contains(lowercaseQuery);
-      final matchesAuthor = post.authorName.toLowerCase().contains(lowercaseQuery);
-      final matchesTags = post.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
-      
+      final matchesContent =
+          post.content.toLowerCase().contains(lowercaseQuery);
+      final matchesAuthor =
+          post.authorName.toLowerCase().contains(lowercaseQuery);
+      final matchesTags =
+          post.tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery));
+
       return matchesContent || matchesAuthor || matchesTags;
     }).toList();
   }
 
   // Filter posts by tag
-  static List<CommunityPost> filterPostsByTag(List<CommunityPost> posts, String tag) {
+  static List<CommunityPost> filterPostsByTag(
+      List<CommunityPost> posts, String tag) {
     return posts.where((post) => post.tags.contains(tag)).toList();
   }
 
   // Get trending tags
   static List<String> getTrendingTags(List<CommunityPost> posts) {
     final tagCounts = <String, int>{};
-    
+
     for (final post in posts) {
       for (final tag in post.tags) {
         tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
       }
     }
-    
+
     final sortedTags = tagCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    
+
     return sortedTags.take(10).map((entry) => entry.key).toList();
   }
 
-  static List<String> _loadLikedPostIds(SharedPreferences prefs, {String? walletAddress}) {
+  static List<String> _loadLikedPostIds(SharedPreferences prefs,
+      {String? walletAddress}) {
     final key = _likesStorageKey(prefs, walletAddress: walletAddress);
     final liked = prefs.getStringList(key);
     if (liked != null) {
@@ -708,17 +759,22 @@ class CommunityService {
     return <String>[];
   }
 
-  static Future<void> _saveLikedPostIds(SharedPreferences prefs, List<String> liked, {String? walletAddress}) async {
+  static Future<void> _saveLikedPostIds(
+      SharedPreferences prefs, List<String> liked,
+      {String? walletAddress}) async {
     final key = _likesStorageKey(prefs, walletAddress: walletAddress);
     await prefs.setStringList(key, liked);
   }
 
-  static String _likesStorageKey(SharedPreferences prefs, {String? walletAddress}) {
-    final identifier = _resolveWalletIdentifier(prefs, walletOverride: walletAddress);
+  static String _likesStorageKey(SharedPreferences prefs,
+      {String? walletAddress}) {
+    final identifier =
+        _resolveWalletIdentifier(prefs, walletOverride: walletAddress);
     return '${_likesKey}_$identifier';
   }
 
-  static String _resolveWalletIdentifier(SharedPreferences prefs, {String? walletOverride}) {
+  static String _resolveWalletIdentifier(SharedPreferences prefs,
+      {String? walletOverride}) {
     final raw = walletOverride ??
         prefs.getString('wallet_address') ??
         prefs.getString('walletAddress') ??

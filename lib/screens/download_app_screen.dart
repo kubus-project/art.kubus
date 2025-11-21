@@ -293,15 +293,15 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
               label: 'App Store',
               icon: Icons.apple,
               color: Colors.black,
-              onTap: () => _launchURL('https://apps.apple.com'),
+              onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
               isLargeScreen: isLargeScreen,
             ),
             // Android Play Store button
             _buildStoreButton(
               label: 'Play Store',
-              icon: Icons.shop,
+              icon: Icons.android,
               color: const Color(0xFF01875F),
-              onTap: () => _launchURL('https://play.google.com'),
+              onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
               isLargeScreen: isLargeScreen,
             ),
           ],
