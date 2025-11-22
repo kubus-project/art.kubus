@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import '../models/artwork.dart';
-import '../models/ar_marker.dart';
+import '../models/art_marker.dart';
+import '../providers/storage_provider.dart';
 import '../community/community_interactions.dart';
 import './ar_manager.dart';
 import './ar_content_service.dart';
@@ -15,11 +16,11 @@ class ARIntegrationService {
   ARIntegrationService._internal();
 
   final ARManager _arManager = ARManager();
-  final List<ARMarker> _nearbyMarkers = [];
+  final List<ArtMarker> _nearbyMarkers = [];
   LatLng? _currentLocation;
   
   // Callbacks for UI updates
-  Function(ARMarker)? onMarkerActivated;
+  Function(ArtMarker)? onMarkerActivated;
   Function(Artwork)? onArtworkDiscovered;
   Function(String)? onARInteractionComplete;
 
@@ -69,7 +70,7 @@ class ARIntegrationService {
 
     try {
       // Find associated AR marker
-      ARMarker? marker;
+      ArtMarker? marker;
       if (artwork.arMarkerId != null) {
         marker = _nearbyMarkers.firstWhere(
           (m) => m.id == artwork.arMarkerId,
@@ -97,13 +98,15 @@ class ARIntegrationService {
   }
 
   /// Create AR marker from artwork data
-  ARMarker _createMarkerFromArtwork(Artwork artwork) {
-    return ARMarker(
+  ArtMarker _createMarkerFromArtwork(Artwork artwork) {
+    return ArtMarker(
       id: artwork.arMarkerId ?? 'temp_${artwork.id}',
       name: artwork.title,
       description: artwork.description,
       position: artwork.position,
       artworkId: artwork.id,
+      type: ArtMarkerType.artwork,
+      category: artwork.category,
       modelCID: artwork.model3DCID,
       modelURL: artwork.model3DURL,
       storageProvider: artwork.model3DCID != null 
@@ -113,13 +116,19 @@ class ARIntegrationService {
       rotation: artwork.arRotation ?? {'x': 0, 'y': 0, 'z': 0},
       enableAnimation: artwork.arEnableAnimation ?? false,
       animationName: artwork.arAnimationName,
+      metadata: {
+        'source': 'artwork_sync',
+        'artworkTitle': artwork.title,
+        'artist': artwork.artist,
+      },
+      tags: artwork.tags,
       createdAt: artwork.createdAt,
       createdBy: artwork.artist,
     );
   }
 
   /// Display AR content using ARManager
-  Future<void> _displayARContent(ARMarker marker, String contentUrl) async {
+  Future<void> _displayARContent(ArtMarker marker, String contentUrl) async {
     if (!_arManager.isInitialized) {
       await _arManager.initialize();
     }
@@ -136,7 +145,7 @@ class ARIntegrationService {
   }
 
   /// Track AR interaction
-  Future<void> _trackARInteraction(Artwork artwork, ARMarker marker) async {
+  Future<void> _trackARInteraction(Artwork artwork, ArtMarker marker) async {
     try {
       // Update local marker stats
       final updatedMarker = marker.copyWith(
@@ -227,7 +236,7 @@ class ARIntegrationService {
   }
 
   /// Get active AR markers
-  List<ARMarker> getActiveMarkers() {
+  List<ArtMarker> getActiveMarkers() {
     if (_currentLocation == null) return [];
     
     return _nearbyMarkers
@@ -236,7 +245,7 @@ class ARIntegrationService {
   }
 
   /// Get AR marker for artwork
-  ARMarker? getMarkerForArtwork(String artworkId) {
+  ArtMarker? getMarkerForArtwork(String artworkId) {
     try {
       return _nearbyMarkers.firstWhere(
         (marker) => marker.artworkId == artworkId,
@@ -247,7 +256,7 @@ class ARIntegrationService {
   }
 
   /// Create AR marker from map location
-  Future<ARMarker?> createMarkerAtLocation({
+  Future<ArtMarker?> createMarkerAtLocation({
     required LatLng location,
     required String name,
     required String description,
@@ -257,18 +266,25 @@ class ARIntegrationService {
     double scale = 1.0,
   }) async {
     try {
-      final marker = ARMarker(
+      final marker = ArtMarker(
         id: 'marker_${DateTime.now().millisecondsSinceEpoch}',
         name: name,
         description: description,
         position: location,
         artworkId: artworkId,
+        type: ArtMarkerType.artwork,
+        category: 'User Created',
         modelCID: modelCID,
         modelURL: modelURL,
         storageProvider: modelCID != null 
             ? StorageProvider.hybrid 
             : StorageProvider.http,
         scale: scale,
+        metadata: {
+          'source': 'user_created',
+          'createdFrom': 'map_screen',
+        },
+        tags: const [],
         createdAt: DateTime.now(),
         createdBy: 'current_user',
       );
@@ -289,7 +305,7 @@ class ARIntegrationService {
   }
 
   /// Upload AR content and create marker
-  Future<ARMarker?> uploadAndCreateMarker({
+  Future<ArtMarker?> uploadAndCreateMarker({
     required LatLng location,
     required String name,
     required String description,
@@ -370,3 +386,5 @@ class ARIntegrationService {
   /// Get nearby markers count
   int get nearbyMarkersCount => _nearbyMarkers.length;
 }
+
+

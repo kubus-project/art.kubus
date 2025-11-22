@@ -2,9 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../models/ar_marker.dart';
+import 'dart:typed_data';
+import '../models/art_marker.dart';
 import '../config/api_keys.dart';
 import '../config/config.dart';
+import '../providers/storage_provider.dart';
+import 'backend_api_service.dart';
 
 /// Configuration for storage providers
 class StorageConfig {
@@ -112,7 +115,7 @@ class ARContentService {
   }
 
   /// Load AR content for a marker
-  static Future<String?> loadARContent(ARMarker marker) async {
+  static Future<String?> loadARContent(ArtMarker marker) async {
     final provider = await getPreferredStorageProvider();
     
     try {
@@ -136,7 +139,7 @@ class ARContentService {
   }
 
   /// Load content from IPFS
-  static Future<String?> _loadFromIPFS(ARMarker marker) async {
+  static Future<String?> _loadFromIPFS(ArtMarker marker) async {
     if (marker.modelCID == null) return null;
 
     try {
@@ -161,7 +164,7 @@ class ARContentService {
   }
 
   /// Load content from HTTP
-  static String? _loadFromHTTP(ARMarker marker) {
+  static String? _loadFromHTTP(ArtMarker marker) {
     if (marker.modelURL == null) return null;
     
     debugPrint('ARContentService: Using HTTP URL - ${marker.modelURL}');
@@ -306,8 +309,8 @@ class ARContentService {
     return results;
   }
 
-  /// Fetch AR markers from backend
-  static Future<List<ARMarker>> fetchARMarkers({
+  /// Fetch art markers from backend
+  static Future<List<ArtMarker>> fetchARMarkers({
     double? latitude,
     double? longitude,
     double? radiusKm,
@@ -318,7 +321,7 @@ class ARContentService {
       if (longitude != null) queryParams['lng'] = longitude.toString();
       if (radiusKm != null) queryParams['radius'] = radiusKm.toString();
 
-      final uri = Uri.parse('${StorageConfig.httpBackend}/api/ar-markers')
+      final uri = Uri.parse('${StorageConfig.httpBackend}/api/art-markers')
           .replace(queryParameters: queryParams);
 
       final response = await http.get(uri).timeout(
@@ -326,8 +329,17 @@ class ARContentService {
       );
 
       if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body) as List;
-        return jsonData.map((json) => ARMarker.fromMap(json)).toList();
+        final body = jsonDecode(response.body);
+        final List<dynamic> payload;
+        if (body is List) {
+          payload = body;
+        } else if (body is Map<String, dynamic>) {
+          payload = (body['data'] ?? body['markers'] ?? body['artMarkers'] ?? body['results'] ?? []) as List<dynamic>;
+        } else {
+          payload = const [];
+        }
+
+        return payload.map((json) => ArtMarker.fromMap(json as Map<String, dynamic>)).toList();
       }
 
       debugPrint('ARContentService: Failed to fetch markers - ${response.statusCode}');
@@ -339,13 +351,20 @@ class ARContentService {
   }
 
   /// Save AR marker to backend
-  static Future<bool> saveARMarker(ARMarker marker) async {
+  /// Save AR marker to backend
+  static Future<bool> saveARMarker(ArtMarker marker) async {
     try {
-      final url = Uri.parse('${StorageConfig.httpBackend}/api/ar-markers');
+      // Use BackendApiService's createArtMarker method for proper auth
+      final backendApi = BackendApiService();
+      await backendApi.ensureAuthLoaded();
+      
+      // Convert marker data to match backend expectations
+      final markerData = marker.toMap();
+      
       final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(marker.toMap()),
+        Uri.parse('${StorageConfig.httpBackend}/api/art-markers'),
+        headers: await _getAuthHeaders(),
+        body: jsonEncode(markerData),
       ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -353,12 +372,38 @@ class ARContentService {
         return true;
       }
 
-      debugPrint('ARContentService: Failed to save marker - ${response.statusCode}');
+      debugPrint('ARContentService: Failed to save marker - ${response.statusCode}: ${response.body}');
       return false;
     } catch (e) {
       debugPrint('ARContentService: Error saving marker: $e');
       return false;
     }
+  }
+  
+  /// Get auth headers from backend API service
+  static Future<Map<String, String>> _getAuthHeaders() async {
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    
+    try {
+      final backendApi = BackendApiService();
+      await backendApi.ensureAuthLoaded();
+      // Try to get the stored token
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+        debugPrint('ARContentService: Added auth token to headers');
+      } else {
+        debugPrint('ARContentService: No auth token available');
+      }
+    } catch (e) {
+      debugPrint('ARContentService: Failed to get auth headers: $e');
+    }
+    
+    return headers;
   }
 
   /// Get storage statistics
@@ -387,3 +432,4 @@ class ARContentService {
     debugPrint('ARContentService: Cache cleared');
   }
 }
+

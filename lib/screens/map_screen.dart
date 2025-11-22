@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 // inline_loading no longer used in this file; replaced with inline_progress
 import '../widgets/inline_progress.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_compass/flutter_compass.dart';
-import 'package:location/location.dart';
+import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_loading.dart';
@@ -23,7 +27,8 @@ import '../services/ar_integration_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/achievement_service.dart';
-import '../models/ar_marker.dart';
+import '../models/art_marker.dart';
+import '../widgets/art_marker_cube.dart';
 import 'art_detail_screen.dart';
 import 'ar_screen.dart';
 import 'user_profile_screen.dart';
@@ -40,14 +45,18 @@ class _MapScreenState extends State<MapScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   
   // Location and Map State
-  LocationData? _currentLocation;
-  Location location = Location();
+  LatLng? _currentPosition;
+  Location? _mobileLocation;
   Timer? _timer;
   final MapController _mapController = MapController();
+  final ValueNotifier<MapCamera?> _cameraNotifier = ValueNotifier<MapCamera?>(null);
   bool _autoCenter = true;
   double? _direction; // Compass direction
   StreamSubscription<CompassEvent>? _compassSubscription;
+  StreamSubscription<LocationData>? _mobileLocationSubscription;
+  StreamSubscription<Position>? _webPositionSubscription;
   TileProviders? tileProviders;
+  double _lastKnownZoom = 17.0;
   
   // Animation
   late AnimationController _animationController;
@@ -56,9 +65,10 @@ class _MapScreenState extends State<MapScreen>
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
   final BackendApiService _backendApi = BackendApiService();
   final PushNotificationService _pushNotificationService = PushNotificationService();
-  List<ARMarker> _arMarkers = [];
+  List<ArtMarker> _artMarkers = [];
   final Set<String> _notifiedMarkers = {}; // Track which markers we've notified about
   Timer? _proximityCheckTimer;
+  ArtMarker? _selectedArtMarker;
 
   // UI State
   bool _isSearching = false;
@@ -112,16 +122,70 @@ class _MapScreenState extends State<MapScreen>
     taskProvider.updateAchievementProgress('local_guide', discoveredCount);
   }
 
+  double _interpolateByZoom(
+    double zoom, {
+    required double minZoom,
+    required double maxZoom,
+    required double minValue,
+    required double maxValue,
+  }) {
+    final double clampedZoom = zoom.clamp(minZoom, maxZoom);
+    final double range = maxZoom - minZoom;
+    if (range <= 0) {
+      return minValue;
+    }
+    final double t = (clampedZoom - minZoom) / range;
+    final double? value = ui.lerpDouble(minValue, maxValue, t);
+    return value ?? minValue;
+  }
+
+  double _computeArtMarkerSize(double zoom) {
+    return _interpolateByZoom(
+      zoom,
+      minZoom: 11.5,
+      maxZoom: 20.0,
+      minValue: 40,
+      maxValue: 68,
+    );
+  }
+
+  double _computeArtworkMarkerSize(double zoom) {
+    return _interpolateByZoom(
+      zoom,
+      minZoom: 11.5,
+      maxZoom: 20.0,
+      minValue: 28,
+      maxValue: 48,
+    );
+  }
+
+  double _computeUserMarkerSize(double zoom) {
+    return _interpolateByZoom(
+      zoom,
+      minZoom: 10.5,
+      maxZoom: 20.0,
+      minValue: 20,
+      maxValue: 38,
+    );
+  }
+
   void _initializeMap() {
+    if (!kIsWeb) {
+      _mobileLocation = Location();
+    }
+
     _getLocation();
     _showIntroDialogIfNeeded();
     _startLocationTimer();
     
-    _compassSubscription = FlutterCompass.events!.listen((CompassEvent event) {
-      if (mounted) {
-        _updateDirection(event.heading);
-      }
-    });
+    final compassStream = FlutterCompass.events;
+    if (compassStream != null) {
+      _compassSubscription = compassStream.listen((CompassEvent event) {
+        if (mounted) {
+          _updateDirection(event.heading);
+        }
+      });
+    }
 
     WidgetsBinding.instance.addObserver(this);
 
@@ -129,6 +193,12 @@ class _MapScreenState extends State<MapScreen>
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
+
+    if (!kIsWeb) {
+      _subscribeToMobileLocationStream();
+    } else {
+      _startWebLocationStream();
+    }
     
     // Initialize AR integration
     _initializeARIntegration();
@@ -142,8 +212,8 @@ class _MapScreenState extends State<MapScreen>
       // Set up notification tap handler
       _pushNotificationService.onNotificationTap = _handleNotificationTap;
       
-      // Load AR markers from backend
-      await _loadARMarkers();
+      // Load art markers from backend
+      await _loadArtMarkers();
       
       // Start proximity checking timer (every 10 seconds)
       _proximityCheckTimer = Timer.periodic(
@@ -156,37 +226,26 @@ class _MapScreenState extends State<MapScreen>
     }
   }
   
-  Future<void> _loadARMarkers() async {
-    if (_currentLocation == null) return;
+  Future<void> _loadArtMarkers() async {
+    if (_currentPosition == null) return;
     
     try {
       // Load from backend API
-      final markers = await _backendApi.getNearbyMarkers(
-        latitude: _currentLocation!.latitude!,
-        longitude: _currentLocation!.longitude!,
+      final markers = await _backendApi.getNearbyArtMarkers(
+        latitude: _currentPosition!.latitude,
+        longitude: _currentPosition!.longitude,
         radiusKm: 5.0,
       );
       
       if (mounted) {
         setState(() {
-          _arMarkers = markers;
+          _artMarkers = markers;
         });
       }
       
-      debugPrint('Loaded ${markers.length} AR markers from backend');
+      debugPrint('Loaded ${markers.length} art markers from backend');
     } catch (e) {
-      debugPrint('Error loading AR markers from backend: $e');
-      // Fallback to local service if backend fails
-      try {
-        final markers = _arIntegrationService.getActiveMarkers();
-        if (mounted) {
-          setState(() {
-            _arMarkers = markers;
-          });
-        }
-      } catch (e2) {
-        debugPrint('Error loading AR markers from local service: $e2');
-      }
+      debugPrint('Error loading art markers from backend: $e');
     }
   }
   
@@ -198,11 +257,11 @@ class _MapScreenState extends State<MapScreen>
       if (type == 'ar_proximity') {
         final markerId = data['markerId'] as String?;
         if (markerId != null) {
-          final marker = _arMarkers.firstWhere(
+          final marker = _artMarkers.firstWhere(
             (m) => m.id == markerId,
-            orElse: () => _arMarkers.first,
+            orElse: () => _artMarkers.first,
           );
-          _showARMarkerDialog(marker);
+          _showArtMarkerDialog(marker);
         }
       }
     } catch (e) {
@@ -211,15 +270,12 @@ class _MapScreenState extends State<MapScreen>
   }
   
   void _checkProximityNotifications() {
-    if (_currentLocation == null) return;
+    if (_currentPosition == null) return;
     
     const Distance distanceCalculator = Distance();
-    final currentLatLng = LatLng(
-      _currentLocation!.latitude!,
-      _currentLocation!.longitude!,
-    );
+    final currentLatLng = _currentPosition!;
     
-    for (final marker in _arMarkers) {
+    for (final marker in _artMarkers) {
       // Check if already notified
       if (_notifiedMarkers.contains(marker.id)) continue;
       
@@ -239,9 +295,9 @@ class _MapScreenState extends State<MapScreen>
     
     // Clean up notifications for markers we've moved away from (>100m)
     _notifiedMarkers.removeWhere((markerId) {
-      final marker = _arMarkers.firstWhere(
+      final marker = _artMarkers.firstWhere(
         (m) => m.id == markerId,
-        orElse: () => _arMarkers.first,
+        orElse: () => _artMarkers.first,
       );
       
       final distance = distanceCalculator.as(
@@ -254,7 +310,7 @@ class _MapScreenState extends State<MapScreen>
     });
   }
   
-  void _showProximityNotification(ARMarker marker, double distance) {
+  void _showProximityNotification(ArtMarker marker, double distance) {
     if (!mounted) return;
     
     // Show push notification
@@ -320,7 +376,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
   
-  void _showARMarkerDialog(ARMarker marker) {
+  void _showArtMarkerDialog(ArtMarker marker) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -349,13 +405,13 @@ class _MapScreenState extends State<MapScreen>
                 style: GoogleFonts.outfit(),
               ),
             const SizedBox(height: 12),
-            if (_currentLocation != null) ...[
+            if (_currentPosition != null) ...[
               Builder(
                 builder: (context) {
                   const Distance distanceCalculator = Distance();
                   final distance = distanceCalculator.as(
                     LengthUnit.Meter,
-                    LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                    _currentPosition!,
                     marker.position,
                   );
                   return Row(
@@ -397,7 +453,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
   
-  Future<void> _launchARExperience(ARMarker marker) async {
+  Future<void> _launchARExperience(ArtMarker marker) async {
     try {
       // Navigate to AR screen
       await Navigator.push(
@@ -419,31 +475,448 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _getLocation() async {
+  Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
+    Color base;
+    switch (marker.type) {
+      case ArtMarkerType.artwork:
+        base = themeProvider.accentColor;
+        break;
+      case ArtMarkerType.institution:
+        base = scheme.secondary;
+        break;
+      case ArtMarkerType.event:
+        base = scheme.tertiary;
+        break;
+      case ArtMarkerType.residency:
+        base = scheme.primaryContainer;
+        break;
+      case ArtMarkerType.drop:
+        base = scheme.secondaryContainer;
+        break;
+      case ArtMarkerType.experience:
+        base = scheme.primary;
+        break;
+      case ArtMarkerType.other:
+        base = scheme.outline;
+        break;
+    }
+
+    switch (marker.signalTier) {
+      case ArtMarkerSignal.legendary:
+        return Color.alphaBlend(scheme.error.withValues(alpha: 0.45), base);
+      case ArtMarkerSignal.featured:
+        return Color.alphaBlend(scheme.tertiary.withValues(alpha: 0.35), base);
+      case ArtMarkerSignal.active:
+        return base;
+      case ArtMarkerSignal.subtle:
+        return Color.alphaBlend(
+          scheme.surfaceContainerHighest.withValues(alpha: 0.55),
+          base,
+        );
+    }
+  }
+
+  IconData _resolveArtMarkerIcon(ArtMarkerType type) {
+    switch (type) {
+      case ArtMarkerType.artwork:
+        return Icons.auto_awesome;
+      case ArtMarkerType.institution:
+        return Icons.museum_outlined;
+      case ArtMarkerType.event:
+        return Icons.event_available;
+      case ArtMarkerType.residency:
+        return Icons.apartment;
+      case ArtMarkerType.drop:
+        return Icons.wallet_giftcard;
+      case ArtMarkerType.experience:
+        return Icons.view_in_ar;
+      case ArtMarkerType.other:
+        return Icons.location_on_outlined;
+    }
+  }
+
+  // Isometric overlay removed - grid is now integrated in tile provider
+
+  void _handleCurrentLocationTap() {
+    if (_currentPosition == null) return;
+
+    // Check if there's a nearby marker (within 30 meters)
+    const Distance distanceCalculator = Distance();
+    ArtMarker? nearbyMarker;
+    double minDistance = double.infinity;
+
+    for (final marker in _artMarkers) {
+      final distance = distanceCalculator.as(
+        LengthUnit.Meter,
+        _currentPosition!,
+        marker.position,
+      );
+
+      if (distance < 30 && distance < minDistance) {
+        nearbyMarker = marker;
+        minDistance = distance;
+      }
+    }
+
+    if (nearbyMarker != null) {
+      // Show marker info
+      _showArtMarkerDialog(nearbyMarker);
+    } else {
+      // Show create marker dialog
+      _showCreateMarkerDialog();
+    }
+  }
+
+  void _showCreateMarkerDialog() {
+    if (_currentPosition == null) return;
+
+    final titleController = TextEditingController();
+    final descriptionController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    String selectedType = 'artwork';
+    String selectedCategory = 'User Created';
+    bool isCreating = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Row(
+            children: [
+              Icon(
+                Icons.add_location_alt,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Create Art Marker',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Form(
+              key: formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Create a new art marker at your current location',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Marker Type
+                  Text(
+                    'Marker Type',
+                    style: GoogleFonts.outfit(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: selectedType,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'artwork', child: Text('Artwork')),
+                      DropdownMenuItem(value: 'institution', child: Text('Institution')),
+                      DropdownMenuItem(value: 'event', child: Text('Event')),
+                      DropdownMenuItem(value: 'experience', child: Text('AR Experience')),
+                      DropdownMenuItem(value: 'drop', child: Text('Drop/Reward')),
+                      DropdownMenuItem(value: 'other', child: Text('Other')),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() => selectedType = value!);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Title
+                  TextFormField(
+                    controller: titleController,
+                    decoration: InputDecoration(
+                      labelText: 'Marker Title *',
+                      hintText: 'Enter marker name',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a title';
+                      }
+                      if (value.trim().length < 3) {
+                        return 'Title must be at least 3 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Description
+                  TextFormField(
+                    controller: descriptionController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: 'Description *',
+                      hintText: 'Describe this location and what visitors will experience',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter a description';
+                      }
+                      if (value.trim().length < 10) {
+                        return 'Description must be at least 10 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Category
+                  TextFormField(
+                    initialValue: selectedCategory,
+                    decoration: InputDecoration(
+                      labelText: 'Category',
+                      hintText: 'e.g., Street Art, Gallery, Museum',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      selectedCategory = value;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  // Location info
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          size: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Current Location',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 11,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isCreating) ...[
+                    const SizedBox(height: 16),
+                    const Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: isCreating
+                  ? null
+                  : () {
+                      Navigator.of(dialogContext).pop();
+                      titleController.dispose();
+                      descriptionController.dispose();
+                    },
+              child: Text('Cancel', style: GoogleFonts.outfit()),
+            ),
+            ElevatedButton.icon(
+              onPressed: isCreating
+                  ? null
+                  : () async {
+                      if (formKey.currentState!.validate()) {
+                        setDialogState(() => isCreating = true);
+                        
+                        final success = await _createMarkerAtCurrentLocation(
+                          title: titleController.text.trim(),
+                          description: descriptionController.text.trim(),
+                          type: selectedType,
+                          category: selectedCategory.trim(),
+                        );
+
+                        if (dialogContext.mounted) {
+                          Navigator.of(dialogContext).pop();
+                        }
+                        titleController.dispose();
+                        descriptionController.dispose();
+
+                        if (mounted) {
+                          if (success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(Icons.check_circle, color: Colors.white),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Marker created successfully!',
+                                        style: GoogleFonts.outfit(color: Colors.white),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            // Reload markers
+                            await _loadArtMarkers();
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Failed to create marker. Please try again.',
+                                  style: GoogleFonts.outfit(color: Colors.white),
+                                ),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      }
+                    },
+              icon: const Icon(Icons.add_location_alt),
+              label: Text('Create Marker', style: GoogleFonts.outfit()),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<bool> _createMarkerAtCurrentLocation({
+    required String title,
+    required String description,
+    required String type,
+    required String category,
+  }) async {
+    if (_currentPosition == null) return false;
+
     try {
-      bool serviceEnabled = await location.serviceEnabled();
-      if (!serviceEnabled) {
-        serviceEnabled = await location.requestService();
-        if (!serviceEnabled) return;
-      }
+      // Create marker using AR integration service
+      final marker = await _arIntegrationService.createMarkerAtLocation(
+        location: _currentPosition!,
+        name: title,
+        description: description,
+        artworkId: 'user_created_${DateTime.now().millisecondsSinceEpoch}',
+      );
 
-      PermissionStatus permissionGranted = await location.hasPermission();
-      if (permissionGranted == PermissionStatus.denied) {
-        permissionGranted = await location.requestPermission();
-        if (permissionGranted != PermissionStatus.granted) return;
-      }
-
-      final locationData = await location.getLocation();
-      if (mounted) {
+      if (marker != null) {
+        // Update local markers list
         setState(() {
-          _currentLocation = locationData;
+          _artMarkers.add(marker);
         });
-        
-        if (_autoCenter && _currentLocation != null) {
-          _mapController.move(
-            LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-            15.0,
-          );
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('Error creating marker at current location: $e');
+      return false;
+    }
+  }
+
+  Future<void> _getLocation({bool fromTimer = false}) async {
+    try {
+      LatLng? resolvedPosition;
+
+      if (kIsWeb) {
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          debugPrint('MapScreen: Location services disabled on web');
+          return;
+        }
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            debugPrint('MapScreen: Location permission denied on web');
+            return;
+          }
+        }
+
+        if (permission == LocationPermission.deniedForever) {
+          debugPrint('MapScreen: Location permission permanently denied on web');
+          return;
+        }
+
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+        );
+        resolvedPosition = LatLng(position.latitude, position.longitude);
+      } else {
+        _mobileLocation ??= Location();
+        bool serviceEnabled = await _mobileLocation!.serviceEnabled();
+        if (!serviceEnabled) {
+          serviceEnabled = await _mobileLocation!.requestService();
+          if (!serviceEnabled) return;
+        }
+
+        PermissionStatus permissionGranted = await _mobileLocation!.hasPermission();
+        if (permissionGranted == PermissionStatus.denied) {
+          permissionGranted = await _mobileLocation!.requestPermission();
+          if (permissionGranted != PermissionStatus.granted) return;
+        }
+
+        final locationData = await _mobileLocation!.getLocation();
+        if (locationData.latitude != null && locationData.longitude != null) {
+          resolvedPosition = LatLng(locationData.latitude!, locationData.longitude!);
+        }
+      }
+
+      if (resolvedPosition != null) {
+        final shouldCenter = !fromTimer;
+        _updateCurrentPosition(resolvedPosition, shouldCenter: shouldCenter);
+        if (_artMarkers.isEmpty) {
+          await _loadArtMarkers();
         }
       }
     } catch (e) {
@@ -453,8 +926,63 @@ class _MapScreenState extends State<MapScreen>
 
   void _startLocationTimer() {
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      _getLocation();
+      _getLocation(fromTimer: true);
     });
+  }
+
+  void _subscribeToMobileLocationStream() {
+    if (kIsWeb || _mobileLocation == null) {
+      return;
+    }
+    _mobileLocationSubscription?.cancel();
+    try {
+      _mobileLocationSubscription = _mobileLocation!.onLocationChanged.listen((event) {
+        if (event.latitude != null && event.longitude != null) {
+          _updateCurrentPosition(
+            LatLng(event.latitude!, event.longitude!),
+          );
+        }
+      });
+    } catch (e) {
+      debugPrint('MapScreen: Failed to subscribe to mobile location stream: $e');
+    }
+  }
+
+  void _startWebLocationStream() {
+    if (!kIsWeb) {
+      return;
+    }
+    _webPositionSubscription?.cancel();
+    try {
+      final stream = Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          distanceFilter: 4,
+        ),
+      );
+      _webPositionSubscription = stream.listen((position) {
+        _updateCurrentPosition(
+          LatLng(position.latitude, position.longitude),
+        );
+      });
+    } catch (e) {
+      debugPrint('MapScreen: Unable to start web location stream: $e');
+    }
+  }
+
+  void _updateCurrentPosition(LatLng position, {bool shouldCenter = false}) {
+    if (!mounted) return;
+    final bool isInitial = _currentPosition == null;
+    final bool allowCenter = shouldCenter || _autoCenter || isInitial;
+
+    setState(() {
+      _currentPosition = position;
+    });
+
+    if (allowCenter) {
+      final double targetZoom = isInitial ? 15.0 : _mapController.camera.zoom;
+      _mapController.move(position, targetZoom);
+    }
   }
 
   void _updateDirection(double? heading) {
@@ -541,20 +1069,20 @@ class _MapScreenState extends State<MapScreen>
     return filtered;
   }
 
-  List<Artwork> _getSortedArtwork(List<Artwork> artwork, LocationData? currentLocation) {
+  List<Artwork> _getSortedArtwork(List<Artwork> artwork, LatLng? currentPosition) {
     List<Artwork> sorted = List.from(artwork);
 
     switch (_sortBy) {
       case 'distance':
-        if (currentLocation != null) {
+        if (currentPosition != null) {
           const Distance distanceCalculator = Distance();
           sorted.sort((a, b) {
             final distanceA = distanceCalculator.as(LengthUnit.Meter,
-              LatLng(currentLocation.latitude!, currentLocation.longitude!),
+              currentPosition,
               a.position,
             );
             final distanceB = distanceCalculator.as(LengthUnit.Meter,
-              LatLng(currentLocation.latitude!, currentLocation.longitude!),
+              currentPosition,
               b.position,
             );
             return distanceA.compareTo(distanceB);
@@ -731,233 +1259,276 @@ class _MapScreenState extends State<MapScreen>
           }
 
           final filteredArt = _getFilteredArtwork(artworkProvider.artworks);
-          final sortedArt = _getSortedArtwork(filteredArt, _currentLocation);
+          final sortedArt = _getSortedArtwork(filteredArt, _currentPosition);
           
+          final mediaSize = MediaQuery.of(context).size;
+          final isoWidth = mediaSize.width * 4;
+          final isoHeight = mediaSize.height * 2;
+          final isoLift = mediaSize.height * -0.12;
+
           return Stack(
             children: [
-              // Map
-              Transform.scale(
-                scale: 1.5,
-                child: Transform.rotate(
-                  angle: _autoCenter ? rotationRadians : 0,
-                  child: FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: _currentLocation != null
-                          ? LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!)
-                          : const LatLng(46.0569, 14.5058),
-                      initialZoom: 16.0,
-                      minZoom: 3.0,
-                      maxZoom: 18.0,
-                    ),
-                    children: [
-                      tileProviders?.getTileLayer() ?? TileLayer(
-                        urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                        maxZoom: 18,
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          // Current location marker
-                          if (_currentLocation != null)
-                            Marker(
-                              point: LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                              width: 15,
-                              height: 15,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 2),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                              ),
+              // Isometric Map View
+              ClipRect(
+                child: OverflowBox(
+                  minWidth: mediaSize.width,
+                  maxWidth: isoWidth,
+                  minHeight: mediaSize.height,
+                  maxHeight: isoHeight,
+                  child: SizedBox(
+                    width: isoWidth,
+                    height: isoHeight,
+                    child: Transform(
+                      alignment: Alignment.center,
+                      transform: Matrix4.identity()
+                        ..setEntry(3, 2, 0.002)
+                        ..rotateX(-30 * math.pi / 180)
+                        ..scale(1, 1, 1.0),
+                      child: Transform.translate(
+                        offset: Offset(0, -isoLift),
+                        child: Transform.rotate(
+                          angle: _autoCenter ? rotationRadians : 0,
+                          child: SizedBox.expand(
+                            child: FlutterMap(
+                            mapController: _mapController,
+                            options: MapOptions(
+                              initialCenter: _currentPosition != null
+                                  ? _currentPosition!
+                                  : const LatLng(46.0569, 14.5058),
+                              initialZoom: 20.0,
+                              minZoom: 3.0,
+                              maxZoom: 24.0,
+                              onMapEvent: (event) {
+                                _cameraNotifier.value = event.camera;
+                                _lastKnownZoom = event.camera.zoom;
+                              },
                             ),
-                          // Art markers from ArtworkProvider
-                          ...artworkProvider.artworks.map((artwork) {
-                            double distance = 0;
-                            bool isNearby = false;
-                            
-                            if (_currentLocation != null) {
-                              const Distance distanceCalculator = Distance();
-                              distance = distanceCalculator.as(LengthUnit.Meter,
-                                LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                                artwork.position,
-                              );
-                              isNearby = distance < 50;
-                            }
-                            
-                            final isDiscovered = artwork.status == ArtworkStatus.discovered;
-                            
-                            return Marker(
-                              point: artwork.position,
-                              width: 50,
-                              height: 50,
-                              child: GestureDetector(
-                                onTap: () {
-                                  if (_currentLocation != null && isNearby && !isDiscovered) {
-                                    // Only allow discovery if we have location and are actually nearby
-                                    _markAsDiscoveredFromArtwork(artwork);
-                                  } else {
-                                    // Always allow viewing the artwork details
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-                                      ),
-                                    );
-                                  }
+                            children: [
+                              tileProviders?.getTileLayer(withGridOverlay: true) ?? TileLayer(
+                                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                maxZoom: 18,
+                              ),
+                              ValueListenableBuilder<MapCamera?>(
+                                valueListenable: _cameraNotifier,
+                                builder: (context, camera, _) {
+                                  final double zoom = camera?.zoom ?? _lastKnownZoom;
+                                  _lastKnownZoom = zoom;
+
+                                  final double artMarkerSize = _computeArtMarkerSize(zoom);
+                                  final double artMarkerHeight = artMarkerSize * 1.35;
+                                  final double artworkMarkerSize = _computeArtworkMarkerSize(zoom);
+                                  final double artworkHaloSize = artworkMarkerSize * 1.4;
+                                  final double userMarkerSize = _computeUserMarkerSize(zoom);
+                                  const Distance distanceCalculator = Distance();
+
+                                  return MarkerLayer(
+                                    markers: [
+                                      if (_currentPosition != null)
+                                        Marker(
+                                          point: _currentPosition!,
+                                          alignment: Alignment.bottomCenter,
+                                          width: userMarkerSize,
+                                          height: userMarkerSize,
+                                          child: GestureDetector(
+                                            onTap: _handleCurrentLocationTap,
+                                            child: Container(
+                                              width: userMarkerSize,
+                                              height: userMarkerSize,
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                gradient: RadialGradient(
+                                                  colors: [
+                                                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.85),
+                                                    Theme.of(context).colorScheme.primary,
+                                                  ],
+                                                ),
+                                                border: Border.all(
+                                                  color: Colors.white,
+                                                  width: math.max(1.8, userMarkerSize * 0.18),
+                                                ),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.3),
+                                                    blurRadius: userMarkerSize * 0.6,
+                                                    offset: Offset(0, userMarkerSize * 0.22),
+                                                  ),
+                                                ],
+                                              ),
+                                              child: Container(
+                                                margin: EdgeInsets.all(userMarkerSize * 0.28),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white,
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ...artworkProvider.artworks.map((artwork) {
+                                        double distance = 0;
+                                        bool isNearby = false;
+
+                                        if (_currentPosition != null) {
+                                          distance = distanceCalculator.as(
+                                            LengthUnit.Meter,
+                                            _currentPosition!,
+                                            artwork.position,
+                                          );
+                                          isNearby = distance < 50;
+                                        }
+
+                                        final bool isDiscovered = artwork.status == ArtworkStatus.discovered;
+                                        final Color rarityColor = Color(Artwork.getRarityColor(artwork.rarity));
+                                        final double badgeSize = math.max(16.0, artworkMarkerSize * 0.34);
+
+                                        return Marker(
+                                          point: artwork.position,
+                                          alignment: Alignment.bottomCenter,
+                                          width: artworkHaloSize,
+                                          height: artworkHaloSize,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              if (_currentPosition != null && isNearby && !isDiscovered) {
+                                                _markAsDiscoveredFromArtwork(artwork);
+                                              } else {
+                                                Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => ArtDetailScreen(artworkId: artwork.id),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            child: SizedBox(
+                                              width: artworkHaloSize,
+                                              height: artworkHaloSize,
+                                              child: Stack(
+                                                clipBehavior: Clip.none,
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  if (isNearby && !isDiscovered)
+                                                    Container(
+                                                      width: artworkHaloSize,
+                                                      height: artworkHaloSize,
+                                                      decoration: BoxDecoration(
+                                                        shape: BoxShape.circle,
+                                                        color: rarityColor.withValues(alpha: 0.2),
+                                                      ),
+                                                    ),
+                                                  Container(
+                                                    width: artworkMarkerSize,
+                                                    height: artworkMarkerSize,
+                                                    decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      gradient: LinearGradient(
+                                                        colors: [
+                                                          isDiscovered
+                                                              ? Theme.of(context).colorScheme.secondary
+                                                              : rarityColor.withValues(alpha: 0.95),
+                                                          isDiscovered
+                                                              ? Theme.of(context).colorScheme.secondaryContainer
+                                                              : rarityColor,
+                                                        ],
+                                                        begin: Alignment.topCenter,
+                                                        end: Alignment.bottomCenter,
+                                                      ),
+                                                      border: Border.all(
+                                                        color: Colors.white,
+                                                        width: math.max(2.0, artworkMarkerSize * 0.12),
+                                                      ),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black.withValues(alpha: 0.28),
+                                                          blurRadius: artworkMarkerSize * 0.45,
+                                                          offset: Offset(0, artworkMarkerSize * 0.24),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    child: Icon(
+                                                      isDiscovered
+                                                          ? Icons.check
+                                                          : (artwork.arEnabled
+                                                              ? Icons.view_in_ar
+                                                              : Icons.palette),
+                                                      color: Colors.white,
+                                                      size: artworkMarkerSize * 0.52,
+                                                    ),
+                                                  ),
+                                                  if (!isDiscovered)
+                                                    Positioned(
+                                                      top: -badgeSize * 0.35,
+                                                      right: -badgeSize * 0.2,
+                                                      child: Container(
+                                                        width: badgeSize,
+                                                        height: badgeSize,
+                                                        decoration: BoxDecoration(
+                                                          color: Theme.of(context).colorScheme.secondary,
+                                                          shape: BoxShape.circle,
+                                                          boxShadow: [
+                                                            BoxShadow(
+                                                              color: Colors.black.withValues(alpha: 0.22),
+                                                              blurRadius: badgeSize * 0.6,
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.star,
+                                                          color: Colors.white,
+                                                          size: badgeSize * 0.6,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                      ..._artMarkers.map((artMarker) {
+                                        double distance = 0;
+                                        bool isNearby = false;
+
+                                        if (_currentPosition != null) {
+                                          distance = distanceCalculator.as(
+                                            LengthUnit.Meter,
+                                            _currentPosition!,
+                                            artMarker.position,
+                                          );
+                                          isNearby = distance < artMarker.activationRadius;
+                                        }
+
+                                        return Marker(
+                                          point: artMarker.position,
+                                          alignment: Alignment.bottomCenter,
+                                          width: artMarkerSize,
+                                          height: artMarkerHeight,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                _selectedArtMarker = artMarker;
+                                              });
+                                              _showArtMarkerDialog(artMarker);
+                                            },
+                                            child: ArtMarkerCube(
+                                              marker: artMarker,
+                                              baseColor: _resolveArtMarkerColor(artMarker, themeProvider),
+                                              icon: _resolveArtMarkerIcon(artMarker.type),
+                                              size: artMarkerSize,
+                                              glow: isNearby || _selectedArtMarker?.id == artMarker.id,
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                    ],
+                                  );
                                 },
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (isNearby && !isDiscovered)
-                                      Container(
-                                        width: 50,
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.3),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: isDiscovered 
-                                            ? Colors.green 
-                                            : Color(Artwork.getRarityColor(artwork.rarity)),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 3),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        isDiscovered
-                                            ? Icons.check
-                                            : (artwork.arEnabled ? Icons.view_in_ar : Icons.palette),
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    if (!isDiscovered)
-                                      Positioned(
-                                        top: 0,
-                                        right: 0,
-                                        child: Container(
-                                          width: 16,
-                                          height: 16,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.amber,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.star,
-                                            color: Colors.white,
-                                            size: 12,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
                               ),
-                            );
-                          }),
-                          // AR Markers from ARIntegrationService
-                          ..._arMarkers.map((arMarker) {
-                            double distance = 0;
-                            bool isNearby = false;
-                            
-                            if (_currentLocation != null) {
-                              const Distance distanceCalculator = Distance();
-                              distance = distanceCalculator.as(LengthUnit.Meter,
-                                LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-                                arMarker.position,
-                              );
-                              isNearby = distance < 50;
-                            }
-                            
-                            return Marker(
-                              point: arMarker.position,
-                              width: 50,
-                              height: 50,
-                              child: GestureDetector(
-                                onTap: () => _showARMarkerDialog(arMarker),
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    if (isNearby)
-                                      Container(
-                                        width: 50,
-                                        height: 50,
-                                        decoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.3),
-                                          shape: BoxShape.circle,
-                                        ),
-                                      ),
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Theme.of(context).colorScheme.tertiary,
-                                            Theme.of(context).colorScheme.primary,
-                                          ],
-                                        ),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 3),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.3),
-                                            blurRadius: 8,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Icon(
-                                        Icons.view_in_ar,
-                                        color: Colors.white,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    // AR badge
-                                    Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: Container(
-                                        width: 16,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          color: isNearby ? Colors.green : Colors.orange,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(color: Colors.white, width: 1),
-                                        ),
-                                        child: Icon(
-                                          isNearby ? Icons.wifi_tethering : Icons.location_on,
-                                          color: Colors.white,
-                                          size: 10,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
+                            ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -1472,10 +2043,10 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildArtworkListItem(Artwork artwork) {
     double distance = 0;
-    if (_currentLocation != null) {
+    if (_currentPosition != null) {
       const Distance distanceCalculator = Distance();
       distance = distanceCalculator.as(LengthUnit.Meter,
-        LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+        _currentPosition!,
         artwork.position,
       );
     }
@@ -1712,10 +2283,10 @@ class _MapScreenState extends State<MapScreen>
                 setState(() {
                   _autoCenter = !_autoCenter;
                 });
-                if (_autoCenter && _currentLocation != null) {
+                if (_autoCenter && _currentPosition != null) {
                   _getLocation();
                   _mapController.move(
-                    LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
+                    _currentPosition!,
                     _mapController.camera.zoom,
                   );
                 }
@@ -1985,7 +2556,10 @@ class _MapScreenState extends State<MapScreen>
     _timer?.cancel();
     _proximityCheckTimer?.cancel();
     _compassSubscription?.cancel();
+    _mobileLocationSubscription?.cancel();
+    _webPositionSubscription?.cancel();
     _animationController.dispose();
+    _cameraNotifier.dispose();
     _searchController.dispose();
     _searchFocusNode.dispose();
     _sheetController.dispose();
@@ -1995,3 +2569,6 @@ class _MapScreenState extends State<MapScreen>
     super.dispose();
   }
 }
+
+
+

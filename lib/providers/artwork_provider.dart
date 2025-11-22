@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../services/user_action_logger.dart';
 import 'task_provider.dart';
 import 'saved_items_provider.dart';
 
@@ -124,6 +125,14 @@ class ArtworkProvider extends ChangeNotifier {
         if (!wasLiked && _taskProvider != null) {
           _taskProvider!.trackArtworkLike(artworkId);
         }
+
+        if (!wasLiked) {
+          UserActionLogger.logArtworkLike(
+            artworkId: artwork.id,
+            artworkTitle: artwork.title,
+            artistName: artwork.artist,
+          );
+        }
         
         // Sync with backend (fire-and-forget - don't block UI)
         _syncLikeWithBackend(artworkId, !wasLiked).catchError((e) {
@@ -163,6 +172,14 @@ class ArtworkProvider extends ChangeNotifier {
         // Track favorite action for tasks
         if (_taskProvider != null && isAddingToFavorites) {
           _taskProvider!.trackArtworkFavorite(artworkId);
+        }
+
+        if (isAddingToFavorites) {
+          UserActionLogger.logArtworkSave(
+            artworkId: artwork.id,
+            artworkTitle: artwork.title,
+            artistName: artwork.artist,
+          );
         }
         
         // Sync with backend (fire-and-forget)

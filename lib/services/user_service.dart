@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../models/achievements.dart';
 import 'backend_api_service.dart';
 import '../utils/wallet_utils.dart';
+import 'user_action_logger.dart';
 
 class UserService {
   static const String _followingKey = 'following_users';
@@ -538,7 +539,12 @@ class UserService {
     await _saveFollowingUsers(followingList);
   }
 
-  static Future<bool> toggleFollow(String walletAddress) async {
+  static Future<bool> toggleFollow(
+    String walletAddress, {
+    String? displayName,
+    String? username,
+    String? avatarUrl,
+  }) async {
     if (walletAddress.isEmpty) return false;
 
     final followingList = await getFollowingUsers();
@@ -554,6 +560,12 @@ class UserService {
       await backendApi.followUser(walletAddress);
       followingList.add(walletAddress);
       await _saveFollowingUsers(followingList);
+      UserActionLogger.logFollow(
+        walletAddress: walletAddress,
+        displayName: displayName,
+        username: username,
+        avatarUrl: avatarUrl,
+      );
       return true;
     }
   }
@@ -702,12 +714,10 @@ class UserService {
       int following = 0;
       int posts = 0;
       try {
-        if (resp is Map<String, dynamic>) {
-          followers = _parseInt(resp['followers'] ?? resp['followersCount'] ?? resp['followers_count']);
-          following = _parseInt(resp['following'] ?? resp['followingCount'] ?? resp['following_count']);
-          posts = _parseInt(resp['posts'] ?? resp['postsCount'] ?? resp['posts_count']);
-        }
-      } catch (_) {}
+        followers = _parseInt(resp['followers'] ?? resp['followersCount'] ?? resp['followers_count']);
+        following = _parseInt(resp['following'] ?? resp['followingCount'] ?? resp['following_count']);
+        posts = _parseInt(resp['posts'] ?? resp['postsCount'] ?? resp['posts_count']);
+            } catch (_) {}
 
       final existing = _cache[walletAddress];
       final isFollowing = (await getFollowingUsers()).contains(walletAddress);

@@ -30,6 +30,7 @@ import '../services/socket_service.dart';
 import '../providers/notification_provider.dart';
 import '../providers/chat_provider.dart';
 import 'messages_screen.dart';
+import '../providers/saved_items_provider.dart';
 
 enum CommunityFeedType {
   following,
@@ -504,6 +505,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       if (_communityPosts.any((p) => p.id == id)) return;
       try {
         final post = await BackendApiService().getCommunityPostById(id);
+        if (_isDuplicatePost(post)) return;
         if (!mounted) return;
 
         final atTop = _feedScrollController.hasClients
@@ -528,6 +530,23 @@ class _CommunityScreenState extends State<CommunityScreen>
     } catch (e) {
       debugPrint('CommunityScreen incoming post handler error: $e');
     }
+  }
+
+  bool _isDuplicatePost(CommunityPost candidate) {
+    const proximity = Duration(seconds: 4);
+
+    bool matches(CommunityPost existing) {
+      final sameAuthor = existing.authorId == candidate.authorId;
+      final sameContent = existing.content == candidate.content;
+      final timestampDiff = existing.timestamp.difference(candidate.timestamp).abs();
+
+      if (existing.id == candidate.id) return true;
+      if (existing.originalPostId != null && existing.originalPostId == candidate.id) return true;
+      if (candidate.originalPostId != null && candidate.originalPostId == existing.id) return true;
+      return sameAuthor && sameContent && timestampDiff < proximity;
+    }
+
+    return _communityPosts.any(matches) || _bufferedIncomingPosts.any(matches);
   }
 
   void _prependBufferedPosts() {
@@ -1154,51 +1173,54 @@ class _CommunityScreenState extends State<CommunityScreen>
                           const SizedBox(height: 16),
                           Row(
                             children: [
-                              _buildInteractionButton(
-                                post.isLiked
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                '${post.likeCount}',
-                                onTap: () => _toggleLike(index),
-                                onCountTap: () => _showPostLikes(post.id),
-                                isActive: post.isLiked,
+                              Expanded(
+                                child: _buildInteractionButton(
+                                  post.isLiked
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  '${post.likeCount}',
+                                  onTap: () => _toggleLike(index),
+                                  onCountTap: () => _showPostLikes(post.id),
+                                  isActive: post.isLiked,
+                                ),
                               ),
-                              const SizedBox(width: 20),
-                              _buildInteractionButton(
-                                Icons.comment_outlined,
-                                '${post.commentCount}',
-                                onTap: () => _showComments(index),
+                              Expanded(
+                                child: _buildInteractionButton(
+                                  Icons.comment_outlined,
+                                  '${post.commentCount}',
+                                  onTap: () => _showComments(index),
+                                ),
                               ),
-                              const SizedBox(width: 20),
-                              _buildInteractionButton(
-                                Icons.repeat,
-                                '',
-                                onTap: () {
-                                  // Check if this is user's own repost
-                                  final walletProvider =
-                                      Provider.of<WalletProvider>(context,
-                                          listen: false);
-                                  final currentWallet =
-                                      walletProvider.currentWalletAddress;
-                                  if (post.postType == 'repost' &&
-                                      post.authorWallet == currentWallet) {
-                                    // Show unrepost option
-                                    _showRepostOptions(post);
-                                  } else {
-                                    _showRepostModal(post);
-                                  }
-                                },
+                              Expanded(
+                                child: _buildInteractionButton(
+                                  Icons.repeat,
+                                  '${post.shareCount}',
+                                  onTap: () {
+                                    final walletProvider =
+                                        Provider.of<WalletProvider>(context,
+                                            listen: false);
+                                    final currentWallet =
+                                        walletProvider.currentWalletAddress;
+                                    if (post.postType == 'repost' &&
+                                        post.authorWallet == currentWallet) {
+                                      _showRepostOptions(post);
+                                    } else {
+                                      _showRepostModal(post);
+                                    }
+                                  },
+                                  onCountTap: post.shareCount > 0
+                                      ? () => _viewRepostsList(post)
+                                      : null,
+                                ),
                               ),
-                              const SizedBox(width: 20),
-                              _buildInteractionButton(
-                                Icons.share_outlined,
-                                '${post.shareCount}',
-                                onTap: () => _sharePost(index),
-                                onCountTap: post.shareCount > 0
-                                    ? () => _viewRepostsList(post)
-                                    : null,
+                              Expanded(
+                                child: _buildInteractionButton(
+                                  Icons.share_outlined,
+                                  '',
+                                  onTap: () => _sharePost(index),
+                                ),
                               ),
-                              const Spacer(),
+                              const SizedBox(width: 8),
                               IconButton(
                                 onPressed: () => _toggleBookmark(index),
                                 icon: Icon(
@@ -1221,56 +1243,44 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  Widget _buildInteractionButton(IconData icon, String count,
+  Widget _buildInteractionButton(IconData icon, String label,
       {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap}) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final color = isActive
+        ? accent
+        : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65);
     return GestureDetector(
-      onTapDown: (_) {
-        // Immediate haptic feedback and visual response
-        if (onTap != null && mounted) {
-          setState(() {
-            // Force immediate rebuild for ultra-fast response
-          });
-        }
-      },
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 6),
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             AnimatedScale(
               scale: isActive ? 1.18 : 1.0,
               duration: const Duration(milliseconds: 100),
               curve: Curves.easeOut,
-              child: Icon(
-                icon,
-                color: isActive
-                    ? Provider.of<ThemeProvider>(context).accentColor
-                    : Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
-                size: 20,
-              ),
+              child: Icon(icon, color: color, size: 20),
             ),
-            const SizedBox(width: 6),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onCountTap,
-              child: AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 100),
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: isActive
-                      ? Provider.of<ThemeProvider>(context).accentColor
-                      : Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+            if (label.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onCountTap ?? onTap,
+                child: AnimatedDefaultTextStyle(
+                  duration: const Duration(milliseconds: 100),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: color,
+                    fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                  child: Text(label, textAlign: TextAlign.center),
                 ),
-                child: Text(count),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -1879,8 +1889,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 .toString();
                             String time = ts.isNotEmpty ? ts : '';
                             try {
-                              if (time.isNotEmpty)
+                              if (time.isNotEmpty) {
                                 time = _getTimeAgo(DateTime.parse(time));
+                              }
                             } catch (_) {}
                             final leadSeed = (sender?['wallet'] ??
                                     sender?['wallet_address'] ??
@@ -2885,23 +2896,38 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (index >= _communityPosts.length) return;
 
     final post = _communityPosts[index];
+    final savedItemsProvider =
+        Provider.of<SavedItemsProvider>(context, listen: false);
 
-    // Update through service
-    await CommunityService.toggleBookmark(post);
-    if (!mounted) return;
+    try {
+      await CommunityService.toggleBookmark(post);
+      if (!mounted) return;
 
-    // Update local state
-    setState(() {
-      _bookmarkedPosts[index] = post.isBookmarked;
-    });
+      await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content:
-            Text(post.isBookmarked ? 'Post bookmarked!' : 'Bookmark removed!'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
+      setState(() {
+        _bookmarkedPosts[index] = post.isBookmarked;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            post.isBookmarked ? 'Post bookmarked!' : 'Bookmark removed!',
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Could not update bookmark'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   void _toggleFollowArtist(int index) async {
@@ -2916,39 +2942,46 @@ class _CommunityScreenState extends State<CommunityScreen>
             ?.toString() ??
         '';
     final artistName = artist['name'] as String? ?? 'Artist';
+    final artistUsername =
+        artist['username'] as String? ?? artist['handle'] as String?;
 
     if (artistWallet.isEmpty) return;
     final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
 
     try {
-      // Use centralized UserService.toggleFollow which handles backend sync + local fallback
-      final newState = await UserService.toggleFollow(artistWallet);
+      final newState = await UserService.toggleFollow(
+        artistWallet,
+        displayName: artistName,
+        username: artistUsername,
+      );
 
       if (!mounted) return;
 
-      // Update local follow map and refetch artist stats from backend
       final backend = BackendApiService();
       int updatedFollowers = (artist['followersCount'] as int?) ?? 0;
       try {
         final stats = await backend.getUserStats(artistWallet);
         updatedFollowers = stats['followers'] as int? ?? updatedFollowers;
       } catch (_) {}
+
       setState(() {
         _followedArtists[index] = newState;
         _followingArtists[index]['followersCount'] = updatedFollowers;
       });
 
-      // Trigger global refresh so other UIs update
       try {
         appRefresh.triggerCommunity();
       } catch (_) {}
+
       if (!mounted) return;
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(
         SnackBar(
-          content: Text(newState
-              ? 'Now following $artistName!'
-              : 'Unfollowed $artistName'),
+          content: Text(
+            newState
+                ? 'Now following $artistName!'
+                : 'Unfollowed $artistName',
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -2958,9 +2991,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       final messenger2 = ScaffoldMessenger.of(context);
       messenger2.showSnackBar(
         SnackBar(
-          content: Text('Failed to update follow status'),
+          content: const Text('Failed to update follow status'),
           duration: const Duration(seconds: 2),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -3849,10 +3882,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                         await Clipboard.setData(ClipboardData(
                             text: 'https://app.kubus.site/post/${post.id}'));
                         Navigator.pop(sheetContext);
-                        if (mounted)
+                        if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                   content: Text('Link copied to clipboard')));
+                        }
 
                         // Track analytics
                         BackendApiService().trackAnalyticsEvent(

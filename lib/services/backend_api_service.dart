@@ -6,7 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_keys.dart';
-import '../models/ar_marker.dart';
+import '../models/art_marker.dart';
 import '../models/artwork.dart';
 import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
@@ -921,15 +921,15 @@ class BackendApiService {
 
   // ==================== AR Marker Endpoints ====================
 
-  /// Get nearby AR markers (geospatial query)
-  /// GET /api/ar-markers?lat=&lng=&radius=
-  Future<List<ARMarker>> getNearbyMarkers({
+  /// Get nearby art markers (geospatial query)
+  /// GET /api/art-markers?lat=&lng=&radius=
+  Future<List<ArtMarker>> getNearbyArtMarkers({
     required double latitude,
     required double longitude,
     double radiusKm = 5.0,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/ar-markers').replace(queryParameters: {
+      final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: {
         'lat': latitude.toString(),
         'lng': longitude.toString(),
         'radius': radiusKm.toString(),
@@ -938,9 +938,18 @@ class BackendApiService {
       final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final markers = data['markers'] as List<dynamic>;
-        return markers.map((json) => _arMarkerFromBackendJson(json as Map<String, dynamic>)).toList();
+        final data = jsonDecode(response.body);
+        final List<dynamic> markerList;
+        if (data is List) {
+          markerList = data;
+        } else if (data is Map<String, dynamic>) {
+          markerList = (data['data'] ?? data['markers'] ?? data['artMarkers'] ?? []) as List<dynamic>;
+        } else {
+          markerList = const [];
+        }
+        return markerList
+            .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
+            .toList();
       } else {
         throw Exception('Failed to get markers: ${response.statusCode}');
       }
@@ -950,9 +959,9 @@ class BackendApiService {
     }
   }
 
-  /// Create a new AR marker
-  /// POST /api/ar-markers
-  Future<ARMarker> createARMarker({
+  /// Create a new art marker
+  /// POST /api/art-markers
+  Future<ArtMarker> createArtMarker({
     required String title,
     required String description,
     required double latitude,
@@ -964,7 +973,7 @@ class BackendApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/ar-markers'),
+        Uri.parse('$baseUrl/api/art-markers'),
         headers: _getHeaders(),
         body: jsonEncode({
           'title': title,
@@ -980,7 +989,8 @@ class BackendApiService {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return _arMarkerFromBackendJson(data['marker'] as Map<String, dynamic>);
+        final payload = (data['data'] ?? data['marker'] ?? data['artMarker']) as Map<String, dynamic>;
+        return _artMarkerFromBackendJson(payload);
       } else {
         throw Exception('Failed to create marker: ${response.statusCode}');
       }
@@ -991,11 +1001,11 @@ class BackendApiService {
   }
 
   /// Increment marker views
-  /// POST /api/ar-markers/:id/view
+  /// POST /api/art-markers/:id/view
   Future<void> incrementMarkerViews(String markerId) async {
     try {
       await http.post(
-        Uri.parse('$baseUrl/api/ar-markers/$markerId/view'),
+        Uri.parse('$baseUrl/api/art-markers/$markerId/view'),
         headers: _getHeaders(),
       );
     } catch (e) {
@@ -1004,11 +1014,11 @@ class BackendApiService {
   }
 
   /// Increment marker interactions
-  /// POST /api/ar-markers/:id/interact
+  /// POST /api/art-markers/:id/interact
   Future<void> incrementMarkerInteractions(String markerId) async {
     try {
       await http.post(
-        Uri.parse('$baseUrl/api/ar-markers/$markerId/interact'),
+        Uri.parse('$baseUrl/api/art-markers/$markerId/interact'),
         headers: _getHeaders(),
       );
     } catch (e) {
@@ -2975,29 +2985,37 @@ class BackendApiService {
 }
 
 // Helper functions for model conversions
-ARMarker _arMarkerFromBackendJson(Map<String, dynamic> json) {
-  return ARMarker(
-    id: json['id'] as String,
-    name: json['title'] as String,
-    description: json['description'] as String? ?? '',
-    position: LatLng(
-      (json['latitude'] as num).toDouble(),
-      (json['longitude'] as num).toDouble(),
-    ),
-    artworkId: json['artworkId'] as String? ?? '',
-    modelCID: json['modelCID'] as String?,
-    modelURL: json['modelURL'] as String?,
-    storageProvider: StorageProvider.values.firstWhere(
-      (e) => e.name == json['storageProvider'],
-      orElse: () => StorageProvider.ipfs,
-    ),
-    viewCount: json['views'] as int? ?? 0,
-    interactionCount: json['interactions'] as int? ?? 0,
-    createdAt: json['createdAt'] != null 
-      ? DateTime.parse(json['createdAt'] as String)
-      : DateTime.now(),
-    createdBy: json['createdBy'] as String? ?? 'system',
-  );
+ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
+  final normalized = <String, dynamic>{
+    'id': json['id'] ?? json['_id'] ?? '',
+    'name': json['name'] ?? json['title'] ?? json['label'] ?? '',
+    'description': json['description'] ?? json['summary'] ?? '',
+    'latitude': (json['latitude'] ?? json['lat'] ?? 0).toDouble(),
+    'longitude': (json['longitude'] ?? json['lng'] ?? 0).toDouble(),
+    'artworkId': json['artworkId'] ?? json['artwork_id'],
+    'modelCID': json['modelCID'] ?? json['model_cid'],
+    'modelURL': json['modelURL'] ?? json['model_url'],
+    'storageProvider': json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
+    'scale': (json['scale'] ?? 1.0).toDouble(),
+    'rotation': json['rotation'],
+    'enableAnimation': json['enableAnimation'] ?? json['animate'] ?? false,
+    'animationName': json['animationName'] ?? json['animation_name'],
+    'enablePhysics': json['enablePhysics'] ?? false,
+    'enableInteraction': json['enableInteraction'] ?? true,
+    'metadata': json['metadata'] ?? json['meta'],
+    'tags': json['tags'],
+    'category': json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
+    'createdAt': json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
+    'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
+    'viewCount': json['viewCount'] ?? json['views'] ?? 0,
+    'interactionCount': json['interactionCount'] ?? json['interactions'] ?? 0,
+    'activationRadius': json['activationRadius'] ?? json['activation_radius'] ?? 50.0,
+    'requiresProximity': json['requiresProximity'] ?? json['requires_proximity'] ?? true,
+    'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
+    'markerType': json['markerType'] ?? json['type'],
+  };
+
+  return ArtMarker.fromMap(normalized);
 }
 
 Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
@@ -3270,3 +3288,4 @@ List<Comment> _nestComments(List<Comment> comments) {
 
   return roots;
 }
+

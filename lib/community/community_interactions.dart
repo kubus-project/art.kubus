@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../services/backend_api_service.dart';
+import '../services/user_action_logger.dart';
 
 // Enhanced community interaction models
 class CommunityPost {
@@ -175,10 +176,11 @@ class CommunityService {
   static const String _viewsKey = 'community_views';
 
   // Like/Unlike post (with backend sync)
-  static Future<void> togglePostLike(CommunityPost post,
+    static Future<void> togglePostLike(CommunityPost post,
       {String? currentUserId,
       String? currentUserName,
-      String? currentUserWallet}) async {
+      String? currentUserWallet,
+      bool trackUserAction = true}) async {
     if (!AppConfig.enableLiking) return;
     final backendApi = BackendApiService();
     final originalIsLiked = post.isLiked;
@@ -210,6 +212,15 @@ class CommunityService {
 
       if (updatedCount != null) {
         post.likeCount = updatedCount;
+      }
+
+      if (trackUserAction && post.isLiked) {
+        UserActionLogger.logPostLike(
+          postId: post.id,
+          authorId: post.authorId,
+          authorName: post.authorName,
+          postContent: post.content,
+        );
       }
 
       if (AppConfig.enableDebugPrints) {
@@ -490,7 +501,7 @@ class CommunityService {
   }
 
   // Bookmark/Unbookmark post
-  static Future<void> toggleBookmark(CommunityPost post) async {
+  static Future<void> toggleBookmark(CommunityPost post, {bool trackUserAction = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final bookmarkedPosts = prefs.getStringList(_bookmarksKey) ?? [];
 
@@ -502,6 +513,13 @@ class CommunityService {
       // Add bookmark
       bookmarkedPosts.add(post.id);
       post.isBookmarked = true;
+      if (trackUserAction) {
+        UserActionLogger.logPostSave(
+          postId: post.id,
+          postContent: post.content,
+          authorName: post.authorName,
+        );
+      }
     }
 
     await prefs.setStringList(_bookmarksKey, bookmarkedPosts);

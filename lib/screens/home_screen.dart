@@ -8,7 +8,9 @@ import '../providers/navigation_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
+import '../models/recent_activity.dart';
 import '../web3/dao/governance_hub.dart';
 import '../web3/artist/artist_studio.dart';
 import '../web3/institution/institution_hub.dart';
@@ -18,8 +20,10 @@ import '../web3/connectwallet.dart';
 import '../web3/onboarding/web3_onboarding.dart' as web3;
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
+import '../utils/activity_navigation.dart';
 
 import '../widgets/enhanced_stats_chart.dart';
+import '../widgets/empty_state_card.dart';
 import 'advanced_analytics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -73,6 +77,9 @@ class _HomeScreenState extends State<HomeScreen>
         navigationProvider.trackScreenVisit('community');
         navigationProvider.trackScreenVisit('map'); // Visit map twice to show it as most visited
       }
+
+      final recentActivityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+      recentActivityProvider.initialize();
     });
   }
 
@@ -1113,167 +1120,110 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildRecentActivity() {
-    return Consumer<ConfigProvider>(
-      builder: (context, config, child) {
-        if (!config.useMockData) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Recent Activity',
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline,
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.timeline,
-                        size: 48,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No Recent Activity',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[400],
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Your recent activities will appear here',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
+    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
+    return Consumer<RecentActivityProvider>(
+      builder: (context, activityProvider, child) {
+        final activities = activityProvider.activities.take(5).toList(growable: false);
+        final isLoading = activityProvider.isLoading && activities.isEmpty;
+        final error = activityProvider.error;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Widget content;
+        if (isLoading) {
+          content = _buildActivityLoadingState(accentColor);
+        } else if (error != null && activities.isEmpty) {
+          content = _buildActivityErrorState(error, () => activityProvider.refresh(force: true));
+        } else if (activities.isEmpty) {
+          content = _buildActivityEmptyState();
+        } else {
+          content = ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: activities.length,
+            itemBuilder: (context, index) => RecentActivityTile(
+              activity: activities[index],
+              accentColor: accentColor,
+              onTap: () => ActivityNavigation.open(context, activities[index]),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Recent Activity',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                _showFullActivity();
-              },
-              child: Text(
-                'View All',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: 3,
-          itemBuilder: (context, index) {
-            return _buildActivityItem(index);
-          },
-        ),
-      ],
-    );
-      },
-    );
-  }
-
-  Widget _buildActivityItem(int index) {
-    final activities = [
-      ('New follower: @artist_123', Icons.person_add, '2 hours ago'),
-      ('Artwork liked by @collector_456', Icons.favorite, '5 hours ago'),
-      ('KUB8 tokens received', Icons.account_balance_wallet, '1 day ago'),
-    ];
-
-    final activity = activities[index % activities.length];
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              activity.$2,
-              color: Provider.of<ThemeProvider>(context).accentColor,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  activity.$1,
+                  'Recent Activity',
                   style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                Text(
-                  activity.$3,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                TextButton(
+                  onPressed: _showFullActivity,
+                  child: Text(
+                    'View All',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: accentColor,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            content,
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildActivityLoadingState(Color accentColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: CircularProgressIndicator(
+          strokeWidth: 3,
+          valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+        ),
       ),
+    );
+  }
+
+  Widget _buildActivityEmptyState() {
+    return SizedBox(
+      height: 140,
+      child: Center(
+        child: EmptyStateCard(
+          icon: Icons.timeline,
+          title: 'No Recent Activity',
+          description: 'Your recent interactions will appear here as soon as something happens.',
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityErrorState(String error, VoidCallback onRetry) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        EmptyStateCard(
+          icon: Icons.wifi_off,
+          title: 'Unable to load activity',
+          description: error,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton(
+          onPressed: onRetry,
+          child: const Text('Retry'),
+        ),
+      ],
     );
   }
 
@@ -1423,9 +1373,55 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // Navigation and interaction methods
-  void _showNotificationsBottomSheet(BuildContext context) {
-    final config = Provider.of<ConfigProvider>(context, listen: false);
-    
+  Future<void> _showNotificationsBottomSheet(BuildContext context) async {
+    final config = context.read<ConfigProvider>();
+    if (config.useMockData) {
+      _showMockNotificationsBottomSheet(context);
+      return;
+    }
+
+    final activityProvider = context.read<RecentActivityProvider>();
+    final notificationProvider = context.read<NotificationProvider>();
+
+    if (activityProvider.initialized) {
+      await activityProvider.refresh(force: true);
+    } else {
+      await activityProvider.initialize(force: true);
+    }
+
+    if (!context.mounted) return;
+
+    await notificationProvider.markViewed();
+
+    if (!context.mounted) return;
+
+    final accentColor = context.read<ThemeProvider>().accentColor;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return ChangeNotifierProvider.value(
+          value: activityProvider,
+          child: _NotificationsBottomSheet(
+            accentColor: accentColor,
+            showUnreadOnly: true,
+            onActivitySelected: (activity) async {
+              Navigator.of(sheetContext).pop();
+              await ActivityNavigation.open(context, activity);
+            },
+          ),
+        );
+      },
+    );
+
+    activityProvider.markAllReadLocally();
+  }
+
+  void _showMockNotificationsBottomSheet(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1460,60 +1456,25 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const Spacer(),
-                  if (config.useMockData)
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text(
-                        'Mark all read',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Provider.of<ThemeProvider>(context).accentColor,
-                        ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Mark all read',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: themeProvider.accentColor,
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
             Expanded(
-              child: config.useMockData
-                ? ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: 8,
-                    itemBuilder: (context, index) => _buildNotificationItem(index),
-                  )
-                : Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.notifications_off_outlined,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No Notifications',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[400],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'You\'re all caught up!',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                itemCount: 8,
+                itemBuilder: (context, index) => _buildNotificationItem(index),
+              ),
             ),
           ],
         ),
@@ -1755,6 +1716,12 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showFullActivity() {
+    final activityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+    if (!activityProvider.initialized) {
+      activityProvider.initialize(force: true);
+    } else {
+      activityProvider.refresh(force: true);
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -2103,11 +2070,164 @@ class _HomeScreenState extends State<HomeScreen>
 }
 
 // New Activity Screen
-class ActivityScreen extends StatelessWidget {
+class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
+  State<ActivityScreen> createState() => _ActivityScreenState();
+}
+
+class _NotificationsBottomSheet extends StatelessWidget {
+  const _NotificationsBottomSheet({
+    required this.accentColor,
+    required this.onActivitySelected,
+    this.showUnreadOnly = false,
+  });
+
+  final Color accentColor;
+  final Future<void> Function(RecentActivity activity) onActivitySelected;
+  final bool showUnreadOnly;
+
+  @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final provider = Provider.of<RecentActivityProvider>(context, listen: false);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.65,
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: colorScheme.outline,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            child: Row(
+              children: [
+                Text(
+                  'Notifications',
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh',
+                  onPressed: () => provider.refresh(force: true),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Consumer<RecentActivityProvider>(
+              builder: (context, activityProvider, _) {
+                final activities = showUnreadOnly
+                    ? activityProvider.unreadActivities
+                    : activityProvider.activities;
+                final isLoading = activityProvider.isLoading && activities.isEmpty;
+                final hasError = activityProvider.error != null && activities.isEmpty;
+
+                if (isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () => activityProvider.refresh(force: true),
+                  child: activities.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                          children: [
+                            Icon(
+                              hasError ? Icons.error_outline : Icons.notifications_off_outlined,
+                              size: 48,
+                              color: colorScheme.outline,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              hasError ? 'Unable to load notifications' : 'No Notifications',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                                hasError
+                                  ? activityProvider.error ?? 'Something went wrong'
+                                  : 'You\'re all caught up!',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                            if (hasError) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () => activityProvider.refresh(force: true),
+                                child: const Text('Retry'),
+                              ),
+                            ],
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          itemCount: activities.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          itemBuilder: (context, index) {
+                            final activity = activities[index];
+                            return RecentActivityTile(
+                              activity: activity,
+                              accentColor: accentColor,
+                              onTap: () => onActivitySelected(activity),
+                              margin: EdgeInsets.zero,
+                            );
+                          },
+                        ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivityScreenState extends State<ActivityScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = Provider.of<RecentActivityProvider>(context, listen: false);
+      if (!provider.initialized) {
+        provider.initialize(force: true);
+      } else {
+        provider.refresh(force: true);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -2119,41 +2239,128 @@ class ActivityScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: 20,
-        itemBuilder: (context, index) {
-          final activities = [
-            ('Artwork discovered', 'You found "Quantum Sculpture" near Central Park', Icons.location_on, '2 min ago'),
-            ('KUB8 earned', 'Received 10 KUB8 tokens for artwork discovery', Icons.account_balance_wallet, '15 min ago'),
-            ('New follower', '@digital_artist started following you', Icons.person_add, '1 hour ago'),
-            ('Artwork liked', 'Someone liked your "AR Portal" creation', Icons.favorite, '2 hours ago'),
-            ('Friend activity', '@maya_3d discovered a new artwork', Icons.people, '3 hours ago'),
-            ('Achievement unlocked', 'Explorer Badge - 10 artworks discovered', Icons.star, '1 day ago'),
-          ];
-          
-          final activity = activities[index % activities.length];
-          
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
+      body: Consumer<RecentActivityProvider>(
+        builder: (context, activityProvider, child) {
+          final activities = activityProvider.activities;
+
+          if (activityProvider.isLoading && activities.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (activityProvider.error != null && activities.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: () => activityProvider.refresh(force: true),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: [
+                  EmptyStateCard(
+                    icon: Icons.wifi_off,
+                    title: 'Unable to load activity',
+                    description: activityProvider.error!,
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton(
+                    onPressed: () => activityProvider.refresh(force: true),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          if (activities.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: () => activityProvider.refresh(force: true),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                children: const [
+                  EmptyStateCard(
+                    icon: Icons.timeline,
+                    title: 'No Recent Activity',
+                    description: 'Your interactions will show up here as soon as they happen.',
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => activityProvider.refresh(force: true),
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(24),
+              itemCount: activities.length,
+              itemBuilder: (context, index) => RecentActivityTile(
+                activity: activities[index],
+                accentColor: accentColor,
+                margin: EdgeInsets.only(bottom: index == activities.length - 1 ? 0 : 16),
+                onTap: () => ActivityNavigation.open(context, activities[index]),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class RecentActivityTile extends StatelessWidget {
+  final RecentActivity activity;
+  final Color accentColor;
+  final EdgeInsetsGeometry margin;
+  final VoidCallback? onTap;
+
+  const RecentActivityTile({
+    super.key,
+    required this.activity,
+    required this.accentColor,
+    this.margin = const EdgeInsets.only(bottom: 12),
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final description = activity.description.trim().isNotEmpty
+        ? activity.description
+        : (activity.metadata['message']?.toString() ?? '');
+    final isUnread = !activity.isRead;
+
+    return Container(
+      margin: margin,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
+              color: isUnread
+                  ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.7)
+                  : theme.colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.outline),
+              border: Border.all(
+                color: isUnread
+                    ? accentColor.withValues(alpha: 0.4)
+                    : theme.colorScheme.outline,
+              ),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                    color: accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    activity.$3,
-                    color: Provider.of<ThemeProvider>(context).accentColor,
+                    activityCategoryIcon(activity.category),
+                    color: accentColor,
                     size: 20,
                   ),
                 ),
@@ -2162,28 +2369,49 @@ class ActivityScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        activity.$1,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              activity.title,
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight:
+                                    isUnread ? FontWeight.w700 : FontWeight.w600,
+                                color: theme.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          if (isUnread)
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: accentColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                        ],
                       ),
+                      if (description.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          description,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 4),
                       Text(
-                        activity.$2,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        activity.$4,
+                        formatActivityTime(activity.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -2191,11 +2419,50 @@ class ActivityScreen extends StatelessWidget {
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
+}
+
+IconData activityCategoryIcon(ActivityCategory category) {
+  switch (category) {
+    case ActivityCategory.like:
+      return Icons.favorite;
+    case ActivityCategory.comment:
+      return Icons.chat_bubble_outline;
+    case ActivityCategory.discovery:
+      return Icons.location_on;
+    case ActivityCategory.reward:
+      return Icons.account_balance_wallet;
+    case ActivityCategory.follow:
+      return Icons.person_add;
+    case ActivityCategory.share:
+      return Icons.share;
+    case ActivityCategory.mention:
+      return Icons.alternate_email;
+    case ActivityCategory.nft:
+      return Icons.blur_on;
+    case ActivityCategory.ar:
+      return Icons.view_in_ar;
+    case ActivityCategory.save:
+      return Icons.bookmark;
+    case ActivityCategory.achievement:
+      return Icons.emoji_events;
+    case ActivityCategory.system:
+      return Icons.notifications;
+  }
+}
+
+String formatActivityTime(DateTime timestamp) {
+  final now = DateTime.now();
+  final diff = now.difference(timestamp);
+  if (diff.inMinutes < 1) return 'Just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${timestamp.month}/${timestamp.day}/${timestamp.year}';
 }
 
 

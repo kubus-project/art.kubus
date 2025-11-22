@@ -577,9 +577,307 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     );
   }
 
+  Widget _buildPostDetailCard(CommunityPost post) {
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = scheme.onSurface;
+    final isRepost = (post.postType ?? '').toLowerCase() == 'repost';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAuthorHeader(post),
+          const SizedBox(height: 16),
+          if (isRepost && post.content.isNotEmpty) ...[
+            Text(
+              post.content,
+              style: GoogleFonts.inter(fontSize: 15, height: 1.5, color: textColor),
+            ),
+            const SizedBox(height: 12),
+            Divider(color: scheme.outline.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+          ],
+          if (isRepost)
+            post.originalPost != null
+                ? _buildOriginalPostCard(post.originalPost!)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMissingOriginalNotice(),
+                      if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildPostImage(post.imageUrl!),
+                      ],
+                    ],
+                  )
+          else ...[
+            Text(
+              post.content,
+              style: GoogleFonts.inter(fontSize: 15, height: 1.5, color: textColor),
+            ),
+            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildPostImage(post.imageUrl!),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuthorHeader(CommunityPost post) {
+    final scheme = Theme.of(context).colorScheme;
+    final isCompact = MediaQuery.of(context).size.width < 360;
+    final handle = _formatAuthorHandle(post);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AvatarWidget(
+          wallet: post.authorWallet ?? post.authorId,
+          avatarUrl: post.authorAvatar,
+          radius: 26,
+          allowFabricatedFallback: true,
+          enableProfileNavigation: true,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                post.authorName,
+                style: GoogleFonts.inter(
+                  fontSize: isCompact ? 15 : 17,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (handle.isNotEmpty)
+                Text(
+                  handle,
+                  style: GoogleFonts.inter(
+                    fontSize: isCompact ? 12 : 13,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          _timeAgo(post.timestamp),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatAuthorHandle(CommunityPost post) {
+    final username = post.authorUsername?.trim();
+    if (username != null && username.isNotEmpty) {
+      return '@$username';
+    }
+
+    final raw = (post.authorWallet ?? post.authorId).trim();
+    if (raw.isEmpty) return '';
+    if (raw.length <= 12) return raw;
+    return '${raw.substring(0, 6)}...${raw.substring(raw.length - 4)}';
+  }
+
+  Widget _buildOriginalPostCard(CommunityPost originalPost) {
+    final scheme = Theme.of(context).colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    final originalHandle = originalPost.authorUsername?.trim();
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PostDetailScreen(post: originalPost)),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outline),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AvatarWidget(
+                  wallet: originalPost.authorWallet ?? originalPost.authorId,
+                  avatarUrl: originalPost.authorAvatar,
+                  radius: 18,
+                  allowFabricatedFallback: true,
+                  enableProfileNavigation: true,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        originalPost.authorName,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (originalHandle != null && originalHandle.isNotEmpty)
+                        Text(
+                          '@$originalHandle',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _timeAgo(originalPost.timestamp),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: scheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              originalPost.content,
+              style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: scheme.onSurface),
+            ),
+            if (originalPost.imageUrl != null && originalPost.imageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  originalPost.imageUrl!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 180,
+                    color: themeProvider.accentColor.withValues(alpha: 0.1),
+                    child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissingOriginalNotice() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.history_toggle_off, color: scheme.onSurface.withValues(alpha: 0.7)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Original post is no longer available',
+              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPostImage(String imageUrl) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        imageUrl,
+        height: 220,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: 220,
+          color: themeProvider.accentColor.withValues(alpha: 0.1),
+          child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailAction({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+    bool highlight = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final color = highlight ? accent : scheme.onSurface.withValues(alpha: 0.7);
+
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Icon(icon, color: color),
+              if (label.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
+                    color: color,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     return Scaffold(
       appBar: AppBar(
         title: Text('Post', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
@@ -593,86 +891,33 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // (Removed repost indicator: top-level repost label and icon were redundant)
-                      Row(
-                        children: [
-                          AvatarWidget(
-                            // Show reposter avatar and name in the post header (avoid confusing with original post author)
-                            wallet: (_post!.authorWallet ?? _post!.authorId),
-                            avatarUrl: _post!.authorAvatar,
-                            radius: 28,
-                            enableProfileNavigation: true,
-                          ),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                _post!.authorName,
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _timeAgo(_post!.timestamp),
-                                style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Repost comment (if exists)
-                      if (_post!.postType == 'repost' && _post!.content.isNotEmpty) ...[
-                        Text(_post!.content, style: GoogleFonts.inter(fontSize: 16)),
-                        const SizedBox(height: 12),
-                        Divider(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
-                        const SizedBox(height: 12),
-                      ],
-                      Text(
-                        (_post!.postType == 'repost' && _post!.originalPost != null)
-                            ? _post!.originalPost!.content
-                            : _post!.content,
-                        style: GoogleFonts.inter(fontSize: 16),
-                      ),
-                      if (((_post!.postType == 'repost' && _post!.originalPost?.imageUrl != null) ||
-                          (_post!.postType != 'repost' && _post!.imageUrl != null)) &&
-                          ((_post!.postType == 'repost' ? _post!.originalPost!.imageUrl! : _post!.imageUrl!).isNotEmpty)) ...[
-                        const SizedBox(height: 12),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            (_post!.postType == 'repost' && _post!.originalPost != null)
-                                ? _post!.originalPost!.imageUrl!
-                                : _post!.imageUrl!,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ],
+                      _buildPostDetailCard(_post!),
                       const SizedBox(height: 16),
                       Row(
                         children: [
-                          IconButton(
-                            icon: Icon(_post!.isLiked ? Icons.favorite : Icons.favorite_border, color: _post!.isLiked ? accent : Theme.of(context).iconTheme.color),
-                            onPressed: _toggleLike,
+                          _buildDetailAction(
+                            icon: _post!.isLiked ? Icons.favorite : Icons.favorite_border,
+                            label: '${_post!.likeCount}',
+                            onTap: _toggleLike,
+                            highlight: _post!.isLiked,
                           ),
-                          const SizedBox(width: 6),
-                          Text('${_post!.likeCount}', style: GoogleFonts.inter()),
-                          const SizedBox(width: 16),
-                          Icon(Icons.comment, size: 20),
-                          const SizedBox(width: 6),
-                          Text('${_post!.commentCount}', style: GoogleFonts.inter()),
-                          const SizedBox(width: 16),
-                          IconButton(
-                            icon: const Icon(Icons.repeat, size: 20),
-                            onPressed: () => _showRepostModal(),
+                          _buildDetailAction(
+                            icon: Icons.comment,
+                            label: '${_post!.commentCount}',
+                            onTap: () {
+                              FocusScope.of(context).requestFocus(_commentFocusNode);
+                            },
                           ),
-                          const SizedBox(width: 16),
-                          IconButton(
-                            icon: const Icon(Icons.share, size: 20),
-                            onPressed: () => _showShareModal(),
+                          _buildDetailAction(
+                            icon: Icons.repeat,
+                            label: '${_post!.shareCount}',
+                            onTap: () => _showRepostModal(),
                           ),
-                          const SizedBox(width: 6),
-                          Text('${_post!.shareCount}', style: GoogleFonts.inter()),
+                          _buildDetailAction(
+                            icon: Icons.share,
+                            label: 'Share',
+                            onTap: () => _showShareModal(),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),

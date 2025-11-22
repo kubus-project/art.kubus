@@ -1,9 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 /// Provider for managing saved/bookmarked items across the app
 class SavedItemsProvider extends ChangeNotifier {
+  static const _artworkKey = 'saved_artwork_ids';
+  static const _postKey = 'saved_post_ids';
+  static const _bookmarkKey = 'community_bookmarks';
+  static const _timestampKey = 'saved_timestamps';
+
   final Set<String> _savedArtworkIds = {};
   final Set<String> _savedPostIds = {};
   final Map<String, DateTime> _savedTimestamps = {};
@@ -17,6 +23,10 @@ class SavedItemsProvider extends ChangeNotifier {
   int get savedArtworksCount => _savedArtworkIds.length;
   int get savedPostsCount => _savedPostIds.length;
   int get totalSavedCount => _savedArtworkIds.length + _savedPostIds.length;
+  DateTime? get mostRecentSave {
+    if (_savedTimestamps.isEmpty) return null;
+    return _savedTimestamps.values.reduce((a, b) => a.isAfter(b) ? a : b);
+  }
 
   /// Initialize and load saved items from SharedPreferences
   Future<void> initialize() async {
@@ -29,36 +39,54 @@ class SavedItemsProvider extends ChangeNotifier {
   }
 
   /// Load saved items from persistent storage
-  Future<void> _loadSavedItems() async {
-    final artworkIdsJson = _prefs?.getString('saved_artwork_ids');
-    final postIdsJson = _prefs?.getString('saved_post_ids');
-    final timestampsJson = _prefs?.getString('saved_timestamps');
-    
-    if (artworkIdsJson != null) {
-      final List<dynamic> artworkIds = json.decode(artworkIdsJson);
-      _savedArtworkIds.addAll(artworkIds.cast<String>());
+  Future<void> _loadSavedItems({bool resetExisting = true}) async {
+    _prefs ??= await SharedPreferences.getInstance();
+
+    if (resetExisting) {
+      _savedArtworkIds.clear();
+      _savedPostIds.clear();
+      _savedTimestamps.clear();
     }
-    
-    if (postIdsJson != null) {
-      final List<dynamic> postIds = json.decode(postIdsJson);
-      _savedPostIds.addAll(postIds.cast<String>());
+
+    final artworkList = _prefs?.getStringList(_artworkKey);
+    final artworkIdsJson = _prefs?.getString(_artworkKey);
+    final postList = _prefs?.getStringList(_postKey);
+    final postIdsJson = _prefs?.getString(_postKey);
+    final bookmarks = _prefs?.getStringList(_bookmarkKey) ?? const <String>[];
+    final timestampsJson = _prefs?.getString(_timestampKey);
+
+    _savedArtworkIds.addAll(
+      artworkList ?? _decodeJsonList(artworkIdsJson),
+    );
+
+    final legacyPostIds = postList ?? _decodeJsonList(postIdsJson);
+    final mergedPostIds = {...legacyPostIds, ...bookmarks};
+    for (final id in mergedPostIds) {
+      if (!_savedArtworkIds.contains(id)) {
+        _savedPostIds.add(id);
+      }
     }
-    
+
     if (timestampsJson != null) {
       final Map<String, dynamic> timestamps = json.decode(timestampsJson);
       _savedTimestamps.addAll(
-        timestamps.map((key, value) => MapEntry(key, DateTime.parse(value)))
+        timestamps.map((key, value) => MapEntry(key, DateTime.parse(value))),
       );
     }
   }
 
   /// Save items to persistent storage
   Future<void> _saveToDisk() async {
-    await _prefs?.setString('saved_artwork_ids', json.encode(_savedArtworkIds.toList()));
-    await _prefs?.setString('saved_post_ids', json.encode(_savedPostIds.toList()));
-    await _prefs?.setString('saved_timestamps', json.encode(
-      _savedTimestamps.map((key, value) => MapEntry(key, value.toIso8601String()))
-    ));
+    final prefs = _prefs ?? await SharedPreferences.getInstance();
+    await prefs.setStringList(_artworkKey, _savedArtworkIds.toList());
+    await prefs.setStringList(_postKey, _savedPostIds.toList());
+    await prefs.setStringList(_bookmarkKey, _savedPostIds.toList());
+    await prefs.setString(
+      _timestampKey,
+      json.encode(
+        _savedTimestamps.map((key, value) => MapEntry(key, value.toIso8601String())),
+      ),
+    );
   }
 
   /// Toggle artwork save status
@@ -77,14 +105,30 @@ class SavedItemsProvider extends ChangeNotifier {
 
   /// Toggle post save status
   Future<void> togglePostSaved(String postId) async {
-    if (_savedPostIds.contains(postId)) {
+    final shouldSave = !_savedPostIds.contains(postId);
+    await setPostSaved(postId, shouldSave);
+  }
+
+  /// Explicitly set post save status (used by community bookmark flow)
+  Future<void> setPostSaved(String postId, bool isSaved, {DateTime? timestamp}) async {
+    if (postId.isEmpty) return;
+
+    if (isSaved && _savedArtworkIds.contains(postId)) {
+      // Treat duplicates as artwork saves to avoid rendering the same item twice.
+      _savedTimestamps[postId] = timestamp ?? DateTime.now();
+      await _saveToDisk();
+      notifyListeners();
+      return;
+    }
+
+    if (isSaved) {
+      _savedPostIds.add(postId);
+      _savedTimestamps[postId] = timestamp ?? DateTime.now();
+    } else {
       _savedPostIds.remove(postId);
       _savedTimestamps.remove(postId);
-    } else {
-      _savedPostIds.add(postId);
-      _savedTimestamps[postId] = DateTime.now();
     }
-    
+
     await _saveToDisk();
     notifyListeners();
   }
@@ -122,8 +166,9 @@ class SavedItemsProvider extends ChangeNotifier {
 
   /// Clear all saved artworks
   Future<void> clearAllArtworks() async {
+    final artworkIds = _savedArtworkIds.toList();
     _savedArtworkIds.clear();
-    for (var id in _savedArtworkIds.toList()) {
+    for (final id in artworkIds) {
       _savedTimestamps.remove(id);
     }
     await _saveToDisk();
@@ -132,8 +177,9 @@ class SavedItemsProvider extends ChangeNotifier {
 
   /// Clear all saved posts
   Future<void> clearAllPosts() async {
+    final postIds = _savedPostIds.toList();
     _savedPostIds.clear();
-    for (var id in _savedPostIds.toList()) {
+    for (final id in postIds) {
       _savedTimestamps.remove(id);
     }
     await _saveToDisk();
@@ -172,5 +218,24 @@ class SavedItemsProvider extends ChangeNotifier {
     });
     
     return sortedIds;
+  }
+
+  /// Force reload from disk (useful after external updates)
+  Future<void> reloadFromDisk() async {
+    await _loadSavedItems();
+    notifyListeners();
+  }
+
+  List<String> _decodeJsonList(String? source) {
+    if (source == null || source.isEmpty) return const [];
+    try {
+      final decoded = json.decode(source);
+      if (decoded is List) {
+        return decoded.map((e) => e.toString()).toList();
+      }
+    } catch (_) {
+      // Ignore malformed payloads and fall back to empty state.
+    }
+    return const [];
   }
 }

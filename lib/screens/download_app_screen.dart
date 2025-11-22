@@ -290,7 +290,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           children: [
             // iOS App Store button
             _buildStoreButton(
-              label: 'App Store',
+              label: 'iOS',
               icon: Icons.apple,
               color: Colors.black,
               onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
@@ -298,8 +298,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
             ),
             // Android Play Store button
             _buildStoreButton(
-              label: 'Play Store',
-              icon: Icons.android,
+              label: 'Android',
+              icon: Icons.android_rounded,
               color: const Color(0xFF01875F),
               onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
               isLargeScreen: isLargeScreen,
@@ -340,7 +340,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.apple, color: Colors.white, size: 28),
+            Icon(icon, color: Colors.white, size: isLargeScreen ? 28 : 24),
             const SizedBox(width: 12),
             Text(
               label,

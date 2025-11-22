@@ -16,7 +16,6 @@ import 'onboarding_reset_screen.dart';
 import 'profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
-import '../config/config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});

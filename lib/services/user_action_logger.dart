@@ -1,0 +1,204 @@
+import 'package:flutter/foundation.dart';
+
+import 'user_action_service.dart';
+
+/// Centralized helper for writing the current user's actions to the
+/// [UserActionService] so they surface inside the unified recent activity feed.
+class UserActionLogger {
+  UserActionLogger._();
+
+  static final UserActionService _service = UserActionService();
+
+  /// Record that the current user liked a community post.
+  static Future<void> logPostLike({
+    required String postId,
+    String? authorId,
+    String? authorName,
+    String? postContent,
+  }) async {
+    final title = 'You liked ${_safeDisplayName(authorName, fallback: 'a post')}';
+    await _record(
+      type: 'like',
+      idPrefix: 'post_like',
+      targetId: postId,
+      title: title,
+      description: _truncate(postContent),
+      metadata: {
+        'postId': postId,
+        'targetId': postId,
+        'targetType': 'post',
+        if (postContent != null && postContent.trim().isNotEmpty) 'targetTitle': postContent,
+        if (authorId != null) 'authorId': authorId,
+        if (authorName != null) 'authorName': authorName,
+        'actionUrl': 'app://community/posts/$postId',
+      },
+    );
+  }
+
+  /// Record that the current user saved/bookmarked a community post (or
+  /// converted artwork) for later.
+  static Future<void> logPostSave({
+    required String postId,
+    String? postContent,
+    String? authorName,
+  }) async {
+    final targetTitle = _safeDisplayName(postContent, fallback: 'this post');
+    await _record(
+      type: 'save',
+      idPrefix: 'post_save',
+      targetId: postId,
+      title: 'Saved $targetTitle',
+      description: _truncate(authorName),
+      metadata: {
+        'postId': postId,
+        'targetId': postId,
+        'targetType': 'post',
+        if (postContent != null && postContent.trim().isNotEmpty) 'targetTitle': postContent,
+        if (authorName != null) 'authorName': authorName,
+        'actionUrl': 'app://community/posts/$postId',
+      },
+    );
+  }
+
+  /// Record that the current user liked an artwork in AR or gallery contexts.
+  static Future<void> logArtworkLike({
+    required String artworkId,
+    required String artworkTitle,
+    String? artistName,
+  }) async {
+    final title = 'You liked ${_quoteIfNeeded(artworkTitle)}';
+    await _record(
+      type: 'like',
+      idPrefix: 'artwork_like',
+      targetId: artworkId,
+      title: title,
+      description: _truncate(artistName),
+      metadata: {
+        'artworkId': artworkId,
+        'targetId': artworkId,
+        'targetType': 'artwork',
+        'artworkTitle': artworkTitle,
+        if (artistName != null && artistName.trim().isNotEmpty) 'artistName': artistName,
+        'actionUrl': 'app://artworks/$artworkId',
+      },
+    );
+  }
+
+  /// Record that the current user saved/favorited an artwork.
+  static Future<void> logArtworkSave({
+    required String artworkId,
+    required String artworkTitle,
+    String? artistName,
+  }) async {
+    final title = 'Saved ${_quoteIfNeeded(artworkTitle)}';
+    await _record(
+      type: 'save',
+      idPrefix: 'artwork_save',
+      targetId: artworkId,
+      title: title,
+      description: _truncate(artistName),
+      metadata: {
+        'artworkId': artworkId,
+        'targetId': artworkId,
+        'targetType': 'artwork',
+        'artworkTitle': artworkTitle,
+        if (artistName != null && artistName.trim().isNotEmpty) 'artistName': artistName,
+        'actionUrl': 'app://artworks/$artworkId',
+      },
+    );
+  }
+
+  /// Record that the current user followed another profile.
+  static Future<void> logFollow({
+    required String walletAddress,
+    String? displayName,
+    String? username,
+    String? avatarUrl,
+  }) async {
+    final targetName = _safeDisplayName(displayName ?? username, fallback: _shortWallet(walletAddress));
+    await _record(
+      type: 'follow',
+      idPrefix: 'follow',
+      targetId: walletAddress,
+      title: 'You followed $targetName',
+      description: username != null ? '@${username.replaceAll('@', '')}' : null,
+      metadata: {
+        'userId': walletAddress,
+        'targetWallet': walletAddress,
+        'targetType': 'profile',
+        'targetTitle': targetName,
+        if (displayName != null) 'displayName': displayName,
+        if (username != null) 'username': username,
+        if (avatarUrl != null) 'avatarUrl': avatarUrl,
+        'actionUrl': 'app://profile/$walletAddress',
+      },
+    );
+  }
+
+  static Future<void> _record({
+    required String type,
+    required String idPrefix,
+    required String targetId,
+    required String title,
+    String? description,
+    Map<String, dynamic>? metadata,
+  }) async {
+    final entry = UserActionEntry(
+      id: _buildId(idPrefix, targetId),
+      type: type,
+      title: title,
+      description: description,
+      timestamp: DateTime.now(),
+      metadata: metadata,
+      isRead: true,
+    );
+
+    try {
+      await _service.recordAction(entry);
+    } catch (e, st) {
+      debugPrint('UserActionLogger failed to record $type: $e\n$st');
+    }
+  }
+
+  static String _buildId(String prefix, String targetId) {
+    final sanitizedTarget = targetId.isEmpty ? 'unknown' : targetId;
+    return '${prefix}_${sanitizedTarget}_${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  static String _safeDisplayName(String? value, {required String fallback}) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return fallback;
+    }
+    return trimmed;
+  }
+
+  static String _truncate(String? value, {int maxLength = 80}) {
+    final trimmed = value?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      return '';
+    }
+    if (trimmed.length <= maxLength) {
+      return trimmed;
+    }
+    return '${trimmed.substring(0, maxLength - 1)}…';
+  }
+
+  static String _quoteIfNeeded(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return 'this item';
+    }
+    if (trimmed.startsWith('"') || trimmed.startsWith('\'')) {
+      return trimmed;
+    }
+    return '"$trimmed"';
+  }
+
+  static String _shortWallet(String value) {
+    if (value.length <= 8) {
+      return value;
+    }
+    return '${value.substring(0, 4)}…${value.substring(value.length - 4)}';
+  }
+}

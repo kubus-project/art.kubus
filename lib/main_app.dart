@@ -199,7 +199,7 @@ class _MainAppState extends State<MainApp> {
                 color: isSelected 
                     ? themeProvider.accentColor
                     : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                size: isSmallScreen ? 18 : 22,
+                size: isSmallScreen ? 24 : 28,
               ),
             ],
           ),

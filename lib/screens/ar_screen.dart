@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/platform_provider.dart';
 import '../providers/saved_items_provider.dart';
+import '../services/user_action_logger.dart';
 import '../providers/wallet_provider.dart';
 import '../services/ar_manager.dart';
 import '../services/ar_integration_service.dart';
@@ -151,7 +152,12 @@ class _ARScreenState extends State<ARScreen>
               content: Text('AR marker nearby: ${marker.name}'),
               action: SnackBarAction(
                 label: 'View',
-                onPressed: () => _launchARForMarker(marker.artworkId),
+                onPressed: () {
+                  final targetArtworkId = marker.artworkId;
+                  if (targetArtworkId != null) {
+                    _launchARForMarker(targetArtworkId);
+                  }
+                },
               ),
             ),
           );
@@ -1420,6 +1426,15 @@ Experience it in augmented reality!
       }
     });
     final walletAddress = Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+
+    final isNowLiked = _likedArtworks.contains(artwork['id']);
+    if (isNowLiked) {
+      UserActionLogger.logArtworkLike(
+        artworkId: artwork['id'].toString(),
+        artworkTitle: artwork['title']?.toString() ?? 'Artwork',
+        artistName: artwork['artist']?.toString(),
+      );
+    }
     
     // Track like in community interactions
     final post = CommunityPost(
@@ -1434,6 +1449,7 @@ Experience it in augmented reality!
     await CommunityService.togglePostLike(
       post,
       currentUserWallet: walletAddress,
+      trackUserAction: true,
     );
     
     if (mounted) {
@@ -1475,19 +1491,17 @@ Experience it in augmented reality!
     // Update SavedItemsProvider
     final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
     await savedItemsProvider.toggleArtworkSaved(artwork['id']);
+
+    final isNowSaved = _savedArtworks.contains(artwork['id']);
+    if (isNowSaved) {
+      UserActionLogger.logArtworkSave(
+        artworkId: artwork['id'].toString(),
+        artworkTitle: artwork['title']?.toString() ?? 'Artwork',
+        artistName: artwork['artist']?.toString(),
+      );
+    }
     
     // Track save/bookmark in community interactions
-    final post = CommunityPost(
-      id: artwork['id'],
-      authorId: artwork['artworkId'] ?? artwork['id'],
-      authorName: artwork['artist'],
-      content: artwork['title'],
-      timestamp: DateTime.parse(artwork['timestamp']),
-      isBookmarked: _savedArtworks.contains(artwork['id']),
-    );
-    
-    await CommunityService.toggleBookmark(post);
-    
     // Track in profile for "Saved Items" section
     if (_savedArtworks.contains(artwork['id'])) {
       debugPrint('Artwork saved to profile: ${artwork['id']}');

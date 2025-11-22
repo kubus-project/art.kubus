@@ -14,6 +14,7 @@ import 'providers/institution_provider.dart';
 import 'providers/dao_provider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/notification_provider.dart';
+import 'providers/recent_activity_provider.dart';
 import 'providers/task_provider.dart';
 import 'providers/collectibles_provider.dart';
 import 'providers/platform_provider.dart';
@@ -176,6 +177,17 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
         ChangeNotifierProvider(create: (context) => ChatProvider()),
         ChangeNotifierProvider(create: (context) => NotificationProvider()),
+        ChangeNotifierProxyProvider<NotificationProvider, RecentActivityProvider>(
+          create: (context) => RecentActivityProvider(),
+          update: (context, notificationProvider, recentActivityProvider) {
+            final provider = recentActivityProvider ?? RecentActivityProvider();
+            provider.bindNotificationProvider(notificationProvider);
+            if (!provider.initialized && !provider.isLoading) {
+              unawaited(provider.initialize());
+            }
+            return provider;
+          },
+        ),
         ChangeNotifierProvider(create: (context) => Web3Provider()),
         // ThemeProvider is provided above; no duplicate provider here.
         ChangeNotifierProvider(create: (context) => NavigationProvider()),
@@ -225,6 +237,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
       try {
         final cp = Provider.of<ChatProvider>(context, listen: false);
         await cp.initialize();
+        if (!mounted) return;
         debugPrint('ArtKubus: ChatProvider.initialize called from ArtKubus.initState');
         try {
           // Bind NotificationProvider to AppRefreshProvider so screens can trigger

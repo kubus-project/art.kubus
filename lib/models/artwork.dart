@@ -29,7 +29,7 @@ class Artwork {
   final String? discoveryUserId;
   
   // AR-specific fields
-  final String? arMarkerId;      // Reference to ARMarker
+  final String? arMarkerId;      // Reference to ArtMarker
   final String? model3DCID;      // IPFS CID for 3D model
   final String? model3DURL;      // HTTP URL for 3D model
   final double? arScale;         // Scale for AR display
@@ -305,3 +305,4 @@ class Artwork {
     return 'Artwork(id: $id, title: $title, artist: $artist, rarity: $rarity)';
   }
 }
+

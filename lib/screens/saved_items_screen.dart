@@ -9,6 +9,8 @@ import '../models/artwork.dart';
 import '../community/community_interactions.dart';
 import '../services/backend_api_service.dart';
 
+enum SavedItemsCategory { artworks, posts, all }
+
 class SavedItemsScreen extends StatefulWidget {
   const SavedItemsScreen({super.key});
 
@@ -16,38 +18,29 @@ class SavedItemsScreen extends StatefulWidget {
   State<SavedItemsScreen> createState() => _SavedItemsScreenState();
 }
 
-class _SavedItemsScreenState extends State<SavedItemsScreen> with TickerProviderStateMixin {
-  late TabController _tabController;
-  final List<String> _tabs = ['Artworks', 'Posts', 'All'];
+class _SavedItemsScreenState extends State<SavedItemsScreen> {
+  SavedItemsCategory _activeCategory = SavedItemsCategory.artworks;
   Future<List<CommunityPost>>? _postsFuture;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
     _postsFuture = BackendApiService().getCommunityPosts(limit: 100);
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final theme = Theme.of(context);
     
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? Theme.of(context).scaffoldBackgroundColor 
-          : const Color(0xFFF8F9FA),
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         title: Text(
           'Saved Items',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
           IconButton(
@@ -56,30 +49,26 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> with TickerProvider
             tooltip: 'Clear saved items',
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: _tabs.map((tab) => Tab(text: tab)).toList(),
-          indicatorColor: themeProvider.accentColor,
-          labelColor: themeProvider.accentColor,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          labelStyle: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ),
-      body: Consumer<SavedItemsProvider>(
-        builder: (context, savedItemsProvider, child) {
-          if (savedItemsProvider.totalSavedCount == 0) {
-            return _buildEmptyState();
-          }
+      body: Consumer2<SavedItemsProvider, ArtworkProvider>(
+        builder: (context, savedItemsProvider, artworkProvider, child) {
+          final categoryView = _buildCategoryContent(
+            category: _activeCategory,
+            savedProvider: savedItemsProvider,
+            artworkProvider: artworkProvider,
+          );
 
-          return TabBarView(
-            controller: _tabController,
+          return Column(
             children: [
-              _buildArtworksTab(),
-              _buildPostsTab(),
-              _buildAllTab(),
+              _buildOverviewSection(savedItemsProvider),
+              Expanded(
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: categoryView,
+                ),
+              ),
             ],
           );
         },
@@ -87,159 +76,384 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> with TickerProvider
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.bookmark_border,
-            size: 80,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+  void _onCategorySelected(SavedItemsCategory category) {
+    if (_activeCategory == category) return;
+    setState(() => _activeCategory = category);
+  }
+
+  Widget _buildCategoryContent({
+    required SavedItemsCategory category,
+    required SavedItemsProvider savedProvider,
+    required ArtworkProvider artworkProvider,
+  }) {
+    switch (category) {
+      case SavedItemsCategory.artworks:
+        return KeyedSubtree(
+          key: const ValueKey('saved-artworks'),
+          child: _buildArtworksList(savedProvider, artworkProvider),
+        );
+      case SavedItemsCategory.posts:
+        return KeyedSubtree(
+          key: const ValueKey('saved-posts'),
+          child: _buildPostsList(savedProvider),
+        );
+      case SavedItemsCategory.all:
+        return KeyedSubtree(
+          key: const ValueKey('saved-all'),
+          child: _buildAllList(savedProvider, artworkProvider),
+        );
+    }
+  }
+
+  Widget _buildOverviewSection(SavedItemsProvider savedProvider) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final theme = Theme.of(context);
+    final captionColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final lastSaved = savedProvider.mostRecentSave;
+    final lastSavedLabel = lastSaved != null
+        ? 'Updated ${_formatTimestamp(lastSaved)}'
+        : 'Save items to build your collection';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.outline.withValues(alpha: 0.2),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'No Saved Items',
-            style: GoogleFonts.inter(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
-          ),
-          const SizedBox(height: 12),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
-              'Start saving artworks and posts you love to see them here',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your saved collection',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        lastSavedLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: captionColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Text(
+                    '${savedProvider.totalSavedCount} items',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatTile(
+                    label: 'Artworks',
+                    value: savedProvider.savedArtworksCount.toString(),
+                    icon: Icons.palette_outlined,
+                    isSelected: _activeCategory == SavedItemsCategory.artworks,
+                    onTap: () => _onCategorySelected(SavedItemsCategory.artworks),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatTile(
+                    label: 'Posts',
+                    value: savedProvider.savedPostsCount.toString(),
+                    icon: Icons.article_outlined,
+                    isSelected: _activeCategory == SavedItemsCategory.posts,
+                    onTap: () => _onCategorySelected(SavedItemsCategory.posts),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatTile(
+                    label: 'Combined',
+                    value: savedProvider.totalSavedCount.toString(),
+                    icon: Icons.collections_bookmark_outlined,
+                    isSelected: _activeCategory == SavedItemsCategory.all,
+                    onTap: () => _onCategorySelected(SavedItemsCategory.all),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildArtworksTab() {
-    return Consumer2<SavedItemsProvider, ArtworkProvider>(
-      builder: (context, savedProvider, artworkProvider, child) {
-        final savedArtworkIds = savedProvider.savedArtworkIds.toList();
-        
-        if (savedArtworkIds.isEmpty) {
-          return _buildEmptyTabState(
-            icon: Icons.palette_outlined,
-            message: 'No saved artworks yet',
-          );
+  Widget _buildStatTile({
+    required String label,
+    required String value,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final theme = Theme.of(context);
+
+    final backgroundColor = isSelected
+        ? themeProvider.accentColor.withValues(alpha: 0.18)
+        : theme.colorScheme.surfaceContainerHighest;
+    final borderColor = isSelected
+        ? themeProvider.accentColor.withValues(alpha: 0.4)
+        : theme.colorScheme.outline.withValues(alpha: 0.2);
+    final iconBgColor = isSelected
+        ? themeProvider.accentColor.withValues(alpha: 0.24)
+        : themeProvider.accentColor.withValues(alpha: 0.12);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: themeProvider.accentColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    Text(
+                      value,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArtworksList(
+    SavedItemsProvider savedProvider,
+    ArtworkProvider artworkProvider,
+  ) {
+    final savedArtworkIds = savedProvider.savedArtworkIds.toList();
+
+    if (savedArtworkIds.isEmpty) {
+      return _buildEmptyTabState(
+        icon: Icons.palette_outlined,
+        message: 'No saved artworks yet',
+      );
+    }
+
+    return ListView.builder(
+      key: const PageStorageKey('saved-artworks-list'),
+      padding: const EdgeInsets.all(16),
+      itemCount: savedArtworkIds.length,
+      itemBuilder: (context, index) {
+        final artworkId = savedArtworkIds[index];
+        final artwork = artworkProvider.artworks
+            .where((a) => a.id == artworkId)
+            .firstOrNull;
+
+        if (artwork == null) {
+          return _buildPlaceholderArtworkCard(artworkId, savedProvider);
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: savedArtworkIds.length,
-          itemBuilder: (context, index) {
-            final artworkId = savedArtworkIds[index];
-            final artwork = artworkProvider.artworks
-                .where((a) => a.id == artworkId)
-                .firstOrNull;
-            
-            if (artwork == null) {
-              // Artwork not found, show placeholder
-              return _buildPlaceholderArtworkCard(artworkId, savedProvider);
-            }
-            
-            return _buildArtworkCard(artwork, savedProvider);
-          },
-        );
+        return _buildArtworkCard(artwork, savedProvider);
       },
     );
   }
 
-  Widget _buildPostsTab() {
-    return Consumer<SavedItemsProvider>(
-      builder: (context, savedProvider, child) {
-        final savedPostIds = savedProvider.savedPostIds.toList();
+  Widget _buildPostsList(SavedItemsProvider savedProvider) {
+    final savedPostIds = savedProvider.savedPostIds
+        .where((id) => !savedProvider.savedArtworkIds.contains(id))
+        .toList();
 
-        if (savedPostIds.isEmpty) {
-          return _buildEmptyTabState(
-            icon: Icons.article_outlined,
-            message: 'No saved posts yet',
+    if (savedPostIds.isEmpty) {
+      return _buildEmptyTabState(
+        icon: Icons.article_outlined,
+        message: 'No saved posts yet',
+      );
+    }
+
+    return FutureBuilder<List<CommunityPost>>(
+      future: _postsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const AppLoading();
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Failed to load posts',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _refreshPosts,
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
           );
         }
 
-        return FutureBuilder<List<CommunityPost>>(
-          future: _postsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const AppLoading();
-            }
-            if (snapshot.hasError) {
-              return _buildEmptyTabState(
-                icon: Icons.error_outline,
-                message: 'Failed to load posts',
-              );
-            }
+        final allPosts = snapshot.data ?? const <CommunityPost>[];
 
-            final allPosts = snapshot.data ?? const <CommunityPost>[];
+        return RefreshIndicator(
+          onRefresh: _refreshPosts,
+          child: ListView.builder(
+            key: const PageStorageKey('saved-posts-list'),
+            padding: const EdgeInsets.all(16),
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: savedPostIds.length,
+            itemBuilder: (context, index) {
+              final postId = savedPostIds[index];
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: savedPostIds.length,
-              itemBuilder: (context, index) {
-                final postId = savedPostIds[index];
+              final post = allPosts.where((p) => p.id == postId).firstOrNull;
 
-                final post = allPosts.where((p) => p.id == postId).firstOrNull;
-
-                if (post == null) {
-                  return _buildPlaceholderPostCard(postId, savedProvider);
-                }
-
-                return _buildPostCard(post, savedProvider);
-              },
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildAllTab() {
-    return Consumer2<SavedItemsProvider, ArtworkProvider>(
-      builder: (context, savedProvider, artworkProvider, child) {
-        final allSavedIds = savedProvider.getSortedSavedIds();
-        
-        if (allSavedIds.isEmpty) {
-          return _buildEmptyTabState(
-            icon: Icons.bookmark_border,
-            message: 'No saved items yet',
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: allSavedIds.length,
-          itemBuilder: (context, index) {
-            final itemId = allSavedIds[index];
-            
-            // Check if it's an artwork or post
-            if (savedProvider.isArtworkSaved(itemId)) {
-              final artwork = artworkProvider.artworks
-                  .where((a) => a.id == itemId)
-                  .firstOrNull;
-              
-              if (artwork == null) {
-                return _buildPlaceholderArtworkCard(itemId, savedProvider);
+              if (post == null) {
+                return _buildPlaceholderPostCard(postId, savedProvider);
               }
-              
-              return _buildArtworkCard(artwork, savedProvider);
-            } else {
-              return _buildPlaceholderPostCard(itemId, savedProvider);
-            }
-          },
+
+              return _buildPostCard(post, savedProvider);
+            },
+          ),
         );
       },
     );
+  }
+
+  Widget _buildAllList(
+    SavedItemsProvider savedProvider,
+    ArtworkProvider artworkProvider,
+  ) {
+    final allSavedIds = savedProvider.getSortedSavedIds();
+
+    if (allSavedIds.isEmpty) {
+      return _buildEmptyTabState(
+        icon: Icons.bookmark_border,
+        message: 'No saved items yet',
+      );
+    }
+
+    return ListView.builder(
+      key: const PageStorageKey('saved-all-list'),
+      padding: const EdgeInsets.all(16),
+      itemCount: allSavedIds.length,
+      itemBuilder: (context, index) {
+        final itemId = allSavedIds[index];
+
+        if (savedProvider.isArtworkSaved(itemId)) {
+          final artwork = artworkProvider.artworks
+              .where((a) => a.id == itemId)
+              .firstOrNull;
+
+          if (artwork == null) {
+            return _buildPlaceholderArtworkCard(itemId, savedProvider);
+          }
+
+          return _buildArtworkCard(artwork, savedProvider);
+        }
+
+        return _buildPlaceholderPostCard(itemId, savedProvider);
+      },
+    );
+  }
+
+  Future<void> _refreshPosts() async {
+    final future = BackendApiService().getCommunityPosts(limit: 100);
+    if (mounted) {
+      setState(() {
+        _postsFuture = future;
+      });
+    } else {
+      _postsFuture = future;
+    }
+    await future;
   }
 
   Widget _buildEmptyTabState({required IconData icon, required String message}) {

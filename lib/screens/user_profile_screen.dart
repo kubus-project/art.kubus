@@ -319,7 +319,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       _followButtonController.reverse();
     });
 
-    final newFollowState = await UserService.toggleFollow(user!.id);
+    final newFollowState = await UserService.toggleFollow(
+      user!.id,
+      displayName: user!.name,
+      username: user!.username,
+      avatarUrl: user!.profileImageUrl,
+    );
     
     setState(() {
       final currentFollowers = user!.followersCount;

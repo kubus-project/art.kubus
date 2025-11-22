@@ -2,13 +2,34 @@ import 'package:latlong2/latlong.dart';
 
 import '../providers/storage_provider.dart';
 
-/// AR marker that links physical locations to digital AR content
-class ARMarker {
+/// High-level category for an art marker shown on the map
+enum ArtMarkerType {
+  artwork,
+  institution,
+  event,
+  residency,
+  drop,
+  experience,
+  other,
+}
+
+/// Signal tier helps the UI decide how vivid the cube should render
+enum ArtMarkerSignal {
+  subtle,
+  active,
+  featured,
+  legendary,
+}
+
+/// Art marker that links physical locations to digital/AR content
+class ArtMarker {
   final String id;
   final String name;
   final String description;
   final LatLng position;
-  final String artworkId; // Reference to Artwork
+  final String? artworkId; // Reference to Artwork when applicable
+  final ArtMarkerType type;
+  final String category;
 
   // AR Content references
   final String? modelCID; // IPFS CID for 3D model (if using IPFS)
@@ -26,7 +47,6 @@ class ARMarker {
   // Metadata
   final Map<String, dynamic>? metadata;
   final List<String> tags;
-  final String category;
   final DateTime createdAt;
   final String createdBy;
   final int viewCount;
@@ -37,12 +57,14 @@ class ARMarker {
   final bool requiresProximity; // Must be near to activate
   final bool isPublic; // Visible to all users
 
-  const ARMarker({
+  const ArtMarker({
     required this.id,
     required this.name,
     required this.description,
     required this.position,
-    required this.artworkId,
+    required this.type,
+    this.artworkId,
+    this.category = 'General',
     this.modelCID,
     this.modelURL,
     this.storageProvider = StorageProvider.hybrid,
@@ -54,7 +76,6 @@ class ARMarker {
     this.enableInteraction = true,
     this.metadata,
     this.tags = const [],
-    this.category = 'General',
     required this.createdAt,
     required this.createdBy,
     this.viewCount = 0,
@@ -64,20 +85,46 @@ class ARMarker {
     this.isPublic = true,
   });
 
+  /// Convenience getter for map visuals
+  ArtMarkerSignal get signalTier {
+    final explicitTier = metadata?["signalTier"];
+    if (explicitTier is String) {
+      final normalized = explicitTier.toLowerCase();
+      if (normalized == 'legendary') return ArtMarkerSignal.legendary;
+      if (normalized == 'featured') return ArtMarkerSignal.featured;
+      if (normalized == 'active') return ArtMarkerSignal.active;
+      if (normalized == 'subtle') return ArtMarkerSignal.subtle;
+    }
+
+    final score = _popularityScore;
+    if (score >= 75) return ArtMarkerSignal.legendary;
+    if (score >= 45) return ArtMarkerSignal.featured;
+    if (score >= 20) return ArtMarkerSignal.active;
+    return ArtMarkerSignal.subtle;
+  }
+
+  double get _popularityScore {
+    final metaScoreRaw = metadata?["popularityScore"];
+    if (metaScoreRaw is num) return metaScoreRaw.toDouble();
+    final views = viewCount.toDouble();
+    final interactions = interactionCount.toDouble();
+    final boost = metadata?["boost"] is num ? (metadata?["boost"] as num).toDouble() : 0;
+    return (views * 0.35) + (interactions * 0.65) + boost;
+  }
+
   /// Get the appropriate content URL based on storage provider
   String? getContentURL({String ipfsGateway = 'https://ipfs.io/ipfs/'}) {
-    switch (storageProvider) {
-      case StorageProvider.ipfs:
-        return modelCID != null ? '$ipfsGateway$modelCID' : null;
-      case StorageProvider.http:
-        return modelURL;
-      case StorageProvider.hybrid:
-        // Prefer IPFS with HTTP fallback
-        if (modelCID != null) {
-          return '$ipfsGateway$modelCID';
-        }
-        return modelURL;
+    if (storageProvider == StorageProvider.ipfs) {
+      return modelCID != null ? '$ipfsGateway$modelCID' : null;
     }
+    if (storageProvider == StorageProvider.http) {
+      return modelURL;
+    }
+    // Hybrid: Prefer IPFS with HTTP fallback
+    if (modelCID != null) {
+      return '$ipfsGateway$modelCID';
+    }
+    return modelURL;
   }
 
   /// Get fallback URL if primary fails
@@ -120,6 +167,8 @@ class ARMarker {
       'latitude': position.latitude,
       'longitude': position.longitude,
       'artworkId': artworkId,
+      'markerType': type.name,
+      'type': type.name,
       'modelCID': modelCID,
       'modelURL': modelURL,
       'storageProvider': storageProvider.name,
@@ -143,48 +192,56 @@ class ARMarker {
   }
 
   /// Create from Map (from storage/API)
-  factory ARMarker.fromMap(Map<String, dynamic> map) {
-    return ARMarker(
-      id: map['id'] ?? '',
-      name: map['name'] ?? '',
-      description: map['description'] ?? '',
+  factory ArtMarker.fromMap(Map<String, dynamic> map) {
+    final markerType = _parseMarkerType(map['markerType'] ?? map['type'] ?? map['category']);
+    return ArtMarker(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      description: map['description']?.toString() ?? '',
       position: LatLng(
-        map['latitude']?.toDouble() ?? 0.0,
-        map['longitude']?.toDouble() ?? 0.0,
+        (map['latitude'] ?? map['lat'] ?? 0).toDouble(),
+        (map['longitude'] ?? map['lng'] ?? 0).toDouble(),
       ),
-      artworkId: map['artworkId'] ?? '',
-      modelCID: map['modelCID'],
-      modelURL: map['modelURL'],
+      artworkId: map['artworkId']?.toString(),
+      type: markerType,
+      category: map['category']?.toString() ?? 'General',
+      modelCID: map['modelCID']?.toString(),
+      modelURL: map['modelURL']?.toString(),
       storageProvider: StorageProvider.values.firstWhere(
         (e) => e.name == map['storageProvider'],
         orElse: () => StorageProvider.hybrid,
       ),
-      scale: map['scale']?.toDouble() ?? 1.0,
+      scale: (map['scale'] ?? 1.0).toDouble(),
       rotation: Map<String, double>.from(map['rotation'] ?? {'x': 0, 'y': 0, 'z': 0}),
-      enableAnimation: map['enableAnimation'] ?? false,
-      animationName: map['animationName'],
-      enablePhysics: map['enablePhysics'] ?? false,
-      enableInteraction: map['enableInteraction'] ?? true,
-      metadata: map['metadata'],
-      tags: List<String>.from(map['tags'] ?? []),
-      category: map['category'] ?? 'General',
-      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
-      createdBy: map['createdBy'] ?? '',
-      viewCount: map['viewCount']?.toInt() ?? 0,
-      interactionCount: map['interactionCount']?.toInt() ?? 0,
-      activationRadius: map['activationRadius']?.toDouble() ?? 50.0,
-      requiresProximity: map['requiresProximity'] ?? true,
-      isPublic: map['isPublic'] ?? true,
+      enableAnimation: map['enableAnimation'] == true,
+      animationName: map['animationName']?.toString(),
+      enablePhysics: map['enablePhysics'] == true,
+      enableInteraction: map['enableInteraction'] != false,
+      metadata: map['metadata'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(map['metadata'])
+          : map['metadata'] is Map
+              ? Map<String, dynamic>.from(map['metadata'] as Map)
+              : null,
+      tags: List<String>.from(map['tags'] ?? const []),
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      createdBy: map['createdBy']?.toString() ?? 'system',
+      viewCount: (map['viewCount'] ?? 0).toInt(),
+      interactionCount: (map['interactionCount'] ?? 0).toInt(),
+      activationRadius: (map['activationRadius'] ?? 50.0).toDouble(),
+      requiresProximity: map['requiresProximity'] != false,
+      isPublic: map['isPublic'] != false,
     );
   }
 
   /// Create a copy with updated fields
-  ARMarker copyWith({
+  ArtMarker copyWith({
     String? id,
     String? name,
     String? description,
     LatLng? position,
     String? artworkId,
+    ArtMarkerType? type,
+    String? category,
     String? modelCID,
     String? modelURL,
     StorageProvider? storageProvider,
@@ -196,7 +253,6 @@ class ARMarker {
     bool? enableInteraction,
     Map<String, dynamic>? metadata,
     List<String>? tags,
-    String? category,
     DateTime? createdAt,
     String? createdBy,
     int? viewCount,
@@ -205,12 +261,14 @@ class ARMarker {
     bool? requiresProximity,
     bool? isPublic,
   }) {
-    return ARMarker(
+    return ArtMarker(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
       position: position ?? this.position,
       artworkId: artworkId ?? this.artworkId,
+      type: type ?? this.type,
+      category: category ?? this.category,
       modelCID: modelCID ?? this.modelCID,
       modelURL: modelURL ?? this.modelURL,
       storageProvider: storageProvider ?? this.storageProvider,
@@ -222,7 +280,6 @@ class ARMarker {
       enableInteraction: enableInteraction ?? this.enableInteraction,
       metadata: metadata ?? this.metadata,
       tags: tags ?? this.tags,
-      category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
       viewCount: viewCount ?? this.viewCount,
@@ -236,7 +293,7 @@ class ARMarker {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is ARMarker && other.id == id;
+    return other is ArtMarker && other.id == id;
   }
 
   @override
@@ -244,6 +301,29 @@ class ARMarker {
 
   @override
   String toString() {
-    return 'ARMarker(id: $id, name: $name, storage: ${storageProvider.name})';
+    return 'ArtMarker(id: $id, type: ${type.name}, name: $name)';
+  }
+
+  static ArtMarkerType _parseMarkerType(dynamic raw) {
+    final value = raw?.toString().toLowerCase() ?? '';
+    if (value.contains('institution') || value.contains('museum') || value.contains('gallery')) {
+      return ArtMarkerType.institution;
+    }
+    if (value.contains('event')) {
+      return ArtMarkerType.event;
+    }
+    if (value.contains('residency')) {
+      return ArtMarkerType.residency;
+    }
+    if (value.contains('drop') || value.contains('airdrop')) {
+      return ArtMarkerType.drop;
+    }
+    if (value.contains('experience') || value.contains('ar')) {
+      return ArtMarkerType.experience;
+    }
+    if (value.contains('artwork') || value.contains('art') || value.isEmpty) {
+      return ArtMarkerType.artwork;
+    }
+    return ArtMarkerType.other;
   }
 }

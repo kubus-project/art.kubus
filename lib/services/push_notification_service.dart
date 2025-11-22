@@ -5,7 +5,7 @@ import 'notification_helper.dart';
 import 'notification_show_helper.dart' as webshow;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/ar_marker.dart';
+import '../models/art_marker.dart';
 
 /// Push notification service for AR proximity alerts and community updates
 class PushNotificationService {
@@ -126,7 +126,7 @@ class PushNotificationService {
 
   /// Show AR proximity notification
   Future<void> showARProximityNotification({
-    required ARMarker marker,
+    required ArtMarker marker,
     required double distance,
   }) async {
     if (!_permissionGranted) return;
@@ -1094,3 +1094,4 @@ class PushNotificationService {
     return out;
   }
 }
+
