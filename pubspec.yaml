@@ -80,7 +80,8 @@ dependencies:
   flutter_compass: ^0.8.1
   # Platform-specific AR plugins for best reliability and maintenance:
   # arkit_plugin: ^1.2.0  # iOS ARKit - DISABLED due to vector_math 2.1.4 incompatibility
-  arcore_flutter_plugin: ^0.1.0  # Android ARCore (stable, 336 likes)
+  arcore_flutter_plugin:
+    path: third_party/arcore_flutter_plugin  # Local override with updated Android config
   # Note: ARManager provides unified API for both platforms
   # Features: Plane detection, object placement, hit testing, GLTF/GLB models
   # See AR_IMPLEMENTATION.md for setup instructions

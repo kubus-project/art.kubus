@@ -35,6 +35,61 @@ class UserActionLogger {
     );
   }
 
+  /// Record that the current user published a new community post.
+  static Future<void> logPostCreated({
+    required String postId,
+    required String content,
+    List<String>? mediaUrls,
+  }) async {
+    final preview = _truncate(content, maxLength: 140);
+    await _record(
+      type: 'post_create',
+      idPrefix: 'post_create',
+      targetId: postId,
+      title: 'You posted a new update',
+      description: preview,
+      metadata: {
+        'postId': postId,
+        'targetId': postId,
+        'targetType': 'post',
+        'actionUrl': 'app://community/posts/$postId',
+        if (preview.isNotEmpty) 'contentPreview': preview,
+        if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
+      },
+    );
+  }
+
+  /// Record that the current user commented on a community post.
+  static Future<void> logPostComment({
+    required String postId,
+    required String commentId,
+    required String commentContent,
+    String? postAuthorName,
+    bool isReply = false,
+  }) async {
+    final preview = _truncate(commentContent, maxLength: 140);
+    final title = isReply
+        ? 'You replied to a comment'
+        : 'You commented on ${postAuthorName != null ? _safeDisplayName(postAuthorName, fallback: 'a post') : 'a post'}';
+    await _record(
+      type: 'comment',
+      idPrefix: 'comment_create',
+      targetId: commentId,
+      title: title,
+      description: preview,
+      metadata: {
+        'postId': postId,
+        'targetId': postId,
+        'targetType': 'post',
+        'commentId': commentId,
+        'actionUrl': 'app://community/posts/$postId?commentId=$commentId',
+        if (preview.isNotEmpty) 'commentPreview': preview,
+        if (postAuthorName != null) 'postAuthorName': postAuthorName,
+        if (isReply) 'isReply': true,
+      },
+    );
+  }
+
   /// Record that the current user saved/bookmarked a community post (or
   /// converted artwork) for later.
   static Future<void> logPostSave({

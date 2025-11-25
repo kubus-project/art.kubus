@@ -36,6 +36,10 @@ ActivityCategory activityCategoryFromString(String? raw) {
     case 'followed':
       return ActivityCategory.follow;
     case 'share':
+    case 'post':
+    case 'post_create':
+    case 'post_created':
+    case 'repost':
       return ActivityCategory.share;
     case 'mention':
       return ActivityCategory.mention;

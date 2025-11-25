@@ -7,7 +7,7 @@ class DAOOnboardingData {
   static final List<OnboardingPage> pages = [
     const OnboardingPage(
       title: 'Welcome to DAO Governance',
-      description: 'Participate in decentralized decision-making for the Art.Kubus ecosystem. Your voice matters in shaping the future of digital art.',
+      description: 'Participate in decentralized decision-making for the art.kubus ecosystem. Your voice matters in shaping the future of digital art.',
       icon: Icons.account_balance,
       gradientColors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
       features: [

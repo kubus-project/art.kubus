@@ -150,6 +150,7 @@ class RecentActivityProvider extends ChangeNotifier {
   RecentActivity? _mapSingle(Map<String, dynamic> raw) {
     final type = _string(raw['type']) ?? _string(raw['interactionType']) ?? _string(raw['eventType']) ?? 'system';
     final data = _extractData(raw['data']);
+    final customMetadata = _extractData(raw['metadata']);
     final sender = _extractData(raw['sender']);
     final actorName = _string(raw['actorName']) ?? _string(sender['displayName']) ?? _string(sender['username']) ?? _string(raw['userName']) ?? _string(raw['authorName']);
     final actorAvatar = _string(sender['avatar']) ?? _string(sender['avatarUrl']) ?? _string(raw['actorAvatar']);
@@ -164,10 +165,11 @@ class RecentActivityProvider extends ChangeNotifier {
     }
     final resolvedTitle = _string(raw['title']) ?? _defaultTitle(category, actorName, data);
     final resolvedDescription = _string(raw['message']) ?? _string(raw['description']) ?? _defaultDescription(category, actorName, data);
-    final actionUrl = _string(raw['actionUrl']) ?? _string(data['actionUrl']);
+    final actionUrl = _string(raw['actionUrl']) ?? _string(raw['action_url']) ?? _string(data['actionUrl']) ?? _string(data['action_url']);
     final isRead = _bool(raw['isRead']) ?? _bool(raw['is_read']) ?? true;
 
     final metadata = <String, dynamic>{
+      ...customMetadata,
       ...data,
       if (sender.isNotEmpty) 'sender': sender,
       if (raw.containsKey('extra')) 'extra': raw['extra'],

@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
@@ -9,16 +8,23 @@ import '../community/community_interactions.dart';
 import './ar_manager.dart';
 import './ar_content_service.dart';
 
-/// Integration service connecting AR, map markers, and community features
+/// Integration service orchestrating AR experiences and physical marker flows
 class ARIntegrationService {
-  static final ARIntegrationService _instance = ARIntegrationService._internal();
+  static final ARIntegrationService _instance =
+      ARIntegrationService._internal();
   factory ARIntegrationService() => _instance;
   ARIntegrationService._internal();
 
   final ARManager _arManager = ARManager();
   final List<ArtMarker> _nearbyMarkers = [];
   LatLng? _currentLocation;
-  
+  DateTime? _lastMarkerRefresh;
+  LatLng? _lastMarkerLocation;
+  bool _isFetchingMarkers = false;
+  static const Duration _markerRefreshInterval = Duration(seconds: 25);
+  static const double _markerRefreshDistanceMeters = 40;
+  final Distance _distanceCalculator = const Distance();
+
   // Callbacks for UI updates
   Function(ArtMarker)? onMarkerActivated;
   Function(Artwork)? onArtworkDiscovered;
@@ -33,12 +39,39 @@ class ARIntegrationService {
   /// Update current location and check for nearby markers
   Future<void> updateLocation(LatLng location) async {
     _currentLocation = location;
-    await _checkNearbyMarkers(location);
+    if (_shouldRefreshMarkers(location)) {
+      if (_isFetchingMarkers) return;
+      _isFetchingMarkers = true;
+      try {
+        await _checkNearbyMarkers(location);
+      } finally {
+        _isFetchingMarkers = false;
+      }
+    }
+  }
+
+  bool _shouldRefreshMarkers(LatLng location) {
+    if (_lastMarkerRefresh == null || _lastMarkerLocation == null) {
+      return true;
+    }
+
+    final double movedMeters = _distanceCalculator.as(
+      LengthUnit.Meter,
+      _lastMarkerLocation!,
+      location,
+    );
+    final bool movedEnough = movedMeters >= _markerRefreshDistanceMeters;
+    final bool intervalElapsed =
+        DateTime.now().difference(_lastMarkerRefresh!) >=
+            _markerRefreshInterval;
+    return movedEnough || intervalElapsed;
   }
 
   /// Check for nearby AR markers
   Future<void> _checkNearbyMarkers(LatLng location) async {
     try {
+      _lastMarkerRefresh = DateTime.now();
+      _lastMarkerLocation = location;
       // Fetch markers from backend
       final markers = await ARContentService.fetchARMarkers(
         latitude: location.latitude,
@@ -109,8 +142,8 @@ class ARIntegrationService {
       category: artwork.category,
       modelCID: artwork.model3DCID,
       modelURL: artwork.model3DURL,
-      storageProvider: artwork.model3DCID != null 
-          ? StorageProvider.hybrid 
+      storageProvider: artwork.model3DCID != null
+          ? StorageProvider.hybrid
           : StorageProvider.http,
       scale: artwork.arScale ?? 1.0,
       rotation: artwork.arRotation ?? {'x': 0, 'y': 0, 'z': 0},
@@ -159,7 +192,8 @@ class ARIntegrationService {
       // Notify callbacks
       onARInteractionComplete?.call(artwork.id);
 
-      debugPrint('ARIntegrationService: Interaction tracked for ${artwork.title}');
+      debugPrint(
+          'ARIntegrationService: Interaction tracked for ${artwork.title}');
     } catch (e) {
       debugPrint('ARIntegrationService: Error tracking interaction: $e');
     }
@@ -204,7 +238,8 @@ class ARIntegrationService {
         id: 'post_${DateTime.now().millisecondsSinceEpoch}',
         authorId: 'current_user',
         authorName: authorName,
-        content: '$content\n\n🎨 Artwork: ${artwork.title}\n📍 ${artwork.position.latitude.toStringAsFixed(4)}, ${artwork.position.longitude.toStringAsFixed(4)}',
+        content:
+            '$content\n\n🎨 Artwork: ${artwork.title}\n📍 ${artwork.position.latitude.toStringAsFixed(4)}, ${artwork.position.longitude.toStringAsFixed(4)}',
         imageUrl: imageUrl ?? artwork.imageUrl,
         timestamp: DateTime.now(),
         tags: ['#AR', '#${artwork.category}', '#art.kubus'],
@@ -219,12 +254,13 @@ class ARIntegrationService {
   }
 
   /// Get nearby artworks with AR enabled
-  List<Artwork> getNearbyARArtworks(List<Artwork> allArtworks, {double radiusKm = 1.0}) {
+  List<Artwork> getNearbyARArtworks(List<Artwork> allArtworks,
+      {double radiusKm = 1.0}) {
     if (_currentLocation == null) return [];
 
     return allArtworks.where((artwork) {
       if (!artwork.arEnabled) return false;
-      
+
       final distanceMeters = artwork.getDistanceFrom(_currentLocation!);
       return distanceMeters <= (radiusKm * 1000);
     }).toList()
@@ -238,7 +274,7 @@ class ARIntegrationService {
   /// Get active AR markers
   List<ArtMarker> getActiveMarkers() {
     if (_currentLocation == null) return [];
-    
+
     return _nearbyMarkers
         .where((marker) => marker.isActiveAt(_currentLocation!))
         .toList();
@@ -255,98 +291,7 @@ class ARIntegrationService {
     }
   }
 
-  /// Create AR marker from map location
-  Future<ArtMarker?> createMarkerAtLocation({
-    required LatLng location,
-    required String name,
-    required String description,
-    required String artworkId,
-    String? modelCID,
-    String? modelURL,
-    double scale = 1.0,
-  }) async {
-    try {
-      final marker = ArtMarker(
-        id: 'marker_${DateTime.now().millisecondsSinceEpoch}',
-        name: name,
-        description: description,
-        position: location,
-        artworkId: artworkId,
-        type: ArtMarkerType.artwork,
-        category: 'User Created',
-        modelCID: modelCID,
-        modelURL: modelURL,
-        storageProvider: modelCID != null 
-            ? StorageProvider.hybrid 
-            : StorageProvider.http,
-        scale: scale,
-        metadata: {
-          'source': 'user_created',
-          'createdFrom': 'map_screen',
-        },
-        tags: const [],
-        createdAt: DateTime.now(),
-        createdBy: 'current_user',
-      );
-
-      // Save to backend
-      final success = await ARContentService.saveARMarker(marker);
-      if (success) {
-        _nearbyMarkers.add(marker);
-        debugPrint('ARIntegrationService: Marker created at ${location.latitude}, ${location.longitude}');
-        return marker;
-      }
-
-      return null;
-    } catch (e) {
-      debugPrint('ARIntegrationService: Error creating marker: $e');
-      return null;
-    }
-  }
-
-  /// Upload AR content and create marker
-  Future<ArtMarker?> uploadAndCreateMarker({
-    required LatLng location,
-    required String name,
-    required String description,
-    required String artworkId,
-    required Uint8List modelData,
-    required String filename,
-    double scale = 1.0,
-  }) async {
-    try {
-      // Upload content using preferred storage
-      final uploadResults = await ARContentService.uploadContent(
-        modelData,
-        filename,
-        metadata: {
-          'artworkId': artworkId,
-          'name': name,
-          'type': 'ar_model',
-        },
-        uploadToBoth: true, // Upload to both IPFS and HTTP for redundancy
-      );
-
-      if (uploadResults['cid'] == null && uploadResults['url'] == null) {
-        debugPrint('ARIntegrationService: Upload failed');
-        return null;
-      }
-
-      // Create marker with uploaded content
-      return await createMarkerAtLocation(
-        location: location,
-        name: name,
-        description: description,
-        artworkId: artworkId,
-        modelCID: uploadResults['cid'],
-        modelURL: uploadResults['url'],
-        scale: scale,
-      );
-    } catch (e) {
-      debugPrint('ARIntegrationService: Error uploading and creating marker: $e');
-      return null;
-    }
-  }
+  // Marker creation/upload handled by MapMarkerService
 
   /// Get storage configuration info
   Future<Map<String, dynamic>> getStorageInfo() async {
@@ -366,7 +311,8 @@ class ARIntegrationService {
   /// Switch storage provider
   Future<void> setStorageProvider(StorageProvider provider) async {
     await ARContentService.setPreferredStorageProvider(provider);
-    debugPrint('ARIntegrationService: Storage provider set to ${provider.name}');
+    debugPrint(
+        'ARIntegrationService: Storage provider set to ${provider.name}');
   }
 
   /// Dispose resources
@@ -374,6 +320,8 @@ class ARIntegrationService {
     _arManager.dispose();
     _nearbyMarkers.clear();
     _currentLocation = null;
+    _lastMarkerRefresh = null;
+    _lastMarkerLocation = null;
     debugPrint('ARIntegrationService: Disposed');
   }
 
@@ -386,5 +334,3 @@ class ARIntegrationService {
   /// Get nearby markers count
   int get nearbyMarkersCount => _nearbyMarkers.length;
 }
-
-

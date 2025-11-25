@@ -831,7 +831,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       onRefresh: () => _loadCommunityData(followingOnly: false),
       emptyIcon: Icons.travel_explore,
       emptyTitle: 'No Community Posts Yet',
-      emptySubtitle: 'Posts from across Kubus will appear here soon.',
+      emptySubtitle: 'Posts from across kubus will appear here soon.',
     );
   }
 

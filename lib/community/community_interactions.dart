@@ -367,6 +367,18 @@ class CommunityService {
             'Comment added to post ${post.id}. Total comments: ${post.commentCount}');
       }
 
+      try {
+        await UserActionLogger.logPostComment(
+          postId: post.id,
+          commentId: backendComment.id,
+          commentContent: backendComment.content,
+          postAuthorName: post.authorName,
+          isReply: parentCommentId?.isNotEmpty == true,
+        );
+      } catch (e, st) {
+        debugPrint('UserActionLogger.logPostComment failed: $e\n$st');
+      }
+
       // Server will create notification for the post author; client-side push is not shown for actor.
 
       return backendComment;

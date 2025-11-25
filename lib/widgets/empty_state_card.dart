@@ -23,20 +23,31 @@ class EmptyStateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
     return Container(
       width: double.infinity,
+      // Ensure the child Column is centered within the available space
+      // when the card is placed inside a fixed-height parent.
+      alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
+        border: Border.all(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
       ),
       child: Column(
+        // Center content both vertically and horizontally so the icon/text
+        // do not hug the top or bottom when the card is placed in a fixed
+        // height container (e.g. SizedBox).
+        mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 48, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.32)),
+          Icon(icon,
+              size: 48,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.32)),
           const SizedBox(height: 12),
           Text(
             title,

@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-// inline_loading no longer used in this file; replaced with inline_progress
 import '../widgets/inline_progress.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -14,17 +12,19 @@ import 'package:flutter_compass/flutter_compass.dart';
 import 'package:location/location.dart' hide LocationAccuracy;
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../widgets/app_loading.dart';
-
-import '../providers/themeprovider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
-import '../providers/tile_providers.dart';
 import '../providers/wallet_provider.dart';
+import '../providers/themeprovider.dart';
+import '../providers/institution_provider.dart';
+import '../providers/dao_provider.dart';
 import '../models/artwork.dart';
+import '../models/task.dart';
+import '../models/map_marker_subject.dart';
 import '../services/task_service.dart';
 import '../services/ar_integration_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/map_marker_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/achievement_service.dart';
 import '../models/art_marker.dart';
@@ -32,7 +32,9 @@ import '../widgets/art_marker_cube.dart';
 import 'art_detail_screen.dart';
 import 'ar_screen.dart';
 import 'user_profile_screen.dart';
-import '../widgets/avatar_widget.dart';
+import '../utils/grid_utils.dart';
+import '../utils/marker_subject_utils.dart';
+import '../providers/tile_providers.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -41,132 +43,180 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> 
+class _MapScreenState extends State<MapScreen>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
-  
+  static const String _kPrefLocationPermissionRequested = 'map_location_permission_requested';
+  static const String _kPrefLocationServiceRequested = 'map_location_service_requested';
   // Location and Map State
   LatLng? _currentPosition;
   Location? _mobileLocation;
   Timer? _timer;
   final MapController _mapController = MapController();
-  final ValueNotifier<MapCamera?> _cameraNotifier = ValueNotifier<MapCamera?>(null);
-  bool _autoCenter = true;
+  bool _autoFollow = true;
   double? _direction; // Compass direction
   StreamSubscription<CompassEvent>? _compassSubscription;
   StreamSubscription<LocationData>? _mobileLocationSubscription;
   StreamSubscription<Position>? _webPositionSubscription;
-  TileProviders? tileProviders;
-  double _lastKnownZoom = 17.0;
-  
+
+  // Avoid repeatedly requesting permission/service on each timer tick
+  bool _locationPermissionRequested = false;
+  bool _locationServiceRequested = false;
+  AppLifecycleState? _lastLifecycleState;
+
   // Animation
   late AnimationController _animationController;
-  
+
   // AR Integration
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
   final BackendApiService _backendApi = BackendApiService();
-  final PushNotificationService _pushNotificationService = PushNotificationService();
+  final MapMarkerService _mapMarkerService = MapMarkerService();
+  final PushNotificationService _pushNotificationService =
+      PushNotificationService();
   List<ArtMarker> _artMarkers = [];
-  final Set<String> _notifiedMarkers = {}; // Track which markers we've notified about
+  final Set<String> _notifiedMarkers =
+      {}; // Track which markers we've notified about
   Timer? _proximityCheckTimer;
-  ArtMarker? _selectedArtMarker;
 
   // UI State
   bool _isSearching = false;
+  bool _isFetchingSuggestions = false;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  String _selectedFilter = 'All';
-  String _sortBy = 'distance'; // distance, rarity, name, newest
-  bool _showListView = false;
-  final DraggableScrollableController _sheetController = DraggableScrollableController();
-  // Profile search results for search bar suggestions
-  List<Map<String, dynamic>> _profileSearchResults = [];
-  bool _isProfileSearchLoading = false;
-  
+  Timer? _searchDebounce;
+  List<_SearchSuggestion> _searchSuggestions = [];
+
+  final Map<ArtMarkerType, bool> _markerLayerVisibility = {
+    ArtMarkerType.artwork: true,
+    ArtMarkerType.institution: true,
+    ArtMarkerType.event: true,
+    ArtMarkerType.residency: true,
+    ArtMarkerType.drop: true,
+    ArtMarkerType.experience: true,
+    ArtMarkerType.other: false, // Misc markers off by default per design spec
+  };
+
+  String _artworkFilter = 'all';
+  _ArtworkSort _sort = _ArtworkSort.nearest;
+  bool _useGridLayout = false;
+  bool _showMapGrid = false; // show isometric grid on the map tiles
+  final DraggableScrollableController _sheetController =
+      DraggableScrollableController();
+
   // Discovery and Progress
   bool _isDiscoveryExpanded = false;
+  bool _filtersExpanded = false;
+
+  // Camera helpers
+  LatLng _cameraCenter = const LatLng(46.056946, 14.505751);
+  double _lastZoom = 16.0;
+
+  final Distance _distanceCalculator = const Distance();
 
   @override
   void initState() {
     super.initState();
-    _initializeMap();
-    
-    // Initialize providers and calculate progress after build completes
+    // Load persisted permission/service request flags, then initialize map
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadPersistedPermissionFlags();
+      _initializeMap();
+
+      // Initialize providers and calculate progress after build completes
       context.read<ArtworkProvider>().loadArtworks();
       final taskProvider = context.read<TaskProvider>();
       final walletProvider = context.read<WalletProvider>();
-      
+
       taskProvider.initializeProgress(); // Ensure proper initialization
-      
+
       // Load real progress from backend if wallet is connected
-      if (walletProvider.currentWalletAddress != null && 
+      if (walletProvider.currentWalletAddress != null &&
           walletProvider.currentWalletAddress!.isNotEmpty) {
-        debugPrint('MapScreen: Loading progress from backend for wallet: ${walletProvider.currentWalletAddress}');
-        await taskProvider.loadProgressFromBackend(walletProvider.currentWalletAddress!);
+        debugPrint(
+            'MapScreen: Loading progress from backend for wallet: ${walletProvider.currentWalletAddress}');
+        await taskProvider
+            .loadProgressFromBackend(walletProvider.currentWalletAddress!);
       } else {
-        debugPrint('MapScreen: No wallet connected, using default empty progress');
+        debugPrint(
+            'MapScreen: No wallet connected, using default empty progress');
       }
-      
+
       _calculateProgress(); // Calculate progress after providers are ready
     });
+  }
+
+  Future<void> _loadPersistedPermissionFlags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final p1 = prefs.getBool(_kPrefLocationPermissionRequested) ?? false;
+      final p2 = prefs.getBool(_kPrefLocationServiceRequested) ?? false;
+      if (!mounted) return;
+      setState(() {
+        _locationPermissionRequested = p1;
+        _locationServiceRequested = p2;
+      });
+    } catch (e) {
+      debugPrint('Error loading persisted map permission flags: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _searchDebounce?.cancel();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _compassSubscription?.cancel();
+    _mobileLocationSubscription?.cancel();
+    _webPositionSubscription?.cancel();
+    _proximityCheckTimer?.cancel();
+    _animationController.dispose();
+    _sheetController.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lastLifecycleState = state;
+    // pause polling/subscriptions while backgrounded to avoid extra prompts and conserve battery
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _timer?.cancel();
+      try {
+        _mobileLocationSubscription?.pause();
+      } catch (_) {}
+      try {
+        _webPositionSubscription?.pause();
+      } catch (_) {}
+      _proximityCheckTimer?.cancel();
+    } else if (state == AppLifecycleState.resumed) {
+      // resume polling when app returns to foreground
+      _startLocationTimer();
+      try {
+        _mobileLocationSubscription?.resume();
+      } catch (_) {}
+      try {
+        _webPositionSubscription?.resume();
+      } catch (_) {}
+      if (_proximityCheckTimer == null || !(_proximityCheckTimer?.isActive ?? false)) {
+        _proximityCheckTimer = Timer.periodic(
+          const Duration(seconds: 10),
+          (_) => _checkProximityNotifications(),
+        );
+      }
+    }
+    super.didChangeAppLifecycleState(state);
   }
 
   void _calculateProgress() {
     // Update task provider with current discovery progress
     final taskProvider = context.read<TaskProvider>();
     final artworkProvider = context.read<ArtworkProvider>();
-    final discoveredCount = artworkProvider.artworks.where((artwork) => artwork.status != ArtworkStatus.undiscovered).length;
-    
+    final discoveredCount = artworkProvider.artworks
+        .where((artwork) => artwork.status != ArtworkStatus.undiscovered)
+        .length;
+
     // Update local guide achievement with current discovered count
     taskProvider.updateAchievementProgress('local_guide', discoveredCount);
-  }
-
-  double _interpolateByZoom(
-    double zoom, {
-    required double minZoom,
-    required double maxZoom,
-    required double minValue,
-    required double maxValue,
-  }) {
-    final double clampedZoom = zoom.clamp(minZoom, maxZoom);
-    final double range = maxZoom - minZoom;
-    if (range <= 0) {
-      return minValue;
-    }
-    final double t = (clampedZoom - minZoom) / range;
-    final double? value = ui.lerpDouble(minValue, maxValue, t);
-    return value ?? minValue;
-  }
-
-  double _computeArtMarkerSize(double zoom) {
-    return _interpolateByZoom(
-      zoom,
-      minZoom: 11.5,
-      maxZoom: 20.0,
-      minValue: 40,
-      maxValue: 68,
-    );
-  }
-
-  double _computeArtworkMarkerSize(double zoom) {
-    return _interpolateByZoom(
-      zoom,
-      minZoom: 11.5,
-      maxZoom: 20.0,
-      minValue: 28,
-      maxValue: 48,
-    );
-  }
-
-  double _computeUserMarkerSize(double zoom) {
-    return _interpolateByZoom(
-      zoom,
-      minZoom: 10.5,
-      maxZoom: 20.0,
-      minValue: 20,
-      maxValue: 38,
-    );
   }
 
   void _initializeMap() {
@@ -177,7 +227,7 @@ class _MapScreenState extends State<MapScreen>
     _getLocation();
     _showIntroDialogIfNeeded();
     _startLocationTimer();
-    
+
     final compassStream = FlutterCompass.events;
     if (compassStream != null) {
       _compassSubscription = compassStream.listen((CompassEvent event) {
@@ -199,61 +249,59 @@ class _MapScreenState extends State<MapScreen>
     } else {
       _startWebLocationStream();
     }
-    
+
     // Initialize AR integration
     _initializeARIntegration();
   }
-  
+
   Future<void> _initializeARIntegration() async {
     try {
       await _arIntegrationService.initialize();
       await _pushNotificationService.initialize();
-      
+
       // Set up notification tap handler
       _pushNotificationService.onNotificationTap = _handleNotificationTap;
-      
+
       // Load art markers from backend
       await _loadArtMarkers();
-      
+
       // Start proximity checking timer (every 10 seconds)
       _proximityCheckTimer = Timer.periodic(
         const Duration(seconds: 10),
         (_) => _checkProximityNotifications(),
       );
-      
     } catch (e) {
       debugPrint('Error initializing AR integration: $e');
     }
   }
-  
-  Future<void> _loadArtMarkers() async {
+
+  Future<void> _loadArtMarkers({bool forceRefresh = false}) async {
     if (_currentPosition == null) return;
-    
+
     try {
-      // Load from backend API
-      final markers = await _backendApi.getNearbyArtMarkers(
-        latitude: _currentPosition!.latitude,
-        longitude: _currentPosition!.longitude,
+      final markers = await _mapMarkerService.loadMarkers(
+        center: _currentPosition!,
         radiusKm: 5.0,
+        forceRefresh: forceRefresh,
       );
-      
+
       if (mounted) {
         setState(() {
           _artMarkers = markers;
         });
       }
-      
+
       debugPrint('Loaded ${markers.length} art markers from backend');
     } catch (e) {
       debugPrint('Error loading art markers from backend: $e');
     }
   }
-  
+
   void _handleNotificationTap(String payload) {
     try {
       final data = jsonDecode(payload) as Map<String, dynamic>;
       final type = data['type'] as String?;
-      
+
       if (type == 'ar_proximity') {
         final markerId = data['markerId'] as String?;
         if (markerId != null) {
@@ -268,59 +316,60 @@ class _MapScreenState extends State<MapScreen>
       debugPrint('Error handling notification tap: $e');
     }
   }
-  
+
   void _checkProximityNotifications() {
     if (_currentPosition == null) return;
-    
-    const Distance distanceCalculator = Distance();
+
     final currentLatLng = _currentPosition!;
-    
+
     for (final marker in _artMarkers) {
       // Check if already notified
       if (_notifiedMarkers.contains(marker.id)) continue;
-      
+
       // Calculate distance
-      final distance = distanceCalculator.as(
+      final distance = _distanceCalculator.as(
         LengthUnit.Meter,
         currentLatLng,
         marker.position,
       );
-      
+
       // Notify if within 50 meters
       if (distance <= 50) {
         _showProximityNotification(marker, distance);
         _notifiedMarkers.add(marker.id);
       }
     }
-    
+
     // Clean up notifications for markers we've moved away from (>100m)
     _notifiedMarkers.removeWhere((markerId) {
       final marker = _artMarkers.firstWhere(
         (m) => m.id == markerId,
         orElse: () => _artMarkers.first,
       );
-      
-      final distance = distanceCalculator.as(
+
+      final distance = _distanceCalculator.as(
         LengthUnit.Meter,
         currentLatLng,
         marker.position,
       );
-      
+
       return distance > 100; // Reset notification if moved far away
     });
   }
-  
+
   void _showProximityNotification(ArtMarker marker, double distance) {
     if (!mounted) return;
-    
+
     // Show push notification
-    _pushNotificationService.showARProximityNotification(
+    _pushNotificationService
+        .showARProximityNotification(
       marker: marker,
       distance: distance,
-    ).catchError((e) {
+    )
+        .catchError((e) {
       debugPrint('MapScreen: showARProximityNotification failed: $e');
     });
-    
+
     // Also show in-app SnackBar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -375,7 +424,7 @@ class _MapScreenState extends State<MapScreen>
       ),
     );
   }
-  
+
   void _showArtMarkerDialog(ArtMarker marker) {
     showDialog(
       context: context,
@@ -408,8 +457,7 @@ class _MapScreenState extends State<MapScreen>
             if (_currentPosition != null) ...[
               Builder(
                 builder: (context) {
-                  const Distance distanceCalculator = Distance();
-                  final distance = distanceCalculator.as(
+                  final distance = _distanceCalculator.as(
                     LengthUnit.Meter,
                     _currentPosition!,
                     marker.position,
@@ -419,13 +467,19 @@ class _MapScreenState extends State<MapScreen>
                       Icon(
                         Icons.location_on,
                         size: 16,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '${distance.round()}m away',
                         style: GoogleFonts.outfit(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -452,7 +506,7 @@ class _MapScreenState extends State<MapScreen>
       ),
     );
   }
-  
+
   Future<void> _launchARExperience(ArtMarker marker) async {
     try {
       // Navigate to AR screen
@@ -536,18 +590,36 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  String _describeMarkerType(ArtMarkerType type) {
+    switch (type) {
+      case ArtMarkerType.artwork:
+        return 'Artwork';
+      case ArtMarkerType.institution:
+        return 'Institution';
+      case ArtMarkerType.event:
+        return 'Event';
+      case ArtMarkerType.residency:
+        return 'Residency';
+      case ArtMarkerType.drop:
+        return 'Drop/Reward';
+      case ArtMarkerType.experience:
+        return 'AR Experience';
+      case ArtMarkerType.other:
+        return 'Other';
+    }
+  }
+
   // Isometric overlay removed - grid is now integrated in tile provider
 
   void _handleCurrentLocationTap() {
     if (_currentPosition == null) return;
 
     // Check if there's a nearby marker (within 30 meters)
-    const Distance distanceCalculator = Distance();
     ArtMarker? nearbyMarker;
     double minDistance = double.infinity;
 
     for (final marker in _artMarkers) {
-      final distance = distanceCalculator.as(
+      final distance = _distanceCalculator.as(
         LengthUnit.Meter,
         _currentPosition!,
         marker.position,
@@ -564,19 +636,94 @@ class _MapScreenState extends State<MapScreen>
       _showArtMarkerDialog(nearbyMarker);
     } else {
       // Show create marker dialog
-      _showCreateMarkerDialog();
+      _showMarkerCreationDialog();
     }
   }
 
-  void _showCreateMarkerDialog() {
+  void _showMarkerCreationDialog() {
     if (_currentPosition == null) return;
 
-    final titleController = TextEditingController();
-    final descriptionController = TextEditingController();
+    final artworkProvider = context.read<ArtworkProvider>();
+    final institutionProvider = context.read<InstitutionProvider>();
+    final daoProvider = context.read<DAOProvider>();
+
+    final arEnabledArtworks =
+        artworkProvider.artworks.where(artworkSupportsAR).toList();
+
+    final subjectOptionsByType = <MarkerSubjectType, List<MarkerSubjectOption>>{
+      for (final type in MarkerSubjectType.values)
+        type: buildSubjectOptions(
+          type: type,
+          artworks: artworkProvider.artworks,
+          institutions: institutionProvider.institutions,
+          events: institutionProvider.events,
+          delegates: daoProvider.delegates,
+        ),
+    };
+
+    MarkerSubjectType selectedSubjectType = MarkerSubjectType.artwork;
+    MarkerSubjectOption? selectedSubject =
+        (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
+            ? subjectOptionsByType[selectedSubjectType]!.first
+            : null;
+    bool subjectSelectionRequired(MarkerSubjectType type) =>
+        type != MarkerSubjectType.misc;
+    bool arAssetRequired(MarkerSubjectType type) =>
+        type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
+
+    Artwork? resolveDefaultAsset(
+      MarkerSubjectType type,
+      MarkerSubjectOption? subjectOption,
+    ) {
+      if (type == MarkerSubjectType.artwork) {
+        return findArtworkById(arEnabledArtworks, subjectOption?.id);
+      }
+      if (arAssetRequired(type) && arEnabledArtworks.isNotEmpty) {
+        return arEnabledArtworks.first;
+      }
+      return null;
+    }
+
+    Artwork? selectedArAsset = resolveDefaultAsset(
+      selectedSubjectType,
+      selectedSubject,
+    );
+    ArtMarkerType selectedMarkerType = selectedSubjectType.defaultMarkerType;
+    bool isPublic = true;
+
+    final titleController =
+        TextEditingController(text: selectedSubject?.title ?? '');
+    final descriptionController = TextEditingController(
+      text: selectedSubject != null && selectedSubject.subtitle.isNotEmpty
+          ? selectedSubject.subtitle
+          : '',
+    );
+    final categoryController =
+        TextEditingController(text: selectedSubjectType.defaultCategory);
     final formKey = GlobalKey<FormState>();
-    String selectedType = 'artwork';
-    String selectedCategory = 'User Created';
     bool isCreating = false;
+
+    void applySubjectType(MarkerSubjectType type, StateSetter refresh) {
+      final options = subjectOptionsByType[type] ?? [];
+      final nextSubject = options.isNotEmpty ? options.first : null;
+
+      refresh(() {
+        selectedSubjectType = type;
+        selectedMarkerType = type.defaultMarkerType;
+        selectedSubject = nextSubject;
+        categoryController.text = type.defaultCategory;
+        if (nextSubject != null) {
+          titleController.text = nextSubject.title;
+          descriptionController.text = nextSubject.subtitle.isNotEmpty
+              ? nextSubject.subtitle
+              : 'Marker for ${nextSubject.title}';
+        } else if (subjectSelectionRequired(type)) {
+          titleController.clear();
+          descriptionController.clear();
+        }
+        selectedArAsset = resolveDefaultAsset(type, nextSubject);
+      });
+    }
 
     showDialog(
       context: context,
@@ -607,16 +754,18 @@ class _MapScreenState extends State<MapScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Create a new art marker at your current location',
+                    'Attach an existing subject and AR asset to this location.',
                     style: GoogleFonts.outfit(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Marker Type
                   Text(
-                    'Marker Type',
+                    'Subject Type',
                     style: GoogleFonts.outfit(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -624,28 +773,196 @@ class _MapScreenState extends State<MapScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: selectedType,
+                  DropdownButtonFormField<MarkerSubjectType>(
+                    value: selectedSubjectType,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                     ),
-                    items: const [
-                      DropdownMenuItem(value: 'artwork', child: Text('Artwork')),
-                      DropdownMenuItem(value: 'institution', child: Text('Institution')),
-                      DropdownMenuItem(value: 'event', child: Text('Event')),
-                      DropdownMenuItem(value: 'experience', child: Text('AR Experience')),
-                      DropdownMenuItem(value: 'drop', child: Text('Drop/Reward')),
-                      DropdownMenuItem(value: 'other', child: Text('Other')),
-                    ],
+                    items: MarkerSubjectType.values
+                        .map(
+                          (type) => DropdownMenuItem<MarkerSubjectType>(
+                            value: type,
+                            child: Text(type.label),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (value) {
-                      setDialogState(() => selectedType = value!);
+                      if (value != null) {
+                        applySubjectType(value, setDialogState);
+                      }
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Title
+                  if (subjectSelectionRequired(selectedSubjectType))
+                    if ((subjectOptionsByType[selectedSubjectType] ?? [])
+                        .isNotEmpty)
+                      DropdownButtonFormField<MarkerSubjectOption>(
+                        value: selectedSubject,
+                        decoration: InputDecoration(
+                          labelText: '${selectedSubjectType.label} *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: (subjectOptionsByType[selectedSubjectType] ?? [])
+                            .map(
+                              (option) => DropdownMenuItem<MarkerSubjectOption>(
+                                value: option,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(option.title,
+                                        style: GoogleFonts.outfit(
+                                            fontWeight: FontWeight.w600)),
+                                    if (option.subtitle.isNotEmpty)
+                                      Text(
+                                        option.subtitle,
+                                        style: GoogleFonts.outfit(fontSize: 12),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setDialogState(() {
+                              selectedSubject = value;
+                              titleController.text = value.title;
+                              descriptionController.text =
+                                  value.subtitle.isNotEmpty
+                                      ? value.subtitle
+                                      : 'Marker for ${value.title}';
+                              if (selectedSubjectType ==
+                                  MarkerSubjectType.artwork) {
+                                selectedArAsset = findArtworkById(
+                                    arEnabledArtworks, value.id);
+                              }
+                            });
+                          }
+                        },
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'No ${selectedSubjectType.label.toLowerCase()}s available. Use the respective module to create one first.',
+                          style: GoogleFonts.outfit(fontSize: 13),
+                        ),
+                      )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHighest
+                            .withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Misc markers do not need a linked subject. Provide a custom title and description below.',
+                        style: GoogleFonts.outfit(fontSize: 13),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                  if (arAssetRequired(selectedSubjectType)) ...[
+                    Text(
+                      'Linked AR Asset',
+                      style: GoogleFonts.outfit(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (arEnabledArtworks.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'No AR-enabled artworks available. Create one from the AR screen (Create tab) first.',
+                          style: GoogleFonts.outfit(fontSize: 13),
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<Artwork>(
+                        value: selectedArAsset,
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: arEnabledArtworks
+                            .map(
+                              (artwork) => DropdownMenuItem<Artwork>(
+                                value: artwork,
+                                child: Text(artwork.title),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          setDialogState(() => selectedArAsset = value);
+                        },
+                      ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (selectedArAsset != null)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primaryContainer
+                            .withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'AR Asset: ${selectedArAsset!.title}',
+                            style:
+                                GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                          ),
+                          Text(
+                            selectedArAsset!.model3DCID != null
+                                ? 'IPFS CID linked'
+                                : 'HTTP Model linked',
+                            style: GoogleFonts.outfit(fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: titleController,
                     decoration: InputDecoration(
@@ -666,13 +983,13 @@ class _MapScreenState extends State<MapScreen>
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Description
                   TextFormField(
                     controller: descriptionController,
                     maxLines: 4,
                     decoration: InputDecoration(
                       labelText: 'Description *',
-                      hintText: 'Describe this location and what visitors will experience',
+                      hintText:
+                          'Describe this location and what visitors will experience',
                       alignLabelWithHint: true,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -689,26 +1006,62 @@ class _MapScreenState extends State<MapScreen>
                     },
                   ),
                   const SizedBox(height: 16),
-                  // Category
                   TextFormField(
-                    initialValue: selectedCategory,
+                    controller: categoryController,
                     decoration: InputDecoration(
                       labelText: 'Category',
-                      hintText: 'e.g., Street Art, Gallery, Museum',
+                      hintText: 'e.g., Residency, Gallery, Experience',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onChanged: (value) {
-                      selectedCategory = value;
-                    },
                   ),
                   const SizedBox(height: 16),
-                  // Location info
+                  DropdownButtonFormField<ArtMarkerType>(
+                    value: selectedMarkerType,
+                    decoration: InputDecoration(
+                      labelText: 'Marker Layer',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
+                    items: ArtMarkerType.values
+                        .map(
+                          (type) => DropdownMenuItem<ArtMarkerType>(
+                            value: type,
+                            child: Text(_describeMarkerType(type)),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setDialogState(() => selectedMarkerType = value);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text('Public marker',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+                    subtitle: Text('Visible to all explorers on the map',
+                        style: GoogleFonts.outfit(fontSize: 12)),
+                    value: isPublic,
+                    onChanged: (value) =>
+                        setDialogState(() => isPublic = value),
+                  ),
+                  const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primaryContainer
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -728,14 +1081,18 @@ class _MapScreenState extends State<MapScreen>
                                 style: GoogleFonts.outfit(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: Theme.of(context).colorScheme.onSurface,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                 ),
                               ),
                               Text(
                                 '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
                                 style: GoogleFonts.outfit(
                                   fontSize: 11,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                             ],
@@ -762,6 +1119,7 @@ class _MapScreenState extends State<MapScreen>
                       Navigator.of(dialogContext).pop();
                       titleController.dispose();
                       descriptionController.dispose();
+                      categoryController.dispose();
                     },
               child: Text('Cancel', style: GoogleFonts.outfit()),
             ),
@@ -769,57 +1127,94 @@ class _MapScreenState extends State<MapScreen>
               onPressed: isCreating
                   ? null
                   : () async {
-                      if (formKey.currentState!.validate()) {
-                        setDialogState(() => isCreating = true);
-                        
-                        final success = await _createMarkerAtCurrentLocation(
-                          title: titleController.text.trim(),
-                          description: descriptionController.text.trim(),
-                          type: selectedType,
-                          category: selectedCategory.trim(),
-                        );
+                      if (!formKey.currentState!.validate()) {
+                        return;
+                      }
 
-                        if (dialogContext.mounted) {
-                          Navigator.of(dialogContext).pop();
-                        }
+                      if (subjectSelectionRequired(selectedSubjectType) &&
+                          selectedSubject == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Select a subject to continue'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      if (arAssetRequired(selectedSubjectType) &&
+                          selectedArAsset == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                'Select an AR-enabled artwork to link to this marker'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isCreating = true);
+
+                      final success = await _createMarkerAtCurrentLocation(
+                        title: titleController.text.trim(),
+                        description: descriptionController.text.trim(),
+                        type: selectedMarkerType,
+                        category: categoryController.text.trim(),
+                        subjectType: selectedSubjectType,
+                        subject: selectedSubject,
+                        linkedArtwork: selectedArAsset,
+                        isPublic: isPublic,
+                      );
+
+                      if (!dialogContext.mounted) {
                         titleController.dispose();
                         descriptionController.dispose();
+                        categoryController.dispose();
+                        return;
+                      }
+                      Navigator.of(dialogContext).pop();
+                      titleController.dispose();
+                      descriptionController.dispose();
+                      categoryController.dispose();
 
-                        if (mounted) {
-                          if (success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Row(
-                                  children: [
-                                    const Icon(Icons.check_circle, color: Colors.white),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'Marker created successfully!',
-                                        style: GoogleFonts.outfit(color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
+                      if (!mounted) {
+                        return;
+                      }
+
+                      if (success) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle,
+                                    color: Colors.white),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    'Marker created successfully!',
+                                    style:
+                                        GoogleFonts.outfit(color: Colors.white),
+                                  ),
                                 ),
-                                backgroundColor: Colors.green,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                            // Reload markers
-                            await _loadArtMarkers();
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Failed to create marker. Please try again.',
-                                  style: GoogleFonts.outfit(color: Colors.white),
-                                ),
-                                backgroundColor: Colors.red,
-                                behavior: SnackBarBehavior.floating,
-                              ),
-                            );
-                          }
-                        }
+                              ],
+                            ),
+                            backgroundColor: Colors.green,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        await _loadArtMarkers(forceRefresh: true);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Failed to create marker. Please try again.',
+                              style: GoogleFonts.outfit(color: Colors.white),
+                            ),
+                            backgroundColor: Colors.red,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
                       }
                     },
               icon: const Icon(Icons.add_location_alt),
@@ -834,26 +1229,78 @@ class _MapScreenState extends State<MapScreen>
   Future<bool> _createMarkerAtCurrentLocation({
     required String title,
     required String description,
-    required String type,
+    required ArtMarkerType type,
     required String category,
+    required MarkerSubjectType subjectType,
+    MarkerSubjectOption? subject,
+    Artwork? linkedArtwork,
+    required bool isPublic,
   }) async {
     if (_currentPosition == null) return false;
 
     try {
-      // Create marker using AR integration service
-      final marker = await _arIntegrationService.createMarkerAtLocation(
-        location: _currentPosition!,
-        name: title,
+      if (linkedArtwork != null) {
+        final hasCid = linkedArtwork.model3DCID?.isNotEmpty ?? false;
+        final hasUrl = linkedArtwork.model3DURL?.isNotEmpty ?? false;
+        if (!hasCid && !hasUrl) {
+          debugPrint('Selected AR asset is missing model metadata');
+          return false;
+        }
+      }
+
+      // Snap to the nearest grid cell center at the current zoom level
+      // We use the current camera zoom to determine which grid level is most relevant
+      final double currentZoom = _mapController.camera.zoom;
+      // Snap to the grid level that is closest to the current zoom
+      // This ensures we snap to the grid lines the user is likely seeing
+      final tileProviders = Provider.of<TileProviders?>(context, listen: false);
+      final LatLng snappedPosition = tileProviders?.snapToGrid(
+            _currentPosition!,
+            currentZoom,
+          ) ??
+          GridUtils.snapToGrid(_currentPosition!, currentZoom);
+
+      final resolvedCategory = category.isNotEmpty
+          ? category
+          : subject?.type.defaultCategory ?? subjectType.defaultCategory;
+      final marker = await _mapMarkerService.createMarker(
+        location: snappedPosition,
+        title: title,
         description: description,
-        artworkId: 'user_created_${DateTime.now().millisecondsSinceEpoch}',
+        type: type,
+        category: resolvedCategory,
+        artworkId: linkedArtwork?.id,
+        modelCID: linkedArtwork?.model3DCID,
+        modelURL: linkedArtwork?.model3DURL,
+        isPublic: isPublic,
+        metadata: {
+          'snapZoom': currentZoom,
+          'createdFrom': 'map_screen',
+          'subjectType': subjectType.name,
+          'subjectLabel': subjectType.label,
+          if (subject != null) ...{
+            'subjectId': subject.id,
+            'subjectTitle': subject.title,
+            'subjectSubtitle': subject.subtitle,
+          },
+          if (linkedArtwork != null) ...{
+            'linkedArtworkId': linkedArtwork.id,
+            'linkedArtworkTitle': linkedArtwork.title,
+          },
+          'visibility': isPublic ? 'public' : 'private',
+          if (subject?.metadata != null) ...subject!.metadata!,
+        },
       );
 
       if (marker != null) {
+        debugPrint('Marker created and saved: ${marker.id}');
         // Update local markers list
         setState(() {
           _artMarkers.add(marker);
         });
         return true;
+      } else {
+        debugPrint('Failed to create marker: returned null');
       }
 
       return false;
@@ -863,9 +1310,10 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _getLocation({bool fromTimer = false}) async {
+  Future<void> _getLocation({bool fromTimer = false, bool promptForPermission = true}) async {
     try {
       LatLng? resolvedPosition;
+      final prefs = await SharedPreferences.getInstance();
 
       if (kIsWeb) {
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -876,6 +1324,10 @@ class _MapScreenState extends State<MapScreen>
 
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
+          if (!promptForPermission) {
+            debugPrint('MapScreen: Location permission denied on web; skipping prompt');
+            return;
+          }
           permission = await Geolocator.requestPermission();
           if (permission == LocationPermission.denied) {
             debugPrint('MapScreen: Location permission denied on web');
@@ -894,16 +1346,82 @@ class _MapScreenState extends State<MapScreen>
         resolvedPosition = LatLng(position.latitude, position.longitude);
       } else {
         _mobileLocation ??= Location();
+
+        // Avoid requesting service repeatedly: only request once while in-memory flag is false
         bool serviceEnabled = await _mobileLocation!.serviceEnabled();
         if (!serviceEnabled) {
-          serviceEnabled = await _mobileLocation!.requestService();
+          if (!promptForPermission) {
+            debugPrint('MapScreen: Location service disabled; skipping prompt due to promptForPermission=false');
+            return;
+          }
+
+          if (!_locationServiceRequested) {
+            _locationServiceRequested = true;
+            try {
+              await prefs.setBool(_kPrefLocationServiceRequested, true);
+            } catch (e) {
+              debugPrint('Failed to persist location service requested flag: $e');
+            }
+
+            serviceEnabled = await _mobileLocation!.requestService();
+
+            // Persist the result (reset the requested flag when enabled)
+            if (serviceEnabled) {
+              try {
+                await prefs.setBool(_kPrefLocationServiceRequested, false);
+              } catch (_) {}
+              _locationServiceRequested = false;
+            }
+          } else {
+            // already requested before and still disabled - don't prompt again
+            debugPrint('MapScreen: Location service disabled (previously requested).');
+            return;
+          }
           if (!serviceEnabled) return;
+        } else {
+          // reset flag if enabled
+          _locationServiceRequested = false;
+          try {
+            await prefs.setBool(_kPrefLocationServiceRequested, false);
+          } catch (_) {}
         }
 
+        // Permission handling: request once and avoid spamming the dialog on subsequent timer ticks
         PermissionStatus permissionGranted = await _mobileLocation!.hasPermission();
         if (permissionGranted == PermissionStatus.denied) {
-          permissionGranted = await _mobileLocation!.requestPermission();
+          if (!promptForPermission) {
+            debugPrint('MapScreen: Location permission denied; skipping request due to promptForPermission=false');
+            return;
+          }
+
+          if (!_locationPermissionRequested) {
+            _locationPermissionRequested = true;
+            try {
+              await prefs.setBool(_kPrefLocationPermissionRequested, true);
+            } catch (e) {
+              debugPrint('Failed to persist permission-requested flag: $e');
+            }
+
+            permissionGranted = await _mobileLocation!.requestPermission();
+
+            if (permissionGranted == PermissionStatus.granted) {
+              try {
+                await prefs.setBool(_kPrefLocationPermissionRequested, false);
+              } catch (_) {}
+              _locationPermissionRequested = false;
+            }
+          } else {
+            // already requested permission once — don't re-request repeatedly
+            debugPrint('MapScreen: Permission denied and previously requested; skipping further requests.');
+            return;
+          }
           if (permissionGranted != PermissionStatus.granted) return;
+        } else if (permissionGranted == PermissionStatus.granted) {
+          // reset flag once permission is granted
+          _locationPermissionRequested = false;
+          try {
+            await prefs.setBool(_kPrefLocationPermissionRequested, false);
+          } catch (_) {}
         }
 
         final locationData = await _mobileLocation!.getLocation();
@@ -925,8 +1443,14 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _startLocationTimer() {
+    _timer?.cancel();
+    // Only start when app is in foreground
+    if (_lastLifecycleState == AppLifecycleState.paused ||
+        _lastLifecycleState == AppLifecycleState.inactive) {
+      return;
+    }
     _timer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      _getLocation(fromTimer: true);
+      _getLocation(fromTimer: true, promptForPermission: false);
     });
   }
 
@@ -936,7 +1460,8 @@ class _MapScreenState extends State<MapScreen>
     }
     _mobileLocationSubscription?.cancel();
     try {
-      _mobileLocationSubscription = _mobileLocation!.onLocationChanged.listen((event) {
+      _mobileLocationSubscription =
+          _mobileLocation!.onLocationChanged.listen((event) {
         if (event.latitude != null && event.longitude != null) {
           _updateCurrentPosition(
             LatLng(event.latitude!, event.longitude!),
@@ -944,7 +1469,8 @@ class _MapScreenState extends State<MapScreen>
         }
       });
     } catch (e) {
-      debugPrint('MapScreen: Failed to subscribe to mobile location stream: $e');
+      debugPrint(
+          'MapScreen: Failed to subscribe to mobile location stream: $e');
     }
   }
 
@@ -973,15 +1499,20 @@ class _MapScreenState extends State<MapScreen>
   void _updateCurrentPosition(LatLng position, {bool shouldCenter = false}) {
     if (!mounted) return;
     final bool isInitial = _currentPosition == null;
-    final bool allowCenter = shouldCenter || _autoCenter || isInitial;
+    final bool allowCenter = shouldCenter || _autoFollow || isInitial;
 
     setState(() {
       _currentPosition = position;
     });
 
     if (allowCenter) {
-      final double targetZoom = isInitial ? 15.0 : _mapController.camera.zoom;
+      final double targetZoom = isInitial ? 18.0 : _mapController.camera.zoom;
       _mapController.move(position, targetZoom);
+    }
+
+    // Ensure markers are loaded if we have a position now
+    if (_artMarkers.isEmpty) {
+      _loadArtMarkers();
     }
   }
 
@@ -996,7 +1527,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _showIntroDialogIfNeeded() async {
     final prefs = await SharedPreferences.getInstance();
     final hasSeenIntro = prefs.getBool('has_seen_map_intro') ?? false;
-    
+
     if (!hasSeenIntro && mounted) {
       await prefs.setBool('has_seen_map_intro', true);
       _showMapIntroDialog();
@@ -1017,8 +1548,8 @@ class _MapScreenState extends State<MapScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.map, 
-                size: 48, 
+                Icons.map,
+                size: 48,
                 color: themeProvider.accentColor,
               ),
               const SizedBox(height: 16),
@@ -1043,91 +1574,28 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  List<Artwork> _getFilteredArtwork(List<Artwork> artworks) {
-    List<Artwork> filtered = List.from(artworks);
+  Future<void> _markAsDiscovered(Artwork artwork) async {
+    context
+        .read<ArtworkProvider>()
+        .discoverArtwork(artwork.id, 'current_user_id');
 
-    if (_isSearching && _searchQuery.isNotEmpty) {
-      filtered = filtered.where((artwork) {
-        final query = _searchQuery.toLowerCase();
-        return artwork.title.toLowerCase().contains(query) ||
-               artwork.artist.toLowerCase().contains(query) ||
-               artwork.category.toLowerCase().contains(query) ||
-               artwork.tags.any((tag) => tag.toLowerCase().contains(query));
-      }).toList();
-    }
-
-    if (_selectedFilter != 'All' && _selectedFilter != 'All Rarities' && _selectedFilter != 'All Status') {
-      filtered = filtered.where((artwork) {
-        return artwork.category == _selectedFilter || 
-               artwork.rarity.name.toLowerCase() == _selectedFilter.toLowerCase() ||
-               (_selectedFilter == 'Discovered' && artwork.status != ArtworkStatus.undiscovered) ||
-               (_selectedFilter == 'Undiscovered' && artwork.status == ArtworkStatus.undiscovered) ||
-               (_selectedFilter == 'AR Enabled' && artwork.arEnabled);
-      }).toList();
-    }
-
-    return filtered;
-  }
-
-  List<Artwork> _getSortedArtwork(List<Artwork> artwork, LatLng? currentPosition) {
-    List<Artwork> sorted = List.from(artwork);
-
-    switch (_sortBy) {
-      case 'distance':
-        if (currentPosition != null) {
-          const Distance distanceCalculator = Distance();
-          sorted.sort((a, b) {
-            final distanceA = distanceCalculator.as(LengthUnit.Meter,
-              currentPosition,
-              a.position,
-            );
-            final distanceB = distanceCalculator.as(LengthUnit.Meter,
-              currentPosition,
-              b.position,
-            );
-            return distanceA.compareTo(distanceB);
-          });
-        }
-        break;
-      case 'rarity':
-        final rarityOrder = {
-          ArtworkRarity.common: 1, 
-          ArtworkRarity.rare: 2, 
-          ArtworkRarity.epic: 3, 
-          ArtworkRarity.legendary: 4
-        };
-        sorted.sort((a, b) => (rarityOrder[b.rarity] ?? 0).compareTo(rarityOrder[a.rarity] ?? 0));
-        break;
-      case 'name':
-        sorted.sort((a, b) => a.title.compareTo(b.title));
-        break;
-      case 'newest':
-        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        break;
-    }
-
-    return sorted;
-  }
-
-  Future<void> _markAsDiscoveredFromArtwork(Artwork artwork) async {
-    context.read<ArtworkProvider>().discoverArtwork(artwork.id, 'current_user_id');
-    
     // Get user ID
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id') ?? 'demo_user';
     if (!mounted) return;
-    
+
     // Get discovered artwork count
     final artworkProvider = context.read<ArtworkProvider>();
-    final discoveredCount = artworkProvider.artworks.where((a) => a.isDiscovered).length;
-    
+    final discoveredCount =
+        artworkProvider.artworks.where((a) => a.isDiscovered).length;
+
     // Check achievements with new service
     await AchievementService().checkAchievements(
       userId: userId,
       action: 'artwork_discovered',
       data: {'discoverCount': discoveredCount},
     );
-    
+
     // If AR artwork, also check AR view achievements
     if (artwork.arEnabled) {
       await AchievementService().checkAchievements(
@@ -1137,7 +1605,7 @@ class _MapScreenState extends State<MapScreen>
       );
     }
     if (!mounted) return;
-    
+
     // Legacy achievement system (for backward compatibility)
     final taskProvider = context.read<TaskProvider>();
     taskProvider.incrementAchievementProgress('local_guide');
@@ -1145,11 +1613,11 @@ class _MapScreenState extends State<MapScreen>
       taskProvider.incrementAchievementProgress('first_ar_visit');
       taskProvider.incrementAchievementProgress('ar_collector');
     }
-    
+
     setState(() {
       _calculateProgress();
     });
-    
+
     _showDiscoveryRewardForArtwork(artwork);
   }
 
@@ -1163,7 +1631,8 @@ class _MapScreenState extends State<MapScreen>
             const SizedBox(width: 8),
             Text(
               'Art Discovered!',
-              style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
+              style:
+                  GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -1187,7 +1656,8 @@ class _MapScreenState extends State<MapScreen>
             const SizedBox(height: 16),
             Text(
               artwork.title,
-              style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
+              style:
+                  GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
@@ -1245,1330 +1715,1329 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
-    double rotationRadians = -(_direction ?? 0) * (3.14159 / 180);
-    
+    final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final artworkProvider = Provider.of<ArtworkProvider>(context);
+    final taskProvider = Provider.of<TaskProvider?>(context);
+
+    final artworks = artworkProvider.artworks;
+    final filteredArtworks = _sortArtworks(_filterArtworks(artworks));
+    final discoveryProgress = taskProvider?.getOverallProgress() ?? 0.0;
+    final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
+
     return Scaffold(
-      body: Consumer2<ThemeProvider, ArtworkProvider>(
-        builder: (context, themeProvider, artworkProvider, child) {
-          if (!mounted) return const AppLoading();
-          
-          try {
-            tileProviders ??= TileProviders(themeProvider);
-          } catch (e) {
-            return const AppLoading();
+      body: Stack(
+        children: [
+          _buildMap(themeProvider),
+          _buildTopOverlays(theme, taskProvider),
+          _buildPrimaryControls(theme),
+          _buildBottomSheet(
+            theme,
+            filteredArtworks,
+            discoveryProgress,
+            isLoadingArtworks,
+          ),
+          if (_isSearching) _buildSuggestionSheet(theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMap(ThemeProvider themeProvider) {
+    final isDark = themeProvider.isDarkMode;
+    // TileProviders centralizes tile logic (tiles + optional grid overlay).
+    // Use devicePixelRatio to determine retina vs non-retina tile streams.
+    final tileProviders = Provider.of<TileProviders?>(context, listen: false);
+    final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final bool isRetina = devicePixelRatio >= 2.0;
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: _currentPosition ?? _cameraCenter,
+        initialZoom: _lastZoom,
+        minZoom: 3.0,
+        maxZoom: 20.0,
+        onMapReady: () {
+          if (_currentPosition != null) {
+            _mapController.move(_currentPosition!, _lastZoom);
           }
+        },
+        onPositionChanged: (camera, hasGesture) {
+          _cameraCenter = camera.center;
+          _lastZoom = camera.zoom;
+          if (hasGesture && _autoFollow) {
+            setState(() => _autoFollow = false);
+          }
+        },
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+        ),
+      ),
+      children: [
+        // Prefer the shared TileProviders tile layer when registered.
+        if (tileProviders != null)
+          (isRetina
+              ? tileProviders.getTileLayer(withGridOverlay: _showMapGrid)
+              : tileProviders.getNonRetinaTileLayer(
+                  withGridOverlay: _showMapGrid))
+        else
+          // Fall back to the previous inline tile layer if TileProviders isn't registered yet.
+          TileLayer(
+            urlTemplate: isDark
+                ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
+                : 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
+            subdomains: const ['a', 'b', 'c'],
+            userAgentPackageName: 'com.art.kubus',
+          ),
+        MarkerLayer(markers: _buildMarkers(themeProvider)),
+      ],
+    );
+  }
 
-          final filteredArt = _getFilteredArtwork(artworkProvider.artworks);
-          final sortedArt = _getSortedArtwork(filteredArt, _currentPosition);
-          
-          final mediaSize = MediaQuery.of(context).size;
-          final isoWidth = mediaSize.width * 4;
-          final isoHeight = mediaSize.height * 2;
-          final isoLift = mediaSize.height * -0.12;
+  List<Marker> _buildMarkers(ThemeProvider themeProvider) {
+    final markers = <Marker>[];
 
-          return Stack(
+    if (_currentPosition != null) {
+      markers.add(
+        Marker(
+          point: _currentPosition!,
+          width: 60,
+          height: 60,
+          child: GestureDetector(
+            onTap: _handleCurrentLocationTap,
+            child: Container(
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.surface,
+                  width: 2,
+                ),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      color: themeProvider.accentColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  if (_direction != null)
+                    Transform.rotate(
+                      angle: (_direction! * math.pi) / 180,
+                      child: Icon(
+                        Icons.navigation,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onPrimary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    markers.addAll(
+      _artMarkers.where((marker) {
+        return _markerLayerVisibility[marker.type] ?? true;
+      }).map(
+        (marker) => Marker(
+          point: marker.position,
+          width: 54,
+          height: 58,
+          child: GestureDetector(
+            onTap: () => _showArtMarkerDialog(marker),
+            child: ArtMarkerCube(
+              marker: marker,
+              size: 44,
+              baseColor: _resolveArtMarkerColor(marker, themeProvider),
+              icon: _resolveArtMarkerIcon(marker.type),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    return markers;
+  }
+
+  Widget _buildTopOverlays(ThemeData theme, TaskProvider? taskProvider) {
+    final topPadding = MediaQuery.of(context).padding.top + 12;
+    return Positioned(
+      top: topPadding,
+      left: 16,
+      right: 16,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildSearchCard(theme),
+                const SizedBox(height: 12),
+                if (_filtersExpanded) ...[
+                  _buildFilterPanel(theme),
+                  const SizedBox(height: 12),
+                ],
+                _buildDiscoveryCard(theme, taskProvider),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  
+
+  Widget _buildSearchCard(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(16),
+      color: scheme.surface,
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        style: GoogleFonts.outfit(),
+        decoration: InputDecoration(
+          hintText: 'Search artworks, artists, institutions…',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  tooltip: 'Clear search',
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    setState(() {
+                      _searchQuery = '';
+                      _isSearching = false;
+                      _searchSuggestions = [];
+                      _isFetchingSuggestions = false;
+                      _searchController.clear();
+                      _searchFocusNode.unfocus();
+                    });
+                  },
+                )
+              : IconButton(
+                  icon: Icon(
+                    _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
+                  ),
+                  tooltip:
+                      _filtersExpanded ? 'Hide filters' : 'Show filters',
+                  onPressed: () {
+                    setState(() {
+                      _filtersExpanded = !_filtersExpanded;
+                    });
+                  },
+                ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 4, vertical: 16),
+        ),
+        onTap: () {
+          setState(() => _isSearching = true);
+        },
+        onChanged: _handleSearchChange,
+      ),
+    );
+  }
+
+  void _handleSearchChange(String value) {
+    setState(() {
+      _searchQuery = value;
+      _isSearching = value.isNotEmpty;
+    });
+
+    _searchDebounce?.cancel();
+    if (value.trim().length < 2) {
+      setState(() {
+        _searchSuggestions = [];
+        _isFetchingSuggestions = false;
+      });
+      return;
+    }
+
+    _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
+      setState(() => _isFetchingSuggestions = true);
+
+      try {
+        final dynamic rr = await _backendApi.getSearchSuggestions(
+          query: value.trim(),
+          limit: 8,
+        );
+
+        // Use centralized normalizer to convert backend response to stable items
+        final List<Map<String, dynamic>> items = _backendApi.normalizeSearchSuggestions(rr);
+
+        final suggestions = <_SearchSuggestion>[];
+        for (final m in items) {
+          try {
+            final suggestion = _SearchSuggestion.fromMap(m);
+            if (suggestion.label.isNotEmpty) suggestions.add(suggestion);
+          } catch (e) {
+            // skip malformed entries
+          }
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _searchSuggestions = suggestions;
+          _isFetchingSuggestions = false;
+        });
+      } catch (e) {
+        debugPrint('Search suggestions failed: $e');
+        if (!mounted) return;
+        setState(() {
+          _searchSuggestions = [];
+          _isFetchingSuggestions = false;
+        });
+      }
+    });
+  }
+
+  Widget _buildSuggestionSheet(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    final double top = MediaQuery.of(context).padding.top + 86;
+    return Positioned(
+      top: top,
+      left: 16,
+      right: 16,
+      child: Material(
+        elevation: 12,
+        borderRadius: BorderRadius.circular(16),
+        color: scheme.surface,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 260),
+          child: Builder(builder: (context) {
+            if (_searchQuery.trim().length < 2) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Type at least 2 characters to search',
+                  style: GoogleFonts.outfit(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              );
+            }
+
+            if (_isFetchingSuggestions) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (_searchSuggestions.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'No suggestions',
+                  style: GoogleFonts.outfit(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              );
+            }
+
+            return ListView.separated(
+              shrinkWrap: true,
+              itemCount: _searchSuggestions.length,
+              separatorBuilder: (_, __) => Divider(
+                height: 1,
+                color: scheme.outlineVariant,
+              ),
+              itemBuilder: (context, index) {
+                final suggestion = _searchSuggestions[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: scheme.surfaceContainerHighest
+                        .withValues(alpha: 0.6),
+                    child: Icon(
+                      suggestion.icon,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  title: Text(
+                    suggestion.label,
+                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: suggestion.subtitle == null
+                      ? null
+                      : Text(
+                          suggestion.subtitle!,
+                          style: GoogleFonts.outfit(
+                            color: scheme.onSurfaceVariant,
+                            fontSize: 12,
+                          ),
+                        ),
+                  onTap: () => _handleSuggestionTap(suggestion),
+                );
+              },
+            );
+          }),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleSuggestionTap(_SearchSuggestion suggestion) async {
+    setState(() {
+      _searchQuery = suggestion.label;
+      _searchController.text = suggestion.label;
+      _searchSuggestions = [];
+      _isSearching = false;
+    });
+    _searchFocusNode.unfocus();
+
+    if (suggestion.position != null) {
+      _mapController.move(suggestion.position!, math.max(_lastZoom, 16.0));
+    }
+
+    if (!mounted) return;
+    if (suggestion.type == 'artwork' && suggestion.id != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ArtDetailScreen(artworkId: suggestion.id!),
+        ),
+      );
+    } else if (suggestion.type == 'profile' && suggestion.id != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => UserProfileScreen(userId: suggestion.id!),
+        ),
+      );
+    }
+  }
+
+  Widget _buildFilterPanel(ThemeData theme) {
+    if (!_filtersExpanded) {
+      return const SizedBox.shrink();
+    }
+    final scheme = theme.colorScheme;
+    const filters = <Map<String, String>>[
+      {'key': 'all', 'label': 'All nearby'},
+      {'key': 'nearby', 'label': 'Within 1km'},
+      {'key': 'discovered', 'label': 'Discovered'},
+      {'key': 'undiscovered', 'label': 'Undiscovered'},
+      {'key': 'ar', 'label': 'AR enabled'},
+      {'key': 'favorites', 'label': 'Favorites'},
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Filters',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: filters.map((filter) {
+            final key = filter['key']!;
+            final selected = _artworkFilter == key;
+            return ChoiceChip(
+              label: Text(filter['label']!),
+              selected: selected,
+              onSelected: (_) {
+                setState(() => _artworkFilter = key);
+              },
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Map layers',
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w600,
+            color: scheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: ArtMarkerType.values.map((type) {
+            final selected = _markerLayerVisibility[type] ?? true;
+            return FilterChip(
+              label: Text(_markerTypeLabel(type)),
+              selected: selected,
+              onSelected: (value) {
+                setState(() => _markerLayerVisibility[type] = value);
+              },
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiscoveryCard(ThemeData theme, TaskProvider? taskProvider) {
+    if (taskProvider == null) return const SizedBox.shrink();
+    final activeProgress = taskProvider.getActiveTaskProgress();
+    if (activeProgress.isEmpty) return const SizedBox.shrink();
+
+    final showTasks = _isDiscoveryExpanded;
+    final tasksToRender =
+      showTasks ? activeProgress : const <TaskProgress>[];
+    final scheme = theme.colorScheme;
+    final overall = taskProvider.getOverallProgress();
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // Isometric Map View
-              ClipRect(
-                child: OverflowBox(
-                  minWidth: mediaSize.width,
-                  maxWidth: isoWidth,
-                  minHeight: mediaSize.height,
-                  maxHeight: isoHeight,
-                  child: SizedBox(
-                    width: isoWidth,
-                    height: isoHeight,
-                    child: Transform(
-                      alignment: Alignment.center,
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.002)
-                        ..rotateX(-30 * math.pi / 180)
-                        ..scale(1, 1, 1.0),
-                      child: Transform.translate(
-                        offset: Offset(0, -isoLift),
-                        child: Transform.rotate(
-                          angle: _autoCenter ? rotationRadians : 0,
-                          child: SizedBox.expand(
-                            child: FlutterMap(
-                            mapController: _mapController,
-                            options: MapOptions(
-                              initialCenter: _currentPosition != null
-                                  ? _currentPosition!
-                                  : const LatLng(46.0569, 14.5058),
-                              initialZoom: 20.0,
-                              minZoom: 3.0,
-                              maxZoom: 24.0,
-                              onMapEvent: (event) {
-                                _cameraNotifier.value = event.camera;
-                                _lastKnownZoom = event.camera.zoom;
-                              },
-                            ),
-                            children: [
-                              tileProviders?.getTileLayer(withGridOverlay: true) ?? TileLayer(
-                                urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                maxZoom: 18,
-                              ),
-                              ValueListenableBuilder<MapCamera?>(
-                                valueListenable: _cameraNotifier,
-                                builder: (context, camera, _) {
-                                  final double zoom = camera?.zoom ?? _lastKnownZoom;
-                                  _lastKnownZoom = zoom;
+              InlineProgress(
+                progress: overall,
+                rows: 3,
+                cols: 5,
+                color: scheme.primary,
+                backgroundColor:
+                    scheme.surfaceContainerHighest.withValues(alpha: 0.4),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Discovery path',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                    Text(
+                      '${(overall * 100).round()}% complete',
+                      style: GoogleFonts.outfit(
+                        color: scheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: _isDiscoveryExpanded ? 'Collapse' : 'Expand',
+                onPressed: () => setState(
+                    () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
+                icon: Icon(
+                  _isDiscoveryExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                ),
+              ),
+            ],
+          ),
+          AnimatedCrossFade(
+            crossFadeState:
+                showTasks ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+            duration: const Duration(milliseconds: 200),
+            firstChild: Column(
+              children: [
+                const SizedBox(height: 12),
+                for (final progress in tasksToRender)
+                  _buildTaskProgressRow(progress),
+              ],
+            ),
+            secondChild: const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
 
-                                  final double artMarkerSize = _computeArtMarkerSize(zoom);
-                                  final double artMarkerHeight = artMarkerSize * 1.35;
-                                  final double artworkMarkerSize = _computeArtworkMarkerSize(zoom);
-                                  final double artworkHaloSize = artworkMarkerSize * 1.4;
-                                  final double userMarkerSize = _computeUserMarkerSize(zoom);
-                                  const Distance distanceCalculator = Distance();
+  Widget _buildTaskProgressRow(TaskProgress progress) {
+    final task = TaskService().getTaskById(progress.taskId);
+    if (task == null) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final pct = progress.progressPercentage;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: task.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(task.icon, color: task.color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  task.name,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 6,
+                    backgroundColor: scheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(task.color),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '${(pct * 100).round()}%',
+            style: GoogleFonts.outfit(
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                                  return MarkerLayer(
-                                    markers: [
-                                      if (_currentPosition != null)
-                                        Marker(
-                                          point: _currentPosition!,
-                                          alignment: Alignment.bottomCenter,
-                                          width: userMarkerSize,
-                                          height: userMarkerSize,
-                                          child: GestureDetector(
-                                            onTap: _handleCurrentLocationTap,
-                                            child: Container(
-                                              width: userMarkerSize,
-                                              height: userMarkerSize,
-                                              decoration: BoxDecoration(
-                                                shape: BoxShape.circle,
-                                                gradient: RadialGradient(
-                                                  colors: [
-                                                    Theme.of(context).colorScheme.primary.withValues(alpha: 0.85),
-                                                    Theme.of(context).colorScheme.primary,
-                                                  ],
-                                                ),
-                                                border: Border.all(
-                                                  color: Colors.white,
-                                                  width: math.max(1.8, userMarkerSize * 0.18),
-                                                ),
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withValues(alpha: 0.3),
-                                                    blurRadius: userMarkerSize * 0.6,
-                                                    offset: Offset(0, userMarkerSize * 0.22),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Container(
-                                                margin: EdgeInsets.all(userMarkerSize * 0.28),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ...artworkProvider.artworks.map((artwork) {
-                                        double distance = 0;
-                                        bool isNearby = false;
+  Widget _buildPrimaryControls(ThemeData theme) {
+    return Positioned(
+      right: 16,
+      bottom: 150,
+      child: Column(
+        children: [
+          _MapIconButton(
+            icon: Icons.my_location,
+            tooltip: 'Center on me',
+            active: _autoFollow,
+            onTap: _currentPosition == null
+                ? null
+                : () {
+                    setState(() => _autoFollow = true);
+                    _mapController.move(
+                      _currentPosition!,
+                      math.max(_lastZoom, 16),
+                    );
+                  },
+          ),
+          const SizedBox(height: 12),
+          _MapIconButton(
+            icon: Icons.grid_view,
+            tooltip: _showMapGrid ? 'Hide map grid' : 'Show map grid',
+            active: _showMapGrid,
+            onTap: () => setState(() => _showMapGrid = !_showMapGrid),
+          ),
+          const SizedBox(height: 12),
+          _MapIconButton(
+            icon: Icons.add_location_alt,
+            tooltip: 'Add AR marker',
+            onTap: _showMarkerCreationDialog,
+          ),
+        ],
+      ),
+    );
+  }
 
-                                        if (_currentPosition != null) {
-                                          distance = distanceCalculator.as(
-                                            LengthUnit.Meter,
-                                            _currentPosition!,
-                                            artwork.position,
-                                          );
-                                          isNearby = distance < 50;
-                                        }
-
-                                        final bool isDiscovered = artwork.status == ArtworkStatus.discovered;
-                                        final Color rarityColor = Color(Artwork.getRarityColor(artwork.rarity));
-                                        final double badgeSize = math.max(16.0, artworkMarkerSize * 0.34);
-
-                                        return Marker(
-                                          point: artwork.position,
-                                          alignment: Alignment.bottomCenter,
-                                          width: artworkHaloSize,
-                                          height: artworkHaloSize,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              if (_currentPosition != null && isNearby && !isDiscovered) {
-                                                _markAsDiscoveredFromArtwork(artwork);
-                                              } else {
-                                                Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-                                                  ),
-                                                );
-                                              }
-                                            },
-                                            child: SizedBox(
-                                              width: artworkHaloSize,
-                                              height: artworkHaloSize,
-                                              child: Stack(
-                                                clipBehavior: Clip.none,
-                                                alignment: Alignment.center,
-                                                children: [
-                                                  if (isNearby && !isDiscovered)
-                                                    Container(
-                                                      width: artworkHaloSize,
-                                                      height: artworkHaloSize,
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        color: rarityColor.withValues(alpha: 0.2),
-                                                      ),
-                                                    ),
-                                                  Container(
-                                                    width: artworkMarkerSize,
-                                                    height: artworkMarkerSize,
-                                                    decoration: BoxDecoration(
-                                                      shape: BoxShape.circle,
-                                                      gradient: LinearGradient(
-                                                        colors: [
-                                                          isDiscovered
-                                                              ? Theme.of(context).colorScheme.secondary
-                                                              : rarityColor.withValues(alpha: 0.95),
-                                                          isDiscovered
-                                                              ? Theme.of(context).colorScheme.secondaryContainer
-                                                              : rarityColor,
-                                                        ],
-                                                        begin: Alignment.topCenter,
-                                                        end: Alignment.bottomCenter,
-                                                      ),
-                                                      border: Border.all(
-                                                        color: Colors.white,
-                                                        width: math.max(2.0, artworkMarkerSize * 0.12),
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black.withValues(alpha: 0.28),
-                                                          blurRadius: artworkMarkerSize * 0.45,
-                                                          offset: Offset(0, artworkMarkerSize * 0.24),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Icon(
-                                                      isDiscovered
-                                                          ? Icons.check
-                                                          : (artwork.arEnabled
-                                                              ? Icons.view_in_ar
-                                                              : Icons.palette),
-                                                      color: Colors.white,
-                                                      size: artworkMarkerSize * 0.52,
-                                                    ),
-                                                  ),
-                                                  if (!isDiscovered)
-                                                    Positioned(
-                                                      top: -badgeSize * 0.35,
-                                                      right: -badgeSize * 0.2,
-                                                      child: Container(
-                                                        width: badgeSize,
-                                                        height: badgeSize,
-                                                        decoration: BoxDecoration(
-                                                          color: Theme.of(context).colorScheme.secondary,
-                                                          shape: BoxShape.circle,
-                                                          boxShadow: [
-                                                            BoxShadow(
-                                                              color: Colors.black.withValues(alpha: 0.22),
-                                                              blurRadius: badgeSize * 0.6,
-                                                            ),
-                                                          ],
-                                                        ),
-                                                        child: Icon(
-                                                          Icons.star,
-                                                          color: Colors.white,
-                                                          size: badgeSize * 0.6,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                      ..._artMarkers.map((artMarker) {
-                                        double distance = 0;
-                                        bool isNearby = false;
-
-                                        if (_currentPosition != null) {
-                                          distance = distanceCalculator.as(
-                                            LengthUnit.Meter,
-                                            _currentPosition!,
-                                            artMarker.position,
-                                          );
-                                          isNearby = distance < artMarker.activationRadius;
-                                        }
-
-                                        return Marker(
-                                          point: artMarker.position,
-                                          alignment: Alignment.bottomCenter,
-                                          width: artMarkerSize,
-                                          height: artMarkerHeight,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              setState(() {
-                                                _selectedArtMarker = artMarker;
-                                              });
-                                              _showArtMarkerDialog(artMarker);
-                                            },
-                                            child: ArtMarkerCube(
-                                              marker: artMarker,
-                                              baseColor: _resolveArtMarkerColor(artMarker, themeProvider),
-                                              icon: _resolveArtMarkerIcon(artMarker.type),
-                                              size: artMarkerSize,
-                                              glow: isNearby || _selectedArtMarker?.id == artMarker.id,
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
+  Widget _buildBottomSheet(
+    ThemeData theme,
+    List<Artwork> artworks,
+    double discoveryProgress,
+    bool isLoading,
+  ) {
+    final scheme = theme.colorScheme;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: DraggableScrollableSheet(
+        controller: _sheetController,
+        initialChildSize: 0.1,
+        minChildSize: 0.1,
+        maxChildSize: 0.85,
+        snap: true,
+        snapSizes: const [0.2, 0.45, 0.85],
+        builder: (context, scrollController) {
+          return Container(
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.18),
+                  blurRadius: 24,
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            child: CustomScrollView(
+              controller: scrollController,
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 48,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: scheme.outlineVariant,
+                              borderRadius: BorderRadius.circular(2),
                             ),
                           ),
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Nearby art',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  '${artworks.length} results · ${(discoveryProgress * 100).round()}% discovered',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: scheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              tooltip: _useGridLayout
+                                  ? 'Show list view'
+                                  : 'Show grid view',
+                              onPressed: () => setState(
+                                  () => _useGridLayout = !_useGridLayout),
+                              icon: Icon(
+                                _useGridLayout
+                                    ? Icons.view_list
+                                    : Icons.grid_view,
+                              ),
+                            ),
+                            PopupMenuButton<_ArtworkSort>(
+                              tooltip: 'Sort results',
+                              onSelected: (value) =>
+                                  setState(() => _sort = value),
+                              itemBuilder: (context) => [
+                                for (final sort in _ArtworkSort.values)
+                                  PopupMenuItem(
+                                    value: sort,
+                                    child: Row(
+                                      children: [
+                                        Expanded(child: Text(sort.label)),
+                                        if (sort == _sort)
+                                          Icon(Icons.check,
+                                              color: scheme.primary),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                              icon: const Icon(Icons.sort),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
                   ),
                 ),
-              ),
-
-              // Search Bar (moved to top)
-              _buildSearchBar(),
-
-              // Filter and Sort Bar
-              if (_isSearching) _buildFilterBar(),
-
-              // Art Discovery Progress (below search)
-              _buildArtDiscoveryProgress(),
-
-              // Map Controls
-              _buildMapControls(),
-
-              // Bottom Sheet with Artwork List
-              _buildBottomSheet(sortedArt),
-            ],
+                if (isLoading)
+                  const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (artworks.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: _buildEmptyState(theme),
+                  )
+                else if (_useGridLayout)
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    sliver: SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final artwork = artworks[index];
+                          return _ArtworkListTile(
+                            artwork: artwork,
+                            currentPosition: _currentPosition,
+                            onOpenDetails: () => _openArtwork(artwork),
+                            onMarkDiscovered: () => _markAsDiscovered(artwork),
+                            dense: true,
+                          );
+                        },
+                        childCount: artworks.length,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        childAspectRatio: 0.92,
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final artwork = artworks[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _ArtworkListTile(
+                              artwork: artwork,
+                              currentPosition: _currentPosition,
+                              onOpenDetails: () => _openArtwork(artwork),
+                              onMarkDiscovered: () =>
+                                  _markAsDiscovered(artwork),
+                            ),
+                          );
+                        },
+                        childCount: artworks.length,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildSearchBar() {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 16,
-      left: 16,
-      right: 16,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: _isSearching ? 56 : 48,
-        child: Row(
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(_isSearching ? 28 : 24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  decoration: InputDecoration(
-                    hintText: 'Search artworks, artists...',
-                    hintStyle: GoogleFonts.outfit(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    prefixIcon: Icon(
-                      Icons.search,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    suffixIcon: _isSearching ? IconButton(
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() {
-                          _searchQuery = '';
-                          _isSearching = false;
-                        });
-                        _searchFocusNode.unfocus();
-                      },
-                      icon: Icon(
-                        Icons.clear,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ) : null,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                      _isSearching = value.isNotEmpty;
-                    });
-                    if (value.trim().isNotEmpty) _performProfileSearch(value.trim());
-                  },
-                  onTap: () {
-                    setState(() {
-                      _isSearching = true;
-                    });
-                  },
-                ),
-              ),
-            ),
-            if (_isSearching) ...[
-              const SizedBox(width: 8),
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    setState(() {
-                      _searchQuery = '';
-                      _isSearching = false;
-                    });
-                    _searchFocusNode.unfocus();
-                  },
-                  icon: const Icon(
-                    Icons.close,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterBar() {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 80,
-      left: 16,
-      right: 16,
+  Widget _buildEmptyState(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        height: 40,
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          children: [
-            _buildFilterChip('All', _selectedFilter == 'All', () {
-              setState(() => _selectedFilter = 'All');
-            }),
-            const SizedBox(width: 8),
-            _buildFilterChip('AR Enabled', _selectedFilter == 'AR Enabled', () {
-              setState(() => _selectedFilter = 'AR Enabled');
-            }),
-            const SizedBox(width: 8),
-            _buildFilterChip('Common', _selectedFilter == 'Common', () {
-              setState(() => _selectedFilter = 'Common');
-            }),
-            const SizedBox(width: 8),
-            _buildFilterChip('Rare', _selectedFilter == 'Rare', () {
-              setState(() => _selectedFilter = 'Rare');
-            }),
-            const SizedBox(width: 8),
-            _buildFilterChip('Epic', _selectedFilter == 'Epic', () {
-              setState(() => _selectedFilter = 'Epic');
-            }),
-            const SizedBox(width: 8),
-            _buildFilterChip('Legendary', _selectedFilter == 'Legendary', () {
-              setState(() => _selectedFilter = 'Legendary');
-            }),
-          ],
-        ),
-      ),
-          // Inline profile suggestions under search bar (constrained height)
-          if (_isSearching && _searchQuery.isNotEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: SizedBox(
-                height: 200,
-                child: _isProfileSearchLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        itemCount: _profileSearchResults.length,
-                        itemBuilder: (ctx, idx) {
-                          final s = _profileSearchResults[idx];
-                          final username = s['username'] ?? s['wallet_address'] ?? s['wallet'];
-                          final display = s['displayName'] ?? s['display_name'] ?? '';
-                          final avatar = s['avatar'] ?? s['avatar_url'] ?? s['profileImageUrl'] ?? '';
-                          final walletAddr = (s['wallet_address'] ?? s['wallet'] ?? s['walletAddress'])?.toString() ?? '';
-                          final title = (display ?? username)?.toString();
-                          final subtitle = walletAddr.isNotEmpty ? walletAddr : (username ?? '').toString();
-                          return ListTile(
-                            leading: AvatarWidget(avatarUrl: (avatar != null && avatar.toString().isNotEmpty) ? avatar.toString() : null, wallet: subtitle, radius: 18, allowFabricatedFallback: false),
-                            title: Text(title ?? ''),
-                            subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-                            onTap: () {
-                              if (walletAddr.isNotEmpty) {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileScreen(userId: walletAddr)));
-                              }
-                            },
-                          );
-                        },
-                      ),
-              ),
+          Icon(Icons.image_not_supported,
+              size: 48, color: scheme.onSurfaceVariant),
+          const SizedBox(height: 12),
+          Text(
+            'No artworks nearby yet',
+            style:
+                GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Try zooming out, switching filters, or move closer to an art cluster.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.outfit(
+              color: scheme.onSurfaceVariant,
             ),
+          ),
         ],
       ),
     );
   }
 
-  Future<void> _performProfileSearch(String q) async {
-    try {
-      setState(() => _isProfileSearchLoading = true);
-      final resp = await BackendApiService().search(query: q, type: 'profiles', limit: 8);
-      final list = <Map<String, dynamic>>[];
-      if (resp['success'] == true) {
-        if (resp['results'] is Map<String, dynamic>) {
-          final data = resp['results'] as Map<String, dynamic>;
-          final profiles = (data['profiles'] as List<dynamic>?) ?? (data['results'] as List<dynamic>?) ?? [];
-          for (final d in profiles) {
-            try { list.add(d as Map<String, dynamic>); } catch (_) {}
-          }
-        } else if (resp['data'] is List) {
-          for (final d in resp['data']) {
-            try { list.add(d as Map<String, dynamic>); } catch (_) {}
-          }
-        } else if (resp['data'] is Map<String, dynamic>) {
-          final data = resp['data'] as Map<String, dynamic>;
-          final profiles = (data['profiles'] as List<dynamic>?) ?? [];
-          for (final d in profiles) {
-            try { list.add(d as Map<String, dynamic>); } catch (_) {}
-          }
+  List<Artwork> _filterArtworks(List<Artwork> artworks) {
+    var filtered = List<Artwork>.from(artworks);
+    final query = _searchQuery.trim().toLowerCase();
+
+    if (query.isNotEmpty) {
+      filtered = filtered.where((artwork) {
+        return artwork.title.toLowerCase().contains(query) ||
+            artwork.artist.toLowerCase().contains(query) ||
+            artwork.category.toLowerCase().contains(query) ||
+            artwork.tags.any((tag) => tag.toLowerCase().contains(query));
+      }).toList();
+    }
+
+    switch (_artworkFilter) {
+      case 'nearby':
+        if (_currentPosition != null) {
+          filtered = filtered
+              .where((artwork) =>
+                  artwork.getDistanceFrom(_currentPosition!) <= 1000)
+              .toList();
         }
-      }
-      if (!mounted) return;
-      setState(() {
-        _profileSearchResults = list;
-        _isProfileSearchLoading = false;
-      });
-    } catch (e) {
-      debugPrint('MapScreen profile search failed: $e');
-      if (mounted) setState(() => _isProfileSearchLoading = false);
-    }
-  }
-
-  Widget _buildFilterChip(String label, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected 
-              ? Theme.of(context).colorScheme.primary
-              : Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected 
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: isSelected 
-                ? Colors.white
-                : Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomSheet(List<Artwork> sortedArt) {
-    return DraggableScrollableSheet(
-      controller: _sheetController,
-      initialChildSize: 0.15,
-      minChildSize: 0.15,
-      maxChildSize: 0.8,
-      snapSizes: const [0.15, 0.4, 0.8],
-      snap: true,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 16,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: CustomScrollView(
-            controller: scrollController,
-            slivers: [
-              // Drag Handle and Header
-              SliverToBoxAdapter(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  width: double.infinity,
-                  child: Column(
-                    children: [
-                      // Drag Handle
-                      Container(
-                        width: 60,
-                        height: 24,
-                        alignment: Alignment.center,
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // Header Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Nearby Art',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
-                                  color: Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              Text(
-                                '${sortedArt.length} artworks found',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 14,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _showListView = !_showListView;
-                                  });
-                                },
-                                icon: Icon(
-                                  _showListView ? Icons.grid_view_outlined : Icons.list_alt_outlined,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                              PopupMenuButton<String>(
-                                icon: Icon(
-                                  Icons.sort,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                onSelected: (value) {
-                                  setState(() {
-                                    _sortBy = value;
-                                  });
-                                },
-                                itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    value: 'distance',
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.near_me, size: 18),
-                                        const SizedBox(width: 8),
-                                        const Text('Distance'),
-                                        if (_sortBy == 'distance') ...[
-                                          const Spacer(),
-                                          Icon(Icons.check, color: Theme.of(context).colorScheme.primary),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'rarity',
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.diamond, size: 18),
-                                        const SizedBox(width: 8),
-                                        const Text('Rarity'),
-                                        if (_sortBy == 'rarity') ...[
-                                          const Spacer(),
-                                          Icon(Icons.check, color: Theme.of(context).colorScheme.primary),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'newest',
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.access_time, size: 18),
-                                        const SizedBox(width: 8),
-                                        const Text('Newest'),
-                                        if (_sortBy == 'newest') ...[
-                                          const Spacer(),
-                                          Icon(Icons.check, color: Theme.of(context).colorScheme.primary),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  PopupMenuItem(
-                                    value: 'name',
-                                    child: Row(
-                                      children: [
-                                        const Icon(Icons.sort_by_alpha, size: 18),
-                                        const SizedBox(width: 8),
-                                        const Text('Name'),
-                                        if (_sortBy == 'name') ...[
-                                          const Spacer(),
-                                          Icon(Icons.check, color: Theme.of(context).colorScheme.primary),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              // Content Area
-              sortedArt.isEmpty
-                  ? SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Container(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.search_off,
-                              size: 64,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No artworks found',
-                              style: GoogleFonts.outfit(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _isSearching
-                                  ? 'Try adjusting your search or filters'
-                                  : 'Move around to discover art near you',
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
-                  : SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      sliver: SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final artwork = sortedArt[index];
-                            return _buildArtworkListItem(artwork);
-                          },
-                          childCount: sortedArt.length,
-                        ),
-                      ),
-                    ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildArtworkListItem(Artwork artwork) {
-    double distance = 0;
-    if (_currentPosition != null) {
-      const Distance distanceCalculator = Distance();
-      distance = distanceCalculator.as(LengthUnit.Meter,
-        _currentPosition!,
-        artwork.position,
-      );
+        break;
+      case 'discovered':
+        filtered = filtered.where((artwork) => artwork.isDiscovered).toList();
+        break;
+      case 'undiscovered':
+        filtered = filtered.where((artwork) => !artwork.isDiscovered).toList();
+        break;
+      case 'ar':
+        filtered = filtered.where((artwork) => artwork.arEnabled).toList();
+        break;
+      case 'favorites':
+        filtered = filtered
+            .where((artwork) =>
+                artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+            .toList();
+        break;
+      case 'all':
+      default:
+        break;
     }
 
-    return GestureDetector(
-      onTap: () {
-        // Track artwork visit and increment view count
-        context.read<ArtworkProvider>().incrementViewCount(artwork.id);
-        
-        // Navigate to artwork details
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Row(
-        children: [
-          // Artwork Icon
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Color(Artwork.getRarityColor(artwork.rarity)),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              artwork.arEnabled ? Icons.view_in_ar : Icons.palette,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Artwork Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        artwork.title,
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        artwork.rarity.name.toUpperCase(),
-                        style: GoogleFonts.outfit(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Color(Artwork.getRarityColor(artwork.rarity)),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'by ${artwork.artist}',
-                  style: GoogleFonts.outfit(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on,
-                      size: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${distance.round()}m away',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.monetization_on_outlined,
-                      size: 12,
-                      color: Colors.amber,
-                    ),
-                    const SizedBox(width: 2),
-                    Text(
-                      '${artwork.rewards} KUB8',
-                      style: GoogleFonts.outfit(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.amber,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Action Buttons
-          Column(
-            children: [
-              if (artwork.arEnabled)
-                IconButton(
-                  onPressed: () => Navigator.pushNamed(context, '/ar'),
-                  icon: const Icon(Icons.view_in_ar, size: 20),
-                  tooltip: 'View in AR',
-                  style: IconButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                    foregroundColor: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.info_outline, size: 20),
-                tooltip: 'Details',
-                style: IconButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-                  foregroundColor: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    ),
-  );
+    return filtered;
   }
 
-  Widget _buildMapControls() {
-    return Positioned(
-      bottom: 140,
-      right: 16,
-      child: Column(
-        children: [
-          // Zoom In
-          Container(
-            width: 48,
-            height: 48,
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: () {
-                _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1);
-              },
-              icon: const Icon(Icons.add),
-            ),
-          ),
+  List<Artwork> _sortArtworks(List<Artwork> artworks) {
+    final sorted = List<Artwork>.from(artworks);
+    switch (_sort) {
+      case _ArtworkSort.nearest:
+        if (_currentPosition != null) {
+          sorted.sort((a, b) {
+            final distanceA = a.getDistanceFrom(_currentPosition!);
+            final distanceB = b.getDistanceFrom(_currentPosition!);
+            return distanceA.compareTo(distanceB);
+          });
+        }
+        break;
+      case _ArtworkSort.newest:
+        sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case _ArtworkSort.rarity:
+        const rarityRank = {
+          ArtworkRarity.legendary: 3,
+          ArtworkRarity.epic: 2,
+          ArtworkRarity.rare: 1,
+          ArtworkRarity.common: 0,
+        };
+        sorted.sort((a, b) {
+          final aRank = rarityRank[a.rarity] ?? 0;
+          final bRank = rarityRank[b.rarity] ?? 0;
+          return bRank.compareTo(aRank);
+        });
+        break;
+      case _ArtworkSort.rewards:
+        sorted.sort((a, b) => b.rewards.compareTo(a.rewards));
+        break;
+      case _ArtworkSort.popular:
+        sorted.sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
+        break;
+    }
+    return sorted;
+  }
 
-          // Zoom Out
-          Container(
-            width: 48,
-            height: 48,
-            margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: () {
-                _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1);
-              },
-              icon: const Icon(Icons.remove),
-            ),
-          ),
-
-          // Center on Location
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: _autoCenter 
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: () {
-                setState(() {
-                  _autoCenter = !_autoCenter;
-                });
-                if (_autoCenter && _currentPosition != null) {
-                  _getLocation();
-                  _mapController.move(
-                    _currentPosition!,
-                    _mapController.camera.zoom,
-                  );
-                }
-              },
-              icon: Icon(
-                _autoCenter ? Icons.my_location : Icons.location_searching,
-                color: _autoCenter ? Colors.white : null,
-              ),
-            ),
-          ),
-        ],
+  Future<void> _openArtwork(Artwork artwork) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArtDetailScreen(artworkId: artwork.id),
       ),
     );
   }
 
-  Widget _buildArtDiscoveryProgress() {
-    return Consumer<TaskProvider>(
-      builder: (context, taskProvider, child) {
-        final activeProgress = taskProvider.getActiveTaskProgress();
-        final overallProgress = taskProvider.getOverallProgress();
-        final completedCount = taskProvider.getCompletedTasksCount();
-        final totalCount = taskProvider.getTotalAvailableTasksCount();
-
-        return Positioned(
-          top: MediaQuery.of(context).padding.top + (_isSearching ? 130 : 80),
-          left: 16,
-          right: 16,
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _isDiscoveryExpanded = !_isDiscoveryExpanded;
-              });
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Header (not draggable)
-                  Row(
-                    children: [
-                      SizedBox(width: 24, height: 24, child: InlineProgress(progress: overallProgress, rows: 3, cols: 3, tileSize: 6.0, gap: 2.0, color: Theme.of(context).colorScheme.primary, backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.04), shape: BoxShape.circle)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Art Discovery Progress',
-                              style: GoogleFonts.outfit(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                              ),
-                            ),
-                            Text(
-                              '$completedCount/$totalCount tasks completed',
-                              style: GoogleFonts.outfit(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        _isDiscoveryExpanded ? Icons.expand_less : Icons.expand_more,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ],
-                  ),
-                  
-                  // Expandable tasks list (draggable content)
-                  if (_isDiscoveryExpanded) ...[
-                    const SizedBox(height: 12),
-                    GestureDetector(
-                      onPanStart: (details) {
-                        // Handle drag start if needed
-                      },
-                      onPanEnd: (details) {
-                        // Handle drag end if needed
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Column(
-                          children: activeProgress.map((progress) {
-                            final task = TaskService().getTaskById(progress.taskId);
-                            if (task == null) return const SizedBox.shrink();
-                            
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    decoration: BoxDecoration(
-                                      color: task.color.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      task.icon,
-                                      color: task.color,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          task.name,
-                                          style: GoogleFonts.outfit(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                            color: Theme.of(context).colorScheme.onSurface,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        SizedBox(
-                                          height: 6,
-                                          child: InlineProgress(
-                                            progress: progress.progressPercentage,
-                                            rows: 1,
-                                            cols: 5,
-                                            tileSize: 6.0,
-                                            gap: 2.0,
-                                            color: task.color,
-                                            backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.02),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        '${progress.completed}/${progress.total}',
-                                        style: GoogleFonts.outfit(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: task.color,
-                                        ),
-                                      ),
-                                      if (progress.isCompleted)
-                                        const Icon(
-                                          Icons.check_circle,
-                                          color: Colors.green,
-                                          size: 16,
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-                    
-                    // Debug buttons for testing (remove in production)
-                    if (_isDiscoveryExpanded) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () async {
-                              final taskProvider = context.read<TaskProvider>();
-                              taskProvider.incrementAchievementProgress('gallery_explorer');
-                              
-                              // Trigger new achievement system
-                              final prefs = await SharedPreferences.getInstance();
-                              final userId = prefs.getString('user_id') ?? 'demo_user';
-                              await AchievementService().checkAchievements(
-                                userId: userId,
-                                action: 'event_attended',
-                                data: {'eventType': 'gallery'},
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(0, 32),
-                            ),
-                            child: const Text('Visit Museum', style: TextStyle(fontSize: 10)),
-                          ),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final taskProvider = context.read<TaskProvider>();
-                              taskProvider.incrementAchievementProgress('first_favorite');
-                              
-                              // Trigger new achievement system
-                              final prefs = await SharedPreferences.getInstance();
-                              final userId = prefs.getString('user_id') ?? 'demo_user';
-                              await AchievementService().checkAchievements(
-                                userId: userId,
-                                action: 'like_given',
-                                data: {'likeCount': 1},
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.pink,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(0, 32),
-                            ),
-                            child: const Text('Add Favorite', style: TextStyle(fontSize: 10)),
-                          ),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final taskProvider = context.read<TaskProvider>();
-                              taskProvider.incrementAchievementProgress('art_critic');
-                              
-                              // Trigger new achievement system
-                              final prefs = await SharedPreferences.getInstance();
-                              final userId = prefs.getString('user_id') ?? 'demo_user';
-                              await AchievementService().checkAchievements(
-                                userId: userId,
-                                action: 'comment_posted',
-                                data: {'commentCount': 1},
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(0, 32),
-                            ),
-                            child: const Text('Review Art', style: TextStyle(fontSize: 10)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _proximityCheckTimer?.cancel();
-    _compassSubscription?.cancel();
-    _mobileLocationSubscription?.cancel();
-    _webPositionSubscription?.cancel();
-    _animationController.dispose();
-    _cameraNotifier.dispose();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    _sheetController.dispose();
-    _arIntegrationService.dispose();
-    WidgetsBinding.instance.removeObserver(this);
-    tileProviders?.dispose();
-    super.dispose();
+  String _markerTypeLabel(ArtMarkerType type) {
+    switch (type) {
+      case ArtMarkerType.artwork:
+        return 'Artworks';
+      case ArtMarkerType.institution:
+        return 'Institutions';
+      case ArtMarkerType.event:
+        return 'Events';
+      case ArtMarkerType.residency:
+        return 'Residencies';
+      case ArtMarkerType.drop:
+        return 'Drops';
+      case ArtMarkerType.experience:
+        return 'Experiences';
+      case ArtMarkerType.other:
+        return 'Misc';
+    }
   }
 }
 
+class _SearchSuggestion {
+  final String label;
+  final String type;
+  final String? subtitle;
+  final String? id;
+  final LatLng? position;
 
+  const _SearchSuggestion({
+    required this.label,
+    required this.type,
+    this.subtitle,
+    this.id,
+    this.position,
+  });
 
+  IconData get icon {
+    switch (type) {
+      case 'profile':
+        return Icons.account_circle_outlined;
+      case 'institution':
+        return Icons.museum_outlined;
+      case 'event':
+        return Icons.event_available;
+      case 'marker':
+        return Icons.location_on_outlined;
+      case 'artwork':
+      default:
+        return Icons.auto_awesome;
+    }
+  }
+
+  factory _SearchSuggestion.fromMap(Map<String, dynamic> map) {
+    final lat = map['lat'] ?? map['latitude'];
+    final lng = map['lng'] ?? map['longitude'];
+    LatLng? position;
+    if (lat is num && lng is num) {
+      position = LatLng(lat.toDouble(), lng.toDouble());
+    }
+
+    // Build a friendly label/subtitle: prefer displayName + @username
+    final label = (map['label'] ?? map['displayName'] ?? map['display_name'] ?? map['title'] ?? '').toString();
+    String? subtitle = map['subtitle']?.toString();
+    if ((subtitle == null || subtitle.isEmpty)) {
+      final username = (map['username'] ?? map['handle'])?.toString();
+      final wallet = (map['wallet'] ?? map['walletAddress'] ?? map['wallet_address'])?.toString();
+      if (username != null && username.isNotEmpty) {
+        subtitle = '@$username';
+      } else if (wallet != null && wallet.isNotEmpty) {
+        subtitle = wallet.length > 10 ? '${wallet.substring(0,4)}...${wallet.substring(wallet.length-4)}' : wallet;
+      }
+    }
+
+    return _SearchSuggestion(
+      label: label,
+      type: map['type']?.toString() ?? 'artwork',
+      subtitle: subtitle,
+      id: map['id']?.toString() ?? (map['wallet']?.toString()),
+      position: position,
+    );
+  }
+}
+
+enum _ArtworkSort {
+  nearest('Nearest'),
+  newest('Newest'),
+  rarity('Rarity'),
+  rewards('Highest rewards'),
+  popular('Most viewed');
+
+  const _ArtworkSort(this.label);
+  final String label;
+}
+
+class _MapIconButton extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback? onTap;
+  final bool active;
+
+  const _MapIconButton({
+    required this.icon,
+    required this.tooltip,
+    this.onTap,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final background = active ? scheme.primary : scheme.surface;
+    final iconColor = active ? scheme.onPrimary : scheme.onSurface;
+    final borderColor = active ? scheme.primary : scheme.outlineVariant;
+
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        shape: const CircleBorder(),
+        color: background,
+        elevation: active ? 6 : 2,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: borderColor.withValues(alpha: 0.6)),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ArtworkListTile extends StatelessWidget {
+  final Artwork artwork;
+  final LatLng? currentPosition;
+  final VoidCallback onOpenDetails;
+  final VoidCallback onMarkDiscovered;
+  final bool dense;
+
+  const _ArtworkListTile({
+    required this.artwork,
+    required this.currentPosition,
+    required this.onOpenDetails,
+    required this.onMarkDiscovered,
+    this.dense = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final borderRadius = BorderRadius.circular(22);
+    final previewHeight = dense ? 120.0 : 150.0;
+    final distanceLabel = _distanceLabel();
+    final isDiscovered = artwork.isDiscovered;
+
+    return Material(
+      color: scheme.surfaceContainerHighest,
+      borderRadius: borderRadius,
+      child: InkWell(
+        borderRadius: borderRadius,
+        onTap: onOpenDetails,
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _ArtworkPreview(
+                imageUrl: artwork.imageUrl,
+                height: previewHeight,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                artwork.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.outfit(
+                  fontSize: dense ? 15 : 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'by ${artwork.artist}',
+                style: GoogleFonts.outfit(
+                  color: scheme.onSurfaceVariant,
+                  fontSize: dense ? 12 : 13,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: [
+                  _InfoChip(
+                    icon: Icons.auto_awesome,
+                    label: artwork.rarity.name.toUpperCase(),
+                    backgroundColor:
+                        Color(Artwork.getRarityColor(artwork.rarity))
+                            .withValues(alpha: 0.18),
+                    foregroundColor:
+                        Color(Artwork.getRarityColor(artwork.rarity)),
+                  ),
+                  if (artwork.arEnabled)
+                    _InfoChip(
+                      icon: Icons.view_in_ar,
+                      label: 'AR ready',
+                      backgroundColor:
+                          scheme.primaryContainer.withValues(alpha: 0.35),
+                      foregroundColor: scheme.primary,
+                    ),
+                  if (distanceLabel != null)
+                    _InfoChip(
+                      icon: Icons.place_outlined,
+                      label: distanceLabel,
+                      backgroundColor:
+                          scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      foregroundColor: scheme.onSurfaceVariant,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.token, size: 18, color: scheme.primary),
+                  const SizedBox(width: 4),
+                  Text(
+                    '+${artwork.rewards} KUB8',
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      color: scheme.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(Icons.visibility,
+                      size: 18, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${artwork.viewsCount}',
+                    style: GoogleFonts.outfit(
+                      color: scheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonal(
+                      onPressed: onOpenDetails,
+                      child: const Text('View details'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton.filledTonal(
+                    tooltip: isDiscovered
+                        ? 'Already discovered'
+                        : 'Mark as discovered',
+                    onPressed: isDiscovered ? null : onMarkDiscovered,
+                    icon: Icon(
+                      isDiscovered ? Icons.check_circle : Icons.flag_outlined,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String? _distanceLabel() {
+    if (currentPosition == null) return null;
+    final meters = artwork.getDistanceFrom(currentPosition!);
+    if (meters >= 1000) {
+      final km = meters / 1000;
+      return '${km.toStringAsFixed(km >= 10 ? 0 : 1)} km';
+    }
+    return '${meters.round()} m';
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final Color foregroundColor;
+
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.foregroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: foregroundColor),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: foregroundColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtworkPreview extends StatelessWidget {
+  final String? imageUrl;
+  final double height;
+  final BorderRadius borderRadius;
+
+  const _ArtworkPreview({
+    required this.imageUrl,
+    required this.height,
+    required this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    if (imageUrl == null || imageUrl!.isEmpty) {
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: borderRadius,
+          color: scheme.surfaceContainerHighest,
+        ),
+        alignment: Alignment.center,
+        child: Icon(Icons.image_outlined,
+            size: 28, color: scheme.onSurfaceVariant),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: borderRadius,
+      child: Image.network(
+        imageUrl!,
+        height: height,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          height: height,
+          color: scheme.surfaceContainerHighest,
+          alignment: Alignment.center,
+          child:
+              Icon(Icons.broken_image_outlined, color: scheme.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+}

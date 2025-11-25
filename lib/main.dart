@@ -8,6 +8,7 @@ import 'providers/chat_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/web3provider.dart';
 import 'providers/themeprovider.dart';
+import 'providers/tile_providers.dart';
 import 'providers/navigation_provider.dart';
 import 'providers/artwork_provider.dart';
 import 'providers/institution_provider.dart';
@@ -208,6 +209,13 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider(create: (context) => InstitutionProvider()),
         ChangeNotifierProvider(create: (context) => DAOProvider()),
         ChangeNotifierProvider(create: (context) => WalletProvider()),
+        // Provide TileProviders so tiles + grid overlay are centralized and
+        // respond to ThemeProvider updates. Dispose manually when the provider
+        // tree is torn down.
+        Provider<TileProviders>(
+          create: (context) => TileProviders(context.read<ThemeProvider>()),
+          dispose: (context, value) => value.dispose(),
+        ),
       ],
       child: const ArtKubus(),
       ),

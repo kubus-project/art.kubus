@@ -439,6 +439,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         builder: (context, constraints) {
           final profileProvider = Provider.of<ProfileProvider>(context);
           final isSmallScreen = constraints.maxWidth < 360;
+          final walletAddress = profileProvider.currentUser?.walletAddress;
           
           return Container(
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
@@ -463,13 +464,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                       label: 'Followers',
                       value: profileProvider.formattedFollowersCount,
                       isCompact: isSmallScreen,
-                      onTap: () => ProfileScreenMethods.showFollowers(context),
+                      onTap: () => ProfileScreenMethods.showFollowers(
+                        context,
+                        walletAddress: walletAddress,
+                      ),
                     ),
                     _buildInlineStat(
                       label: 'Following',
                       value: profileProvider.formattedFollowingCount,
                       isCompact: isSmallScreen,
-                      onTap: () => ProfileScreenMethods.showFollowing(context),
+                      onTap: () => ProfileScreenMethods.showFollowing(
+                        context,
+                        walletAddress: walletAddress,
+                      ),
                     ),
                   ],
                 ),
@@ -942,10 +949,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         _artistDataLoaded = true;
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _artistDataLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _artistDataLoading = false;
+        });
+      }
     }
   }
 
@@ -2198,7 +2206,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              '© 2024 Kubus Project',
+              '© 2024 kubus Project',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),

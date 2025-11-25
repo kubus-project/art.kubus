@@ -1,7 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
+import '../services/ar_content_service.dart';
+import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
 import 'task_provider.dart';
 import 'saved_items_provider.dart';
@@ -14,6 +18,7 @@ class ArtworkProvider extends ChangeNotifier {
   TaskProvider? _taskProvider;
   SavedItemsProvider? _savedItemsProvider;
   bool _useMockData = false;
+  final BackendApiService _backendApi = BackendApiService();
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
@@ -97,6 +102,91 @@ class ArtworkProvider extends ChangeNotifier {
       _artworks.add(artwork);
     }
     notifyListeners();
+  }
+
+  /// Create a brand-new artwork with optional AR assets
+  Future<Artwork?> createArtwork({
+    required String title,
+    required String description,
+    required LatLng position,
+    required String artistName,
+    required ArtworkRarity rarity,
+    required int rewards,
+    required Uint8List coverImageBytes,
+    required String coverImageFilename,
+    List<String> tags = const [],
+    String category = 'General',
+    bool isPublic = true,
+    bool arEnabled = true,
+    Uint8List? modelBytes,
+    String? modelFilename,
+    double modelScale = 1.0,
+    Map<String, dynamic>? metadata,
+  }) async {
+    if (arEnabled && (modelBytes == null || modelFilename == null)) {
+      throw ArgumentError('AR-enabled artworks require a 3D asset.');
+    }
+
+    const operation = 'create_artwork';
+    _setLoading(operation, true);
+    try {
+      final coverUrl = await ARContentService.uploadToHTTP(
+        coverImageBytes,
+        coverImageFilename,
+        metadata: {
+          'type': 'artwork_cover',
+          'title': title,
+        },
+      );
+
+      String? modelCid;
+      String? modelUrl;
+      if (arEnabled) {
+        final uploadResult = await ARContentService.uploadContent(
+          modelBytes!,
+          modelFilename!,
+          metadata: {
+            'type': 'ar_model',
+            'title': title,
+            'artist': artistName,
+          },
+        );
+        modelCid = uploadResult['cid'];
+        modelUrl = uploadResult['url'];
+      }
+
+      final artwork = Artwork(
+        id: 'artwork_${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        artist: artistName,
+        description: description,
+        imageUrl: coverUrl,
+        position: position,
+        rarity: rarity,
+        status: ArtworkStatus.undiscovered,
+        arEnabled: arEnabled && (modelCid != null || modelUrl != null),
+        rewards: rewards,
+        createdAt: DateTime.now(),
+        arScale: arEnabled ? modelScale : null,
+        model3DCID: modelCid,
+        model3DURL: modelUrl,
+        tags: tags,
+        category: category,
+        metadata: {
+          'isPublic': isPublic,
+          'createdFrom': 'artist_studio',
+          if (metadata != null) ...metadata,
+        },
+      );
+
+      addOrUpdateArtwork(artwork);
+      return artwork;
+    } catch (e) {
+      _setError('Failed to create artwork: $e');
+      return null;
+    } finally {
+      _setLoading(operation, false);
+    }
   }
 
   /// Remove artwork
@@ -347,14 +437,12 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading('load_artworks', true);
     
     try {
-      // Load from API calls
-      final artworks = _loadArtwork();
-      _artworks.clear();
-      _artworks.addAll(artworks as List<Artwork>);
-      
-      // Load some mock comments
-      _loadArtworkComments();
-      
+      final artworks = await _backendApi.getArtworks(limit: 100);
+      _artworks
+        ..clear()
+        ..addAll(artworks);
+      _comments.clear();
+
       notifyListeners();
       await _simulateApiDelay();
     } catch (e) {
@@ -428,12 +516,4 @@ class ArtworkProvider extends ChangeNotifier {
     // In production: Call BackendApiService().likeComment(artworkId, commentId, isLiked)
     await Future.delayed(const Duration(milliseconds: 50));
   }
-}
-
-void _loadArtworkComments() {
-  // Placeholder to load some mock comments for artworks
-}
-  // In production, this would fetch comments from backend API
-void _loadArtwork() {
-  // Placeholder to load some mock comments for artworks
 }

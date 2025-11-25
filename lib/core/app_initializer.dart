@@ -138,8 +138,9 @@ class _AppInitializerState extends State<AppInitializer> {
     if (!mounted) return;
     
     // Navigate based on user state and configuration
-    final shouldSkipOnboarding = userSkipOnboarding && 
-                                 (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
+    final shouldSkipOnboarding = userSkipOnboarding &&
+      hasCompletedOnboarding &&
+      (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
     
     debugPrint('  shouldSkipOnboarding: $shouldSkipOnboarding');
     

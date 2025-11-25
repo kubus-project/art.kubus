@@ -93,15 +93,22 @@ class ActivityNavigation {
       return false;
     }
 
-    if (actionUrl.startsWith('app://')) {
-      return _openAppScheme(navigator, actionUrl, metadata);
+    final trimmed = actionUrl.trim();
+    if (trimmed.isEmpty) {
+      return false;
     }
 
-    if (actionUrl.startsWith('/')) {
-      return _openRelativePath(navigator, actionUrl, metadata);
+    final lower = trimmed.toLowerCase();
+    if (lower.startsWith('app://')) {
+      return _openAppScheme(navigator, trimmed, metadata);
     }
 
-    return false;
+    if (trimmed.startsWith('/')) {
+      return _openRelativePath(navigator, trimmed, metadata);
+    }
+
+    // Support relative paths without a leading slash (e.g. `profile/abc`).
+    return _openRelativePath(navigator, '/$trimmed', metadata);
   }
 
   static Future<bool> _openAppScheme(
@@ -117,8 +124,16 @@ class ActivityNavigation {
     }
 
     final target = uri.host.toLowerCase();
-    final segments = uri.pathSegments;
-    final slug = segments.isNotEmpty ? segments.first : null;
+    final segments = uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+    final slug = segments.isNotEmpty ? segments.last : null;
+
+    // Attempt to normalize to a relative path (e.g. app://community/posts/123 -> /community/posts/123)
+    final host = uri.host;
+    final basePath = host.isEmpty ? uri.path : '/$host${uri.path}';
+    final normalizedPath = uri.hasQuery ? '$basePath?${uri.query}' : basePath;
+    if (await _openRelativePath(navigator, normalizedPath, metadata)) {
+      return true;
+    }
 
     switch (target) {
       case 'posts':
@@ -170,29 +185,71 @@ class ActivityNavigation {
     String url,
     Map<String, dynamic> metadata,
   ) async {
-    final trimmed = url.startsWith('/') ? url.substring(1) : url;
-    final parts = trimmed.split('?').first.split('/').where((segment) => segment.isNotEmpty).toList();
-    if (parts.isEmpty) return false;
+    Uri? uri;
+    try {
+      final normalized = url.startsWith('/') ? url : '/$url';
+      uri = Uri.parse(normalized);
+    } catch (_) {
+      return false;
+    }
 
-    final root = parts.first.toLowerCase();
+    final segments = uri.pathSegments.where((segment) => segment.isNotEmpty).toList();
+    if (segments.isEmpty) {
+      return false;
+    }
+
+    final root = segments.first.toLowerCase();
+    final query = uri.queryParameters;
+
     switch (root) {
       case 'community':
-        if (parts.length >= 3 && parts[1].toLowerCase() == 'posts') {
-          final postId = parts[2];
+        if (segments.length >= 2) {
+          final section = segments[1].toLowerCase();
+          if (section == 'posts' && segments.length >= 3) {
+            final postId = segments[2];
+            await _openPost(navigator, postId);
+            return true;
+          }
+          if (section == 'comments' && segments.length >= 3) {
+            final postId = _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
+            if (postId != null) {
+              await _openPost(navigator, postId);
+              return true;
+            }
+          }
+          if ((section == 'profile' || section == 'profiles' || section == 'users') && segments.length >= 3) {
+            await _openUserProfile(navigator, segments[2]);
+            return true;
+          }
+        }
+        break;
+      case 'posts':
+      case 'post':
+        if (segments.length >= 2) {
+          await _openPost(navigator, segments[1]);
+          return true;
+        }
+        break;
+      case 'comments':
+        final postId = _extractPostId(metadata) ?? query['postId'] ?? query['post_id'];
+        if (postId != null) {
           await _openPost(navigator, postId);
           return true;
         }
         break;
       case 'artworks':
-        if (parts.length >= 2) {
-          await _openArtwork(navigator, parts[1]);
+      case 'artwork':
+        if (segments.length >= 2) {
+          await _openArtwork(navigator, segments[1]);
           return true;
         }
         break;
       case 'profile':
+      case 'profiles':
       case 'users':
-        if (parts.length >= 2) {
-          await _openUserProfile(navigator, parts[1]);
+      case 'user':
+        if (segments.length >= 2) {
+          await _openUserProfile(navigator, segments[1]);
           return true;
         }
         break;
@@ -201,7 +258,16 @@ class ActivityNavigation {
         await _openWallet(navigator);
         return true;
       case 'collections':
+      case 'saved':
         await _openCollections(navigator);
+        return true;
+      case 'achievement':
+      case 'achievements':
+        await _openAchievements(navigator);
+        return true;
+      case 'marketplace':
+      case 'trade':
+        await _openMarketplace(navigator);
         return true;
     }
     return false;
@@ -252,7 +318,13 @@ class ActivityNavigation {
   static String? _extractPostId(Map<String, dynamic> metadata) {
     return _firstNonEmpty([
       metadata['postId'],
+      metadata['post_id'],
+      metadata['postID'],
+      metadata['parentPostId'],
+      metadata['targetPostId'],
+      metadata['commentPostId'],
       metadata['targetId'] != null && _string(metadata['targetType']) == 'post' ? metadata['targetId'] : null,
+      metadata['target_id'] != null && _string(metadata['target_type']) == 'post' ? metadata['target_id'] : null,
     ]);
   }
 
@@ -261,6 +333,7 @@ class ActivityNavigation {
       metadata['artworkId'],
       metadata['artwork_id'],
       metadata['targetId'] != null && _string(metadata['targetType']) == 'artwork' ? metadata['targetId'] : null,
+      metadata['target_id'] != null && _string(metadata['target_type']) == 'artwork' ? metadata['target_id'] : null,
     ]);
   }
 
@@ -280,8 +353,11 @@ class ActivityNavigation {
     return _firstNonEmpty([
       metadata['userId'],
       metadata['user_id'],
+      metadata['walletAddress'],
+      metadata['wallet_address'],
       metadata['targetWallet'],
       metadata['followerWallet'],
+      metadata['target_wallet'],
     ]);
   }
 

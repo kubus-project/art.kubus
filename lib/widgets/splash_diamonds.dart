@@ -51,15 +51,39 @@ class _SplashDiamondsState extends State<SplashDiamonds> with TickerProviderStat
     final baseBackground = theme.colorScheme.surface;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final mediaQuery = MediaQuery.maybeOf(context);
+        final mediaSize = mediaQuery?.size ?? const Size(800, 600);
+        double sanitizeDimension(double candidate, double fallback) {
+          if (candidate.isNaN || !candidate.isFinite || candidate <= 0) {
+            return fallback;
+          }
+          return candidate;
+        }
+
+        final fallbackWidth = mediaSize.width.isFinite && mediaSize.width > 0 ? mediaSize.width : 800.0;
+        final fallbackHeight = mediaSize.height.isFinite && mediaSize.height > 0 ? mediaSize.height : 600.0;
+        final width = sanitizeDimension(
+          constraints.hasBoundedWidth ? constraints.maxWidth : mediaSize.width,
+          fallbackWidth,
+        );
+        final height = sanitizeDimension(
+          constraints.hasBoundedHeight ? constraints.maxHeight : mediaSize.height,
+          fallbackHeight,
+        );
+
+        final size = Size(width, height);
         // Build visible tile list once here (per layout) and generate a
         // random order to drive the lighting. This keeps paint cheap and
         // guarantees truly random tiles light up across the screen.
-        return Stack(
-          fit: StackFit.expand,
-          children: [
+        return SizedBox(
+          height: height,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
             Builder(builder: (ctx) {
-              final tileSize = (min(size.width, size.height) / 44.0).clamp(6.0, 24.0);
+              final shortestSide = min(size.width, size.height);
+              final baseSide = shortestSide.isFinite && shortestSide > 0 ? shortestSide : min(fallbackWidth, fallbackHeight);
+              final tileSize = (baseSide / 44.0).clamp(6.0, 24.0);
               final isoW = tileSize;
               final isoH = tileSize * 0.5;
               final cx = size.width * 0.5;
@@ -116,6 +140,7 @@ class _SplashDiamondsState extends State<SplashDiamonds> with TickerProviderStat
               ),
             ),
           ],
+          ),
         );
       },
     );
@@ -145,7 +170,9 @@ class _DiamondsGridPainter extends CustomPainter {
     canvas.drawRect(Offset.zero & size, bgPaint);
 
     final t = animation.value; // 0..1
-    final tileSize = (min(size.width, size.height) / 44.0).clamp(6.0, 24.0);
+    final painterSide = min(size.width, size.height);
+    final safeSide = painterSide.isFinite && painterSide > 0 ? painterSide : 800.0;
+    final tileSize = (safeSide / 44.0).clamp(6.0, 24.0);
     final isoW = tileSize;
     final isoH = tileSize * 0.5;
     final tileList = tiles;

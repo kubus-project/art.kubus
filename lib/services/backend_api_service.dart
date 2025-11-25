@@ -10,6 +10,8 @@ import '../models/art_marker.dart';
 import '../models/artwork.dart';
 import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
+import '../utils/search_suggestions.dart';
+import 'user_action_logger.dart';
 
 /// Backend API Service
 /// 
@@ -190,6 +192,63 @@ class BackendApiService {
     }
 
     return headers;
+  }
+
+  bool _isSuccessStatus(int statusCode) => statusCode >= 200 && statusCode < 300;
+
+  Uri _withOrbitSource(Uri uri) {
+    final qp = Map<String, String>.from(uri.queryParameters);
+    qp['source'] = 'orbit';
+    return uri.replace(queryParameters: qp);
+  }
+
+  Future<Map<String, dynamic>> _fetchJson(
+    Uri uri, {
+    bool includeAuth = true,
+    bool allowOrbitFallback = false,
+  }) async {
+    final headers = _getHeaders(includeAuth: includeAuth);
+    http.Response? primaryResponse;
+    try {
+      primaryResponse = await http.get(uri, headers: headers);
+      if (_isSuccessStatus(primaryResponse.statusCode)) {
+        return jsonDecode(primaryResponse.body) as Map<String, dynamic>;
+      }
+      debugPrint('BackendApiService: ${uri.path} failed with status ${primaryResponse.statusCode}');
+      if (!allowOrbitFallback) {
+        throw Exception('Request failed: ${primaryResponse.statusCode}');
+      }
+    } catch (e) {
+      if (!allowOrbitFallback) {
+        debugPrint('BackendApiService: request error for ${uri.path}: $e');
+        rethrow;
+      }
+      debugPrint('BackendApiService: primary request error for ${uri.path}, trying Orbit fallback -> $e');
+    }
+
+    if (!allowOrbitFallback) {
+      throw Exception('Request failed for ${uri.toString()}');
+    }
+
+    final fallbackUri = _withOrbitSource(uri);
+    final fallbackResponse = await http.get(fallbackUri, headers: headers);
+    if (_isSuccessStatus(fallbackResponse.statusCode)) {
+      final data = jsonDecode(fallbackResponse.body) as Map<String, dynamic>;
+      data['source'] = data['source'] ?? 'orbitdb';
+      return data;
+    }
+    debugPrint('BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}');
+    throw Exception('Orbit fallback failed: ${fallbackResponse.statusCode}');
+  }
+
+  /// Normalize search suggestion payloads from various backend shapes into a
+  /// stable list of maps with keys: `label`, `subtitle`, `id`, `type`, `lat`, `lng`.
+  ///
+  /// Accepts raw JSON that may be a List, a Map with `data`/`results` keys,
+  /// or a single item map. The normalization is defensive to support multiple
+  /// backend response shapes used across endpoints.
+  List<Map<String, dynamic>> normalizeSearchSuggestions(dynamic raw) {
+    return normalizeSearchSuggestionsPayload(raw);
   }
 
   // ==================== User/Profile Endpoints ====================
@@ -654,23 +713,14 @@ class BackendApiService {
       if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized)) {
         throw Exception('Profile not found');
       }
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/profiles/$walletAddress'),
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        // Log raw response for debugging parsing issues
-        debugPrint('BackendApiService.getProfileByWallet: response body: ${response.body}');
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final profile = data['data'] as Map<String, dynamic>;
-        debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${profile.keys.toList()}');
-        return profile;
-      } else if (response.statusCode == 404) {
-        throw Exception('Profile not found');
-      } else {
-        throw Exception('Failed to get profile: ${response.statusCode}');
+      final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress');
+      final data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
+      final raw = data['data'] ?? data;
+      if (raw is Map<String, dynamic>) {
+        debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
+        return raw;
       }
+      throw Exception('Invalid profile payload');
     } catch (e) {
       debugPrint('Error getting profile by wallet: $e');
       rethrow;
@@ -1046,15 +1096,10 @@ class BackendApiService {
       if (arEnabled != null) queryParams['arEnabled'] = arEnabled.toString();
 
       final uri = Uri.parse('$baseUrl/api/artworks').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final artworks = data['artworks'] as List<dynamic>;
-        return artworks.map((json) => _artworkFromBackendJson(json as Map<String, dynamic>)).toList();
-      } else {
-        throw Exception('Failed to get artworks: ${response.statusCode}');
-      }
+      final data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
+      final dynamic listCandidate = data['artworks'] ?? data['data'] ?? data['items'];
+      final List<dynamic> artworks = listCandidate is List ? listCandidate : <dynamic>[];
+      return artworks.map((json) => _artworkFromBackendJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       debugPrint('Error getting artworks: $e');
       rethrow;
@@ -1065,17 +1110,13 @@ class BackendApiService {
   /// GET /api/artworks/:id
   Future<Artwork> getArtwork(String artworkId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/artworks/$artworkId'),
-        headers: _getHeaders(),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return _artworkFromBackendJson(data['artwork'] as Map<String, dynamic>);
-      } else {
-        throw Exception('Failed to get artwork: ${response.statusCode}');
+      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
+      final data = await _fetchJson(uri, allowOrbitFallback: true);
+      final payload = data['artwork'] ?? data['data'] ?? data;
+      if (payload is Map<String, dynamic>) {
+        return _artworkFromBackendJson(payload);
       }
+      throw Exception('Invalid artwork payload');
     } catch (e) {
       debugPrint('Error getting artwork: $e');
       rethrow;
@@ -1118,15 +1159,10 @@ class BackendApiService {
       if (followingOnly != null) queryParams['followingOnly'] = followingOnly.toString();
 
       final uri = Uri.parse('$baseUrl/api/community/posts').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final posts = data['data'] as List<dynamic>;
-        return posts.map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>)).toList();
-      } else {
-        throw Exception('Failed to get posts: ${response.statusCode}');
-      }
+      final allowFallback = followingOnly != true;
+      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: allowFallback);
+      final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
+      return posts.map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       debugPrint('Error getting community posts: $e');
       rethrow;
@@ -1139,18 +1175,12 @@ class BackendApiService {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/community/posts/$postId');
-      final response = await http.get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map<String, dynamic>) {
-          final payload = data['data'] ?? data;
-          return _communityPostFromBackendJson(payload as Map<String, dynamic>);
-        }
-        throw Exception('Unexpected post payload');
-      } else {
-        throw Exception('Failed to get post: ${response.statusCode}');
+      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final payload = data['data'] ?? data;
+      if (payload is Map<String, dynamic>) {
+        return _communityPostFromBackendJson(payload);
       }
+      throw Exception('Unexpected post payload');
     } catch (e) {
       debugPrint('Error getting community post by id: $e');
       rethrow;
@@ -1188,7 +1218,18 @@ class BackendApiService {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+        final createdPost = _communityPostFromBackendJson(data['data'] as Map<String, dynamic>);
+        try {
+          await UserActionLogger.logPostCreated(
+            postId: createdPost.id,
+            content: createdPost.content,
+            mediaUrls: mediaUrls ??
+                (createdPost.imageUrl != null ? <String>[createdPost.imageUrl!] : null),
+          );
+        } catch (e) {
+          debugPrint('UserActionLogger.logPostCreated failed: $e');
+        }
+        return createdPost;
       } else {
         throw Exception('Failed to create post: ${response.statusCode}');
       }
@@ -1707,31 +1748,35 @@ class BackendApiService {
   }
 
   /// Get user's followers
-  /// GET /api/users/:id/followers
+  /// GET /api/community/followers/:walletAddress
   Future<List<Map<String, dynamic>>> getFollowers({
-    required String userId,
+    required String walletAddress,
     int page = 1,
     int limit = 50,
   }) async {
+    final int safeLimit = limit.clamp(1, 200).toInt();
+    final int safePage = page.clamp(1, 1000000).toInt();
+    final int offset = (safePage - 1) * safeLimit;
+    final encoded = Uri.encodeComponent(walletAddress);
+
     try {
       final queryParams = <String, String>{
-        'page': page.toString(),
-        'limit': limit.toString(),
+        'limit': safeLimit.toString(),
+        'offset': offset.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/users/$userId/followers')
+      final uri = Uri.parse('$baseUrl/api/community/followers/$encoded')
           .replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic>) {
-          final raw = payload['followers'] ?? payload['data'] ?? payload['result'] ?? payload['payload'] ?? [];
+          final raw = payload['data'] ?? payload['followers'] ?? payload['result'] ?? payload['payload'] ?? [];
           if (raw is List) {
             return raw.whereType<Map<String, dynamic>>().toList();
           }
         }
-        // If payload shape unexpected, return empty list instead of throwing
         return <Map<String, dynamic>>[];
       } else {
         throw Exception('Failed to get followers: ${response.statusCode}');
@@ -1743,26 +1788,31 @@ class BackendApiService {
   }
 
   /// Get users that a user is following
-  /// GET /api/users/:id/following
+  /// GET /api/community/following/:walletAddress
   Future<List<Map<String, dynamic>>> getFollowing({
-    required String userId,
+    required String walletAddress,
     int page = 1,
     int limit = 50,
   }) async {
+    final int safeLimit = limit.clamp(1, 200).toInt();
+    final int safePage = page.clamp(1, 1000000).toInt();
+    final int offset = (safePage - 1) * safeLimit;
+    final encoded = Uri.encodeComponent(walletAddress);
+
     try {
       final queryParams = <String, String>{
-        'page': page.toString(),
-        'limit': limit.toString(),
+        'limit': safeLimit.toString(),
+        'offset': offset.toString(),
       };
 
-      final uri = Uri.parse('$baseUrl/api/users/$userId/following')
+      final uri = Uri.parse('$baseUrl/api/community/following/$encoded')
           .replace(queryParameters: queryParams);
       final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic>) {
-          final raw = payload['following'] ?? payload['data'] ?? payload['result'] ?? payload['payload'] ?? [];
+          final raw = payload['data'] ?? payload['following'] ?? payload['result'] ?? payload['payload'] ?? [];
           if (raw is List) {
             return raw.whereType<Map<String, dynamic>>().toList();
           }
@@ -2609,15 +2659,22 @@ class BackendApiService {
       }
 
       final uri = Uri.parse('$baseUrl/api/collections').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final jsonData = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: true,
+      );
 
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-        final collections = jsonData['data'] as List<dynamic>;
-        return collections.map((e) => e as Map<String, dynamic>).toList();
-      } else {
-        throw Exception('Failed to fetch collections: ${response.statusCode}');
+      final rawData = jsonData['data'];
+      if (rawData is List) {
+        return rawData.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       }
+      if (rawData is Map<String, dynamic> && rawData['data'] is List) {
+        return (rawData['data'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+      throw Exception('Unexpected collections response shape');
     } catch (e) {
       debugPrint('Error fetching collections: $e');
       return [];
@@ -2628,17 +2685,19 @@ class BackendApiService {
   /// GET /api/collections/:id
   Future<Map<String, dynamic>> getCollection(String collectionId) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/collections/$collectionId'),
-        headers: _getHeaders(includeAuth: false),
+      final uri = Uri.parse('$baseUrl/api/collections/$collectionId');
+      final jsonData = await _fetchJson(
+        uri,
+        includeAuth: false,
+        allowOrbitFallback: true,
       );
 
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-        return jsonData['data'] as Map<String, dynamic>;
-      } else {
-        throw Exception('Failed to fetch collection: ${response.statusCode}');
+      final data = jsonData['data'];
+      if (data is Map<String, dynamic>) {
+        return data;
       }
+
+      throw Exception('Unexpected collection response shape');
     } catch (e) {
       debugPrint('Error fetching collection: $e');
       rethrow;

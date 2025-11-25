@@ -286,7 +286,7 @@ class ProfileProvider extends ChangeNotifier {
       // Load followers
       try {
         final followers = await _apiService.getFollowers(
-          userId: walletAddress,
+          walletAddress: walletAddress,
           page: 1,
           limit: 100,
         );
@@ -307,7 +307,7 @@ class ProfileProvider extends ChangeNotifier {
       // Load following
       try {
         final following = await _apiService.getFollowing(
-          userId: walletAddress,
+          walletAddress: walletAddress,
           page: 1,
           limit: 100,
         );

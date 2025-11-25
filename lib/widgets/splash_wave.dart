@@ -52,31 +52,42 @@ class _SplashWaveState extends State<SplashWave> with SingleTickerProviderStateM
       builder: (context, child) {
         final media = MediaQuery.of(context).size;
         final logoSize = min(media.width, media.height) * 0.22; // slightly larger logo
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            SizedBox.expand(
-              child: CustomPaint(
+        // Constrain the splash to a finite height so it can be used safely
+        // inside scrollable/sliver parents. When MediaQuery isn't available
+        // (tests) fall back to a reasonable default.
+        final mq = MediaQuery.maybeOf(context);
+        final screen = mq?.size ?? const Size(800, 600);
+        final double computedHeight = (() {
+          final h = min(screen.height * 0.45, 420.0);
+          if (h.isNaN || !h.isFinite || h <= 0) return 300.0;
+          return h;
+        })();
+
+        return SizedBox(
+          height: computedHeight,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              CustomPaint(
                 painter: _IsometricGridPainter(
                   progress: _controller.value,
                   accent: accent,
                   highlight: highlight,
                   background: baseBackground,
                 ),
-                // size: Size.infinite, // REMOVE this line
               ),
-            ),
-            Center(
-              child: ScaleTransition(
-                scale: _logoScale,
-                child: SizedBox(
-                  width: logoSize,
-                  height: logoSize,
-                  child: const AppLogo(),
+              Center(
+                child: ScaleTransition(
+                  scale: _logoScale,
+                  child: SizedBox(
+                    width: logoSize,
+                    height: logoSize,
+                    child: const AppLogo(),
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

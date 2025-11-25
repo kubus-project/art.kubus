@@ -229,7 +229,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       UserService.fetchAndUpdateUserStats(user!.id);
     } catch (_) {}
 
-    await _loadUserStats();
+    await _loadUserStats(skipFollowersOverwrite: true);
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
@@ -580,7 +580,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           _buildInlineStat(label: 'Followers', value: _formatCount(user!.followersCount), onTap: () async {
             try { await _loadUserStats(); } catch (_) {}
-            ProfileScreenMethods.showFollowers(context, userId: user!.id);
+            ProfileScreenMethods.showFollowers(context, walletAddress: user!.id);
           }),
           Container(
             width: 1,
@@ -589,7 +589,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           _buildInlineStat(label: 'Following', value: _formatCount(user!.followingCount), onTap: () async {
             try { await _loadUserStats(); } catch (_) {}
-            ProfileScreenMethods.showFollowing(context, userId: user!.id);
+            ProfileScreenMethods.showFollowing(context, walletAddress: user!.id);
           }),
         ],
       ),

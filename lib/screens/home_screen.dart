@@ -33,8 +33,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> 
-    with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -46,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -54,7 +53,7 @@ class _HomeScreenState extends State<HomeScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -62,23 +61,26 @@ class _HomeScreenState extends State<HomeScreen>
       parent: _animationController,
       curve: Curves.easeOutBack,
     ));
-    
+
     _animationController.forward();
-    
+
     // Initialize navigation provider
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+      final navigationProvider =
+          Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
-      
+
       // Add some default visits for demo purposes if no visits exist
       if (navigationProvider.visitCounts.isEmpty) {
         navigationProvider.trackScreenVisit('map');
         navigationProvider.trackScreenVisit('ar');
         navigationProvider.trackScreenVisit('community');
-        navigationProvider.trackScreenVisit('map'); // Visit map twice to show it as most visited
+        navigationProvider.trackScreenVisit(
+            'map'); // Visit map twice to show it as most visited
       }
 
-      final recentActivityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+      final recentActivityProvider =
+          Provider.of<RecentActivityProvider>(context, listen: false);
       recentActivityProvider.initialize();
     });
   }
@@ -92,10 +94,10 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? Theme.of(context).scaffoldBackgroundColor 
+      backgroundColor: themeProvider.isDarkMode
+          ? Theme.of(context).scaffoldBackgroundColor
           : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: AnimatedBuilder(
@@ -114,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen>
                         final isSmallScreen = screenWidth < 375;
                         final padding = isSmallScreen ? 16.0 : 24.0;
                         final spacing = isSmallScreen ? 16.0 : 24.0;
-                        
+
                         return SliverPadding(
                           padding: EdgeInsets.all(padding),
                           sliver: SliverList(
@@ -147,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildAppBar() {
     final web3Provider = Provider.of<Web3Provider>(context);
-    
+
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -157,89 +159,91 @@ class _HomeScreenState extends State<HomeScreen>
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final isSmallScreen = constraints.maxWidth < 375;
-          
+
           return Container(
             padding: EdgeInsets.fromLTRB(
-              isSmallScreen ? 16 : 24, 
-              16, 
-              isSmallScreen ? 16 : 24, 
+              isSmallScreen ? 16 : 24,
+              16,
+              isSmallScreen ? 16 : 24,
               16,
             ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  // Logo and app name
-                  AppLogo(
-                    width: isSmallScreen ? 36 : 40,
-                    height: isSmallScreen ? 36 : 40,
-                  ),
-                  SizedBox(width: isSmallScreen ? 8 : 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
+            child: Row(
+              children: [
+                // Logo and app name
+                AppLogo(
+                  width: isSmallScreen ? 36 : 40,
+                  height: isSmallScreen ? 36 : 40,
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'art.kubus',
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 16 : 18,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      if (web3Provider.isConnected) ...[
                         Text(
-                          'art.kubus',
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 16 : 18,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+                          web3Provider
+                              .formatAddress(web3Provider.walletAddress),
+                          style: GoogleFonts.robotoMono(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
-                        if (web3Provider.isConnected) ...[
-                          Text(
-                            web3Provider.formatAddress(web3Provider.walletAddress),
-                            style: GoogleFonts.robotoMono(
-                              fontSize: isSmallScreen ? 10 : 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        Container(
+                          margin: EdgeInsets.only(top: isSmallScreen ? 2 : 4),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 6 : 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.orange.withValues(alpha: 0.3),
+                              width: 1,
                             ),
                           ),
-                          Container(
-                            margin: EdgeInsets.only(top: isSmallScreen ? 2 : 4),
-                            padding: EdgeInsets.symmetric(
-                              horizontal: isSmallScreen ? 6 : 8, 
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.orange.withValues(alpha: 0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              'DEVNET',
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 8 : 10,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.orange,
-                              ),
+                          child: Text(
+                            'DEVNET',
+                            style: GoogleFonts.inter(
+                              fontSize: isSmallScreen ? 8 : 10,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange,
                             ),
                           ),
-                        ],
+                        ),
                       ],
-                    ),
+                    ],
                   ),
-                  // Notification bell
-                  Consumer<NotificationProvider>(
-                    builder: (context, np, _) => TopBarIcon(
-                      tooltip: 'Notifications',
-                      icon: Icon(
-                        Icons.notifications_outlined,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        size: isSmallScreen ? 22 : 26,
-                      ),
-                      onPressed: () {
-                        _showNotificationsBottomSheet(context);
-                      },
-                      badgeCount: np.unreadCount,
-                      badgeColor: Provider.of<ThemeProvider>(context).accentColor,
+                ),
+                // Notification bell
+                Consumer<NotificationProvider>(
+                  builder: (context, np, _) => TopBarIcon(
+                    tooltip: 'Notifications',
+                    icon: Icon(
+                      Icons.notifications_outlined,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      size: isSmallScreen ? 22 : 26,
                     ),
+                    onPressed: () {
+                      _showNotificationsBottomSheet(context);
+                    },
+                    badgeCount: np.unreadCount,
+                    badgeColor: Provider.of<ThemeProvider>(context).accentColor,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         },
@@ -251,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
@@ -259,7 +263,7 @@ class _HomeScreenState extends State<HomeScreen>
         final titleSize = isSmallScreen ? 20.0 : 24.0;
         final descriptionSize = isSmallScreen ? 12.0 : 14.0;
         final iconSize = isSmallScreen ? 50.0 : 60.0;
-        
+
         return Container(
           padding: EdgeInsets.all(padding),
           decoration: BoxDecoration(
@@ -292,9 +296,9 @@ class _HomeScreenState extends State<HomeScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          profileProvider.currentUser?.displayName != null 
-                            ? 'Welcome back, ${profileProvider.currentUser!.displayName}!' 
-                            : 'Welcome Back!',
+                          profileProvider.currentUser?.displayName != null
+                              ? 'Welcome back, ${profileProvider.currentUser!.displayName}!'
+                              : 'Welcome Back!',
                           style: GoogleFonts.inter(
                             fontSize: titleSize,
                             fontWeight: FontWeight.bold,
@@ -333,25 +337,32 @@ class _HomeScreenState extends State<HomeScreen>
                   builder: (context, walletProvider, child) {
                     // Get KUB8 balance
                     final kub8Balance = walletProvider.tokens
-                        .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                        .isNotEmpty 
+                            .where(
+                                (token) => token.symbol.toUpperCase() == 'KUB8')
+                            .isNotEmpty
                         ? walletProvider.tokens
-                            .where((token) => token.symbol.toUpperCase() == 'KUB8')
-                            .first.balance 
+                            .where(
+                                (token) => token.symbol.toUpperCase() == 'KUB8')
+                            .first
+                            .balance
                         : 0.0;
-                    
-                    // Get SOL balance  
+
+                    // Get SOL balance
                     final solBalance = walletProvider.tokens
-                        .where((token) => token.symbol.toUpperCase() == 'SOL')
-                        .isNotEmpty 
+                            .where(
+                                (token) => token.symbol.toUpperCase() == 'SOL')
+                            .isNotEmpty
                         ? walletProvider.tokens
-                            .where((token) => token.symbol.toUpperCase() == 'SOL')
-                            .first.balance 
+                            .where(
+                                (token) => token.symbol.toUpperCase() == 'SOL')
+                            .first
+                            .balance
                         : 0.0;
 
                     return Row(
                       children: [
-                        _buildBalanceChip('KUB8', kub8Balance.toStringAsFixed(2)),
+                        _buildBalanceChip(
+                            'KUB8', kub8Balance.toStringAsFixed(2)),
                         const SizedBox(width: 12),
                         _buildBalanceChip('SOL', solBalance.toStringAsFixed(3)),
                       ],
@@ -445,7 +456,7 @@ class _HomeScreenState extends State<HomeScreen>
         final isSmallScreen = constraints.maxWidth < 375;
         final navigationProvider = Provider.of<NavigationProvider>(context);
         final frequentScreens = navigationProvider.getFrequentScreensData();
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -464,69 +475,75 @@ class _HomeScreenState extends State<HomeScreen>
                   'Recently Used',
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 12 : 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
             ),
             SizedBox(height: isSmallScreen ? 12 : 16),
-            isSmallScreen 
-              ? Column(
-                  children: [
-                    Row(
-                      children: frequentScreens.take(2).map((screen) {
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildActionCard(
-                              screen['name'], 
-                              screen['icon'], 
-                              screen['color'],
-                              isSmallScreen,
-                              onTap: () => navigationProvider.navigateToScreen(context, screen['key']),
-                              visitCount: screen['visitCount'],
+            isSmallScreen
+                ? Column(
+                    children: [
+                      Row(
+                        children: frequentScreens.take(2).map((screen) {
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _buildActionCard(
+                                screen['name'],
+                                screen['icon'],
+                                screen['color'],
+                                isSmallScreen,
+                                onTap: () => navigationProvider
+                                    .navigateToScreen(context, screen['key']),
+                                visitCount: screen['visitCount'],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: frequentScreens.skip(2).map((screen) {
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildActionCard(
-                              screen['name'], 
-                              screen['icon'], 
-                              screen['color'],
-                              isSmallScreen,
-                              onTap: () => navigationProvider.navigateToScreen(context, screen['key']),
-                              visitCount: screen['visitCount'],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                )
-              : Row(
-                  children: frequentScreens.map((screen) {
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: _buildActionCard(
-                          screen['name'], 
-                          screen['icon'], 
-                          screen['color'],
-                          isSmallScreen,
-                          onTap: () => navigationProvider.navigateToScreen(context, screen['key']),
-                          visitCount: screen['visitCount'],
-                        ),
+                          );
+                        }).toList(),
                       ),
-                    );
-                  }).toList(),
-                ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: frequentScreens.skip(2).map((screen) {
+                          return Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: _buildActionCard(
+                                screen['name'],
+                                screen['icon'],
+                                screen['color'],
+                                isSmallScreen,
+                                onTap: () => navigationProvider
+                                    .navigateToScreen(context, screen['key']),
+                                visitCount: screen['visitCount'],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  )
+                : Row(
+                    children: frequentScreens.map((screen) {
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: _buildActionCard(
+                            screen['name'],
+                            screen['icon'],
+                            screen['color'],
+                            isSmallScreen,
+                            onTap: () => navigationProvider.navigateToScreen(
+                                context, screen['key']),
+                            visitCount: screen['visitCount'],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
           ],
         );
       },
@@ -534,9 +551,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildActionCard(
-    String title, 
-    IconData icon, 
-    Color color, 
+    String title,
+    IconData icon,
+    Color color,
     bool isSmallScreen, {
     VoidCallback? onTap,
     int visitCount = 0,
@@ -544,9 +561,10 @@ class _HomeScreenState extends State<HomeScreen>
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap ?? () {
-          _handleQuickAction(title);
-        },
+        onTap: onTap ??
+            () {
+              _handleQuickAction(title);
+            },
         borderRadius: BorderRadius.circular(16),
         splashColor: color.withValues(alpha: 0.1),
         highlightColor: color.withValues(alpha: 0.05),
@@ -637,47 +655,12 @@ class _HomeScreenState extends State<HomeScreen>
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline,
-                    width: 1,
-                  ),
+              const EmptyStateCard(
+                  icon: Icons.analytics,
+                  title: 'No Stats Available',
+                  description:
+                      'Stats will appear as you interact with the platform',
                 ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.analytics,
-                        size: 48,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No Stats Available',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Stats will appear as you interact with the platform',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           );
         }
@@ -692,7 +675,7 @@ class _HomeScreenState extends State<HomeScreen>
           builder: (context, constraints) {
             final isSmallScreen = constraints.maxWidth < 375;
             final isVerySmallScreen = constraints.maxWidth < 320;
-            
+
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -712,8 +695,10 @@ class _HomeScreenState extends State<HomeScreen>
                       final index = entry.key;
                       final stat = entry.value;
                       return Padding(
-                        padding: EdgeInsets.only(bottom: index < stats.length - 1 ? 8 : 0),
-                        child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: false, isVerticalLayout: true),
+                        padding: EdgeInsets.only(
+                            bottom: index < stats.length - 1 ? 8 : 0),
+                        child: _buildStatCard(stat.$1, stat.$2, stat.$3,
+                            showIconOnly: false, isVerticalLayout: true),
                       );
                     }).toList(),
                   )
@@ -724,7 +709,8 @@ class _HomeScreenState extends State<HomeScreen>
                       return Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(right: 12),
-                          child: _buildStatCard(stat.$1, stat.$2, stat.$3, showIconOnly: true, isVerticalLayout: false),
+                          child: _buildStatCard(stat.$1, stat.$2, stat.$3,
+                              showIconOnly: true, isVerticalLayout: false),
                         ),
                       );
                     }).toList(),
@@ -737,13 +723,14 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, {bool showIconOnly = false, bool isVerticalLayout = false}) {
+  Widget _buildStatCard(String title, String value, IconData icon,
+      {bool showIconOnly = false, bool isVerticalLayout = false}) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
-        
+
         return GestureDetector(
           onTap: () => _showStatsDialog(title, icon),
           child: Container(
@@ -763,100 +750,110 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ],
             ),
-            child: showIconOnly 
-              ? Column(
-                  children: [
-                    Icon(
-                      icon,
-                      color: themeProvider.accentColor,
-                      size: 28, // Keep original icon size
-                    ),
-                    if (isSmallScreen) ...[
-                      SizedBox(height: isSmallScreen ? 4 : 6),
-                      Text(
-                        value,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 10 : 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 7 : 8,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ],
-                )
-              : isVerticalLayout 
-                ? Row(
+            child: showIconOnly
+                ? Column(
                     children: [
                       Icon(
                         icon,
                         color: themeProvider.accentColor,
-                        size: 20, // Keep original icon size
+                        size: 28, // Keep original icon size
                       ),
-                      SizedBox(width: isSmallScreen ? 8 : 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              value,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 10 : 12,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ),
-                            Text(
-                              title,
-                              style: GoogleFonts.inter(
-                                fontSize: isSmallScreen ? 7 : 8,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
+                      if (isSmallScreen) ...[
+                        SizedBox(height: isSmallScreen ? 4 : 6),
+                        Text(
+                          value,
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 10 : 12,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
-                      ),
+                        Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: isSmallScreen ? 7 : 8,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
                   )
-                : Column(
-                    children: [
-                      Icon(
-                        icon,
-                        color: themeProvider.accentColor,
-                        size: 24, // Keep original icon size
+                : isVerticalLayout
+                    ? Row(
+                        children: [
+                          Icon(
+                            icon,
+                            color: themeProvider.accentColor,
+                            size: 20, // Keep original icon size
+                          ),
+                          SizedBox(width: isSmallScreen ? 8 : 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  value,
+                                  style: GoogleFonts.inter(
+                                    fontSize: isSmallScreen ? 10 : 12,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                                Text(
+                                  title,
+                                  style: GoogleFonts.inter(
+                                    fontSize: isSmallScreen ? 7 : 8,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          Icon(
+                            icon,
+                            color: themeProvider.accentColor,
+                            size: 24, // Keep original icon size
+                          ),
+                          SizedBox(height: isSmallScreen ? 4 : 6),
+                          Text(
+                            value,
+                            style: GoogleFonts.inter(
+                              fontSize: isSmallScreen ? 10 : 12,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            title,
+                            style: GoogleFonts.inter(
+                              fontSize: isSmallScreen ? 7 : 8,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
-                      SizedBox(height: isSmallScreen ? 4 : 6),
-                      Text(
-                        value,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 10 : 12,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: isSmallScreen ? 7 : 8,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
           ),
         );
       },
@@ -868,7 +865,7 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (context, web3Provider, child) {
         // Show as connected if wallet is connected (mock or real)
         final bool isEffectivelyConnected = web3Provider.isConnected;
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -885,11 +882,13 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 if (!isEffectivelyConnected)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+                      border: Border.all(
+                          color: Colors.orange.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -918,12 +917,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'Governance',
                     Icons.how_to_vote,
                     const Color(0xFF4ECDC4),
-                    isEffectivelyConnected 
-                      ? () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const GovernanceHub()),
-                        )
-                      : () => _showWalletOnboarding(context),
+                    isEffectivelyConnected
+                        ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const GovernanceHub()),
+                            )
+                        : () => _showWalletOnboarding(context),
                     isLocked: !isEffectivelyConnected,
                   ),
                 ),
@@ -934,12 +934,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'Studio',
                     Icons.palette,
                     const Color(0xFFFF9A8B),
-                    isEffectivelyConnected 
-                      ? () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const ArtistStudio()),
-                        )
-                      : () => _showWalletOnboarding(context),
+                    isEffectivelyConnected
+                        ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const ArtistStudio()),
+                            )
+                        : () => _showWalletOnboarding(context),
                     isLocked: !isEffectivelyConnected,
                   ),
                 ),
@@ -954,12 +955,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'Hub',
                     Icons.museum,
                     const Color(0xFF667eea),
-                    isEffectivelyConnected 
-                      ? () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const InstitutionHub()),
-                        )
-                      : () => _showWalletOnboarding(context),
+                    isEffectivelyConnected
+                        ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const InstitutionHub()),
+                            )
+                        : () => _showWalletOnboarding(context),
                     isLocked: !isEffectivelyConnected,
                   ),
                 ),
@@ -970,12 +972,13 @@ class _HomeScreenState extends State<HomeScreen>
                     'NFTs',
                     Icons.store,
                     const Color(0xFFFF6B6B),
-                    isEffectivelyConnected 
-                      ? () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => const Marketplace()),
-                        )
-                      : () => _showWalletOnboarding(context),
+                    isEffectivelyConnected
+                        ? () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const Marketplace()),
+                            )
+                        : () => _showWalletOnboarding(context),
                     isLocked: !isEffectivelyConnected,
                   ),
                 ),
@@ -987,7 +990,9 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildWeb3Card(String title, String subtitle, IconData icon, Color color, VoidCallback onTap, {bool isLocked = false}) {
+  Widget _buildWeb3Card(String title, String subtitle, IconData icon,
+      Color color, VoidCallback onTap,
+      {bool isLocked = false}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1043,7 +1048,10 @@ class _HomeScreenState extends State<HomeScreen>
                       subtitle,
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -1078,7 +1086,10 @@ class _HomeScreenState extends State<HomeScreen>
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1087,7 +1098,10 @@ class _HomeScreenState extends State<HomeScreen>
                         subtitle,
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.3),
                         ),
                         textAlign: TextAlign.center,
                       ),
@@ -1123,7 +1137,8 @@ class _HomeScreenState extends State<HomeScreen>
     final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Consumer<RecentActivityProvider>(
       builder: (context, activityProvider, child) {
-        final activities = activityProvider.activities.take(5).toList(growable: false);
+        final activities =
+            activityProvider.activities.take(5).toList(growable: false);
         final isLoading = activityProvider.isLoading && activities.isEmpty;
         final error = activityProvider.error;
 
@@ -1131,7 +1146,8 @@ class _HomeScreenState extends State<HomeScreen>
         if (isLoading) {
           content = _buildActivityLoadingState(accentColor);
         } else if (error != null && activities.isEmpty) {
-          content = _buildActivityErrorState(error, () => activityProvider.refresh(force: true));
+          content = _buildActivityErrorState(
+              error, () => activityProvider.refresh(force: true));
         } else if (activities.isEmpty) {
           content = _buildActivityEmptyState();
         } else {
@@ -1197,16 +1213,12 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildActivityEmptyState() {
-    return SizedBox(
-      height: 140,
-      child: Center(
-        child: EmptyStateCard(
+    return EmptyStateCard(
           icon: Icons.timeline,
           title: 'No Recent Activity',
-          description: 'Your recent interactions will appear here as soon as something happens.',
-        ),
-      ),
-    );
+          description:
+              'Your recent interactions will appear here as soon as something happens.',
+        );
   }
 
   Widget _buildActivityErrorState(String error, VoidCallback onRetry) {
@@ -1231,7 +1243,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
         final featuredArtworks = artworkProvider.artworks.take(5).toList();
-        
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1264,33 +1276,23 @@ class _HomeScreenState extends State<HomeScreen>
             SizedBox(
               height: 180,
               child: featuredArtworks.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.image_not_supported,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'No featured artworks',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
+                  ?  EmptyStateCard(
+                          icon: Icons.image_not_supported,
+                          title: 'No featured artworks',
+                          description:
+                              'Explore the gallery to discover featured AR artworks.',
+                          showAction: true,
+                          actionLabel: 'Explore',
+                          onAction: _navigateToGallery,
+                    )
+                  : ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: featuredArtworks.length,
+                      itemBuilder: (context, index) {
+                        return _buildArtworkCard(
+                            featuredArtworks[index], index);
+                      },
                     ),
-                  )
-                : ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: featuredArtworks.length,
-                    itemBuilder: (context, index) {
-                      return _buildArtworkCard(featuredArtworks[index], index);
-                    },
-                  ),
             ),
           ],
         );
@@ -1300,7 +1302,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildArtworkCard(dynamic artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+
     return GestureDetector(
       onTap: () {
         _showArtworkDetail(artwork);
@@ -1327,7 +1329,8 @@ class _HomeScreenState extends State<HomeScreen>
                       themeProvider.accentColor.withValues(alpha: 0.1),
                     ],
                   ),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
                 child: const Center(
                   child: Icon(
@@ -1358,7 +1361,10 @@ class _HomeScreenState extends State<HomeScreen>
                     'by ${artwork?.artist ?? '@artist'}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1484,14 +1490,34 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildNotificationItem(int index) {
     final notifications = [
-      ('New artwork discovered nearby', 'Check out "Digital Dreams" by @artist_maya', Icons.location_on, '5 min ago'),
-      ('KUB8 rewards earned', 'You earned 15 KUB8 tokens for discovering 3 artworks', Icons.account_balance_wallet, '1 hour ago'),
-      ('Friend request', '@collector_sam wants to connect with you', Icons.person_add, '2 hours ago'),
-      ('Artwork featured', 'Your AR sculpture was featured in trending', Icons.star, '4 hours ago'),
+      (
+        'New artwork discovered nearby',
+        'Check out "Digital Dreams" by @artist_maya',
+        Icons.location_on,
+        '5 min ago'
+      ),
+      (
+        'KUB8 rewards earned',
+        'You earned 15 KUB8 tokens for discovering 3 artworks',
+        Icons.account_balance_wallet,
+        '1 hour ago'
+      ),
+      (
+        'Friend request',
+        '@collector_sam wants to connect with you',
+        Icons.person_add,
+        '2 hours ago'
+      ),
+      (
+        'Artwork featured',
+        'Your AR sculpture was featured in trending',
+        Icons.star,
+        '4 hours ago'
+      ),
     ];
-    
+
     final notification = notifications[index % notifications.length];
-    
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -1508,7 +1534,9 @@ class _HomeScreenState extends State<HomeScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+              color: Provider.of<ThemeProvider>(context)
+                  .accentColor
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -1535,7 +1563,10 @@ class _HomeScreenState extends State<HomeScreen>
                   notification.$2,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -1543,7 +1574,10 @@ class _HomeScreenState extends State<HomeScreen>
                   notification.$4,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -1555,8 +1589,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _handleQuickAction(String action) {
-    final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
-    
+    final navigationProvider =
+        Provider.of<NavigationProvider>(context, listen: false);
+
     switch (action) {
       case 'Create AR':
         navigationProvider.trackScreenVisit('ar');
@@ -1596,7 +1631,7 @@ class _HomeScreenState extends State<HomeScreen>
   // Show wallet onboarding for first-time users
   void _showWalletOnboarding(BuildContext context) {
     debugPrint('DEBUG: Wallet onboarding triggered from home screen');
-    
+
     // Navigate directly to comprehensive Web3 onboarding
     Navigator.of(context).push(
       MaterialPageRoute(
@@ -1619,7 +1654,8 @@ class _HomeScreenState extends State<HomeScreen>
     return [
       const web3.OnboardingPage(
         title: 'Welcome to Web3',
-        description: 'Connect your wallet to unlock decentralized features powered by blockchain technology.',
+        description:
+            'Connect your wallet to unlock decentralized features powered by blockchain technology.',
         icon: Icons.account_balance_wallet,
         gradientColors: [
           Colors.white,
@@ -1634,7 +1670,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       const web3.OnboardingPage(
         title: 'NFT Marketplace',
-        description: 'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
+        description:
+            'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
         icon: Icons.store,
         gradientColors: [
           Color(0xFFFF6B6B),
@@ -1650,7 +1687,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       const web3.OnboardingPage(
         title: 'Artist Studio',
-        description: 'Create, mint, and manage your digital artworks with professional tools.',
+        description:
+            'Create, mint, and manage your digital artworks with professional tools.',
         icon: Icons.palette,
         gradientColors: [
           Color(0xFFFF9A8B),
@@ -1666,7 +1704,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       const web3.OnboardingPage(
         title: 'DAO Governance',
-        description: 'Participate in community decisions and help shape the future of the platform.',
+        description:
+            'Participate in community decisions and help shape the future of the platform.',
         icon: Icons.how_to_vote,
         gradientColors: [
           Color(0xFF4ECDC4),
@@ -1682,7 +1721,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       const web3.OnboardingPage(
         title: 'Institution Hub',
-        description: 'Connect with galleries, museums, and cultural institutions in the Web3 space.',
+        description:
+            'Connect with galleries, museums, and cultural institutions in the Web3 space.',
         icon: Icons.museum,
         gradientColors: [
           Color(0xFF667eea),
@@ -1698,7 +1738,8 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       const web3.OnboardingPage(
         title: 'KUB8 Token Economy',
-        description: 'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
+        description:
+            'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
         icon: Icons.monetization_on,
         gradientColors: [
           Color(0xFFFFD700),
@@ -1716,7 +1757,8 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showFullActivity() {
-    final activityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+    final activityProvider =
+        Provider.of<RecentActivityProvider>(context, listen: false);
     if (!activityProvider.initialized) {
       activityProvider.initialize(force: true);
     } else {
@@ -1770,18 +1812,23 @@ class _HomeScreenState extends State<HomeScreen>
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
-                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                            Provider.of<ThemeProvider>(context)
+                                .accentColor
+                                .withValues(alpha: 0.3),
+                            Provider.of<ThemeProvider>(context)
+                                .accentColor
+                                .withValues(alpha: 0.1),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: const Center(
-                        child: Icon(Icons.view_in_ar, color: Colors.white, size: 60),
+                        child: Icon(Icons.view_in_ar,
+                            color: Colors.white, size: 60),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Artwork info
                     Text(
                       'AR Art #${index + 1}',
@@ -1800,26 +1847,34 @@ class _HomeScreenState extends State<HomeScreen>
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
-                                Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                                Provider.of<ThemeProvider>(context)
+                                    .accentColor
+                                    .withValues(alpha: 0.3),
+                                Provider.of<ThemeProvider>(context)
+                                    .accentColor
+                                    .withValues(alpha: 0.1),
                               ],
                             ),
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Icon(Icons.person, color: Colors.white, size: 16),
+                          child: const Icon(Icons.person,
+                              color: Colors.white, size: 16),
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'by @artist_name',
                           style: GoogleFonts.inter(
                             fontSize: 16,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Description
                     Text(
                       'Description',
@@ -1834,12 +1889,15 @@ class _HomeScreenState extends State<HomeScreen>
                       'An immersive AR artwork that transforms your surroundings into a digital canvas. Experience the fusion of reality and imagination.',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         height: 1.5,
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Stats
                     Row(
                       children: [
@@ -1851,7 +1909,7 @@ class _HomeScreenState extends State<HomeScreen>
                       ],
                     ),
                     const SizedBox(height: 32),
-                    
+
                     // Action buttons
                     Row(
                       children: [
@@ -1864,10 +1922,13 @@ class _HomeScreenState extends State<HomeScreen>
                             icon: const Icon(Icons.view_in_ar),
                             label: Text(
                               'View in AR',
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+                              backgroundColor:
+                                  Provider.of<ThemeProvider>(context)
+                                      .accentColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               shape: RoundedRectangleBorder(
@@ -1882,9 +1943,12 @@ class _HomeScreenState extends State<HomeScreen>
                             // Add to favorites
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            foregroundColor: Theme.of(context).colorScheme.onSurface,
-                            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                            backgroundColor:
+                                Theme.of(context).colorScheme.primaryContainer,
+                            foregroundColor:
+                                Theme.of(context).colorScheme.onSurface,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16, horizontal: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -1917,14 +1981,18 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             icon,
             size: 16,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 4),
           Text(
             value,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -1940,7 +2008,8 @@ class _HomeScreenState extends State<HomeScreen>
           backgroundColor: Theme.of(dialogContext).colorScheme.surface,
           title: Row(
             children: [
-              Icon(icon, color: Provider.of<ThemeProvider>(dialogContext).accentColor),
+              Icon(icon,
+                  color: Provider.of<ThemeProvider>(dialogContext).accentColor),
               const SizedBox(width: 12),
               Text('$statType Details'),
             ],
@@ -1955,7 +2024,15 @@ class _HomeScreenState extends State<HomeScreen>
                     title: '$statType Trend (Last 7 days)',
                     data: _getStatsData(statType),
                     accentColor: const Color(0xFF4A90E2),
-                    labels: const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    labels: const [
+                      'Mon',
+                      'Tue',
+                      'Wed',
+                      'Thu',
+                      'Fri',
+                      'Sat',
+                      'Sun'
+                    ],
                   ),
                   const SizedBox(height: 20),
                   _buildStatsTimeline(statType),
@@ -1975,7 +2052,8 @@ class _HomeScreenState extends State<HomeScreen>
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AdvancedAnalyticsScreen(statType: statType),
+                    builder: (context) =>
+                        AdvancedAnalyticsScreen(statType: statType),
                   ),
                 );
               },
@@ -1989,7 +2067,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildStatsTimeline(String statType) {
     final milestones = _getStatsMilestones(statType);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2002,30 +2080,30 @@ class _HomeScreenState extends State<HomeScreen>
         ),
         const SizedBox(height: 12),
         ...milestones.map((milestone) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF4A90E2),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  milestone,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.8),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4A90E2),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      milestone,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        )),
+            )),
       ],
     );
   }
@@ -2091,7 +2169,8 @@ class _NotificationsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final provider = Provider.of<RecentActivityProvider>(context, listen: false);
+    final provider =
+        Provider.of<RecentActivityProvider>(context, listen: false);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.65,
@@ -2137,8 +2216,10 @@ class _NotificationsBottomSheet extends StatelessWidget {
                 final activities = showUnreadOnly
                     ? activityProvider.unreadActivities
                     : activityProvider.activities;
-                final isLoading = activityProvider.isLoading && activities.isEmpty;
-                final hasError = activityProvider.error != null && activities.isEmpty;
+                final isLoading =
+                    activityProvider.isLoading && activities.isEmpty;
+                final hasError =
+                    activityProvider.error != null && activities.isEmpty;
 
                 if (isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -2149,48 +2230,35 @@ class _NotificationsBottomSheet extends StatelessWidget {
                   child: activities.isEmpty
                       ? ListView(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 40),
                           children: [
-                            Icon(
-                              hasError ? Icons.error_outline : Icons.notifications_off_outlined,
-                              size: 48,
-                              color: colorScheme.outline,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              hasError ? 'Unable to load notifications' : 'No Notifications',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                                hasError
-                                  ? activityProvider.error ?? 'Something went wrong'
+                            EmptyStateCard(
+                              icon: hasError
+                                  ? Icons.error_outline
+                                  : Icons.notifications_off_outlined,
+                              title: hasError
+                                  ? 'Unable to load notifications'
+                                  : 'No Notifications',
+                              description: hasError
+                                  ? (activityProvider.error ??
+                                      'Something went wrong')
                                   : 'You\'re all caught up!',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                color: colorScheme.onSurface.withValues(alpha: 0.7),
-                              ),
+                              showAction: hasError,
+                              actionLabel: hasError ? 'Retry' : null,
+                              onAction: hasError
+                                  ? () => activityProvider.refresh(force: true)
+                                  : null,
                             ),
-                            if (hasError) ...[
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () => activityProvider.refresh(force: true),
-                                child: const Text('Retry'),
-                              ),
-                            ],
                           ],
                         )
                       : ListView.separated(
                           physics: const AlwaysScrollableScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
                           itemCount: activities.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 12),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 12),
                           itemBuilder: (context, index) {
                             final activity = activities[index];
                             return RecentActivityTile(
@@ -2216,7 +2284,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<RecentActivityProvider>(context, listen: false);
+      final provider =
+          Provider.of<RecentActivityProvider>(context, listen: false);
       if (!provider.initialized) {
         provider.initialize(force: true);
       } else {
@@ -2279,7 +2348,8 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   EmptyStateCard(
                     icon: Icons.timeline,
                     title: 'No Recent Activity',
-                    description: 'Your interactions will show up here as soon as they happen.',
+                    description:
+                        'Your interactions will show up here as soon as they happen.',
                   ),
                 ],
               ),
@@ -2295,8 +2365,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
               itemBuilder: (context, index) => RecentActivityTile(
                 activity: activities[index],
                 accentColor: accentColor,
-                margin: EdgeInsets.only(bottom: index == activities.length - 1 ? 0 : 16),
-                onTap: () => ActivityNavigation.open(context, activities[index]),
+                margin: EdgeInsets.only(
+                    bottom: index == activities.length - 1 ? 0 : 16),
+                onTap: () =>
+                    ActivityNavigation.open(context, activities[index]),
               ),
             ),
           );
@@ -2377,8 +2449,9 @@ class RecentActivityTile extends StatelessWidget {
                               activity.title,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
-                                fontWeight:
-                                    isUnread ? FontWeight.w700 : FontWeight.w600,
+                                fontWeight: isUnread
+                                    ? FontWeight.w700
+                                    : FontWeight.w600,
                                 color: theme.colorScheme.onSurface,
                               ),
                             ),
@@ -2402,7 +2475,8 @@ class RecentActivityTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -2411,7 +2485,8 @@ class RecentActivityTile extends StatelessWidget {
                         formatActivityTime(activity.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 11,
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -2464,5 +2539,3 @@ String formatActivityTime(DateTime timestamp) {
   if (diff.inDays < 7) return '${diff.inDays}d ago';
   return '${timestamp.month}/${timestamp.day}/${timestamp.year}';
 }
-
-

@@ -13,40 +13,42 @@ import 'user_profile_screen.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
-  static void showFollowers(BuildContext context, {String? userId}) {
+  static void showFollowers(BuildContext context, {String? walletAddress}) {
+    final targetWallet = walletAddress?.trim();
     // Prefetch stats so parent UI can update counts before showing list
     (() async {
       try {
-        if (userId == null) {
+        if (targetWallet == null) {
           try { await Provider.of<ProfileProvider>(context, listen: false).refreshStats(); } catch (_) {}
         } else {
-          try { await UserService.fetchAndUpdateUserStats(userId); } catch (_) {}
+          try { await UserService.fetchAndUpdateUserStats(targetWallet); } catch (_) {}
         }
       } catch (_) {}
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => _FollowersBottomSheet(userId: userId),
+        builder: (context) => _FollowersBottomSheet(walletAddress: targetWallet),
       );
     })();
   }
 
-  static void showFollowing(BuildContext context, {String? userId}) {
+  static void showFollowing(BuildContext context, {String? walletAddress}) {
+    final targetWallet = walletAddress?.trim();
     // Prefetch stats so parent UI can update counts before showing list
     (() async {
       try {
-        if (userId == null) {
+        if (targetWallet == null) {
           try { await Provider.of<ProfileProvider>(context, listen: false).refreshStats(); } catch (_) {}
         } else {
-          try { await UserService.fetchAndUpdateUserStats(userId); } catch (_) {}
+          try { await UserService.fetchAndUpdateUserStats(targetWallet); } catch (_) {}
         }
       } catch (_) {}
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => _FollowingBottomSheet(userId: userId),
+        builder: (context) => _FollowingBottomSheet(walletAddress: targetWallet),
       );
     })();
   }
@@ -72,9 +74,9 @@ class ProfileScreenMethods {
 
 // ==================== Followers Bottom Sheet ====================
 class _FollowersBottomSheet extends StatefulWidget {
-  final String? userId;
+  final String? walletAddress;
 
-  const _FollowersBottomSheet({this.userId});
+  const _FollowersBottomSheet({this.walletAddress});
 
   @override
   State<_FollowersBottomSheet> createState() => _FollowersBottomSheetState();
@@ -101,9 +103,12 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
 
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final userId = widget.userId ?? walletProvider.currentWalletAddress;
+      final explicitWallet = widget.walletAddress?.trim();
+      final resolvedWallet = (explicitWallet != null && explicitWallet.isNotEmpty)
+          ? explicitWallet
+          : walletProvider.currentWalletAddress;
 
-      if (userId == null || userId.isEmpty) {
+      if (resolvedWallet == null || resolvedWallet.isEmpty) {
         setState(() {
           _followers = [];
           _isLoading = false;
@@ -111,7 +116,7 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
         return;
       }
 
-      final followers = await BackendApiService().getFollowers(userId: userId);
+      final followers = await BackendApiService().getFollowers(walletAddress: resolvedWallet);
       
       if (!mounted) return;
       setState(() {
@@ -318,9 +323,9 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
 
 // ==================== Following Bottom Sheet ====================
 class _FollowingBottomSheet extends StatefulWidget {
-  final String? userId;
+  final String? walletAddress;
 
-  const _FollowingBottomSheet({this.userId});
+  const _FollowingBottomSheet({this.walletAddress});
 
   @override
   State<_FollowingBottomSheet> createState() => _FollowingBottomSheetState();
@@ -347,9 +352,12 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final userId = widget.userId ?? walletProvider.currentWalletAddress;
+      final explicitWallet = widget.walletAddress?.trim();
+      final resolvedWallet = (explicitWallet != null && explicitWallet.isNotEmpty)
+          ? explicitWallet
+          : walletProvider.currentWalletAddress;
 
-      if (userId == null || userId.isEmpty) {
+      if (resolvedWallet == null || resolvedWallet.isEmpty) {
         setState(() {
           _following = [];
           _isLoading = false;
@@ -357,7 +365,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
         return;
       }
 
-      final following = await BackendApiService().getFollowing(userId: userId);
+      final following = await BackendApiService().getFollowing(walletAddress: resolvedWallet);
       
       if (!mounted) return;
       setState(() {

@@ -248,44 +248,62 @@ class SocketService {
   }
 
   /// Subscribe to personal user room. Requires server validation with JWT.
-  /// Only subscribes if not already subscribed to this wallet.
+  /// Will auto-connect if needed and avoid duplicate subscriptions.
   void subscribeUser(String walletAddress) {
-    if (_socket == null || !_socket!.connected) {
-      debugPrint('SocketService: Cannot subscribe - socket not connected');
+    final roomWallet = walletAddress.toString();
+    if (roomWallet.isEmpty) return;
+
+    final previouslySubscribed = _currentSubscribedWallet;
+    final socketReady = _socket != null && _socket!.connected;
+
+    if (!socketReady) {
+      _currentSubscribedWallet = roomWallet;
+      debugPrint('SocketService: subscribeUser queued until socket connects');
+      unawaited(connect());
       return;
     }
 
-    final roomWallet = walletAddress.toString();
     // Prevent duplicate subscriptions (compare canonical strings)
-    if (_currentSubscribedWallet == roomWallet) {
+    if (previouslySubscribed == roomWallet) {
       debugPrint('SocketService: Already subscribed to $walletAddress');
       return;
     }
 
     // Unsubscribe from previous wallet if any (use stored canonical value)
-    if (_currentSubscribedWallet != null) {
-      _socket!.emit('unsubscribe:user', _currentSubscribedWallet);
+    if (previouslySubscribed != null && previouslySubscribed.isNotEmpty) {
+      _socket!.emit('unsubscribe:user', previouslySubscribed);
     }
 
     _currentSubscribedWallet = roomWallet;
     // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
     debugPrint('SocketService: emitted subscribe:user for $_currentSubscribedWallet');
-    // Also emit subscribe for lowercase variant for compatibility with servers that track rooms in lower-case
-    try {
-      final lower = _currentSubscribedWallet!.toLowerCase();
-      _socket!.emit('subscribe:user', lower);
-      debugPrint('SocketService: emitted subscribe:user for $lower (lowercase)');
-    } catch (_) {}
+    Timer? lowercaseFallback;
+    bool awaitingAck = true;
+    void emitLowercaseFallback() {
+      if (!awaitingAck) return;
+      try {
+        final lower = _currentSubscribedWallet!.toLowerCase();
+        _socket!.emit('subscribe:user', lower);
+        debugPrint('SocketService: emitted subscribe:user for $lower (fallback lowercase)');
+      } catch (e) {
+        debugPrint('SocketService: lowercase subscribe fallback failed: $e');
+      }
+    }
+    lowercaseFallback = Timer(const Duration(milliseconds: 600), emitLowercaseFallback);
 
     // Register handlers only once
     void onSubscribeOk(dynamic payload) {
       debugPrint('SocketService: subscribe:ok for $walletAddress (room: user:$_currentSubscribedWallet)');
+      awaitingAck = false;
+      lowercaseFallback?.cancel();
     }
 
     void onSubscribeError(dynamic payload) {
       debugPrint('SocketService: subscribe:error for $walletAddress: $payload');
       _currentSubscribedWallet = null;
+      awaitingAck = false;
+      lowercaseFallback?.cancel();
     }
 
     _socket!.once('subscribe:ok', onSubscribeOk);

@@ -1061,6 +1061,12 @@ class _SettingsScreenState extends State<SettingsScreen>
           Icons.download,
           onTap: () => _showDataExportDialog(),
         ),
+        _buildSettingsTile(
+          'Reset Permission Flags',
+          'Clear saved permission/service prompts',
+          Icons.location_off,
+          onTap: () => _showResetPermissionFlagsDialog(),
+        ),
       ],
     );
   }
@@ -1801,6 +1807,67 @@ class _SettingsScreenState extends State<SettingsScreen>
         ],
       ),
     );
+  }
+
+  void _showResetPermissionFlagsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text(
+          'Reset Permission Flags',
+          style: GoogleFonts.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'This will clear the app\'s stored permission and service request flags. Use this to re-trigger permission prompts if needed.',
+          style: GoogleFonts.inter(
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor),
+            onPressed: () async {
+              Navigator.pop(context);
+              await _resetPermissionFlags();
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Permission flags reset')),
+              );
+            },
+            child: Text('Reset', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPermissionFlags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys();
+      // Keep a small whitelist of critical keys
+      const keepKeys = {'has_wallet', 'wallet_address', 'private_key', 'mnemonic'};
+
+      for (final key in keys) {
+        if (keepKeys.contains(key)) continue;
+        final k = key.toLowerCase();
+        if (k.contains('permission') || k.contains('service') || k.contains('location') || k.contains('camera') || k.contains('_requested') || k.contains('gps')) {
+          try {
+            await prefs.remove(key);
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to reset persisted permission flags: $e');
+    }
   }
 
   void _showDataExportDialog() {

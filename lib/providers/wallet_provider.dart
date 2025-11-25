@@ -505,7 +505,6 @@ class WalletProvider extends ChangeNotifier {
     debugPrint('WalletProvider._loadData: Starting');
 
     try {
-      // TODO: Load from blockchain
       debugPrint('WalletProvider._loadData: Loading from blockchain');
       await _loadFromBlockchain();
     } catch (e) {

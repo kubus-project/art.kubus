@@ -28,10 +28,9 @@ packages:
   arcore_flutter_plugin:
     dependency: "direct main"
     description:
-      name: arcore_flutter_plugin
-      sha256: "48307e6e630cd991e5b08efd74a0869504631c828d4dc650d144c267a8b6ebfd"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/arcore_flutter_plugin"
+      relative: true
+    source: path
     version: "0.1.0"
   args:
     dependency: transitive
