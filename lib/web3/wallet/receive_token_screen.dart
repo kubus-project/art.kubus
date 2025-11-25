@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
-import '../../config/api_keys.dart';
 
 class ReceiveTokenScreen extends StatefulWidget {
   const ReceiveTokenScreen({super.key});
@@ -20,12 +19,6 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   String _selectedToken = 'KUB8';
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
-
-  // Getter for wallet address that uses the provider
-  String get _walletAddress {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    return walletProvider.currentWalletAddress ?? ApiKeys.mockReceiveAddress;
-  }
 
   @override
   void initState() {
@@ -52,6 +45,10 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
 
   @override
   Widget build(BuildContext context) {
+    final walletProvider = Provider.of<WalletProvider>(context);
+    final walletAddress = walletProvider.currentWalletAddress;
+    final hasWalletAddress = walletAddress != null && walletAddress.isNotEmpty;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -86,9 +83,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                   children: [
                     _buildTokenSelector(),
                     SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
-                    _buildQRCode(),
+                    _buildQRCode(walletAddress, hasWalletAddress),
                     SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
-                    _buildAddressSection(),
+                    _buildAddressSection(walletAddress, hasWalletAddress),
                     SizedBox(height: isWideScreen ? 40 : isTablet ? 36 : 32),
                     _buildInstructions(),
                   ],
@@ -197,7 +194,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  Widget _buildQRCode() {
+  Widget _buildQRCode(String? walletAddress, bool hasWalletAddress) {
     return ScaleTransition(
       scale: _scaleAnimation,
       child: Container(
@@ -218,26 +215,37 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               ),
               child: Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: QrImageView(
-                  data: _walletAddress,
-                  version: QrVersions.auto,
-                  size: 184.0,
-                  backgroundColor: Theme.of(context).colorScheme.onPrimary,
-                  eyeStyle: const QrEyeStyle(color: Colors.black),
-                  dataModuleStyle: const QrDataModuleStyle(color: Colors.black),
-                  errorStateBuilder: (cxt, err) {
-                    return const Center(
-                      child: Text(
-                        'QR Error\nGeneration\nFailed',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
+                child: hasWalletAddress
+                    ? QrImageView(
+                        data: walletAddress!,
+                        version: QrVersions.auto,
+                        size: 184.0,
+                        backgroundColor: Theme.of(context).colorScheme.onPrimary,
+                        eyeStyle: const QrEyeStyle(color: Colors.black),
+                        dataModuleStyle: const QrDataModuleStyle(color: Colors.black),
+                        errorStateBuilder: (cxt, err) {
+                          return const Center(
+                            child: Text(
+                              'QR Error\nGeneration\nFailed',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Text(
+                          'Create or import a wallet\nto generate a QR code',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    );
-                  },
-                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -251,7 +259,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Anyone can send $_selectedToken to this address',
+              hasWalletAddress
+                  ? 'Anyone can send $_selectedToken to this address'
+                  : 'Finish wallet setup to share your address',
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -264,7 +274,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  Widget _buildAddressSection() {
+  Widget _buildAddressSection(String? walletAddress, bool hasWalletAddress) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -287,7 +297,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 ),
               ),
               IconButton(
-                onPressed: () => _copyAddress(_walletAddress),
+                onPressed: hasWalletAddress ? () => _copyAddress(walletAddress) : null,
                 icon: Icon(
                   Icons.copy,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
@@ -306,7 +316,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
             ),
             child: Text(
-              _walletAddress,
+              hasWalletAddress
+                  ? walletAddress!
+                  : 'Create or import a wallet to receive tokens',
               style: GoogleFonts.jetBrainsMono(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -319,7 +331,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () => _copyAddress(_walletAddress),
+              onPressed: hasWalletAddress ? () => _copyAddress(walletAddress) : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -470,7 +482,18 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 
-  void _copyAddress(String walletAddress) {
+  void _copyAddress(String? walletAddress) {
+    if (walletAddress == null || walletAddress.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('No wallet address available yet'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
     Clipboard.setData(ClipboardData(text: walletAddress));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

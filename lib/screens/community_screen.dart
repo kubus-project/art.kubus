@@ -100,6 +100,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   // Location selected by user when creating a new post; may be null.
   // selectedLocation removed; location name is used in the UI when creating posts
   String? _locationName;
+  String? _lastWalletAddress;
+  AppRefreshProvider? _appRefreshProvider;
+  int _lastCommunityRefreshVersion = 0;
+  int _lastGlobalRefreshVersion = 0;
+  bool _communityReloadInFlight = false;
 
   Future<void> _loadFollowingArtists() async {
     if (mounted) {
@@ -129,7 +134,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  Future<void> _loadCommunityData({bool? followingOnly}) async {
+  Future<void> _loadCommunityData({bool? followingOnly, bool force = false}) async {
     final bool targetFollowing =
         followingOnly ?? (_activeFeed == CommunityFeedType.following);
     final bool isActiveFeed =
@@ -137,9 +142,9 @@ class _CommunityScreenState extends State<CommunityScreen>
             (_activeFeed == CommunityFeedType.discover && !targetFollowing);
 
     if (targetFollowing) {
-      if (_isLoadingFollowingFeed) return;
+      if (_isLoadingFollowingFeed && !force) return;
     } else {
-      if (_isLoadingDiscoverFeed) return;
+      if (_isLoadingDiscoverFeed && !force) return;
     }
 
     if (mounted) {
@@ -156,14 +161,19 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final walletAddress = walletProvider.currentWalletAddress;
 
     try {
       final backendApi = BackendApiService();
       try {
-        await backendApi.loadAuthToken();
-        debugPrint('🔐 Auth token loaded for community posts');
+        if (walletAddress != null && walletAddress.isNotEmpty) {
+          await backendApi.ensureAuthLoaded(walletAddress: walletAddress);
+        } else {
+          await backendApi.loadAuthToken();
+        }
+        debugPrint('Auth token ready for community posts');
       } catch (e) {
-        debugPrint('⚠️ No auth token: $e');
+        debugPrint('Auth token not ready for community posts: $e');
       }
 
       final posts = await backendApi.getCommunityPosts(
@@ -175,7 +185,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
       await CommunityService.loadSavedInteractions(
         posts,
-        walletAddress: walletProvider.currentWalletAddress,
+        walletAddress: walletAddress,
       );
       debugPrint('✅ Restored local interaction state for posts');
 
@@ -277,6 +287,45 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
+  Future<void> _reloadCommunityFeedsForWallet({String? walletAddress, bool force = false}) async {
+    if (_communityReloadInFlight) return;
+    _communityReloadInFlight = true;
+    try {
+      final normalized = walletAddress?.trim() ?? '';
+      if (normalized.isNotEmpty) {
+        try {
+          await BackendApiService().ensureAuthLoaded(walletAddress: normalized);
+        } catch (e) {
+          debugPrint('CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
+        }
+      }
+      await _loadCommunityData(followingOnly: true, force: force);
+      await _loadCommunityData(followingOnly: false, force: force);
+    } finally {
+      _communityReloadInFlight = false;
+    }
+  }
+
+  void _onAppRefreshTriggered() {
+    if (!mounted || _appRefreshProvider == null) return;
+    final communityVersion = _appRefreshProvider!.communityVersion;
+    final globalVersion = _appRefreshProvider!.globalVersion;
+    final shouldRefresh =
+        communityVersion != _lastCommunityRefreshVersion ||
+        globalVersion != _lastGlobalRefreshVersion;
+    _lastCommunityRefreshVersion = communityVersion;
+    _lastGlobalRefreshVersion = globalVersion;
+    if (!shouldRefresh) return;
+    try {
+      _lastWalletAddress =
+          Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+    } catch (_) {}
+    _reloadCommunityFeedsForWallet(
+      walletAddress: _lastWalletAddress,
+      force: true,
+    );
+  }
+
   /// Public helper: open comments view for a post by id (if present in current feed)
   void openPostById(String postId) {
     final idx = _communityPosts.indexWhere((p) => p.id == postId);
@@ -306,6 +355,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     // Load following feed by default
     _communityPosts = _followingFeedPosts;
     _activeFeed = CommunityFeedType.following;
+    try {
+      _lastWalletAddress =
+          Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+    } catch (_) {}
     _loadCommunityData(followingOnly: true);
     // Listen for tab changes to load appropriate content
     _tabController.addListener(() {
@@ -439,6 +492,17 @@ class _CommunityScreenState extends State<CommunityScreen>
         walletProvider.addListener(_onWalletProviderChanged);
       } catch (_) {}
     });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        _appRefreshProvider =
+            Provider.of<AppRefreshProvider>(context, listen: false);
+        _lastCommunityRefreshVersion =
+            _appRefreshProvider?.communityVersion ?? 0;
+        _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
+        _appRefreshProvider?.addListener(_onAppRefreshTriggered);
+      } catch (_) {}
+    });
   }
 
   DateTime? _lastConfigChange;
@@ -486,6 +550,9 @@ class _CommunityScreenState extends State<CommunityScreen>
     try {
       Provider.of<WalletProvider>(context, listen: false)
           .removeListener(_onWalletProviderChanged);
+    } catch (_) {}
+    try {
+      _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
     } catch (_) {}
     try {
       SocketService().removePostListener(_handleIncomingPost);
@@ -566,13 +633,27 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   void _onWalletProviderChanged() async {
-    // When wallet/login state changes, reload saved likes state so UI reflects current account
     try {
+      final walletProvider =
+          Provider.of<WalletProvider>(context, listen: false);
+      final currentWallet = walletProvider.currentWalletAddress ?? '';
+      final normalized = currentWallet.trim();
+      final hasChanged =
+          (_lastWalletAddress ?? '').toLowerCase() != normalized.toLowerCase();
+
+      if (hasChanged) {
+        _lastWalletAddress = normalized;
+        await _reloadCommunityFeedsForWallet(
+          walletAddress: normalized,
+          force: true,
+        );
+        return;
+      }
+
       if (_communityPosts.isNotEmpty) {
         await CommunityService.loadSavedInteractions(
           _communityPosts,
-          walletAddress: Provider.of<WalletProvider>(context, listen: false)
-              .currentWalletAddress,
+          walletAddress: normalized.isEmpty ? null : normalized,
         );
         if (!mounted) return;
         setState(() {});

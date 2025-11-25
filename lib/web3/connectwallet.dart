@@ -9,6 +9,9 @@ import '../providers/wallet_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/app_refresh_provider.dart';
+import '../providers/notification_provider.dart';
+import '../providers/recent_activity_provider.dart';
 import '../services/solana_walletconnect_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
@@ -63,6 +66,45 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     _mnemonicController.dispose();
     _wcUriController.dispose();
     super.dispose();
+  }
+
+  Future<void> _runPostWalletConnectRefresh(String walletAddress) async {
+    if (!mounted) return;
+    final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final activityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+
+    try {
+      await BackendApiService().ensureAuthLoaded(walletAddress: walletAddress);
+    } catch (e) {
+      debugPrint('connectwallet: ensureAuthLoaded after wallet connect failed: $e');
+    }
+
+    try {
+      await chatProvider.initialize(initialWallet: walletAddress);
+      await chatProvider.setCurrentWallet(walletAddress);
+      await chatProvider.refreshConversations();
+    } catch (e) {
+      debugPrint('connectwallet: chat refresh after wallet connect failed: $e');
+    }
+
+    try {
+      await notificationProvider.initialize(walletOverride: walletAddress, force: true);
+    } catch (e) {
+      debugPrint('connectwallet: NotificationProvider.initialize failed after wallet connect: $e');
+    }
+
+    try {
+      await activityProvider.refresh(force: true);
+    } catch (e) {
+      debugPrint('connectwallet: RecentActivityProvider.refresh failed after wallet connect: $e');
+    }
+
+    try {
+      appRefresh.triggerAll();
+      appRefresh.triggerCommunity();
+    } catch (_) {}
   }
 
   @override
@@ -625,6 +667,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           } catch (e) {
             debugPrint('connectwallet: failed to set chat provider wallet after import: $e');
           }
+          try {
+            await _runPostWalletConnectRefresh(address);
+          } catch (_) {}
         }
       
       if (mounted) {
@@ -1305,7 +1350,24 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     });
     
     try {
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final walletAddress = walletProvider.currentWalletAddress;
+      if (walletAddress == null || walletAddress.isEmpty) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Create or import a wallet before using WalletConnect'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      
       final wcService = SolanaWalletConnectService.instance;
+      wcService.updateActiveWalletAddress(walletAddress);
       
       // Initialize if not already done
       if (!wcService.isConnected) {
@@ -1399,6 +1461,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           } catch (e, st) {
             debugPrint('connectwallet: failed to set chat provider wallet after walletconnect: $e\n$st');
           }
+          try {
+            await _runPostWalletConnectRefresh(address);
+          } catch (_) {}
           navigator.pop();
         }
       };
@@ -1520,6 +1585,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
         
         if (mounted) {
+          try {
+            await _runPostWalletConnectRefresh(result['address']!);
+          } catch (_) {}
           messenger.showSnackBar(
             SnackBar(
               content: const Text('Wallet created and profile set up successfully!'),

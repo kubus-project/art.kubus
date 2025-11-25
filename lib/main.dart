@@ -256,7 +256,8 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           final wallet = profile.currentUser?.walletAddress;
           await notif.initialize(walletOverride: wallet);
           notif.bindToRefresh(appRefresh);
-          debugPrint('ArtKubus: NotificationProvider bound to AppRefreshProvider');
+          cp.bindToRefresh(appRefresh);
+          debugPrint('ArtKubus: NotificationProvider + ChatProvider bound to AppRefreshProvider');
         } catch (e) {
           debugPrint('ArtKubus: failed to bind NotificationProvider to AppRefreshProvider: $e');
         }

@@ -19,6 +19,7 @@ class SolanaWalletConnectService {
   // Session management
   SessionData? _currentSession;
   String? _connectedAddress;
+  String? _activeWalletAddress;
   
   // Event callbacks
   Function(String address)? onConnected;
@@ -118,19 +119,21 @@ class SolanaWalletConnectService {
     });
   }
   
+  /// Update the wallet address that will be exposed to connected dApps
+  void updateActiveWalletAddress(String? address) {
+    if (address == null || address.isEmpty) {
+      _activeWalletAddress = null;
+      return;
+    }
+    _activeWalletAddress = address;
+  }
+  
   /// Approve a session proposal
   Future<void> _approveSession(int id, ProposalData proposal) async {
     try {
-      // Use real user wallet address if available, otherwise use mock for development
-      String solanaAddress;
-      
-      if (kDebugMode) {
-        // In debug mode, use mock address for development
-        solanaAddress = ApiKeys.mockSolanaAddress;
-      } else {
-        // In production, this should be the user's actual wallet address
-        // TODO: Get real user wallet address from wallet provider
-        solanaAddress = ApiKeys.mockSolanaAddress; // Temporary - replace with real address
+      final solanaAddress = _activeWalletAddress;
+      if (solanaAddress == null || solanaAddress.isEmpty) {
+        throw Exception('No wallet address configured for WalletConnect session');
       }
       
       final sessionData = await _walletKit.approveSession(
