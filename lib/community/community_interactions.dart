@@ -591,8 +591,9 @@ class CommunityService {
 
       if (originalFollowState) {
         // Restore to following
-        if (!followedUsers.contains(walletAddress))
+        if (!followedUsers.contains(walletAddress)) {
           followedUsers.add(walletAddress);
+        }
         if (post != null) post.isFollowing = true;
       } else {
         // Restore to not following

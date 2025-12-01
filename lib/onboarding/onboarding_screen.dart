@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/gradient_icon_card.dart';
 import 'permissions_screen.dart';
-import '../main_app.dart';
+import '../screens/auth/sign_in_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -26,7 +26,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       description: 'Transform your surroundings with immersive AR artworks and join a global community of digital artists.',
       iconData: Icons.view_in_ar,
       gradient: const LinearGradient(
-        colors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
+        colors: [Color.fromARGB(255, 4, 93, 148), Color(0xFF0B6E4F)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -359,7 +359,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => const MainApp(),
+          builder: (context) => const SignInScreen(),
         ),
       );
     }

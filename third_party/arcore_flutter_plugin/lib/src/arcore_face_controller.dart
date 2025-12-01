@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
+import 'package:flutter/widgets.dart';
 
 import '../arcore_flutter_plugin.dart';
 
@@ -17,19 +17,19 @@ class ArCoreFaceController {
   late MethodChannel _channel;
   late StringResultHandler onError;
 
-  init() async {
+  Future<void> init() async {
     try {
       await _channel.invokeMethod<void>('init', {
         'enableAugmentedFaces': enableAugmentedFaces,
       });
     } on PlatformException catch (ex) {
-      print(ex.message);
+      debugPrint(ex.message);
     }
   }
 
   Future<dynamic> _handleMethodCalls(MethodCall call) async {
     if (debug) {
-      print('_platformCallHandler call ${call.method} ${call.arguments}');
+      debugPrint('_platformCallHandler call ${call.method} ${call.arguments}');
     }
     switch (call.method) {
       case 'onError':
@@ -37,7 +37,7 @@ class ArCoreFaceController {
         break;
       default:
         if (debug) {
-          print('Unknown method ${call.method}');
+          debugPrint('Unknown method ${call.method}');
         }
     }
     return Future.value();

@@ -256,7 +256,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green : Colors.transparent,
+          color: isSelected ? const Color(0xFF667EEA) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(

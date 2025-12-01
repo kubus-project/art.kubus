@@ -15,6 +15,6 @@ class ArCoreCube extends ArCoreShape {
 
   @override
   Map<String, dynamic> toMap() => <String, dynamic>{
-        'size': convertVector3ToMap(this.size),
+        'size': convertVector3ToMap(size),
       }..addAll(super.toMap());
 }

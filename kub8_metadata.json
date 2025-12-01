@@ -1,0 +1,26 @@
+{
+  "name": "kubit",
+  "symbol": "KUB8",
+  "description": "KUB8 utility token for the art.kubus AR ecosystem.",
+  "image": "https://ipfs.io/ipfs/QmctfGSzc9VS4DE9fw2rg718HQmmR8jr172rwRsUHrMSV8/logo.png",
+  "seller_fee_basis_points": 0,
+  "attributes": [
+    { "trait_type": "Utility", "value": "AR Access" },
+    { "trait_type": "Supply", "value": "42000000" }
+  ],
+  "properties": {
+    "category": "token",
+    "files": [
+      {
+        "uri": "https://ipfs.io/ipfs/QmctfGSzc9VS4DE9fw2rg718HQmmR8jr172rwRsUHrMSV8/logo.png",
+        "type": "image/png"
+      }
+    ],
+    "creators": [
+      {
+        "address": "A8FtJ7fvJHZfsmMLfT85rTE6itNCf4qu26A4nU9LeCZ2",
+        "share": 100
+      }
+    ]
+  }
+}

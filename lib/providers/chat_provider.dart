@@ -78,23 +78,20 @@ class ChatProvider extends ChangeNotifier {
       final namesMap = result['names'] as Map<String, String?>;
       final wallets = <String>[];
       final seenWallets = <String>{};
-      String? myWalletLower;
-      try {
-        myWalletLower = _currentWallet?.toLowerCase();
-      } catch (_) {}
+      final myWalletCanonical = WalletUtils.canonical(_currentWallet);
 
       void addWallet(String wallet) {
-        final normalized = wallet.trim();
+        final normalized = WalletUtils.normalize(wallet);
         if (normalized.isEmpty) return;
-        final lower = normalized.toLowerCase();
-        if (myWalletLower != null && lower == myWalletLower) return;
-        if (seenWallets.add(lower)) {
+        final canonical = WalletUtils.canonical(normalized);
+        if (myWalletCanonical.isNotEmpty && canonical == myWalletCanonical) return;
+        if (seenWallets.add(canonical)) {
           wallets.add(normalized);
         }
       }
 
       void seedFromProfile(ConversationMemberProfile profile) {
-        final wallet = profile.wallet.trim();
+        final wallet = WalletUtils.normalize(profile.wallet);
         if (wallet.isEmpty) return;
         addWallet(wallet);
         if ((profile.displayName ?? '').isNotEmpty) {
@@ -141,7 +138,7 @@ class ChatProvider extends ChangeNotifier {
             final members = (cache['result'] as List<dynamic>?) ?? [];
             for (final m in members) {
               final map = (m as Map).cast<String, dynamic>();
-              final w = ((map['wallet_address'] ?? map['wallet'] ?? map['walletAddress'] ?? map['id'])?.toString() ?? '').trim();
+              final w = WalletUtils.normalize((map['wallet_address'] ?? map['wallet'] ?? map['walletAddress'] ?? map['id'])?.toString());
               if (w.isNotEmpty) {
                 addWallet(w);
                 final displayName = (map['displayName'] ?? map['display_name'] ?? map['name'])?.toString();
@@ -163,7 +160,7 @@ class ChatProvider extends ChangeNotifier {
         if (msgs != null) {
           final set = <String>{};
           for (final m in msgs) {
-            final w = m.senderWallet;
+            final w = WalletUtils.normalize(m.senderWallet);
             if (w.isNotEmpty && w != _currentWallet) set.add(w);
           }
           for (final w in set) {
@@ -202,10 +199,10 @@ class ChatProvider extends ChangeNotifier {
       final seenWallets = <String>{};
 
       void addProfile(ConversationMemberProfile profile) {
-        final wallet = profile.wallet.trim();
+        final wallet = WalletUtils.normalize(profile.wallet);
         if (wallet.isEmpty) return;
-        final lower = wallet.toLowerCase();
-        if (!seenWallets.add(lower)) return;
+        final canonical = WalletUtils.canonical(wallet);
+        if (!seenWallets.add(canonical)) return;
         entries.add({
           'wallet_address': wallet,
           'wallet': wallet,
@@ -245,11 +242,11 @@ class ChatProvider extends ChangeNotifier {
       }
       if (conv.memberWallets.isNotEmpty) {
         for (final wallet in conv.memberWallets) {
-          final trimmed = wallet.trim();
+          final trimmed = WalletUtils.normalize(wallet);
           if (trimmed.isEmpty) continue;
-          final lower = trimmed.toLowerCase();
-          if (seenWallets.contains(lower)) continue;
-          seenWallets.add(lower);
+          final canonical = WalletUtils.canonical(trimmed);
+          if (seenWallets.contains(canonical)) continue;
+          seenWallets.add(canonical);
           entries.add({
             'wallet_address': trimmed,
             'wallet': trimmed,
@@ -278,8 +275,8 @@ class ChatProvider extends ChangeNotifier {
     final sanitized = displayName.replaceAll(RegExp(r'[^a-zA-Z0-9_\s]'), '').trim();
     final usernameSeed = sanitized.replaceAll(RegExp(r'\s+'), '').toLowerCase();
     final fallbackUsername = usernameSeed.isNotEmpty
-        ? usernameSeed
-        : (wallet.length > 8 ? wallet.substring(0, 8).toLowerCase() : wallet.toLowerCase());
+      ? usernameSeed
+      : (wallet.length > 8 ? wallet.substring(0, 8) : wallet);
     return User(
       id: wallet,
       name: displayName,
@@ -335,15 +332,15 @@ class ChatProvider extends ChangeNotifier {
   Future<void> _prefetchMembersAndProfilesFromConversations(List<Conversation> convs) async {
     try {
       final wallets = <String>{};
-      String? myWalletLower;
-      try { myWalletLower = _currentWallet?.toLowerCase(); } catch (_) {}
+      final myWalletCanonical = WalletUtils.canonical(_currentWallet);
 
       void collectWallet(String? wallet) {
         if (wallet == null) return;
-        final trimmed = wallet.trim();
-        if (trimmed.isEmpty) return;
-        if (myWalletLower != null && trimmed.toLowerCase() == myWalletLower) return;
-        wallets.add(trimmed);
+        final normalized = WalletUtils.normalize(wallet);
+        if (normalized.isEmpty) return;
+        final canonical = WalletUtils.canonical(normalized);
+        if (myWalletCanonical.isNotEmpty && canonical == myWalletCanonical) return;
+        wallets.add(normalized);
       }
 
       final convsNeedingMembers = <Conversation>[];
@@ -374,7 +371,7 @@ class ChatProvider extends ChangeNotifier {
         try {
           final members = await fetchMembers(conv.id);
           for (final member in members) {
-            final wallet = ((member['wallet_address'] ?? member['wallet'] ?? member['walletAddress'] ?? member['id'])?.toString() ?? '').trim();
+            final wallet = WalletUtils.normalize((member['wallet_address'] ?? member['wallet'] ?? member['walletAddress'] ?? member['id'])?.toString());
             collectWallet(wallet);
           }
         } catch (e) {
@@ -712,9 +709,10 @@ class ChatProvider extends ChangeNotifier {
       _subscriptionMonitorTimer?.cancel();
       _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 25), (_) async {
         try {
-          if (_currentWallet == null || _currentWallet!.isEmpty) return;
-          final subscribed = _socket.currentSubscribedWallet;
-          if (subscribed == null || subscribed.toLowerCase() != _currentWallet!.toLowerCase()) {
+          final expectedWallet = WalletUtils.canonical(_currentWallet);
+          if (expectedWallet.isEmpty) return;
+          final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
+          if (subscribed.isEmpty || subscribed != expectedWallet) {
             debugPrint('ChatProvider: subscription monitor detected mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe');
             var ok = await _socket.connectAndSubscribe(_api.baseUrl, _currentWallet!);
             debugPrint('ChatProvider subscription monitor: connectAndSubscribe -> $ok');
@@ -908,10 +906,10 @@ class ChatProvider extends ChangeNotifier {
         messageFound = true;
         
         // Check if this reader is already in the list
-        final readerWalletLower = reader.toLowerCase();
+        final readerCanonical = WalletUtils.canonical(reader);
         final alreadyRegistered = m.readers.any((r) {
-          final existing = (r['wallet_address'] ?? r['wallet'] ?? '').toString();
-          return existing.isNotEmpty && existing.toLowerCase() == readerWalletLower;
+          final existing = WalletUtils.normalize((r['wallet_address'] ?? r['wallet'] ?? '').toString());
+          return existing.isNotEmpty && WalletUtils.equals(existing, readerCanonical);
         });
 
         if (alreadyRegistered) {
@@ -927,7 +925,7 @@ class ChatProvider extends ChangeNotifier {
         final updatedMsg = m.copyWith(
           readers: newReaders,
           readersCount: newReaders.length,
-          readByCurrent: (_currentWallet != null && reader.toLowerCase() == _currentWallet!.toLowerCase()) ? true : m.readByCurrent,
+          readByCurrent: (_currentWallet != null && WalletUtils.equals(reader, _currentWallet)) ? true : m.readByCurrent,
         );
 
         // Create completely new list instance to ensure change detection
@@ -938,7 +936,7 @@ class ChatProvider extends ChangeNotifier {
         _messages[convId] = newList;
 
         // Update unread count if current user is the reader
-        if (_currentWallet != null && reader.toLowerCase() == _currentWallet!.toLowerCase()) {
+        if (_currentWallet != null && WalletUtils.equals(reader, _currentWallet)) {
           final curr = _unreadCounts[convId] ?? 0;
           if (curr > 0) _unreadCounts[convId] = curr - 1;
         }
@@ -992,7 +990,7 @@ class ChatProvider extends ChangeNotifier {
       debugPrint('ChatProvider._onConversationMemberRead: convId=$convId, wallet=$wallet, lastRead=$lastRead');
       if (convId.isEmpty) return;
       // Compare wallet to current wallet case-insensitively for detection only
-      if (wallet.isNotEmpty && _currentWallet != null && wallet.toLowerCase() == _currentWallet!.toLowerCase()) {
+      if (wallet.isNotEmpty && _currentWallet != null && WalletUtils.equals(wallet, _currentWallet)) {
         _unreadCounts[convId] = 0;
         _safeNotifyListeners(force: true);
       }
@@ -1761,12 +1759,12 @@ class ChatProvider extends ChangeNotifier {
         if (m.id == messageId) {
         if (m.readByCurrent) break;
         final existingReaders = m.readers.map((e) => Map<String, dynamic>.from(e)).toList();
-        final readerWallet = _currentWallet ?? '';
-        final readerWalletLower = readerWallet.toLowerCase();
+        final readerWallet = WalletUtils.normalize(_currentWallet);
+        final readerCanonical = WalletUtils.canonical(readerWallet);
         if (readerWallet.isNotEmpty && !existingReaders.any((r) {
           try {
-            final existing = ((r['wallet_address'] ?? r['wallet']) ?? '').toString();
-            return existing.isNotEmpty && existing.toLowerCase() == readerWalletLower && readerWalletLower.isNotEmpty;
+            final existing = WalletUtils.normalize(((r['wallet_address'] ?? r['wallet']) ?? '').toString());
+            return existing.isNotEmpty && WalletUtils.equals(existing, readerCanonical) && readerCanonical.isNotEmpty;
           } catch (_) { return false; }
         })) {
           existingReaders.add(_buildReaderMetadata(readerWallet));

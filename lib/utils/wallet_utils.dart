@@ -1,9 +1,10 @@
 class WalletUtils {
   /// Returns a canonical room key for the given wallet address.
-  /// Ensures consistent lowercase formatting for sockets and server room names.
+  /// Wallet addresses are case-sensitive, so we preserve the original casing
+  /// and only trim surrounding whitespace.
   static String roomKey(String? wallet) => canonical(wallet);
 
-  /// Returns a canonical identicon key for a wallet (lowercased for stable URL)
+  /// Returns a canonical identicon key for a wallet (case preserved).
   static String identiconKey(String? wallet) => canonical(wallet);
 
   /// Normalizes any wallet-like identifier by trimming whitespace while preserving case.
@@ -12,8 +13,8 @@ class WalletUtils {
     return wallet.trim();
   }
 
-  /// Returns a lowercase canonical representation for comparisons.
-  static String canonical(String? wallet) => normalize(wallet).toLowerCase();
+  /// Returns a canonical representation for comparisons (case preserved).
+  static String canonical(String? wallet) => normalize(wallet);
 
   /// Returns true when both wallets resolve to the same canonical identifier.
   static bool equals(String? a, String? b) => canonical(a) == canonical(b);

@@ -2,19 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
+import '../utils/wallet_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
 import '../providers/web3provider.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/task_provider.dart';
+import '../providers/wallet_provider.dart';
+import '../providers/artwork_provider.dart';
 import '../services/backend_api_service.dart';
 import '../community/community_interactions.dart';
-import '../web3/wallet.dart';
+import '../web3/wallet/wallet_home.dart';
 import '../web3/achievements/achievements_page.dart';
 import 'settings_screen.dart';
 import 'saved_items_screen.dart';
 import 'profile_screen_methods.dart';
+import 'view_history_screen.dart';
 import '../models/achievements.dart';
 import 'profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
@@ -75,6 +79,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     
     _animationController.forward();
     _loadPrivacySettings();
+    Future.microtask(() {
+      try {
+        context.read<ArtworkProvider>().ensureHistoryLoaded();
+      } catch (_) {}
+    });
   }
 
   @override
@@ -228,6 +237,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                   avatarUrl: profileProvider.currentUser?.avatar,
                   radius: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
                   enableProfileNavigation: false,
+                  showStatusIndicator: _showActivityStatus,
+                  isOnline: !Provider.of<WalletProvider>(context, listen: false).isLocked,
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 20),
                 Align(
@@ -925,14 +936,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
       final collections = await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
-      final lowerWallet = walletAddress.toLowerCase();
+      final normalizedWallet = WalletUtils.normalize(walletAddress);
       final filteredEvents = eventsResponse.where((event) {
-        final createdBy = (event['createdBy'] ?? event['created_by'] ?? '').toString().toLowerCase();
+        final createdBy = WalletUtils.normalize((event['createdBy'] ?? event['created_by'] ?? '').toString());
         final artistIdsDynamic = event['artistIds'] ?? event['artist_ids'] ?? [];
         final artistIds = artistIdsDynamic is List
-            ? artistIdsDynamic.map((e) => e.toString().toLowerCase()).toList()
+            ? artistIdsDynamic.map((e) => WalletUtils.normalize(e.toString())).toList()
             : <String>[];
-        return createdBy == lowerWallet || artistIds.contains(lowerWallet);
+        return createdBy == normalizedWallet || artistIds.contains(normalizedWallet);
       }).take(6).map((e) => Map<String, dynamic>.from(e)).toList();
 
       if (!mounted) return;
@@ -1295,6 +1306,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     return 'Just now';
   }
 
+  String _formatCount(num value) {
+    if (value >= 1000000) return '${(value / 1000000).toStringAsFixed(1)}M';
+    if (value >= 1000) return '${(value / 1000).toStringAsFixed(1)}K';
+    return value.toString();
+  }
+
 
   Widget _buildAchievementsSection() {
     return Padding(
@@ -1487,10 +1504,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildPerformanceStats() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Consumer<ConfigProvider>(
-        builder: (context, config, child) {
-          if (!config.useMockData) {
-            // Real stats would come from providers/API
+      child: Consumer2<ProfileProvider, ArtworkProvider>(
+        builder: (context, profileProvider, artworkProvider, child) {
+          final stats = profileProvider.currentUser?.stats;
+          final viewHistory = artworkProvider.viewHistoryEntries;
+          final viewedCount = viewHistory.length;
+          final discoveries = stats?.artworksDiscovered ?? 0;
+          final created = stats?.artworksCreated ?? 0;
+          final followers = stats?.followersCount ?? profileProvider.followersCount;
+          final following = stats?.followingCount ?? profileProvider.followingCount;
+          final nftsOwned = stats?.nftsOwned ?? 0;
+
+          final hasData = stats != null || viewedCount > 0;
+          if (!hasData) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -1505,14 +1531,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: 16),
                 _buildEmptyStateCard(
                   icon: Icons.analytics,
-                  title: 'No Stats Available',
-                  description: 'Performance stats will appear as you interact with the platform',
+                  title: 'No Stats Yet',
+                  description: 'Interact with artworks, collections, and community to see insights.',
                 ),
               ],
             );
           }
 
-          // Mock data for demo purposes
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1525,13 +1550,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              _buildPerformanceCard('Total Views', '2,456', Icons.visibility, '+12%'),
+              _buildPerformanceCard('Artworks viewed', _formatCount(viewedCount), Icons.visibility, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Likes Received', '389', Icons.favorite, '+8%'),
+              _buildPerformanceCard('Discoveries', _formatCount(discoveries), Icons.location_on, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('KUB8 Earned', '156.7', Icons.currency_bitcoin, '+23%'),
+              _buildPerformanceCard('Created / Owned', '${_formatCount(created)} / ${_formatCount(nftsOwned)}', Icons.auto_fix_high, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Discoveries', '42', Icons.location_on, '+15%'),
+              _buildPerformanceCard('Followers / Following', '${_formatCount(followers)} / ${_formatCount(following)}', Icons.group, null),
             ],
           );
         },
@@ -1539,7 +1564,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildPerformanceCard(String title, String value, IconData icon, String change) {
+  Widget _buildPerformanceCard(String title, String value, IconData icon, String? change) {
     Widget cardContent = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1585,21 +1610,22 @@ class _ProfileScreenState extends State<ProfileScreen>
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              change,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.green,
+          if (change != null)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                change,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.green,
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -1610,7 +1636,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const Wallet()),
+            MaterialPageRoute(builder: (context) => const WalletHome()),
           );
         },
         child: cardContent,
@@ -1836,40 +1862,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _navigateToViewHistory() {
-    // Show history dialog for now
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'View History',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.history,
-              size: 64,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Your viewing history will appear here',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: GoogleFonts.inter()),
-          ),
-        ],
-      ),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ViewHistoryScreen()),
     );
   }
 
@@ -1934,7 +1929,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
           ),
         ],
       ),
@@ -1942,21 +1937,42 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
   
   Future<void> _savePrivacySettings() async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('private_profile', _privateProfile);
     await prefs.setBool('show_activity_status', _showActivityStatus);
     await prefs.setBool('show_collection', _showCollection);
     await prefs.setBool('allow_messages', _allowMessages);
+    // Persist via provider/backend as well
+    try {
+      await profileProvider.updatePreferences(
+        privateProfile: _privateProfile,
+        showActivityStatus: _showActivityStatus,
+        showCollection: _showCollection,
+        allowMessages: _allowMessages,
+      );
+    } catch (_) {}
   }
   
   Future<void> _loadPrivacySettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _privateProfile = prefs.getBool('private_profile') ?? false;
-      _showActivityStatus = prefs.getBool('show_activity_status') ?? true;
-      _showCollection = prefs.getBool('show_collection') ?? true;
-      _allowMessages = prefs.getBool('allow_messages') ?? true;
-    });
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    try {
+      final prefsModel = profileProvider.preferences;
+      setState(() {
+        _privateProfile = prefsModel.privacy.toLowerCase() == 'private';
+        _showActivityStatus = prefsModel.showActivityStatus;
+        _showCollection = prefsModel.showCollection;
+        _allowMessages = prefsModel.allowMessages;
+      });
+    } catch (_) {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        _privateProfile = prefs.getBool('private_profile') ?? false;
+        _showActivityStatus = prefs.getBool('show_activity_status') ?? true;
+        _showCollection = prefs.getBool('show_collection') ?? true;
+        _allowMessages = prefs.getBool('allow_messages') ?? true;
+      });
+    }
   }
 
   void _navigateToHelpSupport() {
@@ -2401,7 +2417,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           Switch(
             value: value,
             onChanged: (newValue) {},
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ],
       ),

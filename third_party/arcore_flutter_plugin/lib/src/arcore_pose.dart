@@ -5,7 +5,7 @@ class ArCorePose {
   late Vector4 rotation;
 
   ArCorePose.fromMap(Map<dynamic, dynamic> map) {
-    this.translation = Vector3.array(map["translation"]);
-    this.rotation = Vector4.array(map["rotation"]);
+    translation = Vector3.array(map["translation"]);
+    rotation = Vector4.array(map["rotation"]);
   }
 }

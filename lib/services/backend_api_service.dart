@@ -34,6 +34,54 @@ class BackendApiService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   bool _authInitialized = false;
   Future<void>? _authInitFuture;
+  final Map<String, DateTime> _rateLimitResets = {};
+
+  String _rateLimitKey(String method, Uri uri) => '${method.toUpperCase()} ${uri.path}';
+
+  bool _isRateLimited(String key) {
+    final resetAt = _rateLimitResets[key];
+    if (resetAt == null) return false;
+    if (resetAt.isBefore(DateTime.now())) {
+      _rateLimitResets.remove(key);
+      return false;
+    }
+    return true;
+  }
+
+  void _markRateLimited(String key, http.Response response, {int defaultWindowMs = 60000}) {
+    int windowMs = defaultWindowMs;
+    try {
+      if (response.headers['retry-after'] != null) {
+        final retry = int.tryParse(response.headers['retry-after']!);
+        if (retry != null) {
+          windowMs = retry * 1000;
+        }
+      }
+      if (response.body.isNotEmpty) {
+        final parsed = jsonDecode(response.body);
+        if (parsed is Map<String, dynamic>) {
+          final fromBody = parsed['windowMs'] ?? parsed['window_ms'] ?? parsed['retryAfterMs'] ?? parsed['retry_after_ms'];
+          if (fromBody is num) {
+            windowMs = fromBody.toInt();
+          }
+        }
+      }
+    } catch (_) {}
+    final resetAt = DateTime.now().add(Duration(milliseconds: windowMs));
+    _rateLimitResets[key] = resetAt;
+    debugPrint('BackendApiService: rate limit set for $key until $resetAt (window ${windowMs}ms)');
+  }
+
+  String _rateLimitMessage(String key) {
+    final resetAt = _rateLimitResets[key];
+    if (resetAt == null) return 'Rate limit exceeded. Please retry shortly.';
+    final remaining = resetAt.difference(DateTime.now());
+    if (remaining.isNegative) return 'Rate limit exceeded. Please retry shortly.';
+    final mins = remaining.inMinutes;
+    final secs = remaining.inSeconds % 60;
+    final human = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
+    return 'Rate limit exceeded. Please retry in ~$human.';
+  }
 
   /// Ensure auth token is loaded once. If token missing and wallet provided,
   /// attempt a single token issuance for that wallet and persist it.
@@ -86,6 +134,19 @@ class BackendApiService {
       }
     } catch (e) {
       debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
+    }
+  }
+
+  Future<void> _ensureAuthBeforeRequest({String? walletAddress}) async {
+    if ((_authToken ?? '').isNotEmpty) return;
+    await _ensureAuthWithStoredWallet();
+    if ((_authToken ?? '').isNotEmpty) return;
+    if (walletAddress != null && walletAddress.isNotEmpty) {
+      try {
+        await ensureAuthLoaded(walletAddress: walletAddress);
+      } catch (e) {
+        debugPrint('BackendApiService: ensureAuthLoaded for $walletAddress failed: $e');
+      }
     }
   }
 
@@ -194,6 +255,18 @@ class BackendApiService {
     return headers;
   }
 
+  Future<void> _persistTokenFromResponse(Map<String, dynamic> body) async {
+    final token = body['data'] != null && body['data']['token'] != null
+        ? body['data']['token'] as String
+        : body['token'] as String?;
+    if (token != null && token.isNotEmpty) {
+      await setAuthToken(token);
+      try {
+        await _secureStorage.write(key: 'jwt_token', value: token);
+      } catch (_) {}
+    }
+  }
+
   bool _isSuccessStatus(int statusCode) => statusCode >= 200 && statusCode < 300;
 
   Uri _withOrbitSource(Uri uri) {
@@ -207,6 +280,13 @@ class BackendApiService {
     bool includeAuth = true,
     bool allowOrbitFallback = false,
   }) async {
+    final key = _rateLimitKey('GET', uri);
+    if (_isRateLimited(key)) {
+      final message = _rateLimitMessage(key);
+      debugPrint('BackendApiService: skipping $key because of active rate limit');
+      throw Exception(message);
+    }
+
     final headers = _getHeaders(includeAuth: includeAuth);
     http.Response? primaryResponse;
     try {
@@ -214,11 +294,18 @@ class BackendApiService {
       if (_isSuccessStatus(primaryResponse.statusCode)) {
         return jsonDecode(primaryResponse.body) as Map<String, dynamic>;
       }
+      if (primaryResponse.statusCode == 429) {
+        _markRateLimited(key, primaryResponse, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
       debugPrint('BackendApiService: ${uri.path} failed with status ${primaryResponse.statusCode}');
       if (!allowOrbitFallback) {
         throw Exception('Request failed: ${primaryResponse.statusCode}');
       }
     } catch (e) {
+      if (primaryResponse?.statusCode == 429) {
+        rethrow; // Do not attempt Orbit fallback when rate limited.
+      }
       if (!allowOrbitFallback) {
         debugPrint('BackendApiService: request error for ${uri.path}: $e');
         rethrow;
@@ -236,6 +323,10 @@ class BackendApiService {
       final data = jsonDecode(fallbackResponse.body) as Map<String, dynamic>;
       data['source'] = data['source'] ?? 'orbitdb';
       return data;
+    }
+    if (fallbackResponse.statusCode == 429) {
+      _markRateLimited(key, fallbackResponse, defaultWindowMs: 900000);
+      throw Exception(_rateLimitMessage(key));
     }
     debugPrint('BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}');
     throw Exception('Orbit fallback failed: ${fallbackResponse.statusCode}');
@@ -290,14 +381,7 @@ class BackendApiService {
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        // If backend returned token, persist it
-        final token = data['data'] != null && data['data']['token'] != null
-            ? data['data']['token'] as String
-            : (data['token'] as String?) ?? null;
-        if (token != null) {
-          await setAuthToken(token);
-          try { await _secureStorage.write(key: 'jwt_token', value: token); } catch (_) {}
-        }
+        await _persistTokenFromResponse(data);
         return data;
       } else {
         throw Exception('Register failed: ${response.statusCode} ${response.body}');
@@ -328,23 +412,142 @@ class BackendApiService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        if (data['token'] != null) {
-          final token = data['token'] as String;
-          await setAuthToken(token);
-          // Store token in secure storage
-          try {
-            await _secureStorage.write(key: 'jwt_token', value: token);
-            debugPrint('JWT token stored in secure storage');
-          } catch (e) {
-            debugPrint('Error storing JWT token: $e');
-          }
-        }
+        await _persistTokenFromResponse(data);
         return data;
       } else {
         throw Exception('Login failed: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
       debugPrint('Error logging in: $e');
+      rethrow;
+    }
+  }
+
+  /// Register with email + password
+  /// POST /api/auth/register/email
+  Future<Map<String, dynamic>> registerWithEmail({
+    required String email,
+    required String password,
+    String? username,
+    String? walletAddress,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/register/email');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final body = {
+        'email': email,
+        'password': password,
+        if (username != null && username.isNotEmpty) 'username': username,
+        if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+      };
+      final response = await http.post(
+        uri,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode(body),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await _persistTokenFromResponse(data);
+        return data;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
+      if (response.statusCode == 404) {
+        throw Exception('Email registration endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_EMAIL_AUTH=true.');
+      }
+      throw Exception('Email registration failed: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error in registerWithEmail: $e');
+      rethrow;
+    }
+  }
+
+  /// Login with email + password
+  /// POST /api/auth/login/email
+  Future<Map<String, dynamic>> loginWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/login/email');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final response = await http.post(
+        uri,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        await _persistTokenFromResponse(data);
+        return data;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        throw Exception(_rateLimitMessage(key));
+      }
+      throw Exception('Email login failed: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error logging in with email: $e');
+      rethrow;
+    }
+  }
+
+  /// Login with Google idToken (verified server-side)
+  /// POST /api/auth/login/google
+  Future<Map<String, dynamic>> loginWithGoogle({
+    required String idToken,
+    String? email,
+    String? username,
+    String? walletAddress,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/auth/login/google');
+      final key = _rateLimitKey('POST', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
+      }
+      final body = {
+        'idToken': idToken,
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (username != null && username.isNotEmpty) 'username': username,
+        if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
+      };
+      final response = await http.post(
+        uri,
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode(body),
+      );
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await _persistTokenFromResponse(data);
+        return data;
+      }
+      if (response.statusCode == 429) {
+        _markRateLimited(key, response, defaultWindowMs: 900000);
+        // Persist retry window so the app can skip hitting the endpoint until cooldown ends.
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final resetAt = _rateLimitResets[key];
+          if (resetAt != null) {
+            await prefs.setInt('rate_limit_auth_google_until', resetAt.millisecondsSinceEpoch);
+          }
+        } catch (_) {}
+        throw Exception(_rateLimitMessage(key));
+      }
+      if (response.statusCode == 404) {
+        throw Exception('Google login endpoint not available on the backend (received 404). Ensure the server is updated and ENABLE_GOOGLE_AUTH=true with GOOGLE_CLIENT_ID configured.');
+      }
+      throw Exception('Google login failed: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error logging in with Google: $e');
       rethrow;
     }
   }
@@ -678,17 +881,24 @@ class BackendApiService {
     }
   }
 
-  /// Update user profile
-  /// PUT /api/users/:userId
+  /// Update user profile (preferences / metadata)
+  /// POST /api/profiles
   Future<Map<String, dynamic>> updateProfile(
-    String userId,
+    String walletAddress,
     Map<String, dynamic> updates,
   ) async {
     try {
-      final response = await http.put(
-        Uri.parse('$baseUrl/api/users/$userId'),
+      try {
+        await ensureAuthLoaded(walletAddress: walletAddress);
+      } catch (_) {}
+      final payload = {
+        'walletAddress': walletAddress,
+        ...updates,
+      };
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/profiles'),
         headers: _getHeaders(),
-        body: jsonEncode(updates),
+        body: jsonEncode(payload),
       );
 
       if (response.statusCode == 200) {
@@ -708,13 +918,14 @@ class BackendApiService {
   /// GET /api/profiles/:walletAddress
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async {
     try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       // Avoid making pointless network calls when wallet is a known placeholder
-      final normalized = walletAddress.trim().toLowerCase();
-      if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized)) {
+      final normalized = WalletUtils.normalize(walletAddress);
+      if (normalized.isEmpty || ['unknown', 'anonymous', 'n/a', 'none'].contains(normalized.toLowerCase())) {
         throw Exception('Profile not found');
       }
       final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress');
-      final data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
+      final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final raw = data['data'] ?? data;
       if (raw is Map<String, dynamic>) {
         debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
@@ -732,9 +943,10 @@ class BackendApiService {
   Future<Map<String, dynamic>> getProfilesBatch(List<String> wallets) async {
     try {
       if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
+      await _ensureAuthBeforeRequest();
       final response = await http.post(
         Uri.parse('$baseUrl/api/profiles/batch'),
-        headers: _getHeaders(includeAuth: false),
+        headers: _getHeaders(),
         body: jsonEncode({'wallets': wallets}),
       );
 
@@ -979,30 +1191,26 @@ class BackendApiService {
     double radiusKm = 5.0,
   }) async {
     try {
+      await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers').replace(queryParameters: {
         'lat': latitude.toString(),
         'lng': longitude.toString(),
         'radius': radiusKm.toString(),
       });
 
-      final response = await http.get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> markerList;
-        if (data is List) {
-          markerList = data;
-        } else if (data is Map<String, dynamic>) {
-          markerList = (data['data'] ?? data['markers'] ?? data['artMarkers'] ?? []) as List<dynamic>;
-        } else {
-          markerList = const [];
-        }
-        return markerList
-            .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
-            .toList();
+      final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
+      final List<dynamic> markerList;
+      if (data is List) {
+        markerList = data;
+      } else if (data is Map<String, dynamic>) {
+        final dynamic maybeList = data['data'] ?? data['markers'] ?? data['artMarkers'];
+        markerList = maybeList is List ? maybeList : const [];
       } else {
-        throw Exception('Failed to get markers: ${response.statusCode}');
+        markerList = const [];
       }
+      return markerList
+          .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       debugPrint('Error getting nearby markers: $e');
       rethrow;
@@ -1120,6 +1328,76 @@ class BackendApiService {
     } catch (e) {
       debugPrint('Error getting artwork: $e');
       rethrow;
+    }
+  }
+
+  /// Create a new artwork record (cover/model should be uploaded separately)
+  /// POST /api/artworks
+  Future<Artwork?> createArtworkRecord({
+    required String title,
+    required String description,
+    required String imageUrl,
+    required String walletAddress,
+    String? artistName,
+    String category = 'General',
+    List<String> tags = const [],
+    bool isPublic = true,
+    bool enableAR = false,
+    String? modelUrl,
+    String? modelCid,
+    double arScale = 1,
+    bool mintAsNFT = false,
+    double? price,
+    double? royaltyPercent,
+    Map<String, dynamic>? metadata,
+    String? locationName,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+
+      final body = {
+        'title': title,
+        'description': description,
+        'imageUrl': imageUrl,
+        'walletAddress': walletAddress,
+        if (artistName != null && artistName.isNotEmpty) 'artistName': artistName,
+        'category': category,
+        'tags': tags,
+        'isPublic': isPublic,
+        'isAREnabled': enableAR,
+        if (modelUrl != null) 'model3DURL': modelUrl,
+        if (modelCid != null) 'model3DCID': modelCid,
+        'arScale': arScale,
+        'isNFT': mintAsNFT,
+        if (royaltyPercent != null) 'royaltyPercent': royaltyPercent,
+        if (price != null) 'price': price,
+        'currency': 'KUB8',
+        if (locationName != null && locationName.isNotEmpty) 'locationName': locationName,
+        if (metadata != null) 'metadata': metadata,
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/artworks'),
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        if (response.body.isEmpty) {
+          return null;
+        }
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final payload = data['data'] ?? data['artwork'] ?? data;
+        if (payload is Map<String, dynamic>) {
+          return _artworkFromBackendJson(payload);
+        }
+        return null;
+      } else {
+        throw Exception('Failed to create artwork: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error creating artwork record: $e');
+      return null;
     }
   }
 
@@ -2125,26 +2403,282 @@ class BackendApiService {
 
   /// List DAO proposals
   /// GET /api/dao/proposals
-  /// Returns empty list if endpoint is not available yet (404)
-  Future<List<Map<String, dynamic>>> getDAOProposals() async {
+  Future<List<Map<String, dynamic>>> getDAOProposals({int limit = 50, int offset = 0, String? status}) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/dao/proposals'),
-        headers: _getHeaders(includeAuth: false),
+      final uri = Uri.parse('$baseUrl/api/dao/proposals').replace(
+        queryParameters: <String, String>{
+          'limit': '$limit',
+          'offset': '$offset',
+          if (status != null && status.isNotEmpty) 'status': status,
+        },
       );
+      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['proposals'] ?? data['data'] ?? []) as List;
+        final list = (data['data'] ?? data['proposals'] ?? []) as List;
         return List<Map<String, dynamic>>.from(list);
       } else if (response.statusCode == 404) {
-        // Endpoint not available yet on backend
         return [];
       } else {
         throw Exception('Failed to get DAO proposals: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Error getting DAO proposals: $e');
+      return [];
+    }
+  }
+
+  /// Create a DAO proposal
+  /// POST /api/dao/proposals
+  Future<Map<String, dynamic>?> createDAOProposal({
+    required String walletAddress,
+    required String title,
+    required String description,
+    required String type,
+    int votingPeriodDays = 7,
+    double supportRequired = 0.5,
+    double quorumRequired = 0.1,
+    List<String>? supportingDocuments,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/dao/proposals'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'title': title,
+          'description': description,
+          'type': type,
+          'votingPeriodDays': votingPeriodDays,
+          'supportRequired': supportRequired,
+          'quorumRequired': quorumRequired,
+          if (supportingDocuments != null) 'supportingDocuments': supportingDocuments,
+          if (metadata != null) 'metadata': metadata,
+        }),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final payload = data['data'] ?? data['proposal'] ?? data;
+        return payload is Map<String, dynamic> ? payload : null;
+      } else {
+        throw Exception('Failed to create proposal: ${response.statusCode} ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('Error creating DAO proposal: $e');
+      rethrow;
+    }
+  }
+
+  /// List votes for a proposal or all votes
+  /// GET /api/dao/proposals/:id/votes or /api/dao/votes
+  Future<List<Map<String, dynamic>>> getDAOVotes({String? proposalId, int limit = 100, int offset = 0}) async {
+    try {
+      final uri = proposalId == null
+          ? Uri.parse('$baseUrl/api/dao/votes').replace(queryParameters: {
+              'limit': '$limit',
+              'offset': '$offset',
+            })
+          : Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes').replace(queryParameters: {
+              'limit': '$limit',
+              'offset': '$offset',
+            });
+      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = (data['votes'] ?? data['data'] ?? []) as List;
+        return List<Map<String, dynamic>>.from(list);
+      } else if (response.statusCode == 404) {
+        return [];
+      } else {
+        throw Exception('Failed to get DAO votes: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting DAO votes: $e');
+      return [];
+    }
+  }
+
+  /// Submit a DAO vote
+  /// POST /api/dao/proposals/:id/votes
+  Future<Map<String, dynamic>?> submitDAOVote({
+    required String proposalId,
+    required String walletAddress,
+    required String choice,
+    double? votingPower,
+    String? reason,
+    String? txHash,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'choice': choice,
+          if (votingPower != null) 'votingPower': votingPower,
+          if (reason != null) 'reason': reason,
+          if (txHash != null) 'txHash': txHash,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return data['data'] as Map<String, dynamic>? ?? data;
+      } else {
+        throw Exception('Failed to submit DAO vote: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error submitting DAO vote: $e');
+      rethrow;
+    }
+  }
+
+  /// List DAO delegates
+  /// GET /api/dao/delegates
+  Future<List<Map<String, dynamic>>> getDAODelegates() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/dao/delegates'),
+        headers: _getHeaders(includeAuth: false),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = (data['delegates'] ?? data['data'] ?? []) as List;
+        return List<Map<String, dynamic>>.from(list);
+      } else if (response.statusCode == 404) {
+        return [];
+      } else {
+        throw Exception('Failed to get DAO delegates: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting DAO delegates: $e');
+      return [];
+    }
+  }
+
+  /// Delegate voting power
+  /// POST /api/dao/delegations
+  Future<Map<String, dynamic>?> delegateVotingPower({
+    required String delegateId,
+    required String walletAddress,
+    double? votingPower,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/dao/delegations'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'delegateId': delegateId,
+          if (votingPower != null) 'votingPower': votingPower,
+          if (metadata != null) 'metadata': metadata,
+        }),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return data['data'] as Map<String, dynamic>? ?? data;
+      } else {
+        throw Exception('Failed to delegate voting power: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error delegating voting power: $e');
+      rethrow;
+    }
+  }
+
+  /// List DAO treasury/governance transactions
+  /// GET /api/dao/transactions
+  Future<List<Map<String, dynamic>>> getDAOTransactions() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/dao/transactions'),
+        headers: _getHeaders(includeAuth: false),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = (data['data'] ?? data['transactions'] ?? []) as List;
+        return List<Map<String, dynamic>>.from(list);
+      } else if (response.statusCode == 404) {
+        return [];
+      } else {
+        throw Exception('Failed to get DAO transactions: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting DAO transactions: $e');
+      return [];
+    }
+  }
+
+  /// Submit a DAO review/application
+  /// POST /api/dao/reviews
+  Future<Map<String, dynamic>?> submitDAOReview({
+    required String walletAddress,
+    required String portfolioUrl,
+    required String medium,
+    required String statement,
+    String? title,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/dao/reviews'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'portfolioUrl': portfolioUrl,
+          'medium': medium,
+          'statement': statement,
+          if (title != null && title.isNotEmpty) 'title': title,
+          if (metadata != null) 'metadata': metadata,
+        }),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        if (response.body.isEmpty) return null;
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final payload = data['data'] ?? data['review'] ?? data;
+        return payload is Map<String, dynamic> ? payload : null;
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        throw Exception('Failed to submit DAO review: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error submitting DAO review: $e');
+      return null;
+    }
+  }
+
+  /// List DAO reviews
+  /// GET /api/dao/reviews
+  Future<List<Map<String, dynamic>>> getDAOReviews({int limit = 50, int offset = 0}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/dao/reviews')
+          .replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
+      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = (data['data'] ?? data['reviews'] ?? data['items'] ?? []) as List;
+        return List<Map<String, dynamic>>.from(list);
+      } else if (response.statusCode == 404) {
+        return [];
+      } else if (response.statusCode >= 500) {
+        debugPrint('getDAOReviews: backend returned ${response.statusCode}, returning empty list');
+        return [];
+      } else {
+        throw Exception('Failed to get DAO reviews: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting DAO reviews: $e');
       return [];
     }
   }
@@ -2225,78 +2759,6 @@ class BackendApiService {
       }
     } catch (e) {
       debugPrint('Error listing events: $e');
-      return [];
-    }
-  }
-
-  /// List votes for a proposal or all votes
-  /// GET /api/dao/proposals/:id/votes or /api/dao/votes
-  Future<List<Map<String, dynamic>>> getDAOVotes({String? proposalId}) async {
-    try {
-      final uri = proposalId == null
-          ? Uri.parse('$baseUrl/api/dao/votes')
-          : Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes');
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['votes'] ?? data['data'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Failed to get DAO votes: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error getting DAO votes: $e');
-      return [];
-    }
-  }
-
-  /// List DAO delegates
-  /// GET /api/dao/delegates
-  Future<List<Map<String, dynamic>>> getDAODelegates() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/dao/delegates'),
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['delegates'] ?? data['data'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Failed to get DAO delegates: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error getting DAO delegates: $e');
-      return [];
-    }
-  }
-
-  /// List DAO treasury/governance transactions
-  /// GET /api/dao/transactions
-  Future<List<Map<String, dynamic>>> getDAOTransactions() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/dao/transactions'),
-        headers: _getHeaders(includeAuth: false),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final list = (data['transactions'] ?? data['data'] ?? []) as List;
-        return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
-        return [];
-      } else {
-        throw Exception('Failed to get DAO transactions: ${response.statusCode}');
-      }
-    } catch (e) {
-      debugPrint('Error getting DAO transactions: $e');
       return [];
     }
   }
@@ -2451,11 +2913,12 @@ class BackendApiService {
           try {
             if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
               uploadedUrl = data['url'] as String;
-            } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) uploadedUrl = data['ipfsUrl'] as String;
-            else if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) uploadedUrl = data['httpUrl'] as String;
-            else if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) uploadedUrl = data['fileUrl'] as String;
-            else if (data.containsKey('path') && (data['path'] as String).isNotEmpty) uploadedUrl = data['path'] as String;
-          } catch (_) {
+            } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) {uploadedUrl = data['ipfsUrl'] as String;
+              uploadedUrl = data['ipfsUrl'] as String;
+            } else if (data.containsKey('httpUrl') && (data['httpUrl'] as String).isNotEmpty) {uploadedUrl = data['httpUrl'] as String;
+            } else if (data.containsKey('fileUrl') && (data['fileUrl'] as String).isNotEmpty) {uploadedUrl = data['fileUrl'] as String;
+            } else if (data.containsKey('path') && (data['path'] as String).isNotEmpty) {uploadedUrl = data['path'] as String;
+          }} catch (_) {
             uploadedUrl = null;
           }
 
@@ -2649,6 +3112,7 @@ class BackendApiService {
     int limit = 20,
   }) async {
     try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
       final queryParams = <String, String>{
         'page': page.toString(),
         'limit': limit.toString(),
@@ -2661,7 +3125,7 @@ class BackendApiService {
       final uri = Uri.parse('$baseUrl/api/collections').replace(queryParameters: queryParams);
       final jsonData = await _fetchJson(
         uri,
-        includeAuth: false,
+        includeAuth: true,
         allowOrbitFallback: true,
       );
 
@@ -3078,11 +3542,26 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
 }
 
 Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
+  String stringVal(dynamic v, [String fallback = '']) {
+    if (v == null) return fallback;
+    return v.toString();
+  }
+
+  final id = stringVal(json['id'] ?? json['_id'] ?? '');
+  final title = stringVal(json['title'] ?? json['name'] ?? '');
+  final artist = stringVal(
+    json['artist'] ??
+    json['artistName'] ??
+    json['walletAddress'] ??
+    json['wallet_address'] ??
+    'Unknown Artist',
+  );
+
   return Artwork(
-    id: json['id'] as String,
-    title: json['title'] as String,
-    artist: json['artist'] as String,
-    description: json['description'] as String? ?? '',
+    id: id,
+    title: title,
+    artist: artist,
+    description: stringVal(json['description'], ''),
     imageUrl: json['imageUrl'] as String?,
     position: LatLng(
       (json['latitude'] as num?)?.toDouble() ?? 0.0,
@@ -3093,16 +3572,16 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
       orElse: () => ArtworkRarity.common,
     ),
     rewards: json['rewards'] as int? ?? 10,
-    category: json['category'] as String? ?? 'General',
-    model3DURL: json['model3DURL'] as String?,
-    model3DCID: json['model3DCID'] as String?,
-    arEnabled: json['arEnabled'] as bool? ?? false,
+    category: stringVal(json['category'], 'General'),
+    model3DURL: json['model3DURL'] as String? ?? json['model_3d_url'] as String?,
+    model3DCID: json['model3DCID'] as String? ?? json['model_3d_cid'] as String?,
+    arEnabled: json['arEnabled'] as bool? ?? json['isAREnabled'] as bool? ?? false,
     arMarkerId: json['arMarkerId'] as String?,
     createdAt: json['createdAt'] != null 
       ? DateTime.parse(json['createdAt'] as String)
       : DateTime.now(),
     tags: json['tags'] != null 
-      ? (json['tags'] as List<dynamic>).map((e) => e as String).toList()
+      ? (json['tags'] as List<dynamic>).map((e) => e.toString()).toList()
       : [],
     likesCount: json['likesCount'] as int? ?? 0,
     commentsCount: json['commentsCount'] as int? ?? 0,

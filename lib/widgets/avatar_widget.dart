@@ -12,6 +12,9 @@ class AvatarWidget extends StatefulWidget {
   final bool allowFabricatedFallback;
   final bool enableProfileNavigation;
   final String? heroTag;
+  final bool showStatusIndicator;
+  final bool isOnline;
+  final Color? statusColor;
 
   const AvatarWidget({
     super.key,
@@ -22,6 +25,9 @@ class AvatarWidget extends StatefulWidget {
     this.allowFabricatedFallback = false,
     this.enableProfileNavigation = true,
     this.heroTag,
+    this.showStatusIndicator = true,
+    this.isOnline = false,
+    this.statusColor,
   });
 
   @override
@@ -61,7 +67,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     // 3. Fetch authoritative profile
     // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
     final invalidWalletPlaceholders = ['unknown', 'anonymous', 'n/a', 'none'];
-    if (walletId.isEmpty || invalidWalletPlaceholders.contains(walletId.toLowerCase())) {
+    if (walletId.isEmpty || invalidWalletPlaceholders.contains(walletId)) {
       debugPrint('AvatarWidget._setup: skipping profile fetch for invalid wallet "$walletId"');
       if (widget.allowFabricatedFallback) {
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
@@ -200,11 +206,39 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
       );
     }
 
+    Widget base = content;
+    if (widget.showStatusIndicator) {
+      final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();
+      final indicatorColor = widget.statusColor ?? (widget.isOnline ? Colors.greenAccent : Colors.grey.shade400);
+      base = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          content,
+          Positioned(
+            top: 4,
+            right: 4,
+            child: Container(
+              width: indicatorSize,
+              height: indicatorSize,
+              decoration: BoxDecoration(
+                color: indicatorColor,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     // Wrap content in Hero when a tag is present (temporary or provided)
     final tag = widget.heroTag ?? _currentHeroTag;
-    Widget wrapped = content;
+    Widget wrapped = base;
     if (tag != null && tag.isNotEmpty) {
-      wrapped = Hero(tag: tag, child: content);
+      wrapped = Hero(tag: tag, child: base);
     }
 
     if (widget.enableProfileNavigation) {

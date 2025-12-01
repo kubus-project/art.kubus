@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../config/api_keys.dart';
+import '../../widgets/app_loading.dart';
 
 class TokenSwap extends StatefulWidget {
   const TokenSwap({super.key});
@@ -15,6 +18,7 @@ class _TokenSwapState extends State<TokenSwap> {
   String toToken = 'USDC';
   TextEditingController fromController = TextEditingController();
   TextEditingController toController = TextEditingController();
+  bool _isSubmitting = false;
 
   @override
   Widget build(BuildContext context) {
@@ -186,10 +190,7 @@ class _TokenSwapState extends State<TokenSwap> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // Show swap confirmation dialog
-          _showSwapConfirmation();
-        },
+        onPressed: _isSubmitting ? null : _handleSwap,
         style: ElevatedButton.styleFrom(
           backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
           foregroundColor: Theme.of(context).colorScheme.onSurface,
@@ -200,7 +201,7 @@ class _TokenSwapState extends State<TokenSwap> {
           elevation: 0,
         ),
         child: Text(
-          'Swap Tokens',
+          _isSubmitting ? 'Swapping...' : 'Swap Tokens',
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -211,38 +212,41 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  void _showSwapConfirmation() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-        title: Text(
-          'Confirm Swap',
-          style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Swap feature is coming soon! This will allow you to exchange tokens within the art.kubus ecosystem.',
-          style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'OK',
-              style: GoogleFonts.inter(
-                color: Provider.of<ThemeProvider>(context).accentColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  Future<void> _handleSwap() async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final fromAmount = double.tryParse(fromController.text.trim()) ?? 0;
+    final toAmount = double.tryParse(toController.text.trim()) ?? 0;
+
+    if (fromAmount <= 0) {
+      messenger.showSnackBar(const SnackBar(content: Text('Enter an amount to swap.')));
+      return;
+    }
+    if (!walletProvider.isConnected) {
+      messenger.showSnackBar(const SnackBar(content: Text('Connect your wallet first.')));
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      await walletProvider.swapTokens(
+        fromToken: fromToken,
+        toToken: toToken,
+        fromAmount: fromAmount,
+        toAmount: toAmount > 0 ? toAmount : fromAmount, // fallback expected out
+        slippage: 0.01,
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(const SnackBar(content: Text('Swap submitted.')));
+      Navigator.pop(context);
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text('Swap failed: $e'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   Widget _buildRecentSwaps() {

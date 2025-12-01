@@ -76,6 +76,8 @@ class _MapScreenState extends State<MapScreen>
   final Set<String> _notifiedMarkers =
       {}; // Track which markers we've notified about
   Timer? _proximityCheckTimer;
+  StreamSubscription<ArtMarker>? _markerSocketSubscription;
+  Timer? _markerRefreshDebounce;
 
   // UI State
   bool _isSearching = false;
@@ -93,13 +95,13 @@ class _MapScreenState extends State<MapScreen>
     ArtMarkerType.residency: true,
     ArtMarkerType.drop: true,
     ArtMarkerType.experience: true,
-    ArtMarkerType.other: false, // Misc markers off by default per design spec
+    // Default to true so backend markers with generic/legacy types are visible.
+    ArtMarkerType.other: true,
   };
 
   String _artworkFilter = 'all';
   _ArtworkSort _sort = _ArtworkSort.nearest;
   bool _useGridLayout = false;
-  bool _showMapGrid = false; // show isometric grid on the map tiles
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
 
@@ -112,6 +114,10 @@ class _MapScreenState extends State<MapScreen>
   double _lastZoom = 16.0;
 
   final Distance _distanceCalculator = const Distance();
+  LatLng? _lastMarkerFetchCenter;
+  DateTime? _lastMarkerFetchTime;
+  static const double _markerRefreshDistanceMeters = 800;
+  static const Duration _markerRefreshInterval = Duration(seconds: 150);
 
   @override
   void initState() {
@@ -169,6 +175,8 @@ class _MapScreenState extends State<MapScreen>
     _mobileLocationSubscription?.cancel();
     _webPositionSubscription?.cancel();
     _proximityCheckTimer?.cancel();
+    _markerRefreshDebounce?.cancel();
+    _markerSocketSubscription?.cancel();
     _animationController.dispose();
     _sheetController.dispose();
     WidgetsBinding.instance.removeObserver(this);
@@ -264,6 +272,8 @@ class _MapScreenState extends State<MapScreen>
 
       // Load art markers from backend
       await _loadArtMarkers();
+      _markerSocketSubscription =
+          _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
 
       // Start proximity checking timer (every 10 seconds)
       _proximityCheckTimer = Timer.periodic(
@@ -275,12 +285,12 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  Future<void> _loadArtMarkers({bool forceRefresh = false}) async {
-    if (_currentPosition == null) return;
+  Future<void> _loadArtMarkers({LatLng? center, bool forceRefresh = false}) async {
+    final queryCenter = center ?? _currentPosition ?? _cameraCenter;
 
     try {
       final markers = await _mapMarkerService.loadMarkers(
-        center: _currentPosition!,
+        center: queryCenter,
         radiusKm: 5.0,
         forceRefresh: forceRefresh,
       );
@@ -290,10 +300,35 @@ class _MapScreenState extends State<MapScreen>
           _artMarkers = markers;
         });
       }
+      _lastMarkerFetchCenter = queryCenter;
+      _lastMarkerFetchTime = DateTime.now();
 
       debugPrint('Loaded ${markers.length} art markers from backend');
     } catch (e) {
       debugPrint('Error loading art markers from backend: $e');
+    }
+  }
+
+  void _handleMarkerCreated(ArtMarker marker) {
+    try {
+      if (_currentPosition != null) {
+        final distanceKm = _distanceCalculator.as(
+          LengthUnit.Kilometer,
+          _currentPosition!,
+          marker.position,
+        );
+        if (distanceKm > _mapMarkerService.lastQueryRadiusKm + 1) {
+          // Ignore markers far outside the current view; cache will refresh when user pans/refreshes.
+          return;
+        }
+      }
+      setState(() {
+        _artMarkers.removeWhere((m) => m.id == marker.id);
+        _artMarkers.add(marker);
+      });
+      debugPrint('MapScreen: added marker from socket ${marker.id}');
+    } catch (e) {
+      debugPrint('MapScreen: failed to handle socket marker: $e');
     }
   }
 
@@ -314,6 +349,19 @@ class _MapScreenState extends State<MapScreen>
       }
     } catch (e) {
       debugPrint('Error handling notification tap: $e');
+    }
+  }
+
+  Future<void> _maybeRefreshMarkers(LatLng center, {bool force = false}) async {
+    final lastFetch = _lastMarkerFetchTime;
+    final lastCenter = _lastMarkerFetchCenter;
+    final bool timeElapsed =
+        lastFetch == null || DateTime.now().difference(lastFetch) >= _markerRefreshInterval;
+    final bool movedEnough = lastCenter == null ||
+        _distanceCalculator.as(LengthUnit.Meter, center, lastCenter) >= _markerRefreshDistanceMeters;
+
+    if (force || (movedEnough && timeElapsed)) {
+      await _loadArtMarkers(center: center, forceRefresh: force);
     }
   }
 
@@ -357,18 +405,28 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  void _queueMarkerRefresh(LatLng center, {required bool fromGesture}) {
+    _markerRefreshDebounce?.cancel();
+    _markerRefreshDebounce = Timer(fromGesture ? const Duration(milliseconds: 500) : const Duration(milliseconds: 300), () {
+      _markerRefreshDebounce = null;
+      unawaited(_maybeRefreshMarkers(center, force: false));
+    });
+  }
+
   void _showProximityNotification(ArtMarker marker, double distance) {
     if (!mounted) return;
 
-    // Show push notification
-    _pushNotificationService
-        .showARProximityNotification(
-      marker: marker,
-      distance: distance,
-    )
-        .catchError((e) {
-      debugPrint('MapScreen: showARProximityNotification failed: $e');
-    });
+    // On web the push channel requires a service worker; skip if unsupported to avoid console spam.
+    if (!kIsWeb) {
+      _pushNotificationService
+          .showARProximityNotification(
+        marker: marker,
+        distance: distance,
+      )
+          .catchError((e) {
+        debugPrint('MapScreen: showARProximityNotification failed: $e');
+      });
+    }
 
     // Also show in-app SnackBar
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1251,14 +1309,15 @@ class _MapScreenState extends State<MapScreen>
       // Snap to the nearest grid cell center at the current zoom level
       // We use the current camera zoom to determine which grid level is most relevant
       final double currentZoom = _mapController.camera.zoom;
+      final gridCell = GridUtils.gridCellForZoom(_currentPosition!, currentZoom);
       // Snap to the grid level that is closest to the current zoom
       // This ensures we snap to the grid lines the user is likely seeing
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
-      final LatLng snappedPosition = tileProviders?.snapToGrid(
+      final LatLng snappedPosition = tileProviders?.snapToVisibleGrid(
             _currentPosition!,
             currentZoom,
           ) ??
-          GridUtils.snapToGrid(_currentPosition!, currentZoom);
+          gridCell.center;
 
       final resolvedCategory = category.isNotEmpty
           ? category
@@ -1275,6 +1334,12 @@ class _MapScreenState extends State<MapScreen>
         isPublic: isPublic,
         metadata: {
           'snapZoom': currentZoom,
+          'gridAnchor': gridCell.anchorKey,
+          'gridLevel': gridCell.gridLevel,
+          'gridIndices': {
+            'u': gridCell.uIndex,
+            'v': gridCell.vIndex,
+          },
           'createdFrom': 'map_screen',
           'subjectType': subjectType.name,
           'subjectLabel': subjectType.label,
@@ -1319,31 +1384,34 @@ class _MapScreenState extends State<MapScreen>
         final serviceEnabled = await Geolocator.isLocationServiceEnabled();
         if (!serviceEnabled) {
           debugPrint('MapScreen: Location services disabled on web');
-          return;
+          resolvedPosition = _loadFallbackPosition(prefs);
         }
 
         LocationPermission permission = await Geolocator.checkPermission();
         if (permission == LocationPermission.denied) {
           if (!promptForPermission) {
-            debugPrint('MapScreen: Location permission denied on web; skipping prompt');
-            return;
-          }
-          permission = await Geolocator.requestPermission();
-          if (permission == LocationPermission.denied) {
-            debugPrint('MapScreen: Location permission denied on web');
-            return;
+            debugPrint('MapScreen: Location permission denied on web; using fallback if available');
+            resolvedPosition ??= _loadFallbackPosition(prefs);
+          } else {
+            permission = await Geolocator.requestPermission();
+            if (permission == LocationPermission.denied) {
+              debugPrint('MapScreen: Location permission denied on web');
+              resolvedPosition ??= _loadFallbackPosition(prefs);
+            }
           }
         }
 
         if (permission == LocationPermission.deniedForever) {
           debugPrint('MapScreen: Location permission permanently denied on web');
-          return;
+          resolvedPosition ??= _loadFallbackPosition(prefs);
         }
 
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.best,
-        );
-        resolvedPosition = LatLng(position.latitude, position.longitude);
+        if (resolvedPosition == null) {
+          final position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.best,
+          );
+          resolvedPosition = LatLng(position.latitude, position.longitude);
+        }
       } else {
         _mobileLocation ??= Location();
 
@@ -1352,32 +1420,38 @@ class _MapScreenState extends State<MapScreen>
         if (!serviceEnabled) {
           if (!promptForPermission) {
             debugPrint('MapScreen: Location service disabled; skipping prompt due to promptForPermission=false');
-            return;
-          }
-
-          if (!_locationServiceRequested) {
-            _locationServiceRequested = true;
-            try {
-              await prefs.setBool(_kPrefLocationServiceRequested, true);
-            } catch (e) {
-              debugPrint('Failed to persist location service requested flag: $e');
-            }
-
-            serviceEnabled = await _mobileLocation!.requestService();
-
-            // Persist the result (reset the requested flag when enabled)
-            if (serviceEnabled) {
-              try {
-                await prefs.setBool(_kPrefLocationServiceRequested, false);
-              } catch (_) {}
-              _locationServiceRequested = false;
-            }
+            resolvedPosition ??= _loadFallbackPosition(prefs);
+            if (resolvedPosition == null) return;
           } else {
-            // already requested before and still disabled - don't prompt again
-            debugPrint('MapScreen: Location service disabled (previously requested).');
-            return;
+            if (!_locationServiceRequested) {
+              _locationServiceRequested = true;
+              try {
+                await prefs.setBool(_kPrefLocationServiceRequested, true);
+              } catch (e) {
+                debugPrint('Failed to persist location service requested flag: ');
+              }
+
+              serviceEnabled = await _mobileLocation!.requestService();
+
+              // Persist the result (reset the requested flag when enabled)
+              if (serviceEnabled) {
+                try {
+                  await prefs.setBool(_kPrefLocationServiceRequested, false);
+                } catch (_) {}
+                _locationServiceRequested = false;
+              }
+            } else {
+              // already requested before and still disabled - don't prompt again
+              debugPrint('MapScreen: Location service disabled (previously requested).');
+              resolvedPosition ??= _loadFallbackPosition(prefs);
+              if (resolvedPosition == null) return;
+            }
           }
-          if (!serviceEnabled) return;
+
+          if (!serviceEnabled) {
+            resolvedPosition ??= _loadFallbackPosition(prefs);
+            if (resolvedPosition == null) return;
+          }
         } else {
           // reset flag if enabled
           _locationServiceRequested = false;
@@ -1391,7 +1465,8 @@ class _MapScreenState extends State<MapScreen>
         if (permissionGranted == PermissionStatus.denied) {
           if (!promptForPermission) {
             debugPrint('MapScreen: Location permission denied; skipping request due to promptForPermission=false');
-            return;
+            resolvedPosition ??= _loadFallbackPosition(prefs);
+            if (resolvedPosition == null) return;
           }
 
           if (!_locationPermissionRequested) {
@@ -1413,9 +1488,13 @@ class _MapScreenState extends State<MapScreen>
           } else {
             // already requested permission once — don't re-request repeatedly
             debugPrint('MapScreen: Permission denied and previously requested; skipping further requests.');
-            return;
+            resolvedPosition ??= _loadFallbackPosition(prefs);
+            if (resolvedPosition == null) return;
           }
-          if (permissionGranted != PermissionStatus.granted) return;
+          if (permissionGranted != PermissionStatus.granted) {
+            resolvedPosition ??= _loadFallbackPosition(prefs);
+            if (resolvedPosition == null) return;
+          }
         } else if (permissionGranted == PermissionStatus.granted) {
           // reset flag once permission is granted
           _locationPermissionRequested = false;
@@ -1431,11 +1510,16 @@ class _MapScreenState extends State<MapScreen>
       }
 
       if (resolvedPosition != null) {
+        try {
+          await prefs.setDouble('last_known_lat', resolvedPosition.latitude);
+          await prefs.setDouble('last_known_lng', resolvedPosition.longitude);
+        } catch (_) {}
         final shouldCenter = !fromTimer;
         _updateCurrentPosition(resolvedPosition, shouldCenter: shouldCenter);
-        if (_artMarkers.isEmpty) {
-          await _loadArtMarkers();
-        }
+        await _maybeRefreshMarkers(
+          resolvedPosition,
+          force: _artMarkers.isEmpty || !fromTimer,
+        );
       }
     } catch (e) {
       debugPrint('Error getting location: $e');
@@ -1496,6 +1580,30 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  void _animateMapTo(LatLng center,
+      {double? zoom, double? rotation, Duration duration = const Duration(milliseconds: 420)}) {
+    final double targetZoom = zoom ?? _mapController.camera.zoom;
+    final double targetRotation = rotation ?? _mapController.camera.rotation;
+    try {
+      final dynamic controller = _mapController;
+      controller.moveAndRotateAnimatedRaw(
+        center,
+        targetZoom,
+        targetRotation,
+        offset: Offset.zero,
+        duration: duration,
+        curve: Curves.easeOutCubic,
+        hasGesture: false,
+        source: MapEventSource.mapController,
+      );
+    } catch (_) {
+      _mapController.move(center, targetZoom);
+      if (rotation != null) {
+        _mapController.rotate(targetRotation);
+      }
+    }
+  }
+
   void _updateCurrentPosition(LatLng position, {bool shouldCenter = false}) {
     if (!mounted) return;
     final bool isInitial = _currentPosition == null;
@@ -1507,7 +1615,8 @@ class _MapScreenState extends State<MapScreen>
 
     if (allowCenter) {
       final double targetZoom = isInitial ? 18.0 : _mapController.camera.zoom;
-      _mapController.move(position, targetZoom);
+      final double? rotation = _autoFollow ? _direction : null;
+      _animateMapTo(position, zoom: targetZoom, rotation: rotation);
     }
 
     // Ensure markers are loaded if we have a position now
@@ -1516,11 +1625,28 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
+  LatLng? _loadFallbackPosition(SharedPreferences prefs) {
+    try {
+      final lat = prefs.getDouble('last_known_lat');
+      final lng = prefs.getDouble('last_known_lng');
+      if (lat != null && lng != null) {
+        return LatLng(lat, lng);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   void _updateDirection(double? heading) {
     if (mounted && heading != null) {
       setState(() {
         _direction = heading;
       });
+      if (_autoFollow && _currentPosition != null) {
+        _animateMapTo(_currentPosition!,
+            zoom: _mapController.camera.zoom, rotation: heading);
+      } else if (_autoFollow) {
+        _mapController.rotate(heading);
+      }
     }
   }
 
@@ -1768,18 +1894,24 @@ class _MapScreenState extends State<MapScreen>
           if (hasGesture && _autoFollow) {
             setState(() => _autoFollow = false);
           }
+          _queueMarkerRefresh(camera.center, fromGesture: hasGesture);
         },
         interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+          flags: InteractiveFlag.pinchZoom |
+              InteractiveFlag.drag |
+              InteractiveFlag.doubleTapZoom |
+              InteractiveFlag.flingAnimation |
+              InteractiveFlag.pinchMove |
+              InteractiveFlag.scrollWheelZoom |
+              InteractiveFlag.rotate,
         ),
       ),
       children: [
         // Prefer the shared TileProviders tile layer when registered.
         if (tileProviders != null)
           (isRetina
-              ? tileProviders.getTileLayer(withGridOverlay: _showMapGrid)
-              : tileProviders.getNonRetinaTileLayer(
-                  withGridOverlay: _showMapGrid))
+              ? tileProviders.getTileLayer()
+              : tileProviders.getNonRetinaTileLayer())
         else
           // Fall back to the previous inline tile layer if TileProviders isn't registered yet.
           TileLayer(
@@ -2353,15 +2485,8 @@ class _MapScreenState extends State<MapScreen>
           ),
           const SizedBox(height: 12),
           _MapIconButton(
-            icon: Icons.grid_view,
-            tooltip: _showMapGrid ? 'Hide map grid' : 'Show map grid',
-            active: _showMapGrid,
-            onTap: () => setState(() => _showMapGrid = !_showMapGrid),
-          ),
-          const SizedBox(height: 12),
-          _MapIconButton(
             icon: Icons.add_location_alt,
-            tooltip: 'Add AR marker',
+            tooltip: 'Add map marker',
             onTap: _showMarkerCreationDialog,
           ),
         ],

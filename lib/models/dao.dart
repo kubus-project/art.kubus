@@ -3,6 +3,79 @@ enum ProposalType { platformUpdate, rewards, featureRequest, governance, communi
 enum ProposalStatus { draft, active, voting, passed, failed, executed }
 enum VoteChoice { yes, no, abstain }
 
+class DAOReview {
+  final String id;
+  final String walletAddress;
+  final String portfolioUrl;
+  final String medium;
+  final String statement;
+  final String status;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  final String? reviewerNotes;
+  final Map<String, dynamic>? metadata;
+  final Map<String, dynamic>? applicantProfile;
+  final bool canVote;
+
+  DAOReview({
+    required this.id,
+    required this.walletAddress,
+    required this.portfolioUrl,
+    required this.medium,
+    required this.statement,
+    required this.status,
+    required this.createdAt,
+    this.updatedAt,
+    this.reviewerNotes,
+    this.metadata,
+    this.applicantProfile,
+    this.canVote = true,
+  });
+
+  factory DAOReview.fromJson(Map<String, dynamic> json) {
+    DateTime? parseDate(dynamic value) {
+      if (value is String) return DateTime.tryParse(value);
+      return null;
+    }
+
+    return DAOReview(
+      id: json['id']?.toString() ?? '',
+      walletAddress: json['walletAddress']?.toString() ?? json['wallet_address']?.toString() ?? '',
+      portfolioUrl: json['portfolioUrl']?.toString() ?? json['portfolio_url']?.toString() ?? '',
+      medium: json['medium']?.toString() ?? '',
+      statement: json['statement']?.toString() ?? '',
+      status: json['status']?.toString() ?? 'pending',
+      reviewerNotes: json['reviewerNotes']?.toString() ?? json['reviewer_notes']?.toString(),
+      createdAt: parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now(),
+      updatedAt: parseDate(json['updatedAt'] ?? json['updated_at']),
+      metadata: json['metadata'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['metadata'] as Map<String, dynamic>)
+          : null,
+      applicantProfile: json['applicantProfile'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(json['applicantProfile'] as Map<String, dynamic>)
+          : null,
+      canVote: json['canVote'] as bool? ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'walletAddress': walletAddress,
+      'portfolioUrl': portfolioUrl,
+      'medium': medium,
+      'statement': statement,
+      'status': status,
+      'reviewerNotes': reviewerNotes,
+      'createdAt': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+      if (metadata != null) 'metadata': metadata,
+      if (applicantProfile != null) 'applicantProfile': applicantProfile,
+      'canVote': canVote,
+    };
+  }
+}
+
 class Proposal {
   final String id;
   final String title;

@@ -21,12 +21,14 @@ class SocketService {
   final List<NotificationCallback> _messageReadListeners = [];
   final List<NotificationCallback> _conversationListeners = [];
   final List<VoidCallback> _connectListeners = [];
+  final List<NotificationCallback> _markerListeners = [];
   // Stream controllers for consumers that prefer Streams
   final StreamController<Map<String, dynamic>> _messageController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _messageReadController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _conversationMemberReadController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _notificationController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _postController = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _markerController = StreamController<Map<String, dynamic>>.broadcast();
   final List<NotificationCallback> _postListeners = [];
   String? _currentSubscribedWallet;
   final Set<String> _subscribedConversations = {};
@@ -178,6 +180,7 @@ class SocketService {
   Stream<Map<String, dynamic>> get onConversationMemberRead => _conversationMemberReadController.stream;
   Stream<Map<String, dynamic>> get onNotification => _notificationController.stream;
   Stream<Map<String, dynamic>> get onPostCreated => _postController.stream;
+  Stream<Map<String, dynamic>> get onMarkerCreated => _markerController.stream;
 
   void addPostListener(NotificationCallback cb) {
     if (!_postListeners.contains(cb)) _postListeners.add(cb);
@@ -187,6 +190,16 @@ class SocketService {
   void removePostListener(NotificationCallback cb) {
     _postListeners.remove(cb);
     _log('removePostListener: total=${_postListeners.length}');
+  }
+
+  void addMarkerListener(NotificationCallback cb) {
+    if (!_markerListeners.contains(cb)) _markerListeners.add(cb);
+    _log('addMarkerListener: total=${_markerListeners.length}');
+  }
+
+  void removeMarkerListener(NotificationCallback cb) {
+    _markerListeners.remove(cb);
+    _log('removeMarkerListener: total=${_markerListeners.length}');
   }
 
   /// Connects and attempts to subscribe, resolving when subscription is confirmed or rejects on timeout/error
@@ -203,7 +216,7 @@ class SocketService {
         try {
           if (payload is Map<String, dynamic> && payload['room'] != null) {
             final room = payload['room'].toString();
-            if (room == expectedRoom || room.toLowerCase() == expectedRoom.toLowerCase()) {
+            if (room == expectedRoom) {
               if (!completer.isCompleted) completer.complete(true);
             } else {
               // Not the ack we're waiting for - ignore
@@ -278,32 +291,18 @@ class SocketService {
     // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
     debugPrint('SocketService: emitted subscribe:user for $_currentSubscribedWallet');
-    Timer? lowercaseFallback;
     bool awaitingAck = true;
-    void emitLowercaseFallback() {
-      if (!awaitingAck) return;
-      try {
-        final lower = _currentSubscribedWallet!.toLowerCase();
-        _socket!.emit('subscribe:user', lower);
-        debugPrint('SocketService: emitted subscribe:user for $lower (fallback lowercase)');
-      } catch (e) {
-        debugPrint('SocketService: lowercase subscribe fallback failed: $e');
-      }
-    }
-    lowercaseFallback = Timer(const Duration(milliseconds: 600), emitLowercaseFallback);
 
     // Register handlers only once
     void onSubscribeOk(dynamic payload) {
       debugPrint('SocketService: subscribe:ok for $walletAddress (room: user:$_currentSubscribedWallet)');
       awaitingAck = false;
-      lowercaseFallback?.cancel();
     }
 
     void onSubscribeError(dynamic payload) {
       debugPrint('SocketService: subscribe:error for $walletAddress: $payload');
       _currentSubscribedWallet = null;
       awaitingAck = false;
-      lowercaseFallback?.cancel();
     }
 
     _socket!.once('subscribe:ok', onSubscribeOk);
@@ -367,6 +366,20 @@ class SocketService {
       } catch (e) {
         debugPrint('SocketService: notification:new handler error: $e');
       }
+    });
+
+    _socket!.on('art-marker:created', (data) {
+      try {
+        debugPrint('SocketService: Received art-marker:created: $data');
+        final mapped = mapFromPayload(data);
+        if (mapped != null) {
+          _log('art-marker:created -> listeners=${_markerListeners.length}');
+          for (final l in _markerListeners) {
+            try { l(mapped); } catch (e) { debugPrint('SocketService: marker listener error: $e'); }
+          }
+          try { _markerController.add(mapped); _log('art-marker:created -> controller.added'); } catch (e) { debugPrint('SocketService: marker controller add error: $e'); }
+        }
+      } catch (e) { debugPrint('SocketService: art-marker:created handler error: $e'); }
     });
     // Feed updates: new posts or reposts
     _socket!.on('community:new_post', (data) {
@@ -579,7 +592,6 @@ class SocketService {
     if (_socket == null) return;
     final roomWallet = walletAddress.toString();
     _socket!.emit('unsubscribe:user', roomWallet);
-    try { _socket!.emit('unsubscribe:user', roomWallet.toLowerCase()); } catch (_) {}
     if (_currentSubscribedWallet == roomWallet) {
       _currentSubscribedWallet = null;
     }
@@ -605,7 +617,7 @@ class SocketService {
       try {
         if (payload is Map<String, dynamic> && payload['room'] != null) {
           final room = payload['room'].toString();
-          if (room == 'conversation:$nid' || room.toLowerCase() == ('conversation:$nid').toLowerCase()) {
+          if (room == 'conversation:$nid') {
             if (!completer.isCompleted) completer.complete(true);
           } else {
             _log('subscribeConversation: ignoring subscribe:ok for room=$room expected=conversation:$nid');

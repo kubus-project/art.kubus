@@ -7,10 +7,13 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 import '../models/wallet.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
+import '../config/api_keys.dart';
+import '../utils/wallet_utils.dart';
 
 class WalletProvider extends ChangeNotifier {
   final SolanaWalletService _solanaWalletService;
@@ -37,6 +40,7 @@ class WalletProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _isBalanceVisible = true;
   String? _currentWalletAddress;
+  DerivedKeyPairResult? _cachedDerivedCandidate;
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -50,13 +54,15 @@ class WalletProvider extends ChangeNotifier {
   int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
 
-  WalletProvider() : _solanaWalletService = SolanaWalletService() {
+  WalletProvider({SolanaWalletService? solanaWalletService})
+      : _solanaWalletService = solanaWalletService ?? SolanaWalletService() {
     debugPrint('🔐 WalletProvider constructor called');
     _init();
   }
 
   Future<void> _init() async {
     debugPrint('🔐 WalletProvider._init() START');
+    await _applySavedNetworkPreference();
     await _loadLockTimeout();
     debugPrint('🔐 Lock timeout loaded, now loading cached wallet...');
     await _loadCachedWallet();
@@ -67,6 +73,20 @@ class WalletProvider extends ChangeNotifier {
       await _loadData();
     }
     debugPrint('🔐 WalletProvider._init() COMPLETE');
+  }
+
+  Future<void> _applySavedNetworkPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedNetwork = prefs.getString('networkSelection');
+      final targetNetwork = (savedNetwork == null || savedNetwork.isEmpty)
+          ? ApiKeys.defaultSolanaNetwork
+          : savedNetwork;
+      _solanaWalletService.switchNetwork(targetNetwork);
+      debugPrint('🔐 WalletProvider: applied saved Solana network -> $targetNetwork');
+    } catch (e) {
+      debugPrint('🔐 WalletProvider: failed to apply saved network: $e');
+    }
   }
 
   // Load lock timeout (seconds) from secure storage
@@ -363,10 +383,20 @@ class WalletProvider extends ChangeNotifier {
               // Immediately derive the public address locally so the app appears connected,
               // then attempt to import balances/data in background. This avoids forcing the
               // user through onboarding when network/import fails temporarily.
+              DerivedKeyPairResult? derived;
               try {
                 debugPrint('🔐 Attempting to derive keypair from cached mnemonic...');
-                final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(mnemonic);
-                _currentWalletAddress = keyPair.publicKey;
+                derived = await _solanaWalletService.derivePreferredKeyPair(
+                  mnemonic,
+                );
+                _cachedDerivedCandidate = derived;
+                try {
+                  _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
+                  debugPrint('🔐 Active keypair restored from cached mnemonic');
+                } catch (e) {
+                  debugPrint('⚠️ Failed to set active keypair from cached mnemonic: $e');
+                }
+                _currentWalletAddress = derived.address;
                 debugPrint('🔐 ✅ Keypair derived! Address: $_currentWalletAddress');
                 
                 // Save to SharedPreferences for profile provider
@@ -386,7 +416,7 @@ class WalletProvider extends ChangeNotifier {
 
               // Attempt import of full wallet state; if it fails, schedule retries.
               debugPrint('🔐 Calling _attemptImportFromCache...');
-              final success = await _attemptImportFromCache(mnemonic);
+              final success = await _attemptImportFromCache(mnemonic, derived: derived);
               debugPrint('🔐 Import result: $success');
               if (success) return;
               _scheduleImportRetry(mnemonic);
@@ -410,16 +440,26 @@ class WalletProvider extends ChangeNotifier {
             debugPrint('Error validating cached mnemonic without ts: $e');
           }
 
+          DerivedKeyPairResult? derived;
           try {
-            final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(mnemonic);
-            _currentWalletAddress = keyPair.publicKey;
+            derived = await _solanaWalletService.derivePreferredKeyPair(
+              mnemonic,
+            );
+            _cachedDerivedCandidate = derived;
+            try {
+              _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
+              debugPrint('🔐 Active keypair restored from cached mnemonic (no ts)');
+            } catch (e) {
+              debugPrint('⚠️ Failed to set active keypair from cached mnemonic (no ts): $e');
+            }
+            _currentWalletAddress = derived.address;
             notifyListeners();
             _loadData();
           } catch (e) {
             debugPrint('Failed to derive keypair from cached mnemonic (no ts): $e');
           }
 
-          final success = await _attemptImportFromCache(mnemonic);
+          final success = await _attemptImportFromCache(mnemonic, derived: derived);
           if (success) {
             // Set a fresh timestamp so subsequent runs treat it as recent
             try {
@@ -440,10 +480,12 @@ class WalletProvider extends ChangeNotifier {
   }
 
   // Attempt import immediately (returns true on success)
-  Future<bool> _attemptImportFromCache(String mnemonic) async {
+  Future<bool> _attemptImportFromCache(String mnemonic, {DerivedKeyPairResult? derived}) async {
     try {
       debugPrint('🔐 Attempting to import cached mnemonic (attempt ${_importRetryAttempts + 1})...');
-      await importWalletFromMnemonic(mnemonic);
+      final candidate = derived ?? _cachedDerivedCandidate;
+      await importWalletFromMnemonic(mnemonic, preDerived: candidate);
+      _cachedDerivedCandidate = null;
       debugPrint('🔐 ✅ Imported cached mnemonic successfully');
       // reset retry state
       _importRetryAttempts = 0;
@@ -473,7 +515,7 @@ class WalletProvider extends ChangeNotifier {
         // Only retry if still have cached mnemonic and not imported yet
         final cached = await _secureStorage.read(key: 'cached_mnemonic');
         if (cached == null) return;
-        final ok = await _attemptImportFromCache(cached);
+        final ok = await _attemptImportFromCache(cached, derived: _cachedDerivedCandidate);
         if (!ok) {
           // If still failing and attempts not exhausted, schedule another
           if (_importRetryAttempts < _maxImportRetryAttempts) {
@@ -496,6 +538,8 @@ class WalletProvider extends ChangeNotifier {
   bool get isBalanceVisible => _isBalanceVisible;
   double get totalBalance => _wallet?.totalValue ?? 0.0;
   String? get currentWalletAddress => _currentWalletAddress;
+  bool get isConnected => _currentWalletAddress != null && _currentWalletAddress!.isNotEmpty;
+  bool get hasActiveKeyPair => _solanaWalletService.hasActiveKeyPair;
   SolanaWalletService get solanaWalletService => _solanaWalletService;
 
   Future<void> _loadData() async {
@@ -561,18 +605,20 @@ class WalletProvider extends ChangeNotifier {
       ];
 
       // Add SPL tokens
+      final kub8Mint = WalletUtils.canonical(ApiKeys.kub8MintAddress);
       for (final t in tokenBalances) {
+        final isKub8 = WalletUtils.equals(t.mint, kub8Mint);
         _tokens.add(Token(
           id: 'spl_${t.mint}',
           name: t.name,
           symbol: t.symbol,
-          type: TokenType.erc20,
+          type: isKub8 ? TokenType.governance : TokenType.erc20,
           balance: t.balance,
           value: t.balance * 1.0, // Placeholder until price API
           changePercentage: 0.0,
           contractAddress: t.mint,
           decimals: t.decimals,
-          logoUrl: null,
+          logoUrl: t.logoUrl,
           network: 'Solana',
         ));
       }
@@ -746,8 +792,105 @@ class WalletProvider extends ChangeNotifier {
     double? gasPrice,
     Map<String, dynamic>? metadata,
   }) async {
-    // TODO: Implement real Solana transaction sending
-    throw UnimplementedError('Real blockchain transactions not yet implemented');
+    if (!isConnected || _currentWalletAddress == null || _currentWalletAddress!.isEmpty) {
+      throw Exception('Connect wallet before sending transactions');
+    }
+    if (toAddress.trim().isEmpty) {
+      throw Exception('Recipient address is required');
+    }
+    if (amount <= 0) {
+      throw Exception('Amount must be greater than zero');
+    }
+
+    try {
+      final feeTeam = amount * ApiKeys.kubusTeamFeePct;
+      final feeTreasury = amount * ApiKeys.kubusTreasuryFeePct;
+      final totalRequired = amount + feeTeam + feeTreasury;
+      final balance = getTokenBalance(token);
+      if (balance < totalRequired) {
+        throw Exception('Insufficient balance. Needed $totalRequired $token including fees.');
+      }
+
+      String? signature;
+      final isSol = token.toUpperCase() == 'SOL';
+      final tokenMeta = getTokenBySymbol(token);
+      final decimals = tokenMeta?.decimals ?? ApiKeys.kub8Decimals;
+      final mint = tokenMeta?.contractAddress ?? ApiKeys.kub8MintAddress;
+
+      if (isSol) {
+        signature = await _solanaWalletService.transferSol(
+          toAddress: toAddress,
+          amount: amount,
+        );
+      } else {
+        signature = await _solanaWalletService.transferSplToken(
+          mint: mint,
+          toAddress: toAddress,
+          amount: amount,
+          decimals: decimals,
+        );
+      }
+
+      // Fee transfers (match the token being sent)
+      if (feeTeam > 0) {
+        if (isSol) {
+          await _solanaWalletService.transferSol(
+            toAddress: ApiKeys.kubusTeamWallet,
+            amount: feeTeam,
+          );
+        } else {
+          await _solanaWalletService.transferSplToken(
+            mint: mint,
+            toAddress: ApiKeys.kubusTeamWallet,
+            amount: feeTeam,
+            decimals: decimals,
+          );
+        }
+      }
+      if (feeTreasury > 0) {
+        if (isSol) {
+          await _solanaWalletService.transferSol(
+            toAddress: ApiKeys.kubusTreasuryWallet,
+            amount: feeTreasury,
+          );
+        } else {
+          await _solanaWalletService.transferSplToken(
+            mint: mint,
+            toAddress: ApiKeys.kubusTreasuryWallet,
+            amount: feeTreasury,
+            decimals: decimals,
+          );
+        }
+      }
+
+      // Optimistically append transaction and refresh
+      _transactions.insert(
+        0,
+        WalletTransaction(
+          id: signature,
+          type: TransactionType.send,
+          token: token,
+          amount: amount,
+          fromAddress: _currentWalletAddress,
+          toAddress: toAddress,
+          timestamp: DateTime.now(),
+          status: TransactionStatus.confirmed,
+          txHash: signature,
+          gasUsed: gasPrice ?? 0.0,
+          gasFee: gasPrice ?? 0.0,
+          metadata: {
+            ...?metadata,
+            'feeTeam': feeTeam,
+            'feeTreasury': feeTreasury,
+          },
+        ),
+      );
+      await _loadFromBlockchain();
+      notifyListeners();
+        } catch (e, st) {
+      debugPrint('sendTransaction failed: $e\n$st');
+      rethrow;
+    }
   }
 
   Future<void> swapTokens({
@@ -757,8 +900,79 @@ class WalletProvider extends ChangeNotifier {
     required double toAmount,
     double? slippage,
   }) async {
-    // TODO: Implement real DEX swap on Solana
-    throw UnimplementedError('Real DEX swaps not yet implemented');
+    if (!isConnected || _currentWalletAddress == null || _currentWalletAddress!.isEmpty) {
+      throw Exception('Connect wallet before swapping');
+    }
+    if (fromAmount <= 0 || toAmount <= 0) {
+      throw Exception('Swap amounts must be greater than zero');
+    }
+
+    try {
+      // Simple SOL -> SPL swap using wallet service (Jupiter integration placeholder inside service)
+      String? signature;
+      if (fromToken.toUpperCase() == 'SOL') {
+        signature = await _solanaWalletService.swapSolToSpl(
+          mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+          solAmount: fromAmount,
+        );
+      } else {
+        // SPL -> SOL or SPL -> SPL handled via two calls (SPL->SOL not yet wired)
+        signature = await _solanaWalletService.swapSplToken(
+          fromMint: getTokenBySymbol(fromToken)?.contractAddress ?? fromToken,
+          toMint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+          amount: fromAmount,
+          slippage: slippage ?? 0.01,
+        );
+      }
+
+      // Apply fees on output token
+      final feeTeam = toAmount * ApiKeys.kubusTeamFeePct;
+      final feeTreasury = toAmount * ApiKeys.kubusTreasuryFeePct;
+      if (feeTeam > 0) {
+        await _solanaWalletService.transferSplToken(
+          mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+          toAddress: ApiKeys.kubusTeamWallet,
+          amount: feeTeam,
+          decimals: getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
+        );
+      }
+      if (feeTreasury > 0) {
+        await _solanaWalletService.transferSplToken(
+          mint: getTokenBySymbol(toToken)?.contractAddress ?? toToken,
+          toAddress: ApiKeys.kubusTreasuryWallet,
+          amount: feeTreasury,
+          decimals: getTokenBySymbol(toToken)?.decimals ?? ApiKeys.kub8Decimals,
+        );
+      }
+
+      _transactions.insert(
+        0,
+        WalletTransaction(
+          id: signature,
+          type: TransactionType.swap,
+          token: '$fromToken->$toToken',
+          amount: fromAmount,
+          fromAddress: _currentWalletAddress,
+          toAddress: _currentWalletAddress,
+          timestamp: DateTime.now(),
+          status: TransactionStatus.confirmed,
+          txHash: signature,
+          gasUsed: 0.0,
+          gasFee: 0.0,
+          metadata: {
+            'slippage': slippage,
+            'expectedOut': toAmount,
+            'feeTeam': feeTeam,
+            'feeTreasury': feeTreasury,
+          },
+        ),
+      );
+      await _loadFromBlockchain();
+      notifyListeners();
+        } catch (e, st) {
+      debugPrint('swapTokens failed: $e\n$st');
+      rethrow;
+    }
   }
 
   // Analytics methods
@@ -796,33 +1010,76 @@ class WalletProvider extends ChangeNotifier {
   // Wallet Management
   Future<Map<String, String>> createWallet() async {
     final mnemonic = _solanaWalletService.generateMnemonic();
-    final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(mnemonic);
+    final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(
+      mnemonic,
+      accountIndex: 0,
+      changeIndex: 0,
+      pathType: DerivationPathType.standard,
+    );
+    try {
+      final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(
+        mnemonic,
+        account: 0,
+        change: 0,
+      );
+      _solanaWalletService.setActiveKeyPair(hdKeyPair);
+      debugPrint('🔐 Active keypair set for newly created wallet');
+    } catch (e) {
+      debugPrint('⚠️ Failed to set active keypair for new wallet: $e');
+    }
     
     _currentWalletAddress = keyPair.publicKey;
-    
-    // Load the newly created wallet from blockchain
-    await _loadData();
+    // Persist address for other providers/screens
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('wallet_address', _currentWalletAddress!);
+      await prefs.setBool('has_wallet', true);
+    } catch (e) {
+      debugPrint('Failed to persist wallet address: $e');
+    }
+
+    // Load the newly created wallet from blockchain and sync backend
+    try {
+      await _loadData();
+    } catch (e) {
+      debugPrint('createWallet: loadData failed: $e');
+    }
+    try {
+      await _syncBackendData(_currentWalletAddress!);
+    } catch (e) {
+      debugPrint('createWallet: sync backend failed: $e');
+    }
 
     // Cache mnemonic for reuse
     try {
       await _cacheMnemonic(mnemonic);
     } catch (_) {}
     
+    notifyListeners();
+
     return {
       'mnemonic': mnemonic,
       'address': _currentWalletAddress!,
     };
   }
 
-  Future<String> importWalletFromMnemonic(String mnemonic) async {
+  Future<String> importWalletFromMnemonic(String mnemonic, {DerivedKeyPairResult? preDerived}) async {
     debugPrint('🔐 importWalletFromMnemonic START');
     
     if (!_solanaWalletService.validateMnemonic(mnemonic)) {
       throw Exception('Invalid mnemonic phrase');
     }
     
-    final keyPair = await _solanaWalletService.generateKeyPairFromMnemonic(mnemonic);
-    _currentWalletAddress = keyPair.publicKey;
+    final derived = preDerived ?? await _solanaWalletService.derivePreferredKeyPair(
+      mnemonic,
+    );
+    try {
+      _solanaWalletService.setActiveKeyPair(derived.hdKeyPair);
+      debugPrint('🔐 Active keypair set for imported wallet');
+    } catch (e) {
+      debugPrint('⚠️ Failed to set active keypair for imported wallet: $e');
+    }
+    _currentWalletAddress = derived.address;
     debugPrint('🔐 Wallet address set: $_currentWalletAddress');
     
     // Save to SharedPreferences for profile provider
@@ -889,6 +1146,7 @@ class WalletProvider extends ChangeNotifier {
     _collectionsCount = 0;
     _achievementsUnlocked = 0;
     _achievementTokenTotal = 0.0;
+    _cachedDerivedCandidate = null;
     // Clear cached mnemonic on explicit disconnect for security
     try {
       clearCachedMnemonic();

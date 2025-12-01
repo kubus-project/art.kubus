@@ -255,7 +255,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Failed to load likes', style: GoogleFonts.inter(color: theme.colorScheme.onSurface))));
                     }
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
-                    if (likes.isEmpty) return Center(
+                    if (likes.isEmpty) {
+                      return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
                         child: EmptyStateCard(
@@ -265,6 +266,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ),
                       ),
                     );
+                    }
                     return ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       itemCount: likes.length,

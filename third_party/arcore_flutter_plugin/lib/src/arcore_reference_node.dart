@@ -27,7 +27,7 @@ class ArCoreReferenceNode extends ArCoreNode {
 
   @override
   Map<String, dynamic> toMap() => <String, dynamic>{
-        'object3DFileName': this.object3DFileName,
-        'objectUrl': this.objectUrl,
+        'object3DFileName': object3DFileName,
+        'objectUrl': objectUrl,
       }..addAll(super.toMap());
 }

@@ -5,7 +5,7 @@ import '../screens/post_detail_screen.dart';
 import '../screens/art_detail_screen.dart';
 import '../screens/user_profile_screen.dart';
 import '../screens/saved_items_screen.dart';
-import '../web3/wallet.dart';
+import '../web3/wallet/wallet_home.dart';
 import '../web3/achievements/achievements_page.dart';
 import '../web3/marketplace/marketplace.dart';
 
@@ -293,7 +293,7 @@ class ActivityNavigation {
 
   static Future<void> _openWallet(NavigatorState navigator) async {
     await navigator.push(
-      MaterialPageRoute(builder: (_) => const Wallet()),
+      MaterialPageRoute(builder: (_) => const WalletHome()),
     );
   }
 

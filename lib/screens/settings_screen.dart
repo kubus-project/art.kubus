@@ -11,11 +11,13 @@ import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../models/wallet.dart';
 import '../widgets/platform_aware_widgets.dart';
-import '../web3/wallet.dart' as web3_wallet;
+import '../web3/wallet/wallet_home.dart' as web3_wallet;
+import 'connectwallet_screen.dart';
 import 'onboarding_reset_screen.dart';
 import 'profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
+import 'mnemonic_reveal_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -315,7 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const web3_wallet.Wallet()),
+          MaterialPageRoute(builder: (context) => const web3_wallet.WalletHome()),
         );
       },
       child: Container(
@@ -868,7 +870,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   title: Text('Artist profile', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
                   subtitle: Text('Show artist sections (artworks, collections)', style: GoogleFonts.inter(fontSize: 13)),
                   value: artist,
-                  activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                   onChanged: (val) {
                     setState(() => artist = val);
                     profileProvider.setRoleFlags(isArtist: val, isInstitution: institution);
@@ -878,7 +880,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   title: Text('Institution profile', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
                   subtitle: Text('Show institution sections (events, collections)', style: GoogleFonts.inter(fontSize: 13)),
                   value: institution,
-                  activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                   onChanged: (val) {
                     setState(() => institution = val);
                     profileProvider.setRoleFlags(isArtist: artist, isInstitution: val);
@@ -943,6 +945,18 @@ class _SettingsScreenState extends State<SettingsScreen>
           Icons.backup,
           onTap: () => _showBackupDialog(),
         ),
+        _buildSettingsTile(
+          'Export recovery phrase',
+          'Back up your wallet (sensitive)',
+          Icons.warning_amber_rounded,
+          onTap: _showRecoveryWarningDialog,
+        ),
+        _buildSettingsTile(
+          'Import existing wallet (advanced)',
+          'Use a recovery phrase you already have',
+          Icons.upload_file,
+          onTap: _showImportWarningDialog,
+        ),
       ],
     );
   }
@@ -959,12 +973,9 @@ class _SettingsScreenState extends State<SettingsScreen>
           trailing: Switch(
             value: _biometricAuth,
             onChanged: (value) {
-              setState(() {
-                _biometricAuth = value;
-              });
-              _saveAllSettings();
+              _toggleBiometric(value);
             },
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ),
         _buildSettingsTile(
@@ -991,7 +1002,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ),
         _buildSettingsTile(
@@ -1022,7 +1033,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ),
         _buildSettingsTile(
@@ -1037,7 +1048,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ),
         _buildSettingsTile(
@@ -1052,7 +1063,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ),
         _buildSettingsTile(
@@ -1227,7 +1238,8 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Dialog methods
   void _showNetworkDialog() {
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    String currentNetwork = web3Provider.currentNetwork;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final currentNetwork = web3Provider.currentNetwork.toLowerCase();
     
     showDialog(
       context: context,
@@ -1247,12 +1259,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildNetworkOption(
               'Mainnet',
               'Live Solana network',
-              currentNetwork == 'Mainnet',
+              currentNetwork == 'mainnet',
               () async {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 navigator.pop();
                 web3Provider.switchNetwork('Mainnet');
+                walletProvider.switchSolanaNetwork('Mainnet');
                 setState(() {
                   _networkSelection = 'Mainnet';
                 });
@@ -1268,12 +1281,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildNetworkOption(
               'Devnet',
               'Development network for testing',
-              currentNetwork == 'Devnet',
+              currentNetwork == 'devnet',
               () async {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 navigator.pop();
                 web3Provider.switchNetwork('Devnet');
+                walletProvider.switchSolanaNetwork('Devnet');
                 setState(() {
                   _networkSelection = 'Devnet';
                 });
@@ -1289,12 +1303,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             _buildNetworkOption(
               'Testnet',
               'Test network for development',
-              currentNetwork == 'Testnet',
+              currentNetwork == 'testnet',
               () async {
                 final navigator = Navigator.of(context);
                 final messenger = ScaffoldMessenger.of(context);
                 navigator.pop();
                 web3Provider.switchNetwork('Testnet');
+                walletProvider.switchSolanaNetwork('Testnet');
                 setState(() {
                   _networkSelection = 'Testnet';
                 });
@@ -1380,7 +1395,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showBackupDialog() {
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+
     if (!web3Provider.isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please connect your wallet first')),
@@ -1479,7 +1495,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             onPressed: () {
               Navigator.pop(context);
-              _showRecoveryPhrase();
+              _navigateToRecoveryReveal(walletProvider);
             },
             child: Text(
               'Continue',
@@ -1494,102 +1510,13 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  void _showRecoveryPhrase() {
-    // Generate a mock recovery phrase for demo
-    final words = [
-      'abandon', 'ability', 'able', 'about', 'above', 'absent', 
-      'absorb', 'abstract', 'absurd', 'abuse', 'access', 'accident'
-    ];
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          'Recovery Phrase',
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Write down these 12 words in order:',
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
-              ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 3,
-                  childAspectRatio: 2.5,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                ),
-                itemCount: 12,
-                itemBuilder: (context, index) => Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}. ${words[index]}',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-            ),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Recovery phrase shown. Please store it safely!')),
-              );
-            },
-            child: Text(
-              'I\'ve Written It Down',
-              style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  void _navigateToRecoveryReveal(WalletProvider walletProvider) {
+    final hasWallet = walletProvider.wallet != null || (walletProvider.currentWalletAddress ?? '').isNotEmpty;
+    if (!hasWallet) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connect or create a wallet first.')));
+      return;
+    }
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
   }
 
   void _showAutoLockDialog() {
@@ -1661,6 +1588,135 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Future<void> _toggleBiometric(bool value) async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    if (value) {
+      final canUse = await walletProvider.canUseBiometrics();
+      if (!canUse) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric unlock not available on this device.')),
+          );
+        }
+        setState(() => _biometricAuth = false);
+        _saveAllSettings();
+        return;
+      }
+      // Optional: require one successful auth when enabling
+      final ok = await walletProvider.authenticateWithBiometrics();
+      if (!ok) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric authentication failed.')),
+          );
+        }
+        setState(() => _biometricAuth = false);
+        _saveAllSettings();
+        return;
+      }
+    }
+    setState(() => _biometricAuth = value);
+    _saveAllSettings();
+  }
+
+  void _showRecoveryWarningDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Row(
+          children: [
+            Icon(Icons.shield_outlined, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            Text('Export recovery phrase', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Only view your phrase in private. We never store it, and anyone with it can move your assets.',
+              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.lock_outline, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Confirm you are ready before revealing the words.',
+                    style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
+            },
+            child: const Text('Show phrase'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showImportWarningDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Row(
+          children: [
+            Icon(Icons.report_gmailerrorred, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            Text('Import existing wallet', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi and screensharing while importing.',
+              style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.privacy_tip_outlined, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'We never store your seed phrase. You keep full ownership of your assets.',
+                    style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 1)));
+            },
+            child: const Text('Proceed'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showSetPinDialog() {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final pinController = TextEditingController();
@@ -1723,8 +1779,8 @@ class _SettingsScreenState extends State<SettingsScreen>
               final messenger = ScaffoldMessenger.of(context);
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
-              if (pin.isEmpty || confirm.isEmpty) {
-                messenger.showSnackBar(const SnackBar(content: Text('Please enter and confirm PIN')));
+              if (pin.length < 4 || confirm.length < 4) {
+                messenger.showSnackBar(const SnackBar(content: Text('PIN must be at least 4 digits')));
                 return;
               }
               if (pin != confirm) {
@@ -2661,7 +2717,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         value: value,
         onChanged: onChanged,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        activeColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+        activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
       ),
     );
   }

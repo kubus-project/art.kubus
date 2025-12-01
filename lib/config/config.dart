@@ -18,7 +18,7 @@ class AppConfig {
   // ===========================================
   
   /// Use backend mock data endpoint (controlled by backend .env)
-  static const bool useBackendMockData = true; // Backend serves mock data when USE_MOCK_DATA=true
+  static const bool useBackendMockData = false; // Backend serves mock data when USE_MOCK_DATA=true
   
   /// Use real blockchain connections by default
   static const bool useRealBlockchain = true;
@@ -33,7 +33,11 @@ class AppConfig {
   static const bool enableWeb3 = true;
   static const bool enableMarketplace = true;
   static const bool enableNFTMinting = true;
+  static const bool enableDaoOnchainTreasury = true;
   static const bool enableWalletConnect = true;
+  static const bool enableEmailAuth = true;
+  static const bool enableGoogleAuth = true;
+  static const bool enableMultiAuthEntry = true;
   static const bool enforceWalletOnboarding = false; // Don't force wallet during onboarding - let users set it up when needed
   
   /// AR and Camera features
@@ -91,9 +95,11 @@ class AppConfig {
   // ===========================================
   
   /// API endpoints
-  static const String baseApiUrl = isDevelopment 
-    ? 'http://localhost:3000' 
-    : 'https://api.kubus.site';
+  static const String baseApiUrl = 'https://api.kubus.site';
+  
+  //isDevelopment 
+  //  ? 'http://localhost:3000' 
+  //  : 'https://api.kubus.site';
   
   /// Mock data endpoint (when useBackendMockData is true)
   static const String mockDataApiUrl = '$baseApiUrl/api/mock';
@@ -207,6 +213,11 @@ class AppConfig {
       case 'liking': return enableLiking;
       case 'commenting': return enableCommenting;
       case 'web3': return enableWeb3;
+      case 'daoOnchainTreasury': return enableDaoOnchainTreasury;
+      case 'walletConnect': return enableWalletConnect;
+      case 'emailAuth': return enableEmailAuth;
+      case 'googleAuth': return enableGoogleAuth;
+      case 'multiAuth': return enableMultiAuthEntry;
       case 'marketplace': return enableMarketplace;
       case 'ar': return enableARViewer;
       case 'analytics': return enableAnalytics;
@@ -254,9 +265,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.0.3';
-  static const int buildNumber = 3;
-  static const String buildDate = '2025-11-21';
+  static const String version = '0.0.5';
+  static const int buildNumber = 5;
+  static const String buildDate = '2025-12-01';
   
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

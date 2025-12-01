@@ -9,7 +9,7 @@ class DAOOnboardingData {
       title: 'Welcome to DAO Governance',
       description: 'Participate in decentralized decision-making for the art.kubus ecosystem. Your voice matters in shaping the future of digital art.',
       icon: Icons.account_balance,
-      gradientColors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
+      gradientColors: [Color.fromARGB(255, 6, 89, 141), Color(0xFF0B6E4F)],
       features: [
         'Vote on important community proposals',
         'Create and submit your own proposals',

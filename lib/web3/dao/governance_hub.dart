@@ -5,7 +5,9 @@ import 'package:art_kubus/providers/themeprovider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../providers/dao_provider.dart';
+import '../../providers/web3provider.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../models/dao.dart';
 
 
 class GovernanceHub extends StatefulWidget {
@@ -140,39 +142,47 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildGovernanceHeader() {
-    return Consumer<DAOProvider>(
-      builder: (context, daoProvider, child) {
-        // Get voting power and proposal count from DAO provider
-        final votingPower = '0 KUB8'; // TODO: Calculate from actual KUB8 balance
+    return Consumer2<DAOProvider, Web3Provider>(
+      builder: (context, daoProvider, web3Provider, child) {
+        final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+        final kub8Balance = web3Provider.kub8Balance;
+        final votingPower = '${kub8Balance.toStringAsFixed(2)} KUB8';
         final activeProposals = daoProvider.getActiveProposals().length.toString();
-        final totalMembers = '--'; // TODO: Get from backend community stats
+        final totalMembers = daoProvider.delegates.length.toString();
 
         return Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Colors.green, Colors.green],
+              colors: [Color.fromARGB(255, 6, 215, 37), Color(0xFF9C27B0)],
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromARGB(255, 4, 236, 124).withValues(alpha: 0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Column(
             children: [
               Row(
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(25),
+                      color: Colors.white.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: const Icon(
                       Icons.how_to_vote,
                       color: Colors.white,
-                      size: 26,
+                      size: 30,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -215,7 +225,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: _buildStatCard('Total Members', totalMembers),
+                    child: _buildStatCard('Total Delegates', totalMembers),
                   ),
                 ],
               ),
@@ -283,14 +293,15 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildTabButton(String label, IconData icon, int index) {
     final isSelected = _selectedIndex == index;
+    const daoColor = Color.fromARGB(255, 5, 164, 76);
     return GestureDetector(
       onTap: () => setState(() => _selectedIndex = index),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.green : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          color: isSelected ? daoColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -322,73 +333,244 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       builder: (context, daoProvider, child) {
         // Filter active proposals using DAOProvider method
         final activeProposals = daoProvider.getActiveProposals();
+        final reviews = daoProvider.reviews;
         
         // Show empty state if no proposals
-        if (activeProposals.isEmpty) {
+        if (activeProposals.isEmpty && reviews.isEmpty) {
           return Center(
             child: EmptyStateCard(
               icon: Icons.how_to_vote,
               title: 'No active proposals',
-              description: 'Enable mock data to view proposals',
+              description: 'Submit a proposal or review to get governance moving.',
             ),
           );
         }
 
         return Container(
           color: Theme.of(context).scaffoldBackgroundColor,
-          child: ListView.builder(
+          child: ListView(
             padding: const EdgeInsets.all(16),
-            itemCount: 5,
-            itemBuilder: (context, index) {
-              return _buildProposalCard(index);
-            },
+            children: [
+              if (reviews.isNotEmpty) _buildReviewQueue(reviews),
+              ...activeProposals
+                  .map((proposal) => _buildProposalCard(proposal)),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildProposalCard(int index) {
-    final proposals = [
-      {
-        'type': 'COMMUNITY',
-        'title': 'Artist Revenue Share Update',
-        'description': 'Proposal to increase artist revenue share from 70% to 80% for all marketplace transactions',
-        'votes': 234,
-        'timeLeft': '3 days',
-      },
-      {
-        'type': 'TECHNICAL',
-        'title': 'New AR Feature Implementation',
-        'description': 'Add advanced AR tracking capabilities for better artwork visualization and interaction',
-        'votes': 156,
-        'timeLeft': '5 days',
-      },
-      {
-        'type': 'TREASURY',
-        'title': 'Community Fund Allocation',
-        'description': 'Allocate 50,000 KUB8 tokens for community development and educational programs',
-        'votes': 89,
-        'timeLeft': '1 week',
-      },
-      {
-        'type': 'GOVERNANCE',
-        'title': 'Voting Power Restructure',
-        'description': 'Modify voting power calculation to include both token holding and community participation',
-        'votes': 312,
-        'timeLeft': '2 days',
-      },
-      {
-        'type': 'PARTNERSHIP',
-        'title': 'Museum Partnership Program',
-        'description': 'Establish partnerships with major museums for digital art exhibitions and collections',
-        'votes': 78,
-        'timeLeft': '6 days',
-      },
-    ];
+  Widget _buildReviewQueue(List<DAOReview> reviews) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'DAO Review Queue',
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ...reviews.map((review) => _buildReviewCard(review, themeProvider)),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
 
-    final proposal = proposals[index % proposals.length];
-    
+  Widget _buildReviewCard(DAOReview review, ThemeProvider themeProvider) {
+    final colorScheme = Theme.of(context).colorScheme;
+    const daoColor = Color(0xFF10B981);
+    final statusColor = review.status.toLowerCase() == 'approved'
+        ? Colors.green
+        : review.status.toLowerCase() == 'rejected'
+            ? colorScheme.error
+            : daoColor;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colorScheme.onPrimary.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.onPrimary.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: themeProvider.accentColor.withValues(alpha: 0.2),
+                backgroundImage: review.applicantProfile?['avatarUrl'] != null
+                    ? NetworkImage(review.applicantProfile!['avatarUrl'] as String)
+                    : null,
+                child: review.applicantProfile?['avatarUrl'] == null
+                    ? Icon(Icons.person, color: themeProvider.accentColor)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.applicantProfile?['displayName']?.toString() ?? review.walletAddress,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      review.portfolioUrl,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  review.status.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            review.medium.isNotEmpty ? review.medium : 'Medium not provided',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            review.statement,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: colorScheme.onSurface.withValues(alpha: 0.8),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              ElevatedButton.icon(
+                onPressed: () => _showReviewDetails(review),
+                icon: Icon(Icons.visibility, color: colorScheme.onSurface, size: 16),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeProvider.accentColor,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                label: Text(
+                  'View details',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                review.canVote
+                    ? 'Voting opens after review'
+                    : 'You cannot vote on your own submission',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReviewDetails(DAOReview review) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        title: Text(
+          'Review submission',
+          style: TextStyle(color: colorScheme.onSurface),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                review.statement,
+                style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.85)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Portfolio: ${review.portfolioUrl}',
+                style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.75)),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Medium: ${review.medium}',
+                style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.75)),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Status: ${review.status}',
+                style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.8)),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                review.canVote
+                    ? 'Voting will be added with on-chain governance.' // TODO(web3): wire vote on-chain
+                    : 'Voting disabled for the applicant profile.',
+                style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProposalCard(Proposal proposal) {
+    final color = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final totalVotes = proposal.totalVotes;
+    final supportPct = (proposal.supportPercentage * 100).clamp(0, 100);
+    final quorumText = proposal.hasQuorum ? 'Quorum reached' : 'Quorum pending';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -403,28 +585,34 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green),
+                  border: Border.all(color: color.withValues(alpha: 0.6)),
                 ),
                 child: Text(
-                  proposal['type'] as String,
+                  proposal.type.name.toUpperCase(),
                   style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.green,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
               ),
               const Spacer(),
-              Icon(Icons.more_vert, color: Colors.grey[400]),
+              Text(
+                proposal.timeLeft,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: Colors.grey[400],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            proposal['title'] as String,
+            proposal.title,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -433,7 +621,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           ),
           const SizedBox(height: 8),
           Text(
-            proposal['description'] as String,
+            proposal.description,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[400],
@@ -443,9 +631,57 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildVoteInfo(Icons.how_to_vote, '${proposal['votes']} votes'),
-              const SizedBox(width: 16),
-              _buildVoteInfo(Icons.access_time, '${proposal['timeLeft']} left'),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$totalVotes votes • ${supportPct.toStringAsFixed(1)}% support',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: 180,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: LinearProgressIndicator(
+                        value: supportPct / 100,
+                        minHeight: 6,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    quorumText,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Yes: ${proposal.yesVotes}',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
+                  ),
+                  Text(
+                    'No: ${proposal.noVotes}',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
+                  ),
+                  Text(
+                    'Abstain: ${proposal.abstainVotes}',
+                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
+                  ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -453,10 +689,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _vote(true),
+                  onPressed: () => _voteOnProposal(proposal.id, true),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
+                    backgroundColor: color,
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -467,11 +703,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _vote(false),
+                  onPressed: () => _voteOnProposal(proposal.id, false),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    foregroundColor: Colors.white,
-                    side: BorderSide(color: Colors.grey[600]!),
+                    foregroundColor: Theme.of(context).colorScheme.onSurface,
+                    side: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -483,23 +719,6 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildVoteInfo(IconData icon, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: Colors.grey[400], size: 16),
-        const SizedBox(width: 4),
-        Text(
-          text,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color: Colors.grey[400],
-          ),
-        ),
-      ],
     );
   }
 
@@ -690,7 +909,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               child: ElevatedButton(
                 onPressed: _submitProposal,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
+                  backgroundColor: Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -837,10 +1056,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             ],
           ),
           const SizedBox(height: 12),
-          _buildRequirementItem('Minimum 100 KUB8 tokens to submit', true),
+          _buildRequirementItem('Wallet connection required to submit', Provider.of<Web3Provider>(context, listen: false).isConnected),
           _buildRequirementItem('Proposal must be clearly defined', true),
           _buildRequirementItem('Voting period: 3-14 days', true),
-          _buildRequirementItem('Quorum: 15% of total supply', false),
+          _buildRequirementItem('Quorum targets are enforced by DAO config', true),
         ],
       ),
     );
@@ -882,31 +1101,66 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       return;
     }
 
-    // Simulate proposal submission
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text(
-          'Proposal Submitted',
-          style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
+    final daoProvider = context.read<DAOProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final wallet = web3Provider.walletAddress;
+
+    if (wallet.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connect your wallet to submit proposals.'),
         ),
-        content: Text(
-          'Your proposal has been submitted successfully. It will be reviewed by the community and voting will begin in 24 hours.',
-          style: GoogleFonts.inter(color: Colors.grey[400]),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _clearForm();
-              setState(() => _selectedIndex = 0);
-            },
-            child: const Text('OK', style: TextStyle(color: Colors.green)),
+      );
+      return;
+    }
+
+    final selectedType = () {
+      switch (_selectedCategory.toLowerCase()) {
+        case 'platform update':
+          return ProposalType.platformUpdate;
+        case 'new feature':
+        case 'technical improvement':
+          return ProposalType.featureRequest;
+        case 'treasury allocation':
+        case 'community fund allocation':
+          return ProposalType.rewards;
+        case 'policy change':
+        case 'governance':
+          return ProposalType.governance;
+        default:
+          return ProposalType.community;
+      }
+    }();
+
+    final votingDays = int.tryParse(_votingPeriodController.text.trim()) ?? 7;
+
+    daoProvider
+        .createProposal(
+          walletAddress: wallet,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          type: selectedType,
+          votingPeriodDays: votingDays,
+        )
+        .then((proposal) {
+      if (proposal != null) {
+        _clearForm();
+        setState(() => _selectedIndex = 0);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Proposal submitted to DAO'),
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }).catchError((e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to submit proposal: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    });
   }
 
   void _clearForm() {
@@ -957,13 +1211,22 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildTreasuryOverview() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final analytics = daoProvider.getDAOAnalytics();
+        final treasuryAmountDisplay = (analytics['treasuryAmount'] as double? ?? 0.0).toStringAsFixed(2);
+        final transactions = daoProvider.transactions;
+        final inflow = transactions.where((tx) => tx.amount >= 0).fold<double>(0, (sum, tx) => sum + tx.amount);
+        final outflow = transactions.where((tx) => tx.amount < 0).fold<double>(0, (sum, tx) => sum + tx.amount.abs());
+        final accent = Provider.of<ThemeProvider>(context).accentColor;
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Provider.of<ThemeProvider>(context).accentColor, Colors.green],
+              colors: [
+                accent.withValues(alpha: 0.85),
+                accent,
+              ],
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -985,18 +1248,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                           ),
                         ),
                         Text(
-                          '2,450,000 KUB8',
+                          '$treasuryAmountDisplay KUB8',
                           style: GoogleFonts.inter(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-                        Text(
-                          '≈ \$490,000 USD',
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                           ),
                         ),
                       ],
@@ -1007,11 +1263,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildTreasuryStatCard('Monthly Inflow', '125K KUB8', Icons.trending_up)),
+                  Expanded(child: _buildTreasuryStatCard('Inflow', '${inflow.toStringAsFixed(2)} KUB8', Icons.trending_up)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTreasuryStatCard('Monthly Outflow', '89K KUB8', Icons.trending_down)),
+                  Expanded(child: _buildTreasuryStatCard('Outflow', '${outflow.toStringAsFixed(2)} KUB8', Icons.trending_down)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTreasuryStatCard('Reserve Ratio', '78%', Icons.security)),
+                  Expanded(child: _buildTreasuryStatCard('Proposals', '${daoProvider.proposals.length}', Icons.security)),
                 ],
               ),
             ],
@@ -1025,7 +1281,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -1180,109 +1436,43 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTreasuryProposals() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return Consumer<DAOProvider>(
+      builder: (context, daoProvider, child) {
+        final treasuryProposals = daoProvider.proposals.where((p) => p.type == ProposalType.rewards).toList();
+
+        if (treasuryProposals.isEmpty) {
+          return EmptyStateCard(
+            icon: Icons.savings,
+            title: 'No treasury proposals yet',
+            description: 'Create a treasury request to allocate KUB8 to initiatives.',
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Pending Treasury Proposals',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            Row(
+              children: [
+                Text(
+                  'Treasury Proposals',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => setState(() => _selectedIndex = 2),
+                  child: Text('Create Proposal', style: TextStyle(color: Provider.of<ThemeProvider>(context).accentColor)),
+                ),
+              ],
             ),
-            const Spacer(),
-            TextButton(
-              onPressed: () => setState(() => _selectedIndex = 2),
-              child: const Text('Create Proposal', style: TextStyle(color: Colors.green)),
-            ),
+            const SizedBox(height: 16),
+            ...treasuryProposals.map((proposal) => _buildProposalCard(proposal)),
           ],
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[800]!),
-          ),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFD93D).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFD93D)),
-                    ),
-                    child: Text(
-                      'Treasury',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFFFFD93D),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '5 days left',
-                    style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Mobile App Development Fund',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Allocate 200,000 KUB8 for mobile app development and testing',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Colors.grey[400],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _vote(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Approve'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _vote(false),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        foregroundColor: Colors.white,
-                        side: BorderSide(color: Colors.grey[600]!),
-                      ),
-                      child: const Text('Reject'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -1351,13 +1541,19 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           Row(
             children: [
               Expanded(
-                child: _buildDelegationInfo('Voting Power', '125 KUB8'),
+                child: _buildDelegationInfo(
+                  'Voting Power',
+                  '${Provider.of<Web3Provider>(context, listen: false).kub8Balance.toStringAsFixed(2)} KUB8',
+                ),
               ),
               Expanded(
                 child: _buildDelegationInfo('Delegated To', 'Self'),
               ),
               Expanded(
-                child: _buildDelegationInfo('Delegators', '3'),
+                child: _buildDelegationInfo(
+                  'Delegators',
+                  Provider.of<DAOProvider>(context, listen: false).delegates.length.toString(),
+                ),
               ),
             ],
           ),
@@ -1545,7 +1741,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             icon: Icon(Icons.people_outline, size: 20),
             label: const Text('Delegate to Trusted Members'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
+              backgroundColor: Color(0xFF10B981),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
@@ -1745,6 +1941,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   void _delegateVote(String delegateName) {
+    final votingPowerDisplay = '${context.read<Web3Provider>().kub8Balance.toStringAsFixed(2)} KUB8';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1755,7 +1952,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to delegate your 125 KUB8 voting power to $delegateName?',
+              'Are you sure you want to delegate your $votingPowerDisplay voting power to $delegateName?',
               style: GoogleFonts.inter(color: Colors.grey[400]),
             ),
             const SizedBox(height: 16),
@@ -1869,7 +2066,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             ),
             const SizedBox(height: 16),
             _buildDetailRow('Delegate', delegateName),
-            _buildDetailRow('Voting Power', '125 KUB8'),
+            _buildDetailRow(
+              'Voting Power',
+              '${Provider.of<Web3Provider>(context, listen: false).kub8Balance.toStringAsFixed(2)} KUB8',
+            ),
             _buildDetailRow('Status', 'Active'),
             _buildDetailRow('Started', 'Just now'),
             const SizedBox(height: 16),
@@ -1939,13 +2139,42 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 
-  void _vote(bool isYes) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Vote ${isYes ? 'Yes' : 'No'} cast successfully!'),
-        backgroundColor: Colors.green,
-      ),
-    );
+  Future<void> _voteOnProposal(String proposalId, bool isYes) async {
+    final daoProvider = context.read<DAOProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final wallet = web3Provider.walletAddress;
+
+    if (wallet.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Connect your wallet before voting'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final votingPower = web3Provider.kub8Balance.floor();
+      await daoProvider.castVote(
+        proposalId: proposalId,
+        choice: isYes ? VoteChoice.yes : VoteChoice.no,
+        votingPower: votingPower > 0 ? votingPower : 1,
+        walletAddress: wallet,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Vote ${isYes ? 'Yes' : 'No'} submitted'),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Unable to submit vote: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
   }
 
   void _showGovernanceInfo() {

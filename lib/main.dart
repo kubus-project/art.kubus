@@ -25,10 +25,13 @@ import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
+import 'screens/auth/sign_in_screen.dart';
+import 'screens/auth/register_screen.dart';
 import 'screens/ar_screen.dart';
-import 'web3/connectwallet.dart';
+import 'screens/connectwallet_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
+import 'services/solana_wallet_service.dart';
 
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
@@ -170,6 +173,9 @@ class _AppLauncherState extends State<AppLauncher> {
       value: topTheme,
       child: MultiProvider(
       providers: [
+        Provider<SolanaWalletService>(
+          create: (_) => SolanaWalletService(),
+        ),
         ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
         ChangeNotifierProvider(create: (context) => ConfigProvider()),
         ChangeNotifierProvider(create: (context) => PlatformProvider()),
@@ -189,7 +195,11 @@ class _AppLauncherState extends State<AppLauncher> {
             return provider;
           },
         ),
-        ChangeNotifierProvider(create: (context) => Web3Provider()),
+        ChangeNotifierProvider(
+          create: (context) => Web3Provider(
+            solanaWalletService: context.read<SolanaWalletService>(),
+          ),
+        ),
         // ThemeProvider is provided above; no duplicate provider here.
         ChangeNotifierProvider(create: (context) => NavigationProvider()),
         ChangeNotifierProvider(create: (context) => TaskProvider()),
@@ -207,8 +217,16 @@ class _AppLauncherState extends State<AppLauncher> {
         ),
         ChangeNotifierProvider(create: (context) => CollectiblesProvider()),
         ChangeNotifierProvider(create: (context) => InstitutionProvider()),
-        ChangeNotifierProvider(create: (context) => DAOProvider()),
-        ChangeNotifierProvider(create: (context) => WalletProvider()),
+        ChangeNotifierProvider(
+          create: (context) => DAOProvider(
+            solanaWalletService: context.read<SolanaWalletService>(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => WalletProvider(
+            solanaWalletService: context.read<SolanaWalletService>(),
+          ),
+        ),
         // Provide TileProviders so tiles + grid overlay are centralized and
         // respond to ThemeProvider updates. Dispose manually when the provider
         // tree is torn down.
@@ -301,6 +319,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             '/main': (context) => const MainApp(),
             '/ar': (context) => const ARScreen(),
             '/wallet_connect': (context) => const ConnectWallet(),
+            '/connect_wallet': (context) => const ConnectWallet(),
+            '/connect-wallet': (context) => const ConnectWallet(),
+            '/sign-in': (context) => const SignInScreen(),
+            '/register': (context) => const RegisterScreen(),
             '/web3': (context) => const Scaffold(
               body: Center(child: Text('Web3 Dashboard - Coming Soon')),
             ),

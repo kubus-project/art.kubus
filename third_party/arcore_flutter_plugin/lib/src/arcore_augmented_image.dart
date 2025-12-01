@@ -9,12 +9,12 @@ class ArCoreAugmentedImage {
   double extentZ;
 
   ArCoreAugmentedImage.fromMap(Map<dynamic, dynamic> map)
-      : this.name = map['name'],
-        this.index = map['index'],
-        this.extentX = map['extentX'],
-        this.extentZ = map['extentZ'],
-        this.centerPose = ArCorePose.fromMap(map['centerPose']),
-        this.trackingMethod = TrackingMethod.values[map['trackingMethod']];
+      : name = map['name'],
+        index = map['index'],
+        extentX = map['extentX'],
+        extentZ = map['extentZ'],
+        centerPose = ArCorePose.fromMap(map['centerPose']),
+        trackingMethod = TrackingMethod.values[map['trackingMethod']];
 }
 
 enum TrackingMethod {

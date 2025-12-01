@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
-import '../services/solana_wallet_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' hide Wallet; // Hide solana Wallet to avoid name clash with app model
+import '../config/api_keys.dart';
+import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
 import '../models/wallet.dart';
+import '../utils/wallet_utils.dart';
 
 class Web3Provider extends ChangeNotifier {
-  final SolanaWalletService _solanaService = SolanaWalletService();
+  final SolanaWalletService _solanaService;
   final BackendApiService _apiService = BackendApiService();
 
   bool _isConnected = false;
@@ -17,8 +20,8 @@ class Web3Provider extends ChangeNotifier {
   int _achievementsUnlocked = 0;
   double _achievementTokenTotal = 0.0;
 
-  // Configurable constants (replace with actual KUB8 mint/address)
-  final String _kub8TokenAddress = 'KUB8_TOKEN_MINT_PLACEHOLDER';
+  // Configurable constants (KUB8 mint/address from ApiKeys)
+  final String _kub8TokenAddress = ApiKeys.kub8MintAddress;
 
   // Initialization guards
   bool _initialized = false;
@@ -27,9 +30,9 @@ class Web3Provider extends ChangeNotifier {
 
   // Error tracking
   String? _initializeError;
-  Exception? _lastInitException;
 
-  Web3Provider();
+  Web3Provider({SolanaWalletService? solanaWalletService})
+      : _solanaService = solanaWalletService ?? SolanaWalletService();
 
   // Getters
   bool get isConnected => _isConnected;
@@ -44,7 +47,6 @@ class Web3Provider extends ChangeNotifier {
   int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
   String get kub8TokenAddress => _kub8TokenAddress;
-
   // Add simple initialize / state flags so AppInitializer can await provider init
   bool get isInitialized => _initialized;
   bool get isInitializing => _initializing;
@@ -59,6 +61,20 @@ class Web3Provider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _loadSavedNetworkPreference() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedNetwork = prefs.getString('networkSelection');
+      final targetNetwork = (savedNetwork == null || savedNetwork.isEmpty)
+          ? ApiKeys.defaultSolanaNetwork
+          : savedNetwork;
+      _solanaService.switchNetwork(targetNetwork);
+      debugPrint('Web3Provider: applied saved network -> $targetNetwork');
+    } catch (e, st) {
+      debugPrint('Web3Provider: failed to load saved network preference: $e\n$st');
+    }
+  }
+
   Future<void> initialize({bool attemptRestore = true}) async {
     _initializeCallCount++;
     if (_initialized || _initializing) {
@@ -67,9 +83,9 @@ class Web3Provider extends ChangeNotifier {
     }
     _initializing = true;
     _initializeError = null;
-    _lastInitException = null;
     debugPrint('Web3Provider.initialize: start (#$_initializeCallCount), attemptRestore=$attemptRestore');
     try {
+      await _loadSavedNetworkPreference();
       if (attemptRestore) {
         try {
           final dynamic dynamicSol = _solanaService;
@@ -91,7 +107,6 @@ class Web3Provider extends ChangeNotifier {
       }
     } catch (e, st) {
       _initializeError = e.toString();
-      _lastInitException = e is Exception ? e : Exception(e.toString());
       debugPrint('Web3Provider.initialize error: $e\n$st');
     } finally {
       _initialized = true;
@@ -104,21 +119,67 @@ class Web3Provider extends ChangeNotifier {
   // Wallet connection (mnemonic based for now)
   Future<String> createWallet() async {
     final mnemonic = _solanaService.generateMnemonic();
-    final keyPair = await _solanaService.generateKeyPairFromMnemonic(mnemonic);
-    final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(mnemonic);
+    final keyPair = await _solanaService.generateKeyPairFromMnemonic(
+      mnemonic,
+      accountIndex: 0,
+      changeIndex: 0,
+      pathType: DerivationPathType.standard,
+    );
+    final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(
+      mnemonic,
+      account: 0,
+      change: 0,
+    );
     _solanaService.setActiveKeyPair(hdKeyPair);
     await _initializeWallet(keyPair.publicKey); // explicit user action - allow rethrow
     return keyPair.publicKey;
   }
 
-  Future<void> importWallet(String mnemonic) async {
+  Future<void> importWallet(
+    String mnemonic, {
+    int? accountIndex,
+    int? changeIndex,
+    DerivationPathType? pathType,
+  }) async {
     if (mnemonic.trim().isEmpty) {
       throw ArgumentError('Mnemonic cannot be empty');
     }
-    final keyPair = await _solanaService.generateKeyPairFromMnemonic(mnemonic);
-    final hdKeyPair = await Ed25519HDKeyPair.fromMnemonic(mnemonic);
-    _solanaService.setActiveKeyPair(hdKeyPair);
-    await _initializeWallet(keyPair.publicKey); // explicit user action - allow rethrow
+
+    DerivedKeyPairResult derived;
+
+    if (accountIndex != null || changeIndex != null || pathType != null) {
+      final resolvedAccount = accountIndex ?? 0;
+      final resolvedChange = changeIndex ?? 0;
+      final resolvedPath = pathType ?? DerivationPathType.standard;
+      final solanaKeyPair = await _solanaService.generateKeyPairFromMnemonic(
+        mnemonic,
+        accountIndex: resolvedAccount,
+        changeIndex: resolvedChange,
+        pathType: resolvedPath,
+      );
+      final hdKeyPair = await (resolvedPath == DerivationPathType.legacy
+          ? Ed25519HDKeyPair.fromMnemonic(
+              mnemonic,
+              account: resolvedAccount,
+            )
+          : Ed25519HDKeyPair.fromMnemonic(
+              mnemonic,
+              account: resolvedAccount,
+              change: resolvedChange,
+            ));
+      derived = DerivedKeyPairResult(
+        keyPair: solanaKeyPair,
+        hdKeyPair: hdKeyPair,
+        pathType: resolvedPath,
+        accountIndex: resolvedAccount,
+        changeIndex: resolvedChange,
+      );
+    } else {
+      derived = await _solanaService.derivePreferredKeyPair(mnemonic);
+    }
+
+    _solanaService.setActiveKeyPair(derived.hdKeyPair);
+    await _initializeWallet(derived.address); // explicit user action - allow rethrow
   }
 
   Future<void> connectExistingWallet(String publicKey) async {
@@ -130,7 +191,7 @@ class Web3Provider extends ChangeNotifier {
     await _initializeWallet(publicKey);
   }
 
-  Future<void> _initializeWallet(String publicKey, {String? mnemonic, bool suppressErrors = false}) async {
+  Future<void> _initializeWallet(String publicKey, {bool suppressErrors = false}) async {
     try {
       if (publicKey.trim().isEmpty) {
         throw ArgumentError('Public key cannot be empty');
@@ -154,7 +215,6 @@ class Web3Provider extends ChangeNotifier {
     } catch (e, st) {
       _isConnected = false;
       _initializeError = e.toString();
-      _lastInitException = e is Exception ? e : Exception(e.toString());
       debugPrint('Web3Provider: wallet init failed: $e\n$st');
       if (!suppressErrors) rethrow;
     }
@@ -229,13 +289,12 @@ class Web3Provider extends ChangeNotifier {
   }
 
   // NFT functions
-  Future<String> mintArtworkNFT(String artworkData) async {
-    // Placeholder call into service
+  Future<String> mintArtworkNFT(Map<String, dynamic> metadata) async {
     try {
-      final signature = await _solanaService.mintNft(metadata: {'artwork': artworkData});
+      final signature = await _solanaService.mintNft(metadata: metadata);
       return signature;
-    } on UnimplementedError catch (e) {
-      debugPrint('NFT mint pending integration: $e');
+    } catch (e, st) {
+      debugPrint('NFT mint failed: $e\n$st');
       rethrow;
     }
   }
@@ -267,18 +326,20 @@ class Web3Provider extends ChangeNotifier {
         ),
       ];
 
+      final kub8Mint = WalletUtils.canonical(ApiKeys.kub8MintAddress);
       for (final b in splBalances) {
+        final isKub8 = WalletUtils.equals(b.mint, kub8Mint);
         tokens.add(Token(
           id: 'spl_${b.mint}',
           name: b.name,
           symbol: b.symbol,
-          type: TokenType.erc20,
+          type: isKub8 ? TokenType.governance : TokenType.erc20,
           balance: b.balance,
           value: b.balance * 1.0,
           changePercentage: 0.0,
           contractAddress: b.mint,
           decimals: b.decimals,
-          logoUrl: null,
+          logoUrl: b.logoUrl,
           network: 'Solana',
         ));
       }

@@ -19,12 +19,14 @@ class ArCoreRotatingNode extends ArCoreNode {
           scale: scale,
         );
 
+  @override
   final ArCoreShape? shape;
 
   final ValueNotifier<double> degreesPerSecond;
 
+  @override
   Map<String, dynamic> toMap() => <String, dynamic>{
-        'degreesPerSecond': this.degreesPerSecond.value,
+        'degreesPerSecond': degreesPerSecond.value,
       }
         ..addAll(super.toMap())
         ..removeWhere((String k, dynamic v) => v == null);

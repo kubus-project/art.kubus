@@ -25,6 +25,7 @@ class ProfileProvider extends ChangeNotifier {
   late SharedPreferences _prefs;
   final BackendApiService _apiService = BackendApiService();
   Map<String, dynamic>? _lastUploadDebug;
+  ProfilePreferences? _cachedPreferences;
 
   /// Debug info for last upload attempt (raw server response + extraction + verification)
   Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
@@ -210,6 +211,7 @@ class ProfileProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get hasProfile => _currentUser != null;
+  ProfilePreferences get preferences => _currentUser?.preferences ?? _cachedPreferences ?? _cachedPreferencesFromPrefs();
   
   // Dynamic getters for profile stats (from backend)
   int get artworksCount => _currentUser?.stats?.artworksDiscovered ?? 0;
@@ -419,6 +421,10 @@ class ProfileProvider extends ChangeNotifier {
           _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
         } catch (_) {}
         _isSignedIn = true;
+        // Merge backend preferences with locally cached toggles for offline continuity
+        final mergedPrefs = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+        _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
+        await _persistPreferences(mergedPrefs);
         debugPrint('ProfileProvider: Profile loaded from backend: ${_currentUser?.username}');
         
         // Load additional stats (collections, followers, following)
@@ -457,11 +463,17 @@ class ProfileProvider extends ChangeNotifier {
             _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
           } catch (_) {}
           _isSignedIn = true;
+          final mergedPrefs = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+          _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
+          await _persistPreferences(mergedPrefs);
         } catch (regError) {
           debugPrint('ProfileProvider: Auto-registration failed: $regError, creating local default');
           // If registration also fails, create local default
           _currentUser = _createDefaultProfile(walletAddress);
           _isSignedIn = true;
+          final mergedPrefs = _cachedPreferencesFromPrefs();
+          _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
+          await _persistPreferences(mergedPrefs);
         }
       }
       
@@ -820,12 +832,84 @@ class ProfileProvider extends ChangeNotifier {
       return wallet;
     }
   }
+
+  ProfilePreferences _cachedPreferencesFromPrefs() {
+    try {
+      final bool isPrivate = _prefs.getBool('private_profile') ?? false;
+      final bool showActivityStatus = _prefs.getBool('show_activity_status') ?? true;
+      final bool showCollection = _prefs.getBool('show_collection') ?? true;
+      final bool allowMessages = _prefs.getBool('allow_messages') ?? true;
+      return ProfilePreferences(
+        privacy: isPrivate ? 'private' : 'public',
+        notifications: true,
+        theme: 'auto',
+        showActivityStatus: showActivityStatus,
+        showCollection: showCollection,
+        allowMessages: allowMessages,
+      );
+    } catch (_) {
+      return _currentUser?.preferences ?? ProfilePreferences();
+    }
+  }
+
+  Future<void> _persistPreferences(ProfilePreferences preferences) async {
+    try {
+      await _prefs.setBool('private_profile', preferences.privacy.toLowerCase() == 'private');
+      await _prefs.setBool('show_activity_status', preferences.showActivityStatus);
+      await _prefs.setBool('show_collection', preferences.showCollection);
+      await _prefs.setBool('allow_messages', preferences.allowMessages);
+      _cachedPreferences = preferences;
+    } catch (_) {}
+  }
   
   // Refresh stats from backend
   Future<void> refreshStats() async {
     if (_currentUser?.walletAddress != null) {
       await _loadBackendStats(_currentUser!.walletAddress);
       notifyListeners();
+    }
+  }
+
+  /// Update privacy/display preferences locally and attempt to persist to backend.
+  Future<void> updatePreferences({
+    bool? privateProfile,
+    bool? showActivityStatus,
+    bool? showCollection,
+    bool? allowMessages,
+  }) async {
+    try {
+      final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+      final next = ProfilePreferences(
+        privacy: (privateProfile ?? (existing.privacy.toLowerCase() == 'private'))
+            ? 'private'
+            : 'public',
+        notifications: existing.notifications,
+        theme: existing.theme,
+        showActivityStatus: showActivityStatus ?? existing.showActivityStatus,
+        showCollection: showCollection ?? existing.showCollection,
+        allowMessages: allowMessages ?? existing.allowMessages,
+      );
+
+      _cachedPreferences = next;
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(preferences: next);
+      }
+      await _persistPreferences(next);
+      notifyListeners();
+
+      // Best-effort backend persistence
+      if (_currentUser != null) {
+        try {
+          await _apiService.updateProfile(
+            _currentUser!.walletAddress,
+            {'preferences': next.toJson()},
+          );
+        } catch (e) {
+          debugPrint('ProfileProvider.updatePreferences: backend update failed: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('ProfileProvider.updatePreferences failed: $e');
     }
   }
   

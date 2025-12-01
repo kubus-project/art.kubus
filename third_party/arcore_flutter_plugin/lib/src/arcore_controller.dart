@@ -1,10 +1,9 @@
-import 'dart:typed_data';
 
 import 'package:arcore_flutter_plugin/src/arcore_augmented_image.dart';
 import 'package:arcore_flutter_plugin/src/arcore_rotating_node.dart';
 import 'package:arcore_flutter_plugin/src/utils/vector_utils.dart';
 import 'package:flutter/services.dart';
-import 'package:meta/meta.dart';
+import 'package:flutter/widgets.dart';
 
 import 'arcore_hit_test_result.dart';
 import 'arcore_node.dart';
@@ -20,13 +19,13 @@ typedef ArCoreAugmentedImageTrackingHandler = void Function(
 const UTILS_CHANNEL_NAME = 'arcore_flutter_plugin/utils';
 
 class ArCoreController {
-  static checkArCoreAvailability() async {
+  static Future<bool> checkArCoreAvailability() async {
     final bool arcoreAvailable = await MethodChannel(UTILS_CHANNEL_NAME)
         .invokeMethod('checkArCoreApkAvailability');
     return arcoreAvailable;
   }
 
-  static checkIsArCoreInstalled() async {
+  static Future<bool> checkIsArCoreInstalled() async {
     final bool arcoreInstalled = await MethodChannel(UTILS_CHANNEL_NAME)
         .invokeMethod('checkIfARCoreServicesInstalled');
     return arcoreInstalled;
@@ -60,7 +59,7 @@ class ArCoreController {
   String trackingState = '';
   ArCoreAugmentedImageTrackingHandler? onTrackingImage;
 
-  init() async {
+  Future<void> init() async {
     try {
       await _channel.invokeMethod<void>('init', {
         'enableTapRecognizer': enableTapRecognizer,
@@ -68,13 +67,13 @@ class ArCoreController {
         'enableUpdateListener': enableUpdateListener,
       });
     } on PlatformException catch (ex) {
-      print(ex.message);
+      debugPrint(ex.message);
     }
   }
 
   Future<dynamic> _handleMethodCalls(MethodCall call) async {
     if (debug ?? true) {
-      print('_platformCallHandler call ${call.method} ${call.arguments}');
+      debugPrint('_platformCallHandler call ${call.method} ${call.arguments}');
     }
 
     switch (call.method) {
@@ -109,12 +108,12 @@ class ArCoreController {
         // TRACKING, PAUSED or STOPPED
         trackingState = call.arguments;
         if (debug ?? true) {
-          print('Latest tracking state received is: $trackingState');
+          debugPrint('Latest tracking state received is: $trackingState');
         }
         break;
       case 'onTrackingImage':
         if (debug ?? true) {
-          print('flutter onTrackingImage');
+          debugPrint('flutter onTrackingImage');
         }
         final arCoreAugmentedImage =
             ArCoreAugmentedImage.fromMap(call.arguments);
@@ -122,14 +121,14 @@ class ArCoreController {
         break;
       case 'togglePlaneRenderer':
         if (debug ?? true) {
-          print('Toggling Plane Renderer Visibility');
+          debugPrint('Toggling Plane Renderer Visibility');
         }
         togglePlaneRenderer();
         break;
 
       default:
         if (debug ?? true) {
-          print('Unknown method ${call.method}');
+          debugPrint('Unknown method ${call.method}');
         }
     }
     return Future.value();
@@ -138,7 +137,7 @@ class ArCoreController {
   Future<void> addArCoreNode(ArCoreNode node, {String? parentNodeName}) {
     final params = _addParentNodeNameToParams(node.toMap(), parentNodeName);
     if (debug ?? true) {
-      print(params.toString());
+      debugPrint(params.toString());
     }
     _addListeners(node);
     return _channel.invokeMethod('addArCoreNode', params);
@@ -152,7 +151,7 @@ class ArCoreController {
     return _channel.invokeMethod('getTrackingState');
   }
 
-  addArCoreNodeToAugmentedImage(ArCoreNode node, int index,
+  Future addArCoreNodeToAugmentedImage(ArCoreNode node, int index,
       {String? parentNodeName}) {
     final params = _addParentNodeNameToParams(node.toMap(), parentNodeName);
     return _channel.invokeMethod(
@@ -163,11 +162,11 @@ class ArCoreController {
       {String? parentNodeName}) {
     final params = _addParentNodeNameToParams(node.toMap(), parentNodeName);
     if (debug ?? true) {
-      print(params.toString());
+      debugPrint(params.toString());
     }
     _addListeners(node);
     if (debug ?? true) {
-      print('---------_CALLING addArCoreNodeWithAnchor : $params');
+      debugPrint('---------_CALLING addArCoreNodeWithAnchor : $params');
     }
     return _channel.invokeMethod('addArCoreNodeWithAnchor', params);
   }
@@ -250,7 +249,7 @@ class ArCoreController {
         'index': index,
       });
     } catch (ex) {
-      print(ex);
+      debugPrint(ex as String?);
     }
   }
 }

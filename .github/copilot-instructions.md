@@ -339,6 +339,13 @@ for (final marker in markers) {
 - Backend endpoints: `/api/community/posts`, `/api/community/like`, `/api/community/comment`
 - Real-time updates via Socket.IO (backend has socket support)
 
+### OrbitDB Sync & Storage Resilience *(November 2025 update)*
+- `backend/src/services/publicSyncService.js` mirrors Postgres data into OrbitDB docstores (`artworks`, `ar_markers`, `profiles`, `community_posts`, `collections`). Keep this dual-write flow intact whenever schemas or routes change.
+- Sync behavior is controlled by `ORBITDB_SYNC_MODE` (`dual-write`, `catch-up`, `off`), `ORBITDB_REPO_PATH`, `ORBITDB_SERVER_PRIVATE_KEY`, and `ORBITDB_PEER_SYNC_INTERVAL_MS`. Default is `dual-write`; do not bypass unless explicitly requested.
+- `backend/src/services/orbitdbService.js` now retries remote IPFS connections (`IPFS_REMOTE_RETRIES`, `IPFS_REMOTE_RETRY_DELAY_MS`) and automatically falls back to an embedded `ipfs-core` node when `IPFS_REMOTE_FALLBACK=true`.
+- Always use the gateway resolver helpers (`IPFS_GATEWAY_URL` supports comma-separated priority lists such as Pinata → ipfs.io → Cloudflare → dweb.link → localhost) through `StorageService`, `ARService`, or `UserService.safeAvatarUrl`. Never hardcode a single CID URL.
+- If IPFS is degraded, keep assets reachable via the HTTP/S3 hybrid path (`DEFAULT_STORAGE_PROVIDER=hybrid`, S3 credentials). Fallback-friendly code prevents AR regressions.
+
 ---
 
 ## Project Structure & Key Files
@@ -445,8 +452,10 @@ backend/src/
 2. **Feature flags** - Always check `AppConfig.isFeatureEnabled()`, never hardcode bypasses
 3. **Theme colors** - Use `Theme.of(context).colorScheme.*` - NO hardcoded colors (especially purple)
 4. **Provider init** - Call `await provider.initialize()` in AppInitializer, NOT in build()
-5. **IPFS URLs** - Convert `ipfs://CID` → `https://ipfs.io/ipfs/CID` before AR/display
+5. **IPFS URLs** - Convert `ipfs://CID` via the gateway resolver helpers (never hardcode a single endpoint)
 6. **Mock data** - Check `MockupDataProvider.isMockDataEnabled` in ALL data-fetching methods
+7. **OrbitDB sync** - Any Postgres mutation that should surface in Web3/AR (artworks, AR markers, profiles, collections, community posts) must call the relevant `publicSyncService` helper so OrbitDB stays up to date. Respect `ORBITDB_SYNC_MODE`.
+8. **Storage fallback** - Always go through the storage/AR helpers so remote IPFS retries, gateway rotation, and HTTP/S3 fallback (`DEFAULT_STORAGE_PROVIDER=hybrid`) keep working.
 
 ### Known Issues & Solutions
 
@@ -828,10 +837,11 @@ When reviewing changes or before deployment:
 - **GitHub**: https://github.com/kubus-project/art.kubus
 - **Instagram**: @art.kubus
 - **LinkedIn**: @kubustech
+- **Agent playbook**: `AGENTS.md` (Codex-friendly quick start for AI agents)
 
 ---
 
-**Last Updated:** November 19, 2025
+**Last Updated:** November 26, 2025
 **App Version:** 0.0.2
 **Flutter SDK:** >=3.3.4 <4.0.0
 **Node.js:** 20+

@@ -14,7 +14,7 @@ class ArCoreHitTestResult {
   late ArCorePose pose;
 
   ArCoreHitTestResult.fromMap(Map<dynamic, dynamic> map) {
-    this.distance = map['distance'];
-    this.pose = ArCorePose.fromMap(map['pose']);
+    distance = map['distance'];
+    pose = ArCorePose.fromMap(map['pose']);
   }
 }

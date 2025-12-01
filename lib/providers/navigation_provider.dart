@@ -77,14 +77,20 @@ class NavigationProvider with ChangeNotifier {
     'dao_hub': {
       'name': 'DAO Hub',
       'icon': Icons.how_to_vote,
-      'color': Color(0xFF673AB7),
+      'color': Color(0xFF10B981),
       'action': 'dao',
     },
     'studio': {
       'name': 'Artist Studio',
       'icon': Icons.palette,
-      'color': Color(0xFFE91E63),
+      'color': Color(0xFFF59E0B),
       'action': 'artist_studio',
+    },
+    'institution_hub': {
+      'name': 'Institution Hub',
+      'icon': Icons.location_city,
+      'color': Color(0xFF667EEA),
+      'action': 'institution_hub',
     },
   };
 
@@ -238,6 +244,9 @@ class NavigationProvider with ChangeNotifier {
         break;
       case 'artist_studio':
         Navigator.pushNamed(context, '/artist_studio');
+        break;
+      case 'institution_hub':
+        Navigator.pushNamed(context, '/institution_hub');
         break;
       default:
         // Fallback to showing a snackbar or dialog

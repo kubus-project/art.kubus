@@ -194,13 +194,14 @@ class ArtMarker {
   /// Create from Map (from storage/API)
   factory ArtMarker.fromMap(Map<String, dynamic> map) {
     final markerType = _parseMarkerType(map['markerType'] ?? map['type'] ?? map['category']);
+    final rotation = _normalizeRotation(map['rotation']);
     return ArtMarker(
       id: map['id']?.toString() ?? '',
       name: map['name']?.toString() ?? '',
       description: map['description']?.toString() ?? '',
       position: LatLng(
-        (map['latitude'] ?? map['lat'] ?? 0).toDouble(),
-        (map['longitude'] ?? map['lng'] ?? 0).toDouble(),
+        _parseDouble(map['latitude'] ?? map['lat'], 0),
+        _parseDouble(map['longitude'] ?? map['lng'], 0),
       ),
       artworkId: map['artworkId']?.toString(),
       type: markerType,
@@ -211,12 +212,12 @@ class ArtMarker {
         (e) => e.name == map['storageProvider'],
         orElse: () => StorageProvider.hybrid,
       ),
-      scale: (map['scale'] ?? 1.0).toDouble(),
-      rotation: Map<String, double>.from(map['rotation'] ?? {'x': 0, 'y': 0, 'z': 0}),
-      enableAnimation: map['enableAnimation'] == true,
+      scale: _parseDouble(map['scale'], 1.0),
+      rotation: rotation,
+      enableAnimation: _parseBool(map['enableAnimation'], false),
       animationName: map['animationName']?.toString(),
-      enablePhysics: map['enablePhysics'] == true,
-      enableInteraction: map['enableInteraction'] != false,
+      enablePhysics: _parseBool(map['enablePhysics'], false),
+      enableInteraction: _parseBool(map['enableInteraction'], true),
       metadata: map['metadata'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(map['metadata'])
           : map['metadata'] is Map
@@ -225,11 +226,11 @@ class ArtMarker {
       tags: List<String>.from(map['tags'] ?? const []),
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? 'system',
-      viewCount: (map['viewCount'] ?? 0).toInt(),
-      interactionCount: (map['interactionCount'] ?? 0).toInt(),
-      activationRadius: (map['activationRadius'] ?? 50.0).toDouble(),
-      requiresProximity: map['requiresProximity'] != false,
-      isPublic: map['isPublic'] != false,
+      viewCount: _parseInt(map['viewCount'], 0),
+      interactionCount: _parseInt(map['interactionCount'], 0),
+      activationRadius: _parseDouble(map['activationRadius'], 50.0),
+      requiresProximity: _parseBool(map['requiresProximity'], true),
+      isPublic: _parseBool(map['isPublic'], true),
     );
   }
 
@@ -325,5 +326,46 @@ class ArtMarker {
       return ArtMarkerType.artwork;
     }
     return ArtMarkerType.other;
+  }
+
+  static double _parseDouble(dynamic value, double fallback) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      final parsed = double.tryParse(value);
+      if (parsed != null) return parsed;
+    }
+    return fallback;
+  }
+
+  static int _parseInt(dynamic value, int fallback) {
+    if (value is num) return value.toInt();
+    if (value is String) {
+      final parsed = int.tryParse(value);
+      if (parsed != null) return parsed;
+      final parsedDouble = double.tryParse(value);
+      if (parsedDouble != null) return parsedDouble.toInt();
+    }
+    return fallback;
+  }
+
+  static bool _parseBool(dynamic value, bool fallback) {
+    if (value is bool) return value;
+    if (value is String) {
+      final normalized = value.toLowerCase();
+      if (normalized == 'true') return true;
+      if (normalized == 'false') return false;
+    }
+    return fallback;
+  }
+
+  static Map<String, double> _normalizeRotation(dynamic raw) {
+    if (raw is Map) {
+      return {
+        'x': _parseDouble(raw['x'], 0),
+        'y': _parseDouble(raw['y'], 0),
+        'z': _parseDouble(raw['z'], 0),
+      };
+    }
+    return const {'x': 0, 'y': 0, 'z': 0};
   }
 }

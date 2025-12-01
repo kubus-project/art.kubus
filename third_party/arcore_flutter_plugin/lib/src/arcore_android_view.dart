@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 typedef PlatformViewCreatedCallback = void Function(int id);
 
 class ArCoreAndroidView extends AndroidView {
+  @override
   final String viewType;
+  @override
   final PlatformViewCreatedCallback? onPlatformViewCreated;
   final ArCoreViewType arCoreViewType;
   final bool debug;
@@ -17,7 +19,7 @@ class ArCoreAndroidView extends AndroidView {
       this.arCoreViewType = ArCoreViewType.STANDARDVIEW,
       this.debug = false})
       : super(
-          viewType: viewType,
+          key: key, viewType: viewType,
           onPlatformViewCreated: onPlatformViewCreated,
           creationParams: <String, dynamic>{
             "type": arCoreViewType == ArCoreViewType.AUGMENTEDFACE

@@ -24,7 +24,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.art.kubus"
-    compileSdk 35  // Required by camera_android_camerax and other plugins
+    compileSdk 36  // Required by updated AndroidX browser/activity/core deps
     ndkVersion flutter.ndkVersion
 
     compileOptions {

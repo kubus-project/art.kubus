@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/themeprovider.dart';
 import 'art_detail_screen.dart';
 import 'collection_settings_screen.dart';
-import '../web3/artist/marker_creator.dart';
+import '../web3/artist/artwork_creator.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
   final int collectionIndex;
@@ -438,7 +438,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const MarkerCreator(),
+        builder: (context) => const ArtworkCreator(),
       ),
     );
   }

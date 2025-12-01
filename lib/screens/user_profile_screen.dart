@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/wallet_utils.dart';
 import '../widgets/topbar_icon.dart';
 import '../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -108,7 +109,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       final incomingAuthor = (data['walletAddress'] ?? data['author'] ?? data['authorWallet'])?.toString();
       if (incomingAuthor == null) return;
       // author id stored as wallet string in this profile screen
-      if (incomingAuthor.toLowerCase() != user!.id.toLowerCase()) return;
+      if (!WalletUtils.equals(incomingAuthor, user!.id)) return;
       final id = (data['id'] ?? data['postId'] ?? data['post_id'])?.toString();
       if (id == null) return;
       // Avoid duplicates
@@ -1448,14 +1449,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
       final collections = await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
-      final lowerWallet = walletAddress.toLowerCase();
+      final normalizedWallet = WalletUtils.normalize(walletAddress);
       final filteredEvents = eventsResponse.where((event) {
-        final createdBy = (event['createdBy'] ?? event['created_by'] ?? '').toString().toLowerCase();
+        final createdBy = WalletUtils.normalize((event['createdBy'] ?? event['created_by'] ?? '').toString());
         final artistIdsRaw = event['artistIds'] ?? event['artist_ids'] ?? [];
         final artistIds = artistIdsRaw is List
-            ? artistIdsRaw.map((id) => id.toString().toLowerCase()).toList()
+            ? artistIdsRaw.map((id) => WalletUtils.normalize(id.toString())).toList()
             : <String>[];
-        return createdBy == lowerWallet || artistIds.contains(lowerWallet);
+        return createdBy == normalizedWallet || artistIds.contains(normalizedWallet);
       }).take(6).map((e) => Map<String, dynamic>.from(e)).toList();
 
       if (!mounted) return;

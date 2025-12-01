@@ -44,6 +44,6 @@ class ArCoreNode {
         'name': name,
         'image': image?.toMap(),
         'children':
-            this.children?.map((arCoreNode) => arCoreNode.toMap()).toList(),
+            children?.map((arCoreNode) => arCoreNode.toMap()).toList(),
       }..removeWhere((String k, dynamic v) => v == null);
 }

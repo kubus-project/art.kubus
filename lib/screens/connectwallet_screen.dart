@@ -18,9 +18,12 @@ import '../services/user_service.dart';
 import '../models/user.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/gradient_icon_card.dart';
+import 'auth/sign_in_screen.dart';
+import 'auth/register_screen.dart';
 
 class ConnectWallet extends StatefulWidget {
-  const ConnectWallet({super.key});
+  final int initialStep;
+  const ConnectWallet({super.key, this.initialStep = 0});
 
   @override
   State<ConnectWallet> createState() => _ConnectWalletState();
@@ -33,12 +36,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   final TextEditingController _mnemonicController = TextEditingController();
   
   bool _isLoading = false;
-  int _currentStep = 0; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic), 3: WalletConnect
+  late int _currentStep; // 0: Choose option, 1: Connect existing (mnemonic), 2: Create new (generate mnemonic), 3: WalletConnect
   final TextEditingController _wcUriController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _currentStep = widget.initialStep < 0
+        ? 0
+        : (widget.initialStep > 3 ? 3 : widget.initialStep);
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -147,15 +153,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   String _getStepTitle() {
     switch (_currentStep) {
       case 0:
-        return 'Connect Wallet';
+        return 'Sign in to art.kubus';
       case 1:
-        return 'Import Wallet';
+        return 'Secure wallet access';
       case 2:
-        return 'Create New Wallet';
+        return 'Secure wallet access';
       case 3:
-        return 'WalletConnect';
+        return 'Secure wallet access';
       default:
-        return 'Connect Wallet';
+        return 'Sign in to art.kubus';
     }
   }
 
@@ -180,6 +186,8 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 360;
+    final colorScheme = Theme.of(context).colorScheme;
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -194,79 +202,77 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             child: Column(
               children: [
                 SizedBox(height: isSmallScreen ? 16 : 32),
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, _) => GradientIconCard(
-                    start: themeProvider.accentColor,
-                    end: themeProvider.accentColor.withValues(alpha: 0.7),
-                    icon: Icons.account_balance_wallet,
-                    iconSize: isSmallScreen ? 40 : 50,
-                    width: isSmallScreen ? 80 : 100,
-                    height: isSmallScreen ? 80 : 100,
-                    radius: 20,
+                Container(
+                  padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    children: [
+                      GradientIconCard(
+                        start: Color.fromARGB(255, 9, 149, 20),
+                        end: Color(0xFF3B82F6),
+                        icon: Icons.account_balance_wallet_outlined,
+                        iconSize: isSmallScreen ? 44 : 52,
+                        width: isSmallScreen ? 84 : 100,
+                        height: isSmallScreen ? 84 : 100,
+                        radius: 16,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Sign in securely',
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 22 : 24,
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.onSurface,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Keep your keys on-device and choose what suits you: connect a wallet, sign in with email/Google, or register. No seed phrases are stored.',
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 13 : 14,
+                          color: colorScheme.onSurface.withValues(alpha: 0.85),
+                          height: 1.4,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(height: isSmallScreen ? 16 : 24),
-                Text(
-                  'Welcome to Web3',
-                  style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 24 : 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  textAlign: TextAlign.center,
+                _buildActionButton(
+                  icon: Icons.qr_code_scanner,
+                  label: 'WalletConnect',
+                  description: 'Connect with Phantom, Solflare, or other wallets (no gas fee)',
+                  onTap: () => setState(() => _currentStep = 3),
+                  isSmallScreen: isSmallScreen,
                 ),
-                SizedBox(height: isSmallScreen ? 8 : 12),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                _buildActionButton(
+                  icon: Icons.login,
+                  label: 'Sign in',
+                  description: 'Use email/Google or existing wallet account',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen())),
+                  isSmallScreen: isSmallScreen,
+                ),
+                _buildActionButton(
+                  icon: Icons.person_add_alt,
+                  label: 'Register',
+                  description: 'Create a new account (keeps your keys self-custodied)',
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
+                  isSmallScreen: isSmallScreen,
+                ),
+                SizedBox(height: isSmallScreen ? 16 : 24),
+                GestureDetector(
+                  onTap: () => _showWeb3Guide(),
                   child: Text(
-                    'Choose how you\'d like to access the art.kubus ecosystem',
+                    'How does this hybrid wallet work?',
                     style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 14 : 15,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      height: 1.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 24 : 32),
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, _) => _buildOptionCard(
-                    'WalletConnect',
-                    'Connect with Phantom, Solflare, or other Solana wallets',
-                    Icons.qr_code_scanner,
-                    themeProvider.accentColor,
-                    () => setState(() => _currentStep = 3),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, _) => _buildOptionCard(
-                    'Import Wallet',
-                    'Import using 12-word recovery phrase',
-                    Icons.key,
-                    themeProvider.accentColor.withValues(alpha: 0.8),
-                    () => setState(() => _currentStep = 1),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildOptionCard(
-                  'Create New Wallet',
-                  'Generate new Solana wallet with recovery phrase',
-                  Icons.add_circle_outline,
-                  Colors.green,
-                  () => setState(() => _currentStep = 2),
-                ),
-                SizedBox(height: isSmallScreen ? 20 : 28),
-                Consumer<ThemeProvider>(
-                  builder: (context, themeProvider, _) => GestureDetector(
-                    onTap: () => _showWeb3Guide(),
-                    child: Text(
-                      'Learn more about Web3 wallets',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: themeProvider.accentColor,
-                        decoration: TextDecoration.underline,
-                      ),
+                      fontSize: 13,
+                      color: accent,
+                      decoration: TextDecoration.underline,
                     ),
                   ),
                 ),
@@ -276,6 +282,32 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required String description,
+    required VoidCallback onTap,
+    required bool isSmallScreen,
+  }) {
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final colorScheme = Theme.of(context).colorScheme;
+    final iconColor = icon == Icons.qr_code_scanner
+        ? colorScheme.secondary
+        : icon == Icons.login
+            ? colorScheme.primary
+            : icon == Icons.person_add_alt
+                ? colorScheme.tertiary
+                : accent;
+    return _buildOptionCard(
+      label,
+      description,
+      icon,
+      iconColor,
+      onTap,
+      isSubdued: false,
     );
   }
 
@@ -289,44 +321,58 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
+    Color startColor;
+    Color endColor;
+    if (icon == Icons.qr_code_scanner) {
+      startColor = Color(0xFF06B6D4);
+      endColor = Color(0xFF3B82F6);
+    } else if (icon == Icons.login) {
+      startColor = Color.fromARGB(255, 3, 115, 185);
+      endColor = Color.fromARGB(255, 13, 228, 49);
+    } else {
+      startColor = Color(0xFFF59E0B);
+      endColor = Color(0xFFEF4444);
+    }
     
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+        margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 14),
+        padding: EdgeInsets.all(isSmallScreen ? 16 : 18),
         decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSubdued 
-              ? Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)
-              : Theme.of(context).colorScheme.outline,
+            color: startColor.withValues(alpha: isSubdued ? 0.2 : 0.3),
+            width: 1.5,
           ),
-          boxShadow: isSubdued ? [] : [
-            BoxShadow(
-              color: color.withValues(alpha: 0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
+          boxShadow: isSubdued
+              ? []
+              : [
+                  BoxShadow(
+                    color: startColor.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: Row(
           children: [
             SizedBox(
-              width: isSmallScreen ? 44 : 52,
-              height: isSmallScreen ? 44 : 52,
+              width: isSmallScreen ? 48 : 58,
+              height: isSmallScreen ? 48 : 58,
               child: GradientIconCard(
-                start: color,
-                end: color.withValues(alpha: 0.8),
+                start: startColor,
+                end: endColor,
                 icon: icon,
-                iconSize: isSmallScreen ? 22 : 26,
-                width: isSmallScreen ? 44 : 52,
-                height: isSmallScreen ? 44 : 52,
-                radius: isSmallScreen ? 12 : 14,
+                iconSize: isSmallScreen ? 24 : 28,
+                width: isSmallScreen ? 48 : 58,
+                height: isSmallScreen ? 48 : 58,
+                radius: isSmallScreen ? 14 : 16,
               ),
             ),
-            SizedBox(width: isSmallScreen ? 12 : 14),
+            SizedBox(width: isSmallScreen ? 14 : 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -425,15 +471,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: Colors.blue,
-                      end: Colors.blue,
-                      icon: Icons.key,
-                      iconSize: isSmallScreen ? 30 : 35,
-                      width: isSmallScreen ? 60 : 70,
-                      height: isSmallScreen ? 60 : 70,
-                      radius: 18,
+                      start: Color(0xFF0EA5E9),
+                      end: Color(0xFF06B6D4),
+                      icon: Icons.vpn_key_rounded,
+                      iconSize: isSmallScreen ? 44 : 52,
+                      width: isSmallScreen ? 88 : 100,
+                      height: isSmallScreen ? 88 : 100,
+                      radius: 20,
                     ),
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
                       'Import Wallet',
                       style: GoogleFonts.inter(
@@ -522,24 +568,28 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () => _importWalletFromMnemonic(web3Provider),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
+                    backgroundColor: Color(0xFF0EA5E9),
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
+                    elevation: 2,
                     disabledBackgroundColor: Colors.blue.withValues(alpha: 0.5),
                   ),
                   child: _isLoading
                       ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
                         )
                       : Text(
                           'Import Wallet',
                           style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 15 : 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: isSmallScreen ? 16 : 17,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
@@ -721,15 +771,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: Colors.green,
-                      end: Colors.green,
-                      icon: Icons.add_circle_outline,
-                      iconSize: isSmallScreen ? 30 : 35,
-                      width: isSmallScreen ? 60 : 70,
-                      height: isSmallScreen ? 60 : 70,
-                      radius: 18,
+                      start: Color(0xFF10B981),
+                      end: Color(0xFF059669),
+                      icon: Icons.add_circle_outline_rounded,
+                      iconSize: isSmallScreen ? 44 : 52,
+                      width: isSmallScreen ? 88 : 100,
+                      height: isSmallScreen ? 88 : 100,
+                      radius: 20,
                     ),
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
                       'Create New Wallet',
                       style: GoogleFonts.inter(
@@ -825,24 +875,28 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () => _generateNewWallet(web3Provider),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
+                    backgroundColor: Color(0xFF10B981),
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
+                    elevation: 2,
                     disabledBackgroundColor: Colors.green.withValues(alpha: 0.5),
                   ),
                   child: _isLoading
                       ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
                         )
                       : Text(
                           'Generate Wallet',
                           style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 15 : 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: isSmallScreen ? 16 : 17,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
@@ -905,15 +959,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 child: Column(
                   children: [
                     GradientIconCard(
-                      start: Colors.blue,
-                      end: Colors.blue,
-                      icon: Icons.qr_code_scanner,
-                      iconSize: isSmallScreen ? 36 : 44,
-                      width: isSmallScreen ? 80 : 100,
-                      height: isSmallScreen ? 80 : 100,
-                      radius: 24,
+                      start: Color(0xFF06B6D4),
+                      end: Color(0xFF3B82F6),
+                      icon: Icons.qr_code_scanner_rounded,
+                      iconSize: isSmallScreen ? 44 : 52,
+                      width: isSmallScreen ? 88 : 100,
+                      height: isSmallScreen ? 88 : 100,
+                      radius: 20,
                     ),
-                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
                       'Connect with WalletConnect',
                       style: GoogleFonts.inter(
@@ -989,6 +1043,40 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               _buildInstructionStep('2', 'Tap on WalletConnect or scan QR code'),
               _buildInstructionStep('3', 'Scan the QR code or paste the connection URI below'),
               SizedBox(height: isSmallScreen ? 16 : 20),
+            
+              // Quick connect without typing
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isLoading ? null : () => _quickWalletConnect(web3Provider),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 2,
+                  ),
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.flash_on_rounded, color: Colors.white, size: 22),
+                  label: Text(
+                    _isLoading ? 'Connecting...' : 'Quick connect (paste/scan)',
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 15 : 17,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 14),
               
               // URI Input Field
               TextField(
@@ -1318,6 +1406,25 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       });
       await _connectWithWalletConnect(web3Provider);
     }
+  }
+
+  Future<void> _quickWalletConnect(Web3Provider web3Provider) async {
+    // Try clipboard first
+    try {
+      final clipboardData = await Clipboard.getData('text/plain');
+      final text = clipboardData?.text?.trim();
+      if (text != null && text.startsWith('wc:')) {
+        setState(() {
+          _wcUriController.text = text;
+        });
+        await _connectWithWalletConnect(web3Provider);
+        return;
+      }
+    } catch (_) {}
+
+    // If no URI in clipboard, fall back to scanner (mobile) or prompt
+    if (!mounted) return;
+    await _scanQRCode(web3Provider);
   }
 
   Future<void> _connectWithWalletConnect(Web3Provider web3Provider) async {
@@ -1754,15 +1861,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             GradientIconCard(
-              start: Colors.green,
-              end: Colors.green,
-              icon: Icons.check_circle,
-              iconSize: isSmallScreen ? 50 : 60,
-              width: isSmallScreen ? 90 : 110,
-              height: isSmallScreen ? 90 : 110,
-              radius: 22,
+              start: Color(0xFF10B981),
+              end: Color(0xFF059669),
+              icon: Icons.check_circle_rounded,
+              iconSize: isSmallScreen ? 56 : 68,
+              width: isSmallScreen ? 100 : 120,
+              height: isSmallScreen ? 100 : 120,
+              radius: 28,
             ),
-            SizedBox(height: isSmallScreen ? 24 : 28),
+            SizedBox(height: isSmallScreen ? 28 : 32),
             Text(
               'Wallet Connected!',
               style: GoogleFonts.inter(
@@ -1791,17 +1898,17 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               child: ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
+                  backgroundColor: Color(0xFF10B981),
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                 ),
                 child: Text(
-                  'Continue to App',
+                  'Start Exploring',
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 16 : 17,
-                    fontWeight: FontWeight.w600,
+                    fontSize: isSmallScreen ? 17 : 18,
+                    fontWeight: FontWeight.w700,
                     color: Colors.white,
                   ),
                 ),
@@ -1868,7 +1975,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: Theme.of(context).colorScheme.primary,
             ),
             child: Text(
               'Got it!',

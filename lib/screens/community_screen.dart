@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../utils/wallet_utils.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/app_loading.dart';
 import '../widgets/topbar_icon.dart';
@@ -38,9 +39,6 @@ enum CommunityFeedType {
 }
 
 class CommunityScreen extends StatefulWidget {
-  // Global key to allow other screens to request opening a post by id
-  static final GlobalKey<_CommunityScreenState> globalKey =
-      GlobalKey<_CommunityScreenState>();
 
   const CommunityScreen({super.key});
 
@@ -634,12 +632,12 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _onWalletProviderChanged() async {
     try {
-      final walletProvider =
+        final walletProvider =
           Provider.of<WalletProvider>(context, listen: false);
-      final currentWallet = walletProvider.currentWalletAddress ?? '';
-      final normalized = currentWallet.trim();
-      final hasChanged =
-          (_lastWalletAddress ?? '').toLowerCase() != normalized.toLowerCase();
+        final currentWallet = walletProvider.currentWalletAddress ?? '';
+        final normalized = WalletUtils.normalize(currentWallet);
+        final previous = WalletUtils.normalize(_lastWalletAddress);
+        final hasChanged = previous != normalized;
 
       if (hasChanged) {
         _lastWalletAddress = normalized;
@@ -973,8 +971,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                       borderRadius: BorderRadius.circular(24),
                       boxShadow: [
                         BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 6)
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 6,
+                        )
                       ],
                     ),
                     child: Text(
@@ -1114,8 +1113,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     ],
                                   ),
                                 ),
-                              ),
-                              const Spacer(),
+                                    ),
                               Text(
                                 _getTimeAgo(post.timestamp),
                                 style: GoogleFonts.inter(
@@ -1993,8 +1991,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         .withValues(alpha: 0.06)),
                                 boxShadow: [
                                   BoxShadow(
-                                      color: Colors.black.withOpacity(0.02),
-                                      blurRadius: 6)
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 6,
+                                  )
                                 ],
                               ),
                               child: InkWell(
@@ -2136,6 +2135,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                     else
                       TextButton(
                         onPressed: () async {
+                          final navigator = Navigator.of(context);
+                          final messenger =
+                              ScaffoldMessenger.of(context);
                           final content = _newPostController.text.trim();
                           if (content.isEmpty &&
                               _selectedPostImage == null &&
@@ -2157,14 +2159,13 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                             if (walletAddress == null ||
                                 walletAddress.isEmpty) {
-                              if (context.mounted) {
-                                final messenger = ScaffoldMessenger.of(context);
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Please connect your wallet first')),
-                                );
-                              }
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                const SnackBar(
+                                  content:
+                                      Text('Please connect your wallet first'),
+                                ),
+                              );
                               return;
                             }
 
@@ -2193,13 +2194,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 // Token is stored by registerWallet on success
                               } catch (e) {
                                 debugPrint('Auto-registration failed: $e');
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content:
-                                            Text('Failed to authenticate: $e')),
-                                  );
-                                }
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Failed to authenticate: $e'),
+                                  ),
+                                );
                                 return;
                               }
                             }
@@ -2237,13 +2238,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 }
                               } catch (e) {
                                 debugPrint('Error uploading image: $e');
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                        content:
-                                            Text('Failed to upload image: $e')),
-                                  );
-                                }
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content:
+                                        Text('Failed to upload image: $e'),
+                                  ),
+                                );
                               }
                             }
 
@@ -2291,44 +2292,44 @@ class _CommunityScreenState extends State<CommunityScreen>
 
                             setModalState(() => _isPostingNew = false);
 
-                            if (context.mounted) {
-                              // Clear post state
-                              _newPostController.clear();
-                              _selectedPostImage = null;
-                              _selectedPostImageBytes = null;
-                              _selectedPostVideo = null;
-                              _locationName = null;
+                            if (!mounted) return;
 
-                              // Insert created post immediately at top of feed for instant feedback
-                              setState(() {
-                                if (createdPost.id.isNotEmpty) {
-                                  _recentlyCreatedPostIds.add(createdPost.id);
-                                }
-                                _communityPosts.insert(0, createdPost);
-                              });
+                            // Clear post state
+                            _newPostController.clear();
+                            _selectedPostImage = null;
+                            _selectedPostImageBytes = null;
+                            _selectedPostVideo = null;
+                            _locationName = null;
 
-                              // Optionally prefetch comments for the new post
-                              try {
-                                await BackendApiService()
-                                    .getComments(postId: createdPost.id);
-                              } catch (_) {}
+                            // Insert created post immediately at top of feed for instant feedback
+                            setState(() {
+                              if (createdPost.id.isNotEmpty) {
+                                _recentlyCreatedPostIds.add(createdPost.id);
+                              }
+                              _communityPosts.insert(0, createdPost);
+                            });
 
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Post created successfully!'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            }
+                            // Optionally prefetch comments for the new post
+                            try {
+                              await BackendApiService()
+                                  .getComments(postId: createdPost.id);
+                            } catch (_) {}
+
+                            navigator.pop();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Post created successfully!'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
                           } catch (e) {
                             setModalState(() => _isPostingNew = false);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text('Failed to create post: $e')),
-                              );
-                            }
+                            if (!mounted) return;
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Failed to create post: $e'),
+                              ),
+                            );
                           }
                         },
                         child: Text(
@@ -2951,11 +2952,11 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     final String resolvedUserId = currentUserId;
 
-    final String? resolvedWallet =
+    final String resolvedWallet =
         (walletAddress != null && walletAddress.isNotEmpty)
             ? walletAddress
             : currentUserId;
-    final String canonicalWallet = resolvedWallet ?? '';
+    final String canonicalWallet = resolvedWallet;
     String? cachedAvatar;
     try {
       cachedAvatar = canonicalWallet.isNotEmpty
@@ -2981,9 +2982,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         Provider.of<SavedItemsProvider>(context, listen: false);
 
     try {
-      await CommunityService.toggleBookmark(post);
-      if (!mounted) return;
-
       await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
       if (!mounted) return;
 
@@ -3960,14 +3958,17 @@ class _CommunityScreenState extends State<CommunityScreen>
                           Icon(Icons.link, color: theme.colorScheme.primary),
                       title: Text('Copy Link', style: GoogleFonts.inter()),
                       onTap: () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final sheetNavigator = Navigator.of(sheetContext);
                         await Clipboard.setData(ClipboardData(
                             text: 'https://app.kubus.site/post/${post.id}'));
-                        Navigator.pop(sheetContext);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Link copied to clipboard')));
-                        }
+                        if (!mounted) return;
+                        sheetNavigator.pop();
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Link copied to clipboard'),
+                          ),
+                        );
 
                         // Track analytics
                         BackendApiService().trackAnalyticsEvent(
@@ -4039,6 +4040,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       style: GoogleFonts.inter(fontSize: 12)),
                                   onTap: () async {
                                     Navigator.pop(sheetContext);
+                                    final messenger =
+                                        ScaffoldMessenger.of(context);
 
                                     try {
                                       // Share post via DM
@@ -4055,23 +4058,21 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         },
                                       );
 
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content: Text(
-                                                  'Shared post with @$username')),
-                                        );
-                                      }
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Shared post with @$username',
+                                          ),
+                                        ),
+                                      );
                                     } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                              content:
-                                                  Text('Failed to share: $e')),
-                                        );
-                                      }
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text('Failed to share: $e'),
+                                        ),
+                                      );
                                     }
                                   },
                                 );
@@ -4134,6 +4135,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           onPressed: () async {
                             final content = repostContentController.text.trim();
                             Navigator.pop(sheetContext);
+                            final messenger =
+                                ScaffoldMessenger.of(context);
 
                             try {
                               // Create repost via backend
@@ -4148,25 +4151,25 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 metadata: {'has_comment': content.isNotEmpty},
                               );
 
-                              if (mounted) {
-                                // Insert repost into feed immediately for instant feedback
-                                setState(() {
-                                  _communityPosts.insert(0, createdRepost);
-                                });
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(content.isEmpty
-                                          ? 'Reposted!'
-                                          : 'Reposted with comment!')),
-                                );
-                              }
+                              if (!mounted) return;
+                              // Insert repost into feed immediately for instant feedback
+                              setState(() {
+                                _communityPosts.insert(0, createdRepost);
+                              });
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(content.isEmpty
+                                      ? 'Reposted!'
+                                      : 'Reposted with comment!'),
+                                ),
+                              );
                             } catch (e) {
-                              if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('Failed to repost: $e')),
-                                );
-                              }
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to repost: $e'),
+                                ),
+                              );
                             }
                           },
                           child: Text('Repost', style: GoogleFonts.inter()),
@@ -4444,6 +4447,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _unrepostPost(CommunityPost post) async {
     if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
 
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -4476,18 +4480,16 @@ class _CommunityScreenState extends State<CommunityScreen>
         metadata: {'repost_id': post.id},
       );
 
-      if (mounted) {
-        await _loadCommunityData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Repost removed')),
-        );
-      }
+      await _loadCommunityData();
+      if (!mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Repost removed')),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to unrepost: $e')),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to unrepost: $e')),
+      );
     }
   }
 

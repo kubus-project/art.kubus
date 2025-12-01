@@ -406,20 +406,20 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.orange.withValues(alpha: 0.1),
+              color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber_outlined, color: Colors.orange, size: 20),
+                Icon(Icons.warning_amber_outlined, color: Theme.of(context).colorScheme.error, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Only send $_selectedToken and compatible tokens to this address',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.orange,
+                      color: Theme.of(context).colorScheme.error,
                     ),
                   ),
                 ),
@@ -487,7 +487,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('No wallet address available yet'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),

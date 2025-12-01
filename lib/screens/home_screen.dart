@@ -15,8 +15,8 @@ import '../web3/dao/governance_hub.dart';
 import '../web3/artist/artist_studio.dart';
 import '../web3/institution/institution_hub.dart';
 import '../web3/marketplace/marketplace.dart';
-import '../web3/wallet.dart';
-import '../web3/connectwallet.dart';
+import '../web3/wallet/wallet_home.dart';
+import 'connectwallet_screen.dart';
 import '../web3/onboarding/web3_onboarding.dart' as web3;
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
@@ -405,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const Wallet()),
+          MaterialPageRoute(builder: (context) => const WalletHome()),
         );
       },
       child: Container(

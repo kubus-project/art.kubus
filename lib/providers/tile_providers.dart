@@ -1,20 +1,29 @@
-import 'dart:math' as math;
-import 'dart:ui' show FilterQuality, PlatformDispatcher;
+import 'dart:async';
+import 'dart:collection';
+import 'dart:ui' show PlatformDispatcher, Codec, ImmutableBuffer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import '../utils/grid_utils.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'tile_disk_cache.dart';
 
 import 'themeprovider.dart';
 
 class TileProviders with WidgetsBindingObserver {
-  static const double _tileOverlapScale = 1.012;
   static const int _cartoMaxNativeZoom = 20;
-  static const Duration _tileFadeDuration = Duration(milliseconds: 140);
+  // Larger buffers to keep adjacent tiles visible while zoom animations settle.
+  static const int _defaultKeepBuffer = 18;
+  static const int _defaultKeepBufferRetina = 20;
+  static const int _defaultPanBuffer = 12;
+  static const int _defaultPanBufferRetina = 14;
 
   final ThemeProvider themeProvider;
+  _BufferedTileProvider? _retinaProvider;
+  _BufferedTileProvider? _standardProvider;
 
   TileProviders(this.themeProvider) {
     WidgetsBinding.instance.addObserver(this);
@@ -38,72 +47,84 @@ class TileProviders with WidgetsBindingObserver {
     }
   }
 
-  TileLayer getTileLayer({bool withGridOverlay = false}) {
+  TileLayer getTileLayer() {
     return _buildTileLayer(
       retinaMode: true,
-      withGridOverlay: withGridOverlay,
     );
   }
 
-  TileLayer getNonRetinaTileLayer({bool withGridOverlay = false}) {
+  TileLayer getNonRetinaTileLayer() {
     return _buildTileLayer(
       retinaMode: false,
-      withGridOverlay: withGridOverlay,
     );
   }
 
   /// Snap a map position to the underlying isometric grid for a given grid level.
   /// This delegates to GridUtils so snapping logic remains consistent with the
   /// tile grid rendering.
+  LatLng snapToVisibleGrid(LatLng position, double cameraZoom) {
+    return GridUtils.snapToVisibleGrid(position, cameraZoom);
+  }
+
   LatLng snapToGrid(LatLng position, double gridLevel) {
     return GridUtils.snapToGrid(position, gridLevel);
   }
 
+  _TileBufferConfig _resolveBufferConfig(bool retinaMode) {
+    // Favor predictable buffers to avoid visible tile pruning gaps on fast zooms.
+    return retinaMode
+        ? const _TileBufferConfig(
+            keepBuffer: _defaultKeepBufferRetina,
+            panBuffer: _defaultPanBufferRetina,
+          )
+        : const _TileBufferConfig(
+            keepBuffer: _defaultKeepBuffer,
+            panBuffer: _defaultPanBuffer,
+          );
+  }
+
+  _BufferedTileProvider _providerFor(bool retinaMode) {
+    final _BufferedTileProvider? existing =
+        retinaMode ? _retinaProvider : _standardProvider;
+    if (existing != null && !existing.isClosed) {
+      return existing;
+    }
+
+    final _BufferedTileProvider created = _BufferedTileProvider();
+    if (retinaMode) {
+      _retinaProvider = created;
+    } else {
+      _standardProvider = created;
+    }
+    return created;
+  }
+
   TileLayer _buildTileLayer({
     required bool retinaMode,
-    required bool withGridOverlay,
   }) {
     final ThemeData activeTheme = themeProvider.isDarkMode
         ? themeProvider.darkTheme
         : themeProvider.lightTheme;
     final Color bgColor = activeTheme.colorScheme.surface;
+    final _TileBufferConfig buffers = _resolveBufferConfig(retinaMode);
 
     return TileLayer(
       urlTemplate: _getUrlTemplate(),
       userAgentPackageName: 'dev.art.kubus',
-      tileProvider: CancellableNetworkTileProvider(),
+      tileProvider: _providerFor(retinaMode),
       retinaMode: retinaMode,
       subdomains: const ['a', 'b', 'c', 'd'],
       maxNativeZoom: _cartoMaxNativeZoom,
-      keepBuffer: 6,
-      panBuffer: 3,
-      tileDisplay: const TileDisplay.fadeIn(
-        duration: _tileFadeDuration,
-      ),
+      keepBuffer: buffers.keepBuffer,
+      panBuffer: buffers.panBuffer,
+      tileUpdateTransformer: TileUpdateTransformers.debounce(const Duration(milliseconds: 120)),
+      // Show tiles immediately at their native opacity to avoid flashes between zoom levels.
+      tileDisplay: const TileDisplay.instantaneous(),
       tileBuilder: (context, tileWidget, tileImage) {
-        // Apply scale only to the image to prevent gaps, but NOT to the grid
-        final Widget imageLayer = Transform.scale(
-          scale: _tileOverlapScale,
-          alignment: Alignment.center,
-          filterQuality: FilterQuality.high,
+        // Keep tiles at native scale so camera zoom drives sizing; per-tile scaling introduced visible gaps.
+        return ColoredBox(
+          color: bgColor,
           child: tileWidget,
-        );
-
-        if (!withGridOverlay) {
-          return ColoredBox(color: bgColor, child: imageLayer);
-        }
-
-        return Stack(
-          fit: StackFit.expand,
-          children: [
-            ColoredBox(color: bgColor, child: imageLayer),
-            _TileGridOverlay(
-              x: tileImage.coordinates.x,
-              y: tileImage.coordinates.y,
-              z: tileImage.coordinates.z,
-              themeProvider: themeProvider,
-            ),
-          ],
         );
       },
     );
@@ -122,210 +143,188 @@ class TileProviders with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     themeProvider.removeListener(_updateThemeMode);
+    _retinaProvider?.dispose();
+    _standardProvider?.dispose();
   }
 }
 
-class _TileGridOverlay extends StatelessWidget {
-  final int x;
-  final int y;
-  final int z;
-  final ThemeProvider themeProvider;
+class _TileBufferConfig {
+  final int keepBuffer;
+  final int panBuffer;
 
-  const _TileGridOverlay({
-    required this.x,
-    required this.y,
-    required this.z,
-    required this.themeProvider,
+  const _TileBufferConfig({
+    required this.keepBuffer,
+    required this.panBuffer,
   });
+}
+
+/// In-memory caching tile provider to avoid refetching already downloaded tiles.
+/// Extends the cancellable provider so we retain request cancellation on pan/zoom.
+base class _BufferedTileProvider extends CancellableNetworkTileProvider {
+  static const int _maxEntries = 4096;
+  final _TileMemoryCache _memoryCache;
+  final Future<TileDiskCache?> _diskCache;
+  final Dio _dio;
+  bool _closed = false;
+
+  _BufferedTileProvider({int? maxEntries, Future<TileDiskCache?>? diskCache})
+      : _memoryCache = _TileMemoryCache(maxEntries ?? _maxEntries),
+        _diskCache = diskCache ?? TileDiskCache.create(),
+        _dio = Dio(
+          BaseOptions(
+            // Give tile fetches a bit more room to complete on slower networks before failing.
+            connectTimeout: const Duration(seconds: 20),
+            receiveTimeout: const Duration(seconds: 20),
+            responseType: ResponseType.bytes,
+          ),
+        ),
+        super(silenceExceptions: true);
+
+  bool get isClosed => _closed;
 
   @override
-  Widget build(BuildContext context) {
-    final camera = MapCamera.maybeOf(context);
-    final double cameraZoom = camera?.zoom ?? z.toDouble();
-    
-    if (cameraZoom.isNaN || cameraZoom.isInfinite) return const SizedBox.shrink();
+  ImageProvider getImageWithCancelLoadingSupport(
+    TileCoordinates coordinates,
+    TileLayer options,
+    Future<void> cancelLoading,
+  ) {
+    if (_closed) {
+      return MemoryImage(TileProvider.transparentImage);
+    }
 
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    final double baseAlphaFraction =
-        themeProvider.themeMode == ThemeMode.dark ? 0.08 : 0.06;
-    final int baseAlpha = (255 * baseAlphaFraction).clamp(0.0, 255.0).round();
-    final Color primaryLineColor = scheme.onSurface.withAlpha(baseAlpha);
+    final String url = getTileUrl(coordinates, options);
+    final Uint8List? cached = _memoryCache.read(url);
+    if (cached != null) {
+      return MemoryImage(cached);
+    }
 
-    return CustomPaint(
-      painter: _RecursiveIsoGridPainter(
-        lineColor: primaryLineColor,
-        tileX: x,
-        tileY: y,
-        tileZ: z,
-        cameraZoom: cameraZoom,
-      ),
+    final String? fallback = getTileFallbackUrl(coordinates, options);
+    return _CachingNetworkImageProvider(
+      url: url,
+      fallbackUrl: fallback,
+      headers: headers,
+      dioClient: _dio,
+      cancelLoading: cancelLoading,
+      diskCache: _diskCache,
+      onBytes: (bytes) => _memoryCache.write(url, bytes),
     );
   }
+
+  @override
+  Future<void> dispose() async {
+    if (_closed) return;
+    _closed = true;
+    _memoryCache.clear();
+    _dio.close(force: true);
+    return super.dispose();
+  }
 }
 
-class _RecursiveIsoGridPainter extends CustomPainter {
-  final Color lineColor;
-  final int tileX;
-  final int tileY;
-  final int tileZ;
-  final double cameraZoom;
+class _TileMemoryCache {
+  final int _maxEntries;
+  final LinkedHashMap<String, Uint8List> _store = LinkedHashMap<String, Uint8List>();
 
-  _RecursiveIsoGridPainter({
-    required this.lineColor,
-    required this.tileX,
-    required this.tileY,
-    required this.tileZ,
-    required this.cameraZoom,
+  _TileMemoryCache(this._maxEntries);
+
+  Uint8List? read(String key) {
+    final Uint8List? bytes = _store.remove(key);
+    if (bytes != null) {
+      _store[key] = bytes;
+    }
+    return bytes;
+  }
+
+  void write(String key, Uint8List bytes) {
+    if (_maxEntries > 0 && _store.length >= _maxEntries && _store.isNotEmpty) {
+      _store.remove(_store.keys.first);
+    }
+    _store[key] = bytes;
+  }
+
+  void clear() => _store.clear();
+}
+
+class _CachingNetworkImageProvider extends ImageProvider<_CachingNetworkImageProvider> {
+  final String url;
+  final String? fallbackUrl;
+  final Map<String, String> headers;
+  final Dio dioClient;
+  final Future<void> cancelLoading;
+  final Future<TileDiskCache?> diskCache;
+  final void Function(Uint8List bytes) onBytes;
+
+  const _CachingNetworkImageProvider({
+    required this.url,
+    required this.fallbackUrl,
+    required this.headers,
+    required this.dioClient,
+    required this.cancelLoading,
+    required this.diskCache,
+    required this.onBytes,
   });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    if (cameraZoom.isNaN || cameraZoom.isInfinite) return;
-
-    // Use the actual tile size for calculations to ensure alignment
-    final double tileSize = size.width;
-    
-    // Iterate grid levels L.
-    // L represents the zoom level where the grid cells are 1 tile size (256px) wide.
-    // We want to show grids that are roughly 20px to 400px on screen.
-    // Screen spacing = tileSize * 2^(cameraZoom - L)
-    
-    final List<_GridLevel> levels = _resolveGridLevels(cameraZoom);
-
-    for (final level in levels) {
-      final double screenSpacing = tileSize * math.pow(2, cameraZoom - level.zoomLevel);
-      if (_shouldSkipSpacing(screenSpacing)) continue;
-
-      final double baseOpacity = _opacityForSpacing(screenSpacing) * level.intensity;
-      if (baseOpacity <= 0.01) continue;
-
-      final double drawSpacing = tileSize * math.pow(2, tileZ - level.zoomLevel);
-      if (drawSpacing <= 0.1) continue;
-
-      double strokeWidth = level.zoomLevel < cameraZoom
-          ? 1.5 + (cameraZoom - level.zoomLevel) * 0.35
-          : 1.0;
-      strokeWidth = strokeWidth.clamp(0.5, 3.0);
-
-        final double dynamicAlpha =
-          (lineColor.a * 255.0 * baseOpacity).clamp(0.0, 255.0);
-      final Paint paint = Paint()
-        ..color = lineColor.withAlpha(dynamicAlpha.round())
-        ..strokeWidth = strokeWidth
-        ..style = PaintingStyle.stroke
-        ..isAntiAlias = true;
-
-      final double phaseX = -tileX * tileSize;
-      final double phaseY = -tileY * tileSize;
-
-      _drawDiamonds(
-        canvas: canvas,
-        size: size,
-        spacing: drawSpacing,
-        paint: paint,
-        sumPhase: _positiveMod(phaseX + phaseY, drawSpacing),
-        diffPhase: _positiveMod(phaseX - phaseY, drawSpacing),
-      );
-    }
+  ImageStreamCompleter loadImage(
+    _CachingNetworkImageProvider key,
+    ImageDecoderCallback decode,
+  ) {
+    return MultiFrameImageStreamCompleter(
+      codec: _load(decode),
+      scale: 1,
+      debugLabel: url,
+    );
   }
 
-  bool _shouldSkipSpacing(double spacing) {
-    return spacing.isNaN || spacing.isInfinite || spacing < 14 || spacing > 420;
-  }
+  Future<Codec> _load(ImageDecoderCallback decode, {bool useFallback = false}) async {
+    final cache = await diskCache;
 
-  double _opacityForSpacing(double spacing) {
-    if (spacing < 24) return 0.0;
-    if (spacing < 48) return (spacing - 24) / 24;
-    if (spacing < 180) return 1.0;
-    if (spacing < 360) return 1.0 - (spacing - 180) / 180;
-    return 0.0;
-  }
-
-  List<_GridLevel> _resolveGridLevels(double zoom) {
-    final int primary = (zoom + 1.5).floor();
-    final int secondary = primary - 3;
-    final List<_GridLevel> levels = [
-      _GridLevel(zoomLevel: primary, intensity: 1.0),
-    ];
-
-    if (secondary >= 0) {
-      levels.add(_GridLevel(zoomLevel: secondary, intensity: 0.35));
+    if (!useFallback && cache != null) {
+      final cachedBytes = await cache.read(url);
+      if (cachedBytes != null) {
+        onBytes(cachedBytes);
+        final buffer = await ImmutableBuffer.fromUint8List(cachedBytes);
+        return decode(buffer);
+      }
     }
 
-    return levels;
-  }
-
-  double _positiveMod(double value, double modulus) {
-    final double result = value % modulus;
-    return result < 0 ? result + modulus : result;
-  }
-
-  void _drawDiamonds({
-    required Canvas canvas,
-    required Size size,
-    required double spacing,
-    required Paint paint,
-    required double sumPhase,
-    required double diffPhase,
-  }) {
-    if (spacing <= 0.1) return;
-    
-    final double diagonal = size.width + size.height;
-    final int count = (diagonal / spacing).ceil() + 2;
-    
-    // Draw Sum lines ( / )
-    for (int i = -count; i <= count; i++) {
-      final double offset = i * spacing + sumPhase;
-      // Line: x + y = offset
-      // Intersects (0, offset) and (offset, 0)
-      // We draw a long line perpendicular to x=y
-      
-      // Start point: x=0, y=offset
-      // End point: x=offset, y=0
-      // But we want to cover the tile.
-      // The line direction is (-1, 1) for x+y=c? No.
-      // x+y=c => y = -x + c. Slope -1.
-      // Vector (1, -1).
-      
-      // We can just draw from (offset - size.height, size.height) to (offset, 0)
-      // At y=size.height, x = offset - size.height.
-      // At y=0, x = offset.
-      
-      canvas.drawLine(
-        Offset(offset - size.height, size.height),
-        Offset(offset, 0),
-        paint,
+    try {
+      final requestedUrl = useFallback ? (fallbackUrl ?? '') : url;
+      final response = await dioClient.getUri<Uint8List>(
+        Uri.parse(requestedUrl),
+        options: Options(headers: headers, responseType: ResponseType.bytes),
       );
-    }
-
-    // Draw Diff lines ( \ )
-    // x - y = offset => y = x - offset. Slope 1.
-    for (int i = -count; i <= count; i++) {
-      final double offset = i * spacing + diffPhase;
-      // At y=0, x=offset.
-      // At y=size.height, x=offset + size.height.
-      
-      canvas.drawLine(
-        Offset(offset, 0),
-        Offset(offset + size.height, size.height),
-        paint,
-      );
+      final data = response.data!;
+      onBytes(data);
+      // Persist to disk cache in background; don't block rendering.
+      if (cache != null) {
+        unawaited(cache.write(url, data));
+      }
+      final buffer = await ImmutableBuffer.fromUint8List(data);
+      return decode(buffer);
+    } on DioException {
+      if (useFallback || fallbackUrl == null) {
+        // If we have cached bytes, use them instead of surfacing an error to the tile renderer.
+        final cachedBytes = await cache?.read(url);
+        if (cachedBytes != null) {
+          final buffer = await ImmutableBuffer.fromUint8List(cachedBytes);
+          return decode(buffer);
+        }
+        rethrow;
+      }
+      return _load(decode, useFallback: true);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _RecursiveIsoGridPainter oldDelegate) {
-    return oldDelegate.tileX != tileX ||
-        oldDelegate.tileY != tileY ||
-        oldDelegate.tileZ != tileZ ||
-        oldDelegate.cameraZoom != cameraZoom ||
-        oldDelegate.lineColor != lineColor;
+  SynchronousFuture<_CachingNetworkImageProvider> obtainKey(ImageConfiguration configuration) {
+    return SynchronousFuture<_CachingNetworkImageProvider>(this);
   }
-}
 
-class _GridLevel {
-  final int zoomLevel;
-  final double intensity;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is _CachingNetworkImageProvider && url == other.url && fallbackUrl == other.fallbackUrl);
 
-  const _GridLevel({required this.zoomLevel, required this.intensity});
+  @override
+  int get hashCode => Object.hash(url, fallbackUrl);
 }

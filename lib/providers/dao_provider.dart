@@ -1,15 +1,23 @@
 import 'package:flutter/foundation.dart';
+import '../config/api_keys.dart';
+import '../config/config.dart';
 import '../models/dao.dart';
 import '../services/backend_api_service.dart';
+import '../utils/wallet_utils.dart';
+import '../services/solana_wallet_service.dart';
 
 class DAOProvider extends ChangeNotifier {
+  final SolanaWalletService _solanaService;
   List<Proposal> _proposals = [];
   List<Vote> _votes = [];
   List<Delegate> _delegates = [];
   List<DAOTransaction> _transactions = [];
+  List<DAOReview> _reviews = [];
   bool _isLoading = false;
+  double? _treasuryOnChainBalance;
 
-  DAOProvider() {
+  DAOProvider({SolanaWalletService? solanaWalletService})
+      : _solanaService = solanaWalletService ?? SolanaWalletService() {
     _loadData();
   }
 
@@ -18,14 +26,15 @@ class DAOProvider extends ChangeNotifier {
   List<Vote> get votes => List.unmodifiable(_votes);
   List<Delegate> get delegates => List.unmodifiable(_delegates);
   List<DAOTransaction> get transactions => List.unmodifiable(_transactions);
+  List<DAOReview> get reviews => List.unmodifiable(_reviews);
   bool get isLoading => _isLoading;
+  double? get treasuryOnChainBalance => _treasuryOnChainBalance;
 
   Future<void> _loadData() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      // TODO: Load from backend/blockchain
       await _loadFromBackend();
     } catch (e) {
       debugPrint('Error loading DAO data: $e');
@@ -42,36 +51,31 @@ class DAOProvider extends ChangeNotifier {
       final proposalsJson = await api.getDAOProposals();
       _proposals = proposalsJson.map((e) => Proposal.fromJson(e)).toList();
 
-      // If proposals exist, optionally fetch votes per proposal (best-effort)
-      final votesAll = <Vote>[];
-      for (final p in _proposals) {
-        final votesJson = await api.getDAOVotes(proposalId: p.id);
-        votesAll.addAll(votesJson.map((e) => Vote.fromJson(e)));
-      }
-      _votes = votesAll;
+      final votesJson = await api.getDAOVotes();
+      _votes = votesJson.map((e) => Vote.fromJson(e)).toList();
 
       final delegatesJson = await api.getDAODelegates();
       _delegates = delegatesJson.map((e) => Delegate.fromJson(e)).toList();
 
       final txJson = await api.getDAOTransactions();
       _transactions = txJson.map((e) => DAOTransaction.fromJson(e)).toList();
+      await _refreshOnChainTreasuryBalance();
+
+      try {
+        final reviewsJson = await api.getDAOReviews();
+        _reviews = reviewsJson.map((e) => DAOReview.fromJson(e)).toList();
+      } catch (e) {
+        debugPrint('DAOProvider: unable to load reviews (soft-fail): $e');
+      }
     } catch (e) {
       debugPrint('DAOProvider _loadFromBackend error: $e');
       _proposals = [];
       _votes = [];
       _delegates = [];
       _transactions = [];
+      _reviews = [];
+      _treasuryOnChainBalance = null;
     }
-  }
-
-  // Local mock loaders removed to ensure backend-driven data only
-
-  Future<void> _loadFromBlockchain() async {
-    // TODO: Implement blockchain loading
-    _proposals = [];
-    _votes = [];
-    _delegates = [];
-    _transactions = [];
   }
 
   // Proposal methods
@@ -92,94 +96,182 @@ class DAOProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> createProposal(Proposal proposal) async {
-    // TODO: Submit to backend/blockchain
-    _proposals.add(proposal);
-    notifyListeners();
+  Future<Proposal?> createProposal({
+    required String walletAddress,
+    required String title,
+    required String description,
+    required ProposalType type,
+    int votingPeriodDays = 7,
+    double supportRequired = 0.5,
+    double quorumRequired = 0.1,
+    List<String>? supportingDocuments,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final api = BackendApiService();
+      final payload = await api.createDAOProposal(
+        walletAddress: walletAddress,
+        title: title,
+        description: description,
+        type: type.name,
+        votingPeriodDays: votingPeriodDays,
+        supportRequired: supportRequired,
+        quorumRequired: quorumRequired,
+        supportingDocuments: supportingDocuments,
+        metadata: metadata,
+      );
+      if (payload != null) {
+        final proposal = Proposal.fromJson(payload);
+        _proposals.insert(0, proposal);
+        notifyListeners();
+        return proposal;
+      }
+    } catch (e) {
+      debugPrint('DAOProvider.createProposal error: $e');
+    }
+    return null;
   }
 
-  Future<void> castVote(String proposalId, VoteChoice choice, int votingPower, {String? reason}) async {
-    final vote = Vote(
-      id: 'vote_${DateTime.now().millisecondsSinceEpoch}',
-      proposalId: proposalId,
-      voter: '0xcurrent...user', // TODO: Get from wallet
-      choice: choice,
-      votingPower: votingPower,
-      timestamp: DateTime.now(),
-      reason: reason,
-    );
-
-    // TODO: Submit to backend/blockchain
-    _votes.add(vote);
-      
-      // Update proposal vote counts
-      final proposalIndex = _proposals.indexWhere((p) => p.id == proposalId);
-      if (proposalIndex != -1) {
-        final proposal = _proposals[proposalIndex];
-        switch (choice) {
-          case VoteChoice.yes:
-            _proposals[proposalIndex] = Proposal(
-              id: proposal.id,
-              title: proposal.title,
-              description: proposal.description,
-              type: proposal.type,
-              status: proposal.status,
-              proposer: proposal.proposer,
-              createdAt: proposal.createdAt,
-              votingStartDate: proposal.votingStartDate,
-              votingEndDate: proposal.votingEndDate,
-              yesVotes: proposal.yesVotes + votingPower,
-              noVotes: proposal.noVotes,
-              abstainVotes: proposal.abstainVotes,
-              quorumRequired: proposal.quorumRequired,
-              supportRequired: proposal.supportRequired,
-              supportingDocuments: proposal.supportingDocuments,
-              metadata: proposal.metadata,
-            );
-            break;
-          case VoteChoice.no:
-            _proposals[proposalIndex] = Proposal(
-              id: proposal.id,
-              title: proposal.title,
-              description: proposal.description,
-              type: proposal.type,
-              status: proposal.status,
-              proposer: proposal.proposer,
-              createdAt: proposal.createdAt,
-              votingStartDate: proposal.votingStartDate,
-              votingEndDate: proposal.votingEndDate,
-              yesVotes: proposal.yesVotes,
-              noVotes: proposal.noVotes + votingPower,
-              abstainVotes: proposal.abstainVotes,
-              quorumRequired: proposal.quorumRequired,
-              supportRequired: proposal.supportRequired,
-              supportingDocuments: proposal.supportingDocuments,
-              metadata: proposal.metadata,
-            );
-            break;
-          case VoteChoice.abstain:
-            _proposals[proposalIndex] = Proposal(
-              id: proposal.id,
-              title: proposal.title,
-              description: proposal.description,
-              type: proposal.type,
-              status: proposal.status,
-              proposer: proposal.proposer,
-              createdAt: proposal.createdAt,
-              votingStartDate: proposal.votingStartDate,
-              votingEndDate: proposal.votingEndDate,
-              yesVotes: proposal.yesVotes,
-              noVotes: proposal.noVotes,
-              abstainVotes: proposal.abstainVotes + votingPower,
-              quorumRequired: proposal.quorumRequired,
-              supportRequired: proposal.supportRequired,
-              supportingDocuments: proposal.supportingDocuments,
-              metadata: proposal.metadata,
-            );
-            break;
-        }
+  Future<DAOReview?> submitReview({
+    required String walletAddress,
+    required String portfolioUrl,
+    required String medium,
+    required String statement,
+    String? title,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final api = BackendApiService();
+      await api.ensureAuthLoaded(walletAddress: walletAddress);
+      final payload = await api.submitDAOReview(
+        walletAddress: walletAddress,
+        portfolioUrl: portfolioUrl,
+        medium: medium,
+        statement: statement,
+        title: title,
+        metadata: metadata,
+      );
+      if (payload != null) {
+        final review = DAOReview.fromJson(payload);
+        _reviews.removeWhere((r) =>
+            WalletUtils.equals(r.walletAddress, walletAddress) ||
+            r.id == review.id);
+        _reviews.insert(0, review);
+        notifyListeners();
+        return review;
       }
-      notifyListeners();
+    } catch (e) {
+      debugPrint('DAOProvider submitReview error: $e');
+    }
+    return null;
+  }
+
+  Future<void> castVote({
+    required String proposalId,
+    required VoteChoice choice,
+    required int votingPower,
+    required String walletAddress,
+    String? reason,
+    String? txHash,
+  }) async {
+    try {
+      final api = BackendApiService();
+      final payload = await api.submitDAOVote(
+        proposalId: proposalId,
+        walletAddress: walletAddress,
+        choice: choice.name,
+        votingPower: votingPower.toDouble(),
+        reason: reason,
+        txHash: txHash,
+      );
+
+      if (payload != null) {
+        final votePayload = payload['vote'] ?? payload;
+        final proposalPayload = payload['proposal'];
+
+        final vote = Vote.fromJson(votePayload as Map<String, dynamic>);
+        _votes.removeWhere((v) => v.proposalId == proposalId && v.voter == vote.voter);
+        _votes.add(vote);
+
+        if (proposalPayload is Map<String, dynamic>) {
+          final updatedProposal = Proposal.fromJson(proposalPayload);
+          _proposals.removeWhere((p) => p.id == updatedProposal.id);
+          _proposals.add(updatedProposal);
+        } else {
+          // Fallback update when backend does not return proposal payload
+          final proposalIndex = _proposals.indexWhere((p) => p.id == proposalId);
+          if (proposalIndex != -1) {
+            final proposal = _proposals[proposalIndex];
+            switch (choice) {
+              case VoteChoice.yes:
+                _proposals[proposalIndex] = Proposal(
+                  id: proposal.id,
+                  title: proposal.title,
+                  description: proposal.description,
+                  type: proposal.type,
+                  status: proposal.status,
+                  proposer: proposal.proposer,
+                  createdAt: proposal.createdAt,
+                  votingStartDate: proposal.votingStartDate,
+                  votingEndDate: proposal.votingEndDate,
+                  yesVotes: proposal.yesVotes + votingPower,
+                  noVotes: proposal.noVotes,
+                  abstainVotes: proposal.abstainVotes,
+                  quorumRequired: proposal.quorumRequired,
+                  supportRequired: proposal.supportRequired,
+                  supportingDocuments: proposal.supportingDocuments,
+                  metadata: proposal.metadata,
+                );
+                break;
+              case VoteChoice.no:
+                _proposals[proposalIndex] = Proposal(
+                  id: proposal.id,
+                  title: proposal.title,
+                  description: proposal.description,
+                  type: proposal.type,
+                  status: proposal.status,
+                  proposer: proposal.proposer,
+                  createdAt: proposal.createdAt,
+                  votingStartDate: proposal.votingStartDate,
+                  votingEndDate: proposal.votingEndDate,
+                  yesVotes: proposal.yesVotes,
+                  noVotes: proposal.noVotes + votingPower,
+                  abstainVotes: proposal.abstainVotes,
+                  quorumRequired: proposal.quorumRequired,
+                  supportRequired: proposal.supportRequired,
+                  supportingDocuments: proposal.supportingDocuments,
+                  metadata: proposal.metadata,
+                );
+                break;
+              case VoteChoice.abstain:
+                _proposals[proposalIndex] = Proposal(
+                  id: proposal.id,
+                  title: proposal.title,
+                  description: proposal.description,
+                  type: proposal.type,
+                  status: proposal.status,
+                  proposer: proposal.proposer,
+                  createdAt: proposal.createdAt,
+                  votingStartDate: proposal.votingStartDate,
+                  votingEndDate: proposal.votingEndDate,
+                  yesVotes: proposal.yesVotes,
+                  noVotes: proposal.noVotes,
+                  abstainVotes: proposal.abstainVotes + votingPower,
+                  quorumRequired: proposal.quorumRequired,
+                  supportRequired: proposal.supportRequired,
+                  supportingDocuments: proposal.supportingDocuments,
+                  metadata: proposal.metadata,
+                );
+                break;
+            }
+          }
+        }
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('DAOProvider.castVote error: $e');
+      rethrow;
+    }
   }
 
   // Delegate methods
@@ -197,9 +289,27 @@ class DAOProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> delegateVotingPower(String delegateId, int amount) async {
-    // TODO: Submit delegation to backend/blockchain
-    notifyListeners();
+  Future<Map<String, dynamic>?> delegateVotingPower({
+    required String delegateId,
+    required String walletAddress,
+    double? votingPower,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final api = BackendApiService();
+      final result = await api.delegateVotingPower(
+        delegateId: delegateId,
+        walletAddress: walletAddress,
+        votingPower: votingPower,
+        metadata: metadata,
+      );
+      await _loadFromBackend();
+      notifyListeners();
+      return result;
+    } catch (e) {
+      debugPrint('DAOProvider.delegateVotingPower error: $e');
+      return null;
+    }
   }
 
   // Transaction methods
@@ -222,13 +332,14 @@ class DAOProvider extends ChangeNotifier {
     final totalTreasuryAmount = treasuryTransactions.fold<double>(
       0, (sum, tx) => sum + tx.amount
     );
+    final treasuryTotal = _treasuryOnChainBalance ?? totalTreasuryAmount;
 
     return {
       'activeProposals': activeProposals,
       'totalProposals': _proposals.length,
       'totalVotes': totalVotes,
       'totalDelegates': totalDelegates,
-      'treasuryAmount': totalTreasuryAmount,
+      'treasuryAmount': treasuryTotal,
       'recentTransactions': getRecentTransactions(limit: 5).length,
       'proposalsByType': {
         for (var type in ProposalType.values)
@@ -239,5 +350,27 @@ class DAOProvider extends ChangeNotifier {
 
   Future<void> refreshData() async {
     await _loadData();
+  }
+
+  Future<void> _refreshOnChainTreasuryBalance() async {
+    if (!AppConfig.isFeatureEnabled('web3') ||
+        !AppConfig.isFeatureEnabled('daoOnchainTreasury')) {
+      _treasuryOnChainBalance = null;
+      return;
+    }
+
+    final treasuryWallet = ApiKeys.kubusTreasuryWallet;
+    if (treasuryWallet.isEmpty) return;
+
+    try {
+      final balance = await _solanaService.getSplTokenBalance(
+        owner: treasuryWallet,
+        mint: ApiKeys.kub8MintAddress,
+        expectedDecimals: ApiKeys.kub8Decimals,
+      );
+      _treasuryOnChainBalance = balance;
+    } catch (e) {
+      debugPrint('DAOProvider: on-chain treasury load failed: $e');
+    }
   }
 }

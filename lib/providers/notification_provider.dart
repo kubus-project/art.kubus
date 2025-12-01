@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../services/push_notification_service.dart';
+import '../utils/wallet_utils.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final BackendApiService _backend = BackendApiService();
@@ -59,10 +60,10 @@ class NotificationProvider extends ChangeNotifier {
         debugPrint('NotificationProvider.initialize: loadAuthToken failed: $e');
       }
 
-      final resolvedWallet = await _resolveWallet(walletOverride);
-      final normalizedWallet = resolvedWallet?.trim();
-      final walletChanged = normalizedWallet != null && normalizedWallet.isNotEmpty &&
-          (normalizedWallet.toLowerCase() != (_currentWallet ?? '').toLowerCase());
+        final resolvedWallet = await _resolveWallet(walletOverride);
+        final normalizedWallet = WalletUtils.normalize(resolvedWallet);
+        final walletChanged = normalizedWallet.isNotEmpty &&
+          !WalletUtils.equals(normalizedWallet, _currentWallet);
 
       debugPrint('NotificationProvider.initialize: wallet=$normalizedWallet, changed=$walletChanged');
 
@@ -74,7 +75,7 @@ class NotificationProvider extends ChangeNotifier {
         return;
       }
 
-      if (normalizedWallet == null || normalizedWallet.isEmpty) {
+      if (normalizedWallet.isEmpty) {
         debugPrint('NotificationProvider.initialize: wallet not available yet, listeners registered');
         _initialized = false;
         return;
@@ -173,9 +174,10 @@ class NotificationProvider extends ChangeNotifier {
       _subscriptionMonitorTimer?.cancel();
       _subscriptionMonitorTimer = Timer.periodic(const Duration(seconds: 25), (_) async {
         try {
-          if (_currentWallet == null || _currentWallet!.isEmpty) return;
-          final subscribed = _socket.currentSubscribedWallet;
-          if (subscribed == null || subscribed.toLowerCase() != _currentWallet!.toLowerCase()) {
+          final expectedWallet = WalletUtils.canonical(_currentWallet);
+          if (expectedWallet.isEmpty) return;
+          final subscribed = WalletUtils.canonical(_socket.currentSubscribedWallet);
+          if (subscribed.isEmpty || subscribed != expectedWallet) {
             debugPrint('NotificationProvider: subscription monitor detected mismatch (subscribed=$subscribed expected=$_currentWallet), attempting resubscribe');
             var ok = false;
             try {
@@ -241,10 +243,15 @@ class NotificationProvider extends ChangeNotifier {
     return _minServerSyncInterval - elapsed;
   }
 
+  String _unreadCacheKey(String wallet) {
+    final canonical = WalletUtils.canonical(wallet);
+    return '$_prefsUnreadPrefix$canonical';
+  }
+
   Future<void> _hydrateUnreadFromCache(String wallet) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cached = prefs.getInt('$_prefsUnreadPrefix${wallet.toLowerCase()}');
+      final cached = prefs.getInt(_unreadCacheKey(wallet));
       if (cached != null) {
         final changed = cached != _communityUnreadCount || _hasNew != (cached > 0);
         _communityUnreadCount = cached;
@@ -262,7 +269,7 @@ class NotificationProvider extends ChangeNotifier {
     if (_currentWallet == null || _currentWallet!.isEmpty) return;
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('$_prefsUnreadPrefix${_currentWallet!.toLowerCase()}', count);
+      await prefs.setInt(_unreadCacheKey(_currentWallet!), count);
     } catch (e) {
       debugPrint('NotificationProvider: failed to persist unread cache: $e');
     }

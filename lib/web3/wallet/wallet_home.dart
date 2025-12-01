@@ -386,24 +386,7 @@ class _WalletHomeState extends State<WalletHome> {
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: _getTokenColor(token.symbol),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  token.symbol.substring(0, 1).toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            ),
+                            _buildTokenAvatar(token),
                             const SizedBox(width: 16),
                             Expanded(
                               child: Column(
@@ -464,6 +447,91 @@ class _WalletHomeState extends State<WalletHome> {
         );
       },
     );
+  }
+
+  Widget _buildTokenAvatar(Token token) {
+    final theme = Theme.of(context);
+    final fallback = _buildTokenFallbackAvatar(token);
+
+    if (!_isValidLogoUrl(token.logoUrl)) {
+      return fallback;
+    }
+
+    return Container(
+      width: 40,
+      height: 40,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.2)),
+        color: theme.colorScheme.surfaceContainerHighest,
+      ),
+      child: Image.network(
+        token.logoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => fallback,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          final expectedBytes = loadingProgress.expectedTotalBytes;
+          final progress = expectedBytes == null
+              ? null
+              : loadingProgress.cumulativeBytesLoaded / expectedBytes;
+          return Center(
+            child: SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: progress,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTokenFallbackAvatar(Token token) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: _getTokenColor(token.symbol),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Center(
+        child: Text(
+          _getTokenInitial(token),
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _getTokenInitial(Token token) {
+    if (token.symbol.isNotEmpty) {
+      return token.symbol.substring(0, 1).toUpperCase();
+    }
+    if (token.name.isNotEmpty) {
+      return token.name.substring(0, 1).toUpperCase();
+    }
+    return '?';
+  }
+
+  bool _isValidLogoUrl(String? url) {
+    if (url == null || url.trim().isEmpty) {
+      return false;
+    }
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      return false;
+    }
+    return uri.hasScheme && (uri.scheme == 'https' || uri.scheme == 'http');
   }
 
   Widget _buildActionButton(String title, IconData icon, Color color, VoidCallback onPressed, bool isSmallScreen) {

@@ -163,6 +163,30 @@ class UserActionLogger {
     );
   }
 
+  /// Record that the current user viewed an artwork (used for history/analytics).
+  static Future<void> logArtworkView({
+    required String artworkId,
+    String? artworkTitle,
+    String? markerId,
+  }) async {
+    final title = 'Viewed ${_quoteIfNeeded(artworkTitle ?? 'an artwork')}';
+    await _record(
+      type: 'view',
+      idPrefix: 'artwork_view',
+      targetId: artworkId,
+      title: title,
+      description: artworkTitle,
+      metadata: {
+        'artworkId': artworkId,
+        'targetId': artworkId,
+        'targetType': 'artwork',
+        if (artworkTitle != null && artworkTitle.trim().isNotEmpty) 'artworkTitle': artworkTitle,
+        if (markerId != null && markerId.isNotEmpty) 'markerId': markerId,
+        'actionUrl': 'app://artworks/$artworkId',
+      },
+    );
+  }
+
   /// Record that the current user followed another profile.
   static Future<void> logFollow({
     required String walletAddress,

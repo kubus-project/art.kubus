@@ -5,6 +5,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
 import '../../widgets/inline_loading.dart';
+import '../../config/api_keys.dart';
 import 'qr_scanner_screen.dart';
 
 class SendTokenScreen extends StatefulWidget {
@@ -287,7 +288,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _addressError.isNotEmpty 
-                ? Colors.red 
+                ? Theme.of(context).colorScheme.error
                 : Theme.of(context).colorScheme.outline,
             ),
           ),
@@ -327,7 +328,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             _addressError,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
             ),
           ),
         ],
@@ -380,7 +381,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: _amountError.isNotEmpty 
-                ? Colors.red 
+                ? Theme.of(context).colorScheme.error
                 : Theme.of(context).colorScheme.outline,
             ),
           ),
@@ -417,7 +418,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             _amountError,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Colors.red,
+              color: Theme.of(context).colorScheme.error,
             ),
           ),
         ],
@@ -668,26 +669,70 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     setState(() => _isLoading = true);
     
     try {
-      // Simulate transaction processing
-      await Future.delayed(const Duration(seconds: 2));
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final amount = double.parse(_amountController.text);
+      final toAddress = _addressController.text.trim();
+      
+      // Check if wallet has active keypair for signing
+      if (!walletProvider.hasActiveKeyPair) {
+        throw Exception('No wallet keypair available for signing. Please reconnect your wallet.');
+      }
+      
+      String signature;
+      
+      // Send based on selected token
+      if (_selectedToken == 'SOL') {
+        // Transfer native SOL
+        signature = await walletProvider.solanaWalletService.transferSol(
+          toAddress: toAddress,
+          amount: amount,
+        );
+      } else if (_selectedToken == 'KUB8') {
+        // Transfer SPL token (KUB8)
+        // Note: This will throw UnimplementedError until SPL transfer is fully implemented
+        signature = await walletProvider.solanaWalletService.transferSplToken(
+          mint: ApiKeys.kub8MintAddress,
+          toAddress: toAddress,
+          amount: amount,
+          decimals: 6, // KUB8 has 6 decimals
+        );
+      } else {
+        throw Exception('Unsupported token: $_selectedToken');
+      }
+      
+      // Refresh wallet data to reflect new balance
+      await walletProvider.refreshData();
       
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Successfully sent ${_amountController.text} $_selectedToken'),
+            content: Text('Successfully sent $amount $_selectedToken\nTx: ${signature.substring(0, 10)}...'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'Transaction failed: ${e.toString()}';
+        
+        // Provide helpful error messages
+        if (e.toString().contains('UnimplementedError')) {
+          errorMessage = 'SPL token transfers are not yet fully implemented. Coming soon!';
+        } else if (e.toString().contains('insufficient')) {
+          errorMessage = 'Insufficient balance or SOL for gas fees';
+        } else if (e.toString().contains('Invalid address')) {
+          errorMessage = 'Invalid recipient address format';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Transaction failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            content: Text(errorMessage),
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }

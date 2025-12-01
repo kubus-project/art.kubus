@@ -1,7 +1,8 @@
-import 'dart:typed_data';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
 import '../services/ar_content_service.dart';
@@ -19,6 +20,9 @@ class ArtworkProvider extends ChangeNotifier {
   SavedItemsProvider? _savedItemsProvider;
   bool _useMockData = false;
   final BackendApiService _backendApi = BackendApiService();
+  static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
+  final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
+  bool _historyLoaded = false;
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
@@ -334,6 +338,7 @@ class ArtworkProvider extends ChangeNotifier {
           viewsCount: artwork.viewsCount + 1,
         );
         addOrUpdateArtwork(updatedArtwork);
+        await _recordViewHistory(updatedArtwork);
         
         // Track artwork visit for tasks (first time only per session)
         if (_taskProvider != null) {
@@ -458,6 +463,83 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> ensureHistoryLoaded() async {
+    if (_historyLoaded) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getStringList(_viewHistoryPrefsKey) ?? <String>[];
+      _viewHistory
+        ..clear()
+        ..addAll(raw.map((item) {
+          try {
+            final map = jsonDecode(item);
+            if (map is Map<String, dynamic>) {
+              return ViewHistoryEntry.fromJson(map);
+            }
+          } catch (_) {}
+          return null;
+        }).whereType<ViewHistoryEntry>());
+      _historyLoaded = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint('ArtworkProvider.ensureHistoryLoaded error: $e');
+      _historyLoaded = true;
+    }
+  }
+
+  List<ViewHistoryEntry> get viewHistoryEntries => List.unmodifiable(_viewHistory);
+
+  List<Artwork> getViewHistoryArtworks() {
+    return _viewHistory
+        .map((entry) => getArtworkById(entry.artworkId))
+        .whereType<Artwork>()
+        .toList();
+  }
+
+  Future<void> clearViewHistory() async {
+    await ensureHistoryLoaded();
+    _viewHistory.clear();
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_viewHistoryPrefsKey);
+    } catch (_) {}
+  }
+
+  Future<void> _recordViewHistory(Artwork artwork) async {
+    await ensureHistoryLoaded();
+    _viewHistory.removeWhere((entry) => entry.artworkId == artwork.id);
+    _viewHistory.insert(
+      0,
+      ViewHistoryEntry(
+        artworkId: artwork.id,
+        viewedAt: DateTime.now(),
+        markerId: artwork.arMarkerId,
+      ),
+    );
+    if (_viewHistory.length > 60) {
+      _viewHistory.removeRange(60, _viewHistory.length);
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _viewHistoryPrefsKey,
+        _viewHistory.map((e) => jsonEncode(e.toJson())).toList(),
+      );
+    } catch (_) {}
+
+    try {
+      await UserActionLogger.logArtworkView(
+        artworkId: artwork.id,
+        artworkTitle: artwork.title,
+        markerId: artwork.arMarkerId,
+      );
+    } catch (_) {}
+
+    notifyListeners();
+  }
+
   void _setLoading(String operation, bool loading) {
     _loadingStates[operation] = loading;
     notifyListeners();
@@ -515,5 +597,33 @@ class ArtworkProvider extends ChangeNotifier {
   Future<void> _syncCommentLikeWithBackend(String artworkId, String commentId, bool isLiked) async {
     // In production: Call BackendApiService().likeComment(artworkId, commentId, isLiked)
     await Future.delayed(const Duration(milliseconds: 50));
+  }
+}
+
+class ViewHistoryEntry {
+  final String artworkId;
+  final DateTime viewedAt;
+  final String? markerId;
+
+  const ViewHistoryEntry({
+    required this.artworkId,
+    required this.viewedAt,
+    this.markerId,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'artworkId': artworkId,
+      'viewedAt': viewedAt.toIso8601String(),
+      if (markerId != null) 'markerId': markerId,
+    };
+  }
+
+  factory ViewHistoryEntry.fromJson(Map<String, dynamic> json) {
+    return ViewHistoryEntry(
+      artworkId: json['artworkId']?.toString() ?? '',
+      viewedAt: DateTime.tryParse(json['viewedAt']?.toString() ?? '') ?? DateTime.now(),
+      markerId: json['markerId']?.toString(),
+    );
   }
 }

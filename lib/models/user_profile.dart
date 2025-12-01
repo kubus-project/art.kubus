@@ -184,11 +184,17 @@ class ProfilePreferences {
   final String privacy;
   final bool notifications;
   final String theme;
+  final bool showActivityStatus;
+  final bool showCollection;
+  final bool allowMessages;
 
   ProfilePreferences({
     this.privacy = 'public',
     this.notifications = true,
     this.theme = 'auto',
+    this.showActivityStatus = true,
+    this.showCollection = true,
+    this.allowMessages = true,
   });
 
   factory ProfilePreferences.fromJson(Map<String, dynamic> json) {
@@ -196,6 +202,9 @@ class ProfilePreferences {
       privacy: json['privacy'] ?? 'public',
       notifications: json['notifications'] ?? true,
       theme: json['theme'] ?? 'auto',
+      showActivityStatus: json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
+      showCollection: json['showCollection'] ?? json['show_collection'] ?? true,
+      allowMessages: json['allowMessages'] ?? json['allow_messages'] ?? true,
     );
   }
 
@@ -204,6 +213,9 @@ class ProfilePreferences {
       'privacy': privacy,
       'notifications': notifications,
       'theme': theme,
+      'showActivityStatus': showActivityStatus,
+      'showCollection': showCollection,
+      'allowMessages': allowMessages,
     };
   }
 }

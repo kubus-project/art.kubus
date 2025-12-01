@@ -43,13 +43,11 @@ class _ArCoreViewState extends State<ArCoreView> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return Container(
-        child: ArCoreAndroidView(
-          viewType: 'arcore_flutter_plugin',
-          onPlatformViewCreated: _onPlatformViewCreated,
-          arCoreViewType: widget.type,
-          debug: widget.debug,
-        ),
+      return ArCoreAndroidView(
+        viewType: 'arcore_flutter_plugin',
+        onPlatformViewCreated: _onPlatformViewCreated,
+        arCoreViewType: widget.type,
+        debug: widget.debug,
       );
     }
     return Center(

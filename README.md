@@ -61,7 +61,7 @@ The platform's development prioritizes artist autonomy, community governance, an
 
 ### Project Status
 
-art.kubus is currently in active development, with a functional beta platform available at [https://art.kubus.site](https://art.kubus.site). The codebase is open source under the MIT License, welcoming contributions from developers, artists, and researchers interested in the intersection of art and technology.
+art.kubus is currently in active development, with a functional pre-alpha platform available at [https://art.kubus.site](https://art.kubus.site). The codebase is open source under the MIT License, welcoming contributions from developers, artists, and researchers interested in the intersection of art and technology.
 
 **Current Phase**: Building Key Features
 **Roadmap**: [View detailed roadmap](https://art.kubus.site/#roadmap)  

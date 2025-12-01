@@ -12,14 +12,14 @@ class EmptyStateCard extends StatelessWidget {
   final VoidCallback? onAction;
 
   const EmptyStateCard({
-    Key? key,
+    super.key,
     this.icon = Icons.info_outline,
     required this.title,
     required this.description,
     this.showAction = false,
     this.actionLabel,
     this.onAction,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -14,6 +14,7 @@ import '../providers/cache_provider.dart';
 import '../services/backend_api_service.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../main_app.dart';
+import '../screens/auth/sign_in_screen.dart';
 import '../widgets/app_loading.dart';
 
 class AppInitializer extends StatefulWidget {
@@ -123,6 +124,11 @@ class _AppInitializerState extends State<AppInitializer> {
     // Check wallet connection status
     final hasWallet = prefs.getBool('has_wallet') ?? false;
     final hasCompletedOnboarding = prefs.getBool('completed_onboarding') ?? false;
+    final hasAuthToken = (BackendApiService().getAuthToken() ?? '').isNotEmpty;
+    final shouldShowSignIn = !hasWallet &&
+      !hasAuthToken &&
+      AppConfig.enableMultiAuthEntry &&
+      (AppConfig.enableEmailAuth || AppConfig.enableGoogleAuth || AppConfig.enableWalletConnect);
     
     // DEBUG: Print all flags
     debugPrint('🔍 AppInitializer DEBUG:');
@@ -155,9 +161,15 @@ class _AppInitializerState extends State<AppInitializer> {
       }
       
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainApp()),
-      );
+      if (shouldShowSignIn) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        );
+      } else {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainApp()),
+        );
+      }
     } else if (!hasCompletedOnboarding) {
       // First-time user - show onboarding (no wallet required)
       debugPrint('📍 Route: First-time user → OnboardingScreen (wallet optional, setup when needed)');
@@ -168,7 +180,7 @@ class _AppInitializerState extends State<AppInitializer> {
       // Returning user who completed onboarding - go to main app (wallet optional)
       debugPrint('📍 Route: Returning user → MainApp (wallet optional)');
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainApp()),
+        MaterialPageRoute(builder: (context) => shouldShowSignIn ? const SignInScreen() : const MainApp()),
       );
     }
   }

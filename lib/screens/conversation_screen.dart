@@ -21,6 +21,7 @@ import '../services/event_bus.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/inline_loading.dart';
+import '../utils/wallet_utils.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -56,7 +57,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final int _readQueueDelayMs = 150; // milliseconds between queued read sends
   String? _conversationAvatar;
   List<String> _conversationMembers = [];
-  String _normWallet(String? w) => (w ?? '').toString().toLowerCase().trim();
+  String _normWallet(String? w) => WalletUtils.normalize(w);
   // Removed UserService cache listener usage; we now fetch user profiles directly.
   
   ChatMessage? _replyingTo;

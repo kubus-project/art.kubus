@@ -39,9 +39,9 @@ class ArCoreMaterial {
   Map<String, dynamic> toMap() => <String, dynamic>{
         'color': [color!.alpha, color!.red, color!.green, color!.blue],
 //        'texture': this.texture,
-        'textureBytes': this.textureBytes,
-        'metallic': this.metallic,
-        'roughness': this.roughness,
-        'reflectance': this.reflectance,
+        'textureBytes': textureBytes,
+        'metallic': metallic,
+        'roughness': roughness,
+        'reflectance': reflectance,
       }..removeWhere((String k, dynamic v) => v == null);
 }

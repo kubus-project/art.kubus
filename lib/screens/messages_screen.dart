@@ -459,7 +459,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   title: 'No conversations',
                   description: 'Start a conversation using the chat button below.',
                   showAction: true,
-                  actionLabel: 'Start Chat',
+                  actionLabel: 'Start a chat',
                   onAction: () async {
                     final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => _CreateConversationDialog());
                     if (!mounted) return;
@@ -683,18 +683,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
             },
           );
         }
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
-        child: const Icon(Icons.chat),
-        onPressed: () async {
-          // Simple create conversation: members entry (comma separated wallets)
-          final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => _CreateConversationDialog());
-          if (!mounted) return;
-          if (result != null && result['members'] != null) {
-            await _chatProvider.createConversation(result['title'] as String? ?? '', result['isGroup'] as bool? ?? false, (result['members'] as List<String>));
-          }
-        },
       ),
     );
   }

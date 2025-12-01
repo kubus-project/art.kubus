@@ -34,13 +34,11 @@ class _ArCoreFaceViewState extends State<ArCoreFaceView>
   @override
   Widget build(BuildContext context) {
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return Container(
-        child: ArCoreAndroidView(
-          viewType: 'arcore_flutter_plugin',
-          onPlatformViewCreated: _onPlatformViewCreated,
-          arCoreViewType: ArCoreViewType.AUGMENTEDFACE,
-          debug: widget.debug,
-        ),
+      return ArCoreAndroidView(
+        viewType: 'arcore_flutter_plugin',
+        onPlatformViewCreated: _onPlatformViewCreated,
+        arCoreViewType: ArCoreViewType.AUGMENTEDFACE,
+        debug: widget.debug,
       );
     }
     return Center(

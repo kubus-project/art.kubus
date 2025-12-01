@@ -8,10 +8,10 @@ class ArCorePlane {
   ArCorePlaneType? type;
 
   ArCorePlane.fromMap(Map<dynamic, dynamic> map) {
-    this.extendX = map["extendX"];
-    this.extendZ = map["extendZ"];
-    this.centerPose = ArCorePose.fromMap(map["centerPose"]);
-    this.type = ArCorePlaneType.values[map["type"] ?? 0];
+    extendX = map["extendX"];
+    extendZ = map["extendZ"];
+    centerPose = ArCorePose.fromMap(map["centerPose"]);
+    type = ArCorePlaneType.values[map["type"] ?? 0];
   }
 }
 
