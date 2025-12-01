@@ -157,7 +157,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color.fromARGB(255, 6, 215, 37), Color(0xFF9C27B0)],
+              colors: [Color.fromARGB(255, 6, 215, 37), Color.fromARGB(255, 5, 112, 87)],
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [

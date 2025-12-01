@@ -2000,10 +2000,23 @@ class BackendApiService {
   Future<void> followUser(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
-      await http.post(
-        Uri.parse('$baseUrl/api/community/follow/$encoded'),
-        headers: _getHeaders(),
-      );
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
+      http.Response response = await http.post(uri, headers: _getHeaders());
+
+      if (response.statusCode == 401) {
+        debugPrint('BackendApiService.followUser: received 401, retrying after refreshing token');
+        try {
+          await loadAuthToken();
+        } catch (_) {}
+        await _ensureAuthBeforeRequest();
+        response = await http.post(uri, headers: _getHeaders());
+      }
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        final body = response.body.isNotEmpty ? response.body : 'No response body';
+        throw Exception('Failed to follow user (${response.statusCode}): $body');
+      }
     } catch (e) {
       debugPrint('Error following user: $e');
       rethrow;
@@ -2015,10 +2028,23 @@ class BackendApiService {
   Future<void> unfollowUser(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
-      await http.delete(
-        Uri.parse('$baseUrl/api/community/follow/$encoded'),
-        headers: _getHeaders(),
-      );
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
+      http.Response response = await http.delete(uri, headers: _getHeaders());
+
+      if (response.statusCode == 401) {
+        debugPrint('BackendApiService.unfollowUser: received 401, retrying after refreshing token');
+        try {
+          await loadAuthToken();
+        } catch (_) {}
+        await _ensureAuthBeforeRequest();
+        response = await http.delete(uri, headers: _getHeaders());
+      }
+
+      if (!_isSuccessStatus(response.statusCode)) {
+        final body = response.body.isNotEmpty ? response.body : 'No response body';
+        throw Exception('Failed to unfollow user (${response.statusCode}): $body');
+      }
     } catch (e) {
       debugPrint('Error unfollowing user: $e');
       rethrow;
@@ -2110,19 +2136,32 @@ class BackendApiService {
   Future<bool> isFollowing(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/community/follow/$encoded/status'),
-        headers: _getHeaders(),
-      );
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/community/follow/$encoded/status');
+      http.Response response = await http.get(uri, headers: _getHeaders());
+
+      if (response.statusCode == 401) {
+        debugPrint('BackendApiService.isFollowing: received 401, retrying after refreshing token');
+        try {
+          await loadAuthToken();
+        } catch (_) {}
+        await _ensureAuthBeforeRequest();
+        response = await http.get(uri, headers: _getHeaders());
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return data['isFollowing'] as bool? ?? false;
       }
-      return false;
+
+      if (response.statusCode == 404) {
+        throw Exception('User not found when checking follow status');
+      }
+
+      throw Exception('Failed to check follow status (${response.statusCode})');
     } catch (e) {
       debugPrint('Error checking follow status: $e');
-      return false;
+      rethrow;
     }
   }
 

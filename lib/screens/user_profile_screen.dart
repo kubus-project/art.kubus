@@ -320,12 +320,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       _followButtonController.reverse();
     });
 
-    final newFollowState = await UserService.toggleFollow(
-      user!.id,
-      displayName: user!.name,
-      username: user!.username,
-      avatarUrl: user!.profileImageUrl,
-    );
+    bool newFollowState;
+    try {
+      newFollowState = await UserService.toggleFollow(
+        user!.id,
+        displayName: user!.name,
+        username: user!.username,
+        avatarUrl: user!.profileImageUrl,
+      );
+    } catch (e) {
+      debugPrint('UserProfileScreen: failed to toggle follow for ${user!.id}: $e');
+      if (!mounted) return;
+      final theme = Theme.of(context);
+      final message = e.toString().contains('401')
+          ? 'Please sign in to follow creators.'
+          : 'Could not update follow status. Please try again.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 3),
+          backgroundColor: theme.colorScheme.error,
+        ),
+      );
+      await _loadUserStats(skipFollowersOverwrite: true);
+      return;
+    }
     
     setState(() {
       final currentFollowers = user!.followersCount;
