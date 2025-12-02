@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' show PlatformDispatcher;
 
+import '../utils/app_animations.dart';
+
 /// Modern theme provider with multiple theme options and persistence
 class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   static const String _themeKey = 'app_theme_mode';
@@ -90,7 +92,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_themeKey, _themeMode.index);
-      await prefs.setInt(_accentColorKey, _accentColor.value); // Color value for persistence
+      await prefs.setInt(_accentColorKey, _accentColor.toARGB32());
     } catch (e) {
       debugPrint('Error saving theme preferences: $e');
     }
@@ -151,6 +153,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   ThemeData get darkTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
+    pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
     colorScheme: ColorScheme.dark(
       primary: _accentColor,
       secondary: _accentColor.withValues(alpha: 0.8),
@@ -215,12 +218,16 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       type: BottomNavigationBarType.fixed,
       elevation: 0,
     ),
+    extensions: const <ThemeExtension<dynamic>>[
+      AppAnimationTheme.defaults,
+    ],
   );
 
   // Light theme data
   ThemeData get lightTheme => ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
+    pageTransitionsTheme: AppAnimations.pageTransitionsTheme,
     colorScheme: ColorScheme.light(
       primary: _accentColor,
       secondary: _accentColor.withValues(alpha: 0.8),
@@ -286,5 +293,8 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
+    extensions: const <ThemeExtension<dynamic>>[
+      AppAnimationTheme.defaults,
+    ],
   );
 }

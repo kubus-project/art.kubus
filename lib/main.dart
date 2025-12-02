@@ -23,12 +23,13 @@ import 'providers/config_provider.dart';
 import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
+import 'providers/community_hub_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
-import 'screens/ar_screen.dart';
-import 'screens/connectwallet_screen.dart';
+import 'screens/art/ar_screen.dart';
+import 'screens/web3/wallet/connectwallet_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
 import 'services/solana_wallet_service.dart';
@@ -204,6 +205,7 @@ class _AppLauncherState extends State<AppLauncher> {
         ChangeNotifierProvider(create: (context) => NavigationProvider()),
         ChangeNotifierProvider(create: (context) => TaskProvider()),
         ChangeNotifierProvider(create: (context) => CacheProvider()),
+        ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
         ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
           create: (context) {
             final artworkProvider = ArtworkProvider();

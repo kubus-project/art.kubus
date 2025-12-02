@@ -11,20 +11,22 @@ import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
 import '../models/recent_activity.dart';
-import '../web3/dao/governance_hub.dart';
-import '../web3/artist/artist_studio.dart';
-import '../web3/institution/institution_hub.dart';
-import '../web3/marketplace/marketplace.dart';
-import '../web3/wallet/wallet_home.dart';
-import 'connectwallet_screen.dart';
-import '../web3/onboarding/web3_onboarding.dart' as web3;
+import 'web3/dao/governance_hub.dart';
+import 'web3/artist/artist_studio.dart';
+import 'web3/institution/institution_hub.dart';
+import 'web3/marketplace/marketplace.dart';
+import 'web3/wallet/wallet_home.dart';
+import 'web3/wallet/connectwallet_screen.dart';
+import 'web3/onboarding/web3_onboarding.dart' as web3;
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
 
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
-import 'advanced_analytics_screen.dart';
+import 'activity/advanced_analytics_screen.dart';
+import '../utils/app_animations.dart';
+import '../widgets/staggered_fade_slide.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,33 +37,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: AppAnimationTheme.defaults.long,
       vsync: this,
     );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
-
     _animationController.forward();
 
     // Initialize navigation provider
@@ -94,6 +77,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final animationTheme = context.animationTheme;
+    final fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: animationTheme.fadeCurve,
+    );
+    final slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.08),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: animationTheme.defaultCurve,
+    ));
 
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode
@@ -104,9 +99,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           animation: _animationController,
           builder: (context, child) {
             return FadeTransition(
-              opacity: _fadeAnimation,
+              opacity: fadeAnimation,
               child: SlideTransition(
-                position: _slideAnimation,
+                position: slideAnimation,
                 child: CustomScrollView(
                   slivers: [
                     _buildAppBar(),
@@ -120,19 +115,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         return SliverPadding(
                           padding: EdgeInsets.all(padding),
                           sliver: SliverList(
-                            delegate: SliverChildListDelegate([
-                              _buildWelcomeSection(),
-                              SizedBox(height: spacing),
-                              _buildQuickActions(),
-                              SizedBox(height: spacing),
-                              _buildStatsCards(),
-                              SizedBox(height: spacing),
-                              _buildWeb3Section(),
-                              SizedBox(height: spacing),
-                              _buildRecentActivity(),
-                              SizedBox(height: spacing),
-                              _buildFeaturedArtworks(),
-                            ]),
+                            delegate: SliverChildListDelegate(
+                              _buildAnimatedSections(spacing),
+                            ),
                           ),
                         );
                       },
@@ -145,6 +130,34 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildAnimatedSections(double spacing) {
+    final sections = <Widget>[];
+    var animationIndex = 0;
+
+    Widget animated(Widget child) {
+      final indexForWidget = animationIndex++;
+      return StaggeredFadeSlide(
+        animation: _animationController,
+        position: indexForWidget,
+        child: child,
+      );
+    }
+
+    sections.add(animated(_buildWelcomeSection()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(_buildQuickActions()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(_buildStatsCards()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(_buildWeb3Section()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(_buildRecentActivity()));
+    sections.add(SizedBox(height: spacing));
+    sections.add(animated(_buildFeaturedArtworks()));
+
+    return sections;
   }
 
   Widget _buildAppBar() {

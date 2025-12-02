@@ -1,0 +1,1123 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../community/community_interactions.dart';
+import '../../widgets/avatar_widget.dart';
+import '../../services/backend_api_service.dart';
+import '../../providers/themeprovider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../widgets/empty_state_card.dart';
+
+class PostDetailScreen extends StatefulWidget {
+  final CommunityPost? post;
+  final String? postId;
+
+  const PostDetailScreen({super.key, this.post, this.postId}) : assert(post != null || postId != null);
+
+  @override
+  State<PostDetailScreen> createState() => _PostDetailScreenState();
+
+  /// Helper to open a post detail by id (useful for deep links)
+  static Future<void> openById(BuildContext context, String postId) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => PostDetailScreen(postId: postId)),
+    );
+  }
+}
+
+class _PostDetailScreenState extends State<PostDetailScreen> {
+  CommunityPost? _post;
+  bool _loading = true;
+  String? _error;
+  final TextEditingController _commentController = TextEditingController();
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
+  final FocusNode _commentFocusNode = FocusNode();
+
+  String? _currentWalletAddress() {
+    try {
+      return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.post != null) {
+      _post = widget.post;
+      _loading = false;
+    } else if (widget.postId != null) {
+      _fetchPost(widget.postId!);
+    }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _commentFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchPost(String id) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final post = await BackendApiService().getCommunityPostById(id);
+      try {
+        await CommunityService.loadSavedInteractions(
+          [post],
+          walletAddress: _currentWalletAddress(),
+        );
+      } catch (_) {}
+      setState(() {
+        _post = post;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('Error fetching post: $e');
+      setState(() {
+        _error = 'Failed to load post';
+        _loading = false;
+      });
+    }
+  }
+
+  String _timeAgo(DateTime timestamp) {
+    final now = DateTime.now();
+    final diff = now.difference(timestamp);
+    if (diff.inDays > 7) return '${(diff.inDays / 7).floor()}w ago';
+    if (diff.inDays > 0) return '${diff.inDays}d ago';
+    if (diff.inHours > 0) return '${diff.inHours}h ago';
+    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
+    return 'Just now';
+  }
+
+  Future<void> _toggleLike() async {
+    if (_post == null) return;
+    try {
+      await CommunityService.togglePostLike(
+        _post!,
+        currentUserWallet: _currentWalletAddress(),
+      );
+      setState(() {});
+
+      // Show undo option
+      final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_post!.isLiked ? 'Post liked' : 'Like removed'),
+          action: SnackBarAction(
+            label: 'Undo',
+            textColor: accent,
+            onPressed: () async {
+              try {
+                await CommunityService.togglePostLike(
+                  _post!,
+                  currentUserWallet: _currentWalletAddress(),
+                );
+                setState(() {});
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to undo like: $e')));
+              }
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      // On failure ensure rollback and show retry option
+      try {
+        setState(() {});
+      } catch (_) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update like: $e'),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            onPressed: () async {
+              try {
+                await CommunityService.togglePostLike(
+                  _post!,
+                  currentUserWallet: _currentWalletAddress(),
+                );
+                setState(() {});
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Retry failed: $e')));
+              }
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _submitComment() async {
+    if (_post == null) return;
+    final text = _commentController.text.trim();
+    if (text.isEmpty) return;
+    _commentController.clear();
+    // capture and clear reply target
+    final parentId = _replyToCommentId;
+    _replyToCommentId = null;
+    _replyToAuthorName = null;
+    if (_commentFocusNode.hasFocus) _commentFocusNode.unfocus();
+
+    String authorName = 'You';
+    String? authorAvatar;
+    try {
+      final profileResp = await BackendApiService().getMyProfile();
+      if (profileResp['success'] == true && profileResp['data'] is Map<String, dynamic>) {
+        final p = profileResp['data'] as Map<String, dynamic>;
+        authorName = (p['displayName'] ?? p['display_name'] ?? p['username'] ?? authorName).toString();
+        authorAvatar = p['avatar'] as String? ?? p['profileImage'] as String? ?? p['profile_image'] as String?;
+      }
+    } catch (_) {}
+
+    try {
+      final newComment = await CommunityService.addComment(
+        _post!,
+        text,
+        authorName,
+        parentCommentId: parentId,
+        authorAvatar: authorAvatar,
+      );
+
+      // Service already updated the post/comments optimistically, refresh UI
+      if (mounted) setState(() {});
+
+      // Show undo snackbar which attempts to delete the comment from backend and locally
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Comment added'),
+          action: SnackBarAction(
+            label: 'Undo',
+            textColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            onPressed: () async {
+              try {
+                // Attempt server delete
+                await BackendApiService().deleteComment(newComment.id);
+              } catch (_) {}
+              // Remove locally
+              CommunityService.deleteComment(_post!, newComment.id);
+              setState(() {});
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add comment: $e')));
+    }
+  }
+
+  void _showCommentLikes(String commentId) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final future = BackendApiService().getCommentLikes(commentId);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Likes', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    IconButton(icon: const Icon(Icons.close), color: theme.colorScheme.onSurface, onPressed: () => Navigator.of(sheetContext).pop()),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<CommunityLikeUser>>(
+                  future: future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Failed to load likes', style: GoogleFonts.inter(color: theme.colorScheme.onSurface))));
+                    }
+                    final likes = snapshot.data ?? <CommunityLikeUser>[];
+                    if (likes.isEmpty) {
+                      return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: EmptyStateCard(
+                          icon: Icons.favorite_border,
+                          title: 'No likes yet',
+                          description: 'Be the first to like this',
+                        ),
+                      ),
+                    );
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      itemCount: likes.length,
+                      separatorBuilder: (_, __) => Divider(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                      itemBuilder: (context, index) {
+                        final user = likes[index];
+                        final subtitleParts = <String>[];
+                        if (user.username != null && user.username!.isNotEmpty) subtitleParts.add('@${user.username}');
+                        if (user.walletAddress != null && user.walletAddress!.isNotEmpty) subtitleParts.add(user.walletAddress!);
+                        if (user.likedAt != null) subtitleParts.add(user.likedAt!.toIso8601String());
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: AvatarWidget(wallet: user.walletAddress ?? user.userId, avatarUrl: user.avatarUrl, radius: 20, enableProfileNavigation: true),
+                          title: Text(user.displayName.isNotEmpty ? user.displayName : 'Unnamed', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                          subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showShareModal() {
+    if (_post == null || !mounted) return;
+    final theme = Theme.of(context);
+    final searchController = TextEditingController();
+    List<Map<String, dynamic>> searchResults = [];
+    bool isSearching = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Share Post', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: TextField(
+                  controller: searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search for profiles...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: theme.colorScheme.primaryContainer,
+                  ),
+                  onChanged: (query) async {
+                    if (query.trim().isEmpty) {
+                      setModalState(() { searchResults.clear(); });
+                      return;
+                    }
+                    setModalState(() => isSearching = true);
+                    try {
+                      final resp = await BackendApiService().search(query: query, type: 'profiles', limit: 20);
+                      final list = <Map<String, dynamic>>[];
+                      if (resp['success'] == true && resp['results'] is Map) {
+                        final profiles = (resp['results']['profiles'] as List?) ?? [];
+                        for (final p in profiles) { try { list.add(p as Map<String, dynamic>); } catch (_) {} }
+                      }
+                      setModalState(() { searchResults = list; isSearching = false; });
+                    } catch (e) {
+                      setModalState(() => isSearching = false);
+                    }
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Icon(Icons.link, color: theme.colorScheme.primary),
+                      title: Text('Copy Link', style: GoogleFonts.inter()),
+                      onTap: () async {
+                        await Clipboard.setData(ClipboardData(text: 'https://app.kubus.site/post/${_post!.id}'));
+                        Navigator.pop(sheetContext);
+                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+                      },
+                    ),
+                    ListTile(
+                      leading: Icon(Icons.share, color: theme.colorScheme.primary),
+                      title: Text('Share via...', style: GoogleFonts.inter()),
+                      onTap: () async {
+                        Navigator.pop(sheetContext);
+                        final shareText = '${_post!.content}\\n\\n- ${_post!.authorName} on app.kubus\\n\\nhttps://app.kubus.site/post/${_post!.id}';
+                        await SharePlus.instance.share(ShareParams(text: shareText));
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              if (searchController.text.isNotEmpty) ...[
+                const Divider(),
+                Expanded(
+                  child: isSearching
+                      ? const Center(child: CircularProgressIndicator())
+                      : searchResults.isEmpty
+                          ? Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: EmptyStateCard(
+                                  icon: Icons.search_off,
+                                  title: 'No profiles found',
+                                  description: 'Try a different search term',
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              itemCount: searchResults.length,
+                              itemBuilder: (ctx, idx) {
+                                final profile = searchResults[idx];
+                                final walletAddr = profile['wallet_address'] ?? profile['walletAddress'] ?? profile['wallet'] ?? profile['walletAddr'];
+                                final username = profile['username'] ?? walletAddr ?? 'unknown';
+                                final display = profile['displayName'] ?? profile['display_name'] ?? username;
+                                final avatar = profile['avatar'] ?? profile['avatar_url'];
+                                return ListTile(
+                                  leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
+                                  title: Text(display ?? 'Unnamed', style: GoogleFonts.inter()),
+                                  subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                                  onTap: () async {
+                                    Navigator.pop(sheetContext);
+                                    
+                                    try {
+                                      await BackendApiService().sharePostViaDM(
+                                        postId: _post!.id,
+                                        recipientWallet: walletAddr ?? username,
+                                        message: 'Check out this post!',
+                                      );
+                                      
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Shared post with @$username')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to share: $e')),
+                                        );
+                                      }
+                                    }
+                                  },
+                                );
+                              },
+                            ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRepostModal() {
+    if (_post == null || !mounted) return;
+    final theme = Theme.of(context);
+    final repostContentController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Repost', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Row(
+                      children: [
+                        TextButton(onPressed: () => Navigator.pop(sheetContext), child: Text('Cancel', style: GoogleFonts.inter())),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final content = repostContentController.text.trim();
+                            Navigator.pop(sheetContext);
+                            
+                            try {
+                              await BackendApiService().createRepost(
+                                originalPostId: _post!.id,
+                                content: content.isNotEmpty ? content : null,
+                              );
+
+                              if (mounted) {
+                                // Refresh post to potentially show updated share count
+                                if (widget.postId != null) {
+                                  await _fetchPost(widget.postId!);
+                                }
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(content.isEmpty ? 'Reposted!' : 'Reposted with comment!')),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to repost: $e')),
+                                );
+                              }
+                            }
+                          },
+                          child: Text('Repost', style: GoogleFonts.inter()),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextField(
+                        controller: repostContentController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Add your thoughts (optional)...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: theme.colorScheme.primaryContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Reposting:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(12),
+                          color: theme.colorScheme.surface,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                AvatarWidget(wallet: _post!.authorId, avatarUrl: _post!.authorAvatar, radius: 16, enableProfileNavigation: false),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(_post!.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                                      Text(_timeAgo(_post!.timestamp), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(_post!.content, style: GoogleFonts.inter(fontSize: 14), maxLines: 5, overflow: TextOverflow.ellipsis),
+                            if (_post!.imageUrl != null && _post!.imageUrl!.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(_post!.imageUrl!, fit: BoxFit.cover, height: 120, width: double.infinity),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPostDetailCard(CommunityPost post) {
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = scheme.onSurface;
+    final isRepost = (post.postType ?? '').toLowerCase() == 'repost';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildAuthorHeader(post),
+          const SizedBox(height: 16),
+          if (isRepost && post.content.isNotEmpty) ...[
+            Text(
+              post.content,
+              style: GoogleFonts.inter(fontSize: 15, height: 1.5, color: textColor),
+            ),
+            const SizedBox(height: 12),
+            Divider(color: scheme.outline.withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+          ],
+          if (isRepost)
+            post.originalPost != null
+                ? _buildOriginalPostCard(post.originalPost!)
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMissingOriginalNotice(),
+                      if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildPostImage(post.imageUrl!),
+                      ],
+                    ],
+                  )
+          else ...[
+            Text(
+              post.content,
+              style: GoogleFonts.inter(fontSize: 15, height: 1.5, color: textColor),
+            ),
+            if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildPostImage(post.imageUrl!),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAuthorHeader(CommunityPost post) {
+    final scheme = Theme.of(context).colorScheme;
+    final isCompact = MediaQuery.of(context).size.width < 360;
+    final handle = _formatAuthorHandle(post);
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AvatarWidget(
+          wallet: post.authorWallet ?? post.authorId,
+          avatarUrl: post.authorAvatar,
+          radius: 26,
+          allowFabricatedFallback: true,
+          enableProfileNavigation: true,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                post.authorName,
+                style: GoogleFonts.inter(
+                  fontSize: isCompact ? 15 : 17,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (handle.isNotEmpty)
+                Text(
+                  handle,
+                  style: GoogleFonts.inter(
+                    fontSize: isCompact ? 12 : 13,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          _timeAgo(post.timestamp),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatAuthorHandle(CommunityPost post) {
+    final username = post.authorUsername?.trim();
+    if (username != null && username.isNotEmpty) {
+      return '@$username';
+    }
+
+    final raw = (post.authorWallet ?? post.authorId).trim();
+    if (raw.isEmpty) return '';
+    if (raw.length <= 12) return raw;
+    return '${raw.substring(0, 6)}...${raw.substring(raw.length - 4)}';
+  }
+
+  Widget _buildOriginalPostCard(CommunityPost originalPost) {
+    final scheme = Theme.of(context).colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    final originalHandle = originalPost.authorUsername?.trim();
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => PostDetailScreen(post: originalPost)),
+        );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outline),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AvatarWidget(
+                  wallet: originalPost.authorWallet ?? originalPost.authorId,
+                  avatarUrl: originalPost.authorAvatar,
+                  radius: 18,
+                  allowFabricatedFallback: true,
+                  enableProfileNavigation: true,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        originalPost.authorName,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (originalHandle != null && originalHandle.isNotEmpty)
+                        Text(
+                          '@$originalHandle',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+                Text(
+                  _timeAgo(originalPost.timestamp),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: scheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              originalPost.content,
+              style: GoogleFonts.inter(fontSize: 14, height: 1.4, color: scheme.onSurface),
+            ),
+            if (originalPost.imageUrl != null && originalPost.imageUrl!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  originalPost.imageUrl!,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 180,
+                    color: themeProvider.accentColor.withValues(alpha: 0.1),
+                    child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissingOriginalNotice() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.history_toggle_off, color: scheme.onSurface.withValues(alpha: 0.7)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Original post is no longer available',
+              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPostImage(String imageUrl) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.network(
+        imageUrl,
+        height: 220,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: 220,
+          color: themeProvider.accentColor.withValues(alpha: 0.1),
+          child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailAction({
+    required IconData icon,
+    required String label,
+    VoidCallback? onTap,
+    bool highlight = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final color = highlight ? accent : scheme.onSurface.withValues(alpha: 0.7);
+
+    return Expanded(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              Icon(icon, color: color),
+              if (label.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: highlight ? FontWeight.w700 : FontWeight.w500,
+                    color: color,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Post', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!, style: GoogleFonts.inter()))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildPostDetailCard(_post!),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _buildDetailAction(
+                            icon: _post!.isLiked ? Icons.favorite : Icons.favorite_border,
+                            label: '${_post!.likeCount}',
+                            onTap: _toggleLike,
+                            highlight: _post!.isLiked,
+                          ),
+                          _buildDetailAction(
+                            icon: Icons.comment,
+                            label: '${_post!.commentCount}',
+                            onTap: () {
+                              FocusScope.of(context).requestFocus(_commentFocusNode);
+                            },
+                          ),
+                          _buildDetailAction(
+                            icon: Icons.repeat,
+                            label: '${_post!.shareCount}',
+                            onTap: () => _showRepostModal(),
+                          ),
+                          _buildDetailAction(
+                            icon: Icons.share,
+                            label: 'Share',
+                            onTap: () => _showShareModal(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Comments', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      if (_post!.comments.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8.0),
+                          child: EmptyStateCard(
+                            icon: Icons.comment_bank_outlined,
+                            title: 'No comments yet',
+                            description: 'Be the first to start the conversation',
+                          ),
+                        )
+                      else
+                        Column(
+                          children: _post!.comments.map((c) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  leading: CircleAvatar(
+                                    backgroundImage: c.authorAvatar != null && c.authorAvatar!.isNotEmpty ? NetworkImage(c.authorAvatar!) : null,
+                                    child: c.authorAvatar == null || c.authorAvatar!.isEmpty ? Text(c.authorName.isNotEmpty ? c.authorName[0] : '?') : null,
+                                  ),
+                                  title: Text(c.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(c.content, style: GoogleFonts.inter()),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            icon: Icon(c.isLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: c.isLiked ? Colors.red : Theme.of(context).iconTheme.color),
+                                            onPressed: () async {
+                                              // optimistic toggle
+                                              final prevLiked = c.isLiked;
+                                              final prevCount = c.likeCount;
+                                              setState(() {
+                                                c.isLiked = !c.isLiked;
+                                                c.likeCount = (c.likeCount + (c.isLiked ? 1 : -1)).clamp(0, 1 << 30);
+                                              });
+                                              try {
+                                                await CommunityService.toggleCommentLike(c, _post!.id);
+                                              } catch (e) {
+                                                // rollback
+                                                setState(() {
+                                                  c.isLiked = prevLiked;
+                                                  c.likeCount = prevCount;
+                                                });
+                                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+                                              }
+                                            },
+                                          ),
+                                          GestureDetector(
+                                            behavior: HitTestBehavior.opaque,
+                                            onTap: () => _showCommentLikes(c.id),
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                              child: Text('${c.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          TextButton(
+                                            onPressed: () {
+                                              setState(() {
+                                                _replyToCommentId = c.id;
+                                                _replyToAuthorName = c.authorName;
+                                              });
+                                              // prefill mention and focus
+                                              _commentController.text = '@${c.authorName} ';
+                                              _commentController.selection = TextSelection.fromPosition(TextPosition(offset: _commentController.text.length));
+                                              FocusScope.of(context).requestFocus(_commentFocusNode);
+                                            },
+                                            child: Text('Reply', style: GoogleFonts.inter(fontSize: 12)),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Replies
+                                if (c.replies.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.only(left: 56.0),
+                                    child: Column(
+                                      children: c.replies.map((r) {
+                                        return Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                          child: Row(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              CircleAvatar(radius: 12, backgroundImage: r.authorAvatar != null && r.authorAvatar!.isNotEmpty ? NetworkImage(r.authorAvatar!) : null, child: r.authorAvatar == null || r.authorAvatar!.isEmpty ? Text(r.authorName.isNotEmpty ? r.authorName[0] : '?', style: GoogleFonts.inter(fontSize: 12)) : null),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(r.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+                                                    const SizedBox(height: 2),
+                                                    Text(r.content, style: GoogleFonts.inter(fontSize: 14)),
+                                                    const SizedBox(height: 6),
+                                                    Row(
+                                                      children: [
+                                                        IconButton(
+                                                          padding: EdgeInsets.zero,
+                                                          constraints: const BoxConstraints(),
+                                                          icon: Icon(r.isLiked ? Icons.favorite : Icons.favorite_border, size: 14, color: r.isLiked ? Colors.red : Theme.of(context).iconTheme.color),
+                                                          onPressed: () async {
+                                                            final prevLiked = r.isLiked;
+                                                            final prevCount = r.likeCount;
+                                                            setState(() {
+                                                              r.isLiked = !r.isLiked;
+                                                              r.likeCount = (r.likeCount + (r.isLiked ? 1 : -1)).clamp(0, 1 << 30);
+                                                            });
+                                                            try {
+                                                              await CommunityService.toggleCommentLike(r, _post!.id);
+                                                            } catch (e) {
+                                                              setState(() {
+                                                                r.isLiked = prevLiked;
+                                                                r.likeCount = prevCount;
+                                                              });
+                                                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+                                                            }
+                                                          },
+                                                        ),
+                                                        GestureDetector(
+                                                          behavior: HitTestBehavior.opaque,
+                                                          onTap: () => _showCommentLikes(r.id),
+                                                          child: Padding(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                                            child: Text('${r.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(width: 12),
+                                                        TextButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              _replyToCommentId = r.id;
+                                                              _replyToAuthorName = r.authorName;
+                                                            });
+                                                            _commentController.text = '@${r.authorName} ';
+                                                            _commentController.selection = TextSelection.fromPosition(TextPosition(offset: _commentController.text.length));
+                                                            FocusScope.of(context).requestFocus(_commentFocusNode);
+                                                          },
+                                                          child: Text('Reply', style: GoogleFonts.inter(fontSize: 12)),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                const SizedBox(height: 8),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                      const SizedBox(height: 12),
+                      if (_replyToAuthorName != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              Expanded(child: Text('Replying to $_replyToAuthorName', style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)))),
+                              IconButton(icon: const Icon(Icons.close), onPressed: () { setState(() { _replyToAuthorName = null; _replyToCommentId = null; _commentController.clear(); }); }),
+                            ],
+                          ),
+                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _commentController,
+                              focusNode: _commentFocusNode,
+                              decoration: InputDecoration(
+                                hintText: 'Write a comment...',
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                isDense: true,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(onPressed: _submitComment, child: const Text('Send')),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+    );
+  }
+}

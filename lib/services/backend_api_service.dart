@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_keys.dart';
 import '../models/art_marker.dart';
 import '../models/artwork.dart';
+import '../models/community_group.dart';
 import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/search_suggestions.dart';
@@ -1471,17 +1472,40 @@ class BackendApiService {
     required String content,
     String? imageUrl,
     List<String>? mediaUrls,
+    List<String>? mediaCids,
     String? artworkId,
     String? postType,
+    String category = 'post',
+    List<String>? tags,
+    List<String>? mentions,
+    CommunityLocation? location,
+    String? locationName,
+    double? locationLat,
+    double? locationLng,
   }) async {
     try {
-      final requestBody = {
-        'content': content,
-        if (imageUrl != null) 'mediaUrls': [imageUrl],
-        if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
-        if (artworkId != null) 'artworkId': artworkId,
-        if (postType != null) 'postType': postType,
-      };
+      final aggregatedMedia = <String>[];
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        aggregatedMedia.add(imageUrl);
+      }
+      if (mediaUrls != null && mediaUrls.isNotEmpty) {
+        aggregatedMedia.addAll(mediaUrls.where((url) => url.trim().isNotEmpty));
+      }
+
+      final requestBody = _buildCommunityPostPayload(
+        content: content,
+        category: category,
+        mediaUrls: aggregatedMedia.isEmpty ? null : aggregatedMedia,
+        mediaCids: mediaCids,
+        artworkId: artworkId,
+        postType: postType,
+        tags: tags,
+        mentions: mentions,
+        location: location,
+        locationName: locationName,
+        locationLat: locationLat,
+        locationLng: locationLng,
+      );
       
       debugPrint('Creating post with body: $requestBody');
       
@@ -1501,8 +1525,9 @@ class BackendApiService {
           await UserActionLogger.logPostCreated(
             postId: createdPost.id,
             content: createdPost.content,
-            mediaUrls: mediaUrls ??
-                (createdPost.imageUrl != null ? <String>[createdPost.imageUrl!] : null),
+            mediaUrls: aggregatedMedia.isNotEmpty
+                ? aggregatedMedia
+                : (createdPost.imageUrl != null ? <String>[createdPost.imageUrl!] : null),
           );
         } catch (e) {
           debugPrint('UserActionLogger.logPostCreated failed: $e');
@@ -1576,6 +1601,241 @@ class BackendApiService {
       }
     } catch (e) {
       debugPrint('Error creating repost: $e');
+      rethrow;
+    }
+  }
+
+  /// Load art-centric feed filtered by geolocation
+  Future<List<CommunityPost>> getCommunityArtFeed({
+    required double latitude,
+    required double longitude,
+    double radiusKm = 3,
+    int limit = 20,
+  }) async {
+    try {
+      final params = <String, String>{
+        'lat': latitude.toString(),
+        'lng': longitude.toString(),
+        'radiusKm': radiusKm.toStringAsFixed(2),
+        'limit': limit.toString(),
+      };
+      final uri = Uri.parse('$baseUrl/api/community/art-feed').replace(queryParameters: params);
+      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
+      return posts
+          .map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('Error loading art feed: $e');
+      rethrow;
+    }
+  }
+
+  /// List community groups with pagination/search
+  Future<List<CommunityGroupSummary>> listCommunityGroups({
+    int page = 1,
+    int limit = 20,
+    String? search,
+  }) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      };
+      final uri = Uri.parse('$baseUrl/api/groups').replace(queryParameters: queryParams);
+      final jsonData = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final dynamic payload = jsonData['data'] ?? jsonData['groups'] ?? jsonData['results'];
+      final List<dynamic> rows;
+      if (payload is List) {
+        rows = payload;
+      } else if (payload is Map<String, dynamic> && payload['data'] is List) {
+        rows = payload['data'] as List<dynamic>;
+      } else {
+        rows = <dynamic>[];
+      }
+      return rows
+          .whereType<Map<String, dynamic>>()
+          .map(_communityGroupSummaryFromJson)
+          .toList();
+    } catch (e) {
+      debugPrint('Error listing community groups: $e');
+      rethrow;
+    }
+  }
+
+  /// Create a community group
+  Future<CommunityGroupSummary?> createCommunityGroup({
+    required String name,
+    String? description,
+    bool isPublic = true,
+    String? coverImage,
+  }) async {
+    try {
+      final body = {
+        'name': name,
+        if (description != null) 'description': description,
+        'isPublic': isPublic,
+        if (coverImage != null && coverImage.isNotEmpty) 'coverImage': coverImage,
+      };
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/groups'),
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+      );
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final payload = decoded['data'] ?? decoded['group'] ?? decoded;
+        if (payload is Map<String, dynamic>) {
+          return _communityGroupSummaryFromJson(payload);
+        }
+        return null;
+      }
+      throw Exception('Failed to create group: ${response.statusCode}');
+    } catch (e) {
+      debugPrint('Error creating group: $e');
+      rethrow;
+    }
+  }
+
+  /// Join a community group
+  Future<CommunityGroupSummary?> joinCommunityGroup(String groupId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/groups/$groupId/join'),
+        headers: _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final payload = decoded['data'];
+        if (payload is Map<String, dynamic>) {
+          return _communityGroupSummaryFromJson(payload);
+        }
+        return null;
+      }
+      throw Exception('Failed to join group: ${response.statusCode}');
+    } catch (e) {
+      debugPrint('Error joining group: $e');
+      rethrow;
+    }
+  }
+
+  /// Leave a community group
+  Future<CommunityGroupSummary?> leaveCommunityGroup(String groupId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/groups/$groupId/leave'),
+        headers: _getHeaders(),
+      );
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final payload = decoded['data'];
+        if (payload is Map<String, dynamic>) {
+          return _communityGroupSummaryFromJson(payload);
+        }
+        return null;
+      }
+      throw Exception('Failed to leave group: ${response.statusCode}');
+    } catch (e) {
+      debugPrint('Error leaving group: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch posts for a specific group
+  Future<List<CommunityPost>> getGroupPosts(
+    String groupId, {
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      final qp = {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+      final uri = Uri.parse('$baseUrl/api/groups/$groupId/posts').replace(queryParameters: qp);
+      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
+      final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
+      return posts
+          .map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('Error loading group posts: $e');
+      rethrow;
+    }
+  }
+
+  /// Create a post inside a group
+  Future<CommunityPost> createGroupPost(
+    String groupId, {
+    required String content,
+    String? imageUrl,
+    List<String>? mediaUrls,
+    List<String>? mediaCids,
+    String? artworkId,
+    String? postType,
+    String category = 'post',
+    List<String>? tags,
+    List<String>? mentions,
+    CommunityLocation? location,
+    String? locationName,
+    double? locationLat,
+    double? locationLng,
+  }) async {
+    try {
+      final aggregatedMedia = <String>[];
+      if (imageUrl != null && imageUrl.isNotEmpty) {
+        aggregatedMedia.add(imageUrl);
+      }
+      if (mediaUrls != null && mediaUrls.isNotEmpty) {
+        aggregatedMedia.addAll(mediaUrls.where((url) => url.trim().isNotEmpty));
+      }
+
+      final body = _buildCommunityPostPayload(
+        content: content,
+        category: category,
+        mediaUrls: aggregatedMedia.isEmpty ? null : aggregatedMedia,
+        mediaCids: mediaCids,
+        artworkId: artworkId,
+        postType: postType,
+        tags: tags,
+        mentions: mentions,
+        location: location,
+        locationName: locationName,
+        locationLat: locationLat,
+        locationLng: locationLng,
+      );
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/groups/$groupId/posts'),
+        headers: _getHeaders(),
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        final payload = decoded['data'] ?? decoded['post'] ?? decoded;
+        if (payload is Map<String, dynamic>) {
+          final created = _communityPostFromBackendJson(payload);
+          try {
+            await UserActionLogger.logPostCreated(
+              postId: created.id,
+              content: created.content,
+              mediaUrls: aggregatedMedia.isNotEmpty
+                  ? aggregatedMedia
+                  : (created.imageUrl != null ? <String>[created.imageUrl!] : null),
+            );
+          } catch (e) {
+            debugPrint('UserActionLogger.logPostCreated (group) failed: $e');
+          }
+          return created;
+        }
+        throw Exception('Unexpected group post payload');
+      }
+      throw Exception('Failed to create group post: ${response.statusCode} - ${response.body}');
+    } catch (e) {
+      debugPrint('Error creating group post: $e');
       rethrow;
     }
   }
@@ -3629,7 +3889,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   );
 }
 
-String? _normalizeBackendAvatarUrl(String? raw) {
+String? _normalizeBackendMediaUrl(String? raw) {
   if (raw == null) return null;
   var candidate = raw.trim();
   if (candidate.isEmpty) return null;
@@ -3655,6 +3915,7 @@ String? _normalizeBackendAvatarUrl(String? raw) {
 
 CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
   final wallet = json['walletAddress'] as String? ?? json['wallet_address'] as String?;
+
   final username = json['username'] as String?;
   final displayName = json['displayName'] as String?
       ?? json['display_name'] as String?
@@ -3680,6 +3941,75 @@ CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
   );
 }
 
+
+String? _normalizeBackendAvatarUrl(String? raw) => _normalizeBackendMediaUrl(raw);
+
+Map<String, dynamic> _buildCommunityPostPayload({
+  required String content,
+  String category = 'post',
+  List<String>? mediaUrls,
+  List<String>? mediaCids,
+  String? artworkId,
+  String? postType,
+  List<String>? tags,
+  List<String>? mentions,
+  CommunityLocation? location,
+  String? locationName,
+  double? locationLat,
+  double? locationLng,
+}) {
+  final payload = <String, dynamic>{
+    'content': content,
+    'category': category,
+    if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
+    if (mediaCids != null && mediaCids.isNotEmpty) 'mediaCids': mediaCids,
+    if (artworkId != null) 'artworkId': artworkId,
+    if (postType != null) 'postType': postType,
+    if (tags != null && tags.isNotEmpty) 'tags': tags,
+    if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,
+  };
+
+  final hasLocationData = location != null ||
+      locationLat != null ||
+      locationLng != null ||
+      (locationName != null && locationName.isNotEmpty);
+
+  if (hasLocationData) {
+    final effectiveLocation = location ??
+        CommunityLocation(
+          name: locationName,
+          lat: locationLat,
+          lng: locationLng,
+        );
+
+    final locPayload = <String, dynamic>{
+      if (effectiveLocation.name != null && effectiveLocation.name!.isNotEmpty)
+        'name': effectiveLocation.name,
+      if (effectiveLocation.lat != null) 'lat': effectiveLocation.lat,
+      if (effectiveLocation.lng != null) 'lng': effectiveLocation.lng,
+    };
+    if (locPayload.isNotEmpty) {
+      payload['location'] = locPayload;
+    }
+
+    final resolvedName = (locationName != null && locationName.isNotEmpty)
+        ? locationName
+        : effectiveLocation.name;
+    if (resolvedName != null && resolvedName.isNotEmpty) {
+      payload['locationName'] = resolvedName;
+    }
+    final resolvedLat = locationLat ?? effectiveLocation.lat;
+    if (resolvedLat != null) {
+      payload['locationLat'] = resolvedLat;
+    }
+    final resolvedLng = locationLng ?? effectiveLocation.lng;
+    if (resolvedLng != null) {
+      payload['locationLng'] = resolvedLng;
+    }
+  }
+
+  return payload;
+}
 CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   // Extract nested author object if present - can be a map or a string (wallet address)
   final authorRaw = json['author'];
@@ -3703,6 +4033,93 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
       ?? json['walletAddress'] as String?
       ?? json['wallet'] as String?
       ?? (authorRaw is String ? authorRaw : null);
+
+  final dynamic mediaPayload = json['mediaUrls'] ?? json['media_urls'];
+  final List<String> mediaUrls = mediaPayload is List
+      ? mediaPayload
+          .map((entry) => entry?.toString())
+          .whereType<String>()
+          .where((value) => value.isNotEmpty)
+          .toList()
+      : <String>[];
+
+  final mentionsPayload = json['mentions'] ?? json['mentionHandles'];
+  final List<String> mentions = mentionsPayload is List
+      ? mentionsPayload.map((entry) => entry?.toString()).whereType<String>().toList()
+      : <String>[];
+
+  final String resolvedCategory = (json['category'] as String?)?.toLowerCase() ?? 'post';
+
+  CommunityLocation? locationMeta;
+  final locationJson = json['location'];
+  if (locationJson is Map<String, dynamic>) {
+    final latCandidate = locationJson['lat'] ?? locationJson['latitude'];
+    final lngCandidate = locationJson['lng'] ?? locationJson['longitude'];
+    if (locationJson['name'] != null || latCandidate != null || lngCandidate != null) {
+      locationMeta = CommunityLocation(
+        name: locationJson['name']?.toString(),
+        lat: (latCandidate is num) ? latCandidate.toDouble() : double.tryParse(latCandidate?.toString() ?? ''),
+        lng: (lngCandidate is num) ? lngCandidate.toDouble() : double.tryParse(lngCandidate?.toString() ?? ''),
+      );
+    }
+  } else if (json['locationName'] != null || json['location_name'] != null || json['location_lat'] != null || json['locationLng'] != null) {
+    final latCandidate = json['locationLat'] ?? json['location_lat'];
+    final lngCandidate = json['locationLng'] ?? json['location_lng'];
+    locationMeta = CommunityLocation(
+      name: (json['locationName'] ?? json['location_name'])?.toString(),
+      lat: (latCandidate is num) ? latCandidate.toDouble() : double.tryParse(latCandidate?.toString() ?? ''),
+      lng: (lngCandidate is num) ? lngCandidate.toDouble() : double.tryParse(lngCandidate?.toString() ?? ''),
+    );
+  }
+
+  CommunityGroupReference? groupRef;
+  final groupJson = json['group'];
+  if (groupJson is Map<String, dynamic>) {
+    final groupId = (groupJson['id'] ?? groupJson['groupId'] ?? groupJson['group_id'])?.toString();
+    if (groupId != null && groupId.isNotEmpty) {
+      final groupName = (groupJson['name'] ?? groupJson['groupName'])?.toString() ?? 'Community Group';
+      groupRef = CommunityGroupReference(
+        id: groupId,
+        name: groupName,
+        slug: groupJson['slug']?.toString(),
+        coverImage: groupJson['coverImage']?.toString() ?? groupJson['cover_image']?.toString(),
+        description: groupJson['description']?.toString(),
+      );
+    }
+  } else {
+    final fallbackGroupId = (json['groupId'] ?? json['group_id'])?.toString();
+    if (fallbackGroupId != null && fallbackGroupId.isNotEmpty) {
+      groupRef = CommunityGroupReference(
+        id: fallbackGroupId,
+        name: (json['groupName'] ?? json['group_name'] ?? 'Community Group').toString(),
+        slug: json['groupSlug']?.toString() ?? json['group_slug']?.toString(),
+        coverImage: json['groupCover']?.toString() ?? json['group_cover']?.toString(),
+        description: json['groupDescription']?.toString() ?? json['group_description']?.toString(),
+      );
+    }
+  }
+
+  CommunityArtworkReference? artworkRef;
+  final artworkJson = json['artwork'];
+  if (artworkJson is Map<String, dynamic>) {
+    final artworkId = (artworkJson['id'] ?? artworkJson['artworkId'])?.toString();
+    if (artworkId != null && artworkId.isNotEmpty) {
+      artworkRef = CommunityArtworkReference(
+        id: artworkId,
+        title: (artworkJson['title'] ?? 'Artwork').toString(),
+        imageUrl: artworkJson['imageUrl']?.toString() ?? artworkJson['image_url']?.toString(),
+      );
+    }
+  } else {
+    final fallbackArtworkId = json['artworkId']?.toString();
+    if (fallbackArtworkId != null && fallbackArtworkId.isNotEmpty) {
+      artworkRef = CommunityArtworkReference(
+        id: fallbackArtworkId,
+        title: (json['artworkTitle'] ?? json['artwork_title'] ?? 'Artwork').toString(),
+        imageUrl: json['artworkImage']?.toString() ?? json['artwork_image']?.toString(),
+      );
+    }
+  }
 
   // Parse original post for reposts
   CommunityPost? originalPost;
@@ -3735,18 +4152,23 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
     authorUsername: rawUsername,
     content: json['content'] as String,
-    imageUrl: json['imageUrl'] as String? ?? 
-              (json['mediaUrls'] != null && (json['mediaUrls'] as List).isNotEmpty 
-                ? (json['mediaUrls'] as List).first as String? 
-                : null),
+    imageUrl: json['imageUrl'] as String? ?? (mediaUrls.isNotEmpty ? mediaUrls.first : null),
+    mediaUrls: mediaUrls,
     timestamp: json['createdAt'] != null 
       ? DateTime.parse(json['createdAt'] as String)
       : (json['timestamp'] != null 
         ? DateTime.parse(json['timestamp'] as String)
         : DateTime.now()),
     tags: json['tags'] != null 
-      ? (json['tags'] as List<dynamic>).map((e) => e as String).toList()
+      ? (json['tags'] as List<dynamic>).map((e) => e.toString()).toList()
       : [],
+    mentions: mentions,
+    category: resolvedCategory,
+    location: locationMeta,
+    group: groupRef,
+    groupId: (json['groupId'] as String?) ?? (json['group_id'] as String?) ?? groupRef?.id,
+    artwork: artworkRef,
+    distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? (json['distance_km'] as num?)?.toDouble(),
     postType: json['postType'] as String?,
     originalPostId: json['originalPostId'] as String?,
     originalPost: originalPost,
@@ -3757,6 +4179,62 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     isLiked: json['isLiked'] as bool? ?? false,
     isBookmarked: json['isBookmarked'] as bool? ?? false,
     isFollowing: json['isFollowing'] as bool? ?? false,
+  );
+}
+
+GroupPostPreview? _groupPostPreviewFromJson(dynamic raw) {
+  if (raw is! Map<String, dynamic>) {
+    return null;
+  }
+  final id = (raw['id'] ?? raw['postId'] ?? raw['post_id'])?.toString();
+  if (id == null || id.isEmpty) {
+    return null;
+  }
+  DateTime? createdAt;
+  final createdAtRaw = raw['createdAt'] ?? raw['created_at'];
+  if (createdAtRaw is String) {
+    createdAt = DateTime.tryParse(createdAtRaw);
+  }
+  return GroupPostPreview(
+    id: id,
+    content: raw['content']?.toString(),
+    createdAt: createdAt,
+  );
+}
+
+CommunityGroupSummary _communityGroupSummaryFromJson(Map<String, dynamic> json) {
+  final id = (json['id'] ?? json['groupId'] ?? json['group_id'])?.toString();
+  if (id == null || id.isEmpty) {
+    throw Exception('Invalid group payload: missing id');
+  }
+  GroupPostPreview? latestPost;
+  if (json['latestPost'] is Map<String, dynamic>) {
+    latestPost = _groupPostPreviewFromJson(json['latestPost']);
+  } else if (json['latest_post_id'] != null) {
+    latestPost = _groupPostPreviewFromJson({
+      'id': json['latest_post_id'],
+      'content': json['latest_post_content'],
+      'createdAt': json['latest_post_created_at'],
+    });
+  }
+
+  return CommunityGroupSummary(
+    id: id,
+    name: (json['name'] ?? 'Community Group').toString(),
+    slug: json['slug']?.toString(),
+    description: json['description']?.toString(),
+    coverImage: _normalizeBackendMediaUrl(
+      json['coverImage']?.toString() ?? json['cover_image']?.toString(),
+    ),
+    isPublic: json['isPublic'] as bool? ?? json['is_public'] as bool? ?? true,
+    ownerWallet: (json['ownerWallet'] ?? json['owner_wallet'] ?? '').toString(),
+    memberCount: (json['memberCount'] as num?)?.toInt() ??
+        (json['member_count'] as num?)?.toInt() ??
+        (json['member_count_cached'] as num?)?.toInt() ??
+        0,
+    isMember: json['isMember'] as bool? ?? json['is_member'] as bool? ?? false,
+    isOwner: json['isOwner'] as bool? ?? json['is_owner'] as bool? ?? false,
+    latestPost: latestPost,
   );
 }
 

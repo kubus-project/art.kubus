@@ -11,13 +11,14 @@ import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../models/wallet.dart';
 import '../widgets/platform_aware_widgets.dart';
-import '../web3/wallet/wallet_home.dart' as web3_wallet;
-import 'connectwallet_screen.dart';
+import 'web3/wallet/wallet_home.dart' as web3_wallet;
+import 'web3/wallet/connectwallet_screen.dart';
 import 'onboarding_reset_screen.dart';
-import 'profile_edit_screen.dart';
+import 'community/profile_edit_screen.dart';
 import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
-import 'mnemonic_reveal_screen.dart';
+import 'web3/wallet/mnemonic_reveal_screen.dart';
+import '../utils/app_animations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -31,6 +32,25 @@ class _SettingsScreenState extends State<SettingsScreen>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  bool _didAnimateEntrance = false;
+
+  static const List<_ProfileVisibilityOption> _profileVisibilityOptions = [
+    _ProfileVisibilityOption(
+      value: 'Public',
+      label: 'Public',
+      description: 'Anyone can see your profile',
+    ),
+    _ProfileVisibilityOption(
+      value: 'Private',
+      label: 'Private',
+      description: 'Only you can see your profile',
+    ),
+    _ProfileVisibilityOption(
+      value: 'Friends Only',
+      label: 'Friends Only',
+      description: 'Only friends can see your profile',
+    ),
+  ];
 
   // Profile settings state
   String _profileVisibility = 'Public';
@@ -75,29 +95,44 @@ class _SettingsScreenState extends State<SettingsScreen>
   @override
   void initState() {
     super.initState();
+    final animationTheme = AppAnimationTheme.defaults;
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: animationTheme.long,
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
-    
-    _animationController.forward();
+    _configureAnimations(animationTheme);
     _loadAllSettings();
+  }
+
+  void _configureAnimations(AppAnimationTheme animationTheme) {
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: animationTheme.fadeCurve,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.06),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.defaultCurve,
+      ),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final animationTheme = context.animationTheme;
+    if (_animationController.duration != animationTheme.long) {
+      _animationController.duration = animationTheme.long;
+    }
+    _configureAnimations(animationTheme);
+    if (!_didAnimateEntrance) {
+      _didAnimateEntrance = true;
+      _animationController.forward(from: 0);
+    }
   }
 
   @override
@@ -1868,37 +1903,39 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showResetPermissionFlagsDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           'Reset Permission Flags',
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'This will clear the app\'s stored permission and service request flags. Use this to re-trigger permission prompts if needed.',
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text('Cancel', style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.outline)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            ),
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.of(dialogContext).pop();
               await _resetPermissionFlags();
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Permission flags reset')),
               );
             },
-            child: Text('Reset', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text('Reset', style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -2058,28 +2095,28 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showDeleteAccountDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
           'Delete Account',
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           'This action cannot be undone. All your data will be permanently deleted.',
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(
               'Cancel',
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.outline,
+                color: Theme.of(dialogContext).colorScheme.outline,
               ),
             ),
           ),
@@ -2091,36 +2128,35 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () async {
               // Show confirmation dialog — ensure mounted before calling showDialog
               if (!mounted) return;
-              final dialogContext = context;
-              final navigator = Navigator.of(dialogContext);
-              final messenger = ScaffoldMessenger.of(dialogContext);
+              final dialogNavigator = Navigator.of(dialogContext);
+              final messenger = ScaffoldMessenger.of(context);
               final confirmed = await showDialog<bool>(
                 context: dialogContext,
-                builder: (context) => AlertDialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
+                builder: (confirmContext) => AlertDialog(
+                  backgroundColor: Theme.of(confirmContext).colorScheme.surface,
                   title: Text(
                     'Final Confirmation',
                     style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Theme.of(confirmContext).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   content: Text(
                     'Type "DELETE" to confirm permanent account deletion.',
                     style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: Theme.of(confirmContext).colorScheme.onSurface,
                     ),
                   ),
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () => Navigator.pop(confirmContext, false),
                       child: Text('Cancel', style: GoogleFonts.inter()),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pop(context, true),
+                      onPressed: () => Navigator.pop(confirmContext, true),
                       child: Text(
                         'Confirm',
-                        style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
+                        style: GoogleFonts.inter(color: Theme.of(confirmContext).colorScheme.error),
                       ),
                     ),
                   ],
@@ -2134,13 +2170,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await prefs.clear();
 
                 // Disconnect wallet
-                final web3Provider = Provider.of<Web3Provider>(dialogContext, listen: false);
+                if (!mounted) return;
+                final web3Provider = Provider.of<Web3Provider>(context, listen: false);
                 if (web3Provider.isConnected) {
                   web3Provider.disconnectWallet();
                 }
 
                 if (!mounted) return;
-                navigator.pop();
+                dialogNavigator.pop();
                 messenger.showSnackBar(
                   const SnackBar(
                     content: Text('Account deleted. All data has been removed.'),
@@ -2149,7 +2186,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 );
               } else {
                 if (!mounted) return;
-                navigator.pop();
+                dialogNavigator.pop();
               }
             },
             child: const Text('Delete Forever'),
@@ -2188,6 +2225,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   // Load all settings
   Future<void> _loadAllSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     
     setState(() {
@@ -2795,104 +2833,150 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
+  Widget _buildVisibilityOptionTile({
+    required BuildContext context,
+    required _ProfileVisibilityOption option,
+    required Color accentColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: AnimatedContainer(
+        duration: context.animationTheme.short,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.colorScheme.primaryContainer.withValues(alpha: 0.6)
+              : theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? accentColor : theme.colorScheme.outlineVariant,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: theme.colorScheme.shadow.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: context.animationTheme.short,
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? accentColor : theme.colorScheme.outline,
+                  width: 2,
+                ),
+              ),
+              child: AnimatedContainer(
+                duration: context.animationTheme.short,
+                margin: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? accentColor : Colors.transparent,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    option.label,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    option.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                Icons.check_circle,
+                color: accentColor,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Profile Settings Dialog Methods
   void _showProfileVisibilityDialog() {
     String selectedVisibility = _profileVisibility;
-    
+    final accentColor = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (innerContext, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             'Profile Visibility',
             style: GoogleFonts.inter(
-              color: Theme.of(context).colorScheme.onSurface,
+              color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: [
-              RadioListTile<String>(
-                title: Text(
-                  'Public',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface,
+            children: _profileVisibilityOptions
+                .map(
+                  (option) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _buildVisibilityOptionTile(
+                      context: innerContext,
+                      option: option,
+                      accentColor: accentColor,
+                      isSelected: option.value == selectedVisibility,
+                      onTap: () => setDialogState(() => selectedVisibility = option.value),
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  'Anyone can see your profile',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                value: 'Public',
-                groupValue: selectedVisibility,
-                onChanged: (value) => setDialogState(() => selectedVisibility = value!),
-              ),
-              RadioListTile<String>(
-                title: Text(
-                  'Private',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                subtitle: Text(
-                  'Only you can see your profile',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                value: 'Private',
-                groupValue: selectedVisibility,
-                onChanged: (value) => setDialogState(() => selectedVisibility = value!),
-              ),
-              RadioListTile<String>(
-                title: Text(
-                  'Friends Only',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                subtitle: Text(
-                  'Only friends can see your profile',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                  ),
-                ),
-                value: 'Friends Only',
-                groupValue: selectedVisibility,
-                onChanged: (value) => setDialogState(() => selectedVisibility = value!),
-              ),
-            ],
+                )
+                .toList(),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.outline,
+                  color: Theme.of(innerContext).colorScheme.outline,
                 ),
               ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                backgroundColor: accentColor,
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final dialogContext = context;
                 final navigator = Navigator.of(dialogContext);
-                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {
                   _profileVisibility = selectedVisibility;
                 });
                 await _saveProfileVisibility(selectedVisibility);
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Profile visibility set to $selectedVisibility')),
                 );
               },
@@ -2907,13 +2991,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showPrivacySettingsDialog() {
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (innerContext, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             'Privacy Settings',
             style: GoogleFonts.inter(
-              color: Theme.of(context).colorScheme.onSurface,
+              color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -2955,11 +3039,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.outline,
+                  color: Theme.of(innerContext).colorScheme.outline,
                 ),
               ),
             ),
@@ -2969,14 +3053,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final dialogContext = context;
                 final navigator = Navigator.of(dialogContext);
-                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {}); // Update main state
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Privacy settings updated')),
                 );
               },
@@ -2991,13 +3073,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   void _showSecuritySettingsDialog() {
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (innerContext, setDialogState) => AlertDialog(
+          backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
             'Security Settings',
             style: GoogleFonts.inter(
-              color: Theme.of(context).colorScheme.onSurface,
+              color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -3012,7 +3094,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     'Update your account password',
                     Icons.lock_outline,
                     () {
-                      Navigator.pop(context);
+                      Navigator.pop(innerContext);
                       _showChangePasswordDialog();
                     },
                   ),
@@ -3047,11 +3129,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: Text(
                 'Cancel',
                 style: GoogleFonts.inter(
-                  color: Theme.of(context).colorScheme.outline,
+                  color: Theme.of(innerContext).colorScheme.outline,
                 ),
               ),
             ),
@@ -3061,14 +3143,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                 foregroundColor: Colors.white,
               ),
               onPressed: () async {
-                final dialogContext = context;
                 final navigator = Navigator.of(dialogContext);
-                final messenger = ScaffoldMessenger.of(dialogContext);
                 setState(() {}); // Update main state
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Security settings updated')),
                 );
               },
@@ -3320,4 +3400,16 @@ class _SettingsScreenState extends State<SettingsScreen>
       ),
     );
   }
+}
+
+class _ProfileVisibilityOption {
+  final String value;
+  final String label;
+  final String description;
+
+  const _ProfileVisibilityOption({
+    required this.value,
+    required this.label,
+    required this.description,
+  });
 }

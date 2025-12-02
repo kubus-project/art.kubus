@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
-import '../screens/user_profile_screen.dart';
+import '../screens/community/user_profile_screen.dart';
 import '../utils/wallet_utils.dart';
 
 class AvatarWidget extends StatefulWidget {

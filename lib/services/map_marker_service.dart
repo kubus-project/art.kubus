@@ -23,10 +23,11 @@ class MapMarkerService {
   LatLng? _lastQueryCenter;
   double _lastQueryRadiusKm = 5.0;
   DateTime? _lastFetchTime;
-  static const Duration _cacheTtl = Duration(minutes: 10);
-  static const Duration _rateLimitBackoff = Duration(minutes: 15);
+  static const Duration _cacheTtl = Duration(minutes: 15); // Increased from 10 to 15 minutes
+  static const Duration _rateLimitBackoff = Duration(minutes: 30); // Increased from 15 to 30 minutes
   DateTime? _rateLimitUntil;
   final Distance _distance = const Distance();
+  bool _isFetching = false; // Prevent concurrent fetches
 
   bool _canReuseCache(LatLng center, double radiusKm) {
     if (_cachedMarkers.isEmpty ||
@@ -45,8 +46,9 @@ class MapMarkerService {
       center,
     );
 
+    // More lenient cache reuse - 35% of radius instead of 25%
     final radiusDelta = (_lastQueryRadiusKm - radiusKm).abs();
-    return centerDelta <= radiusKm * 0.25 && radiusDelta <= 1.0;
+    return centerDelta <= radiusKm * 0.35 && radiusDelta <= 2.0;
   }
 
   Future<List<ArtMarker>> loadMarkers({
@@ -56,6 +58,12 @@ class MapMarkerService {
   }) async {
     _ensureSocketBridge();
 
+    // Prevent concurrent fetches
+    if (_isFetching) {
+      debugPrint('MapMarkerService: Already fetching, returning cached markers');
+      return List<ArtMarker>.from(_cachedMarkers);
+    }
+
     if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
       debugPrint(
           'MapMarkerService: using cache during rate-limit cooldown (until $_rateLimitUntil)');
@@ -63,10 +71,14 @@ class MapMarkerService {
     }
 
     if (!forceRefresh && _canReuseCache(center, radiusKm)) {
+      debugPrint('MapMarkerService: using cached markers (${_cachedMarkers.length} items)');
       return List<ArtMarker>.from(_cachedMarkers);
     }
 
     try {
+      _isFetching = true;
+      debugPrint('MapMarkerService: Fetching markers from backend...');
+      
       final markers = await _backendApi.getNearbyArtMarkers(
         latitude: center.latitude,
         longitude: center.longitude,
@@ -80,14 +92,18 @@ class MapMarkerService {
       _lastQueryCenter = center;
       _lastQueryRadiusKm = radiusKm;
       _lastFetchTime = DateTime.now();
+      
+      debugPrint('MapMarkerService: Successfully fetched ${markers.length} markers');
     } catch (e) {
       final message = e.toString().toLowerCase();
-      if (message.contains('rate limit')) {
+      if (message.contains('rate limit') || message.contains('429') || message.contains('too many')) {
         _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
         debugPrint(
             'MapMarkerService: rate-limited, backing off until $_rateLimitUntil');
       }
       debugPrint('MapMarkerService: falling back to cached markers after error: $e');
+    } finally {
+      _isFetching = false;
     }
 
     return List<ArtMarker>.from(_cachedMarkers);

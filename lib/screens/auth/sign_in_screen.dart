@@ -13,7 +13,7 @@ import '../../widgets/app_logo.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
-import '../connectwallet_screen.dart';
+import '../web3/wallet/connectwallet_screen.dart';
 import 'register_screen.dart';
 
 class SignInScreen extends StatefulWidget {

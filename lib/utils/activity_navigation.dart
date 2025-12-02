@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../models/recent_activity.dart';
-import '../screens/post_detail_screen.dart';
-import '../screens/art_detail_screen.dart';
-import '../screens/user_profile_screen.dart';
-import '../screens/saved_items_screen.dart';
-import '../web3/wallet/wallet_home.dart';
-import '../web3/achievements/achievements_page.dart';
-import '../web3/marketplace/marketplace.dart';
+import '../screens/community/post_detail_screen.dart';
+import '../screens/art/art_detail_screen.dart';
+import '../screens/community/user_profile_screen.dart';
+import '../screens/activity/saved_items_screen.dart';
+import '../screens/web3/wallet/wallet_home.dart';
+import '../screens/web3/achievements/achievements_page.dart';
+import '../screens/web3/marketplace/marketplace.dart';
 
 class ActivityNavigation {
   ActivityNavigation._();

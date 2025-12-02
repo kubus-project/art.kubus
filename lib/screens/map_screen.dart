@@ -29,9 +29,9 @@ import '../services/push_notification_service.dart';
 import '../services/achievement_service.dart';
 import '../models/art_marker.dart';
 import '../widgets/art_marker_cube.dart';
-import 'art_detail_screen.dart';
-import 'ar_screen.dart';
-import 'user_profile_screen.dart';
+import 'art/art_detail_screen.dart';
+import 'art/ar_screen.dart';
+import 'community/user_profile_screen.dart';
 import '../utils/grid_utils.dart';
 import '../utils/marker_subject_utils.dart';
 import '../providers/tile_providers.dart';
@@ -116,8 +116,9 @@ class _MapScreenState extends State<MapScreen>
   final Distance _distanceCalculator = const Distance();
   LatLng? _lastMarkerFetchCenter;
   DateTime? _lastMarkerFetchTime;
-  static const double _markerRefreshDistanceMeters = 800;
-  static const Duration _markerRefreshInterval = Duration(seconds: 150);
+  static const double _markerRefreshDistanceMeters = 1200; // Increased to reduce API calls
+  static const Duration _markerRefreshInterval = Duration(minutes: 5); // Increased from 150s to 5 min
+  bool _isLoadingMarkers = false; // Prevent concurrent fetches
 
   @override
   void initState() {
@@ -286,9 +287,16 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _loadArtMarkers({LatLng? center, bool forceRefresh = false}) async {
+    // Prevent concurrent fetches
+    if (_isLoadingMarkers) {
+      debugPrint('MapScreen: Skipping marker fetch - already loading');
+      return;
+    }
+
     final queryCenter = center ?? _currentPosition ?? _cameraCenter;
 
     try {
+      _isLoadingMarkers = true;
       final markers = await _mapMarkerService.loadMarkers(
         center: queryCenter,
         radiusKm: 5.0,
@@ -306,6 +314,8 @@ class _MapScreenState extends State<MapScreen>
       debugPrint('Loaded ${markers.length} art markers from backend');
     } catch (e) {
       debugPrint('Error loading art markers from backend: $e');
+    } finally {
+      _isLoadingMarkers = false;
     }
   }
 
@@ -353,14 +363,30 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _maybeRefreshMarkers(LatLng center, {bool force = false}) async {
+    // Skip if already loading
+    if (_isLoadingMarkers) return;
+
     final lastFetch = _lastMarkerFetchTime;
     final lastCenter = _lastMarkerFetchCenter;
-    final bool timeElapsed =
-        lastFetch == null || DateTime.now().difference(lastFetch) >= _markerRefreshInterval;
+    final now = DateTime.now();
+
+    // Check if enough time has passed since last fetch
+    final bool timeElapsed = lastFetch == null || 
+        now.difference(lastFetch) >= _markerRefreshInterval;
+    
+    // Check if user moved significantly from last fetch location
     final bool movedEnough = lastCenter == null ||
         _distanceCalculator.as(LengthUnit.Meter, center, lastCenter) >= _markerRefreshDistanceMeters;
 
-    if (force || (movedEnough && timeElapsed)) {
+    // Only refresh if:
+    // 1. Force refresh requested, OR
+    // 2. Moved enough AND time elapsed (both conditions must be true), OR
+    // 3. No markers loaded yet and no recent attempt
+    final bool noMarkersYet = _artMarkers.isEmpty && 
+        (lastFetch == null || now.difference(lastFetch) >= const Duration(seconds: 30));
+
+    if (force || (movedEnough && timeElapsed) || noMarkersYet) {
+      debugPrint('MapScreen: Refreshing markers (force=$force, moved=$movedEnough, timeElapsed=$timeElapsed, noMarkers=$noMarkersYet)');
       await _loadArtMarkers(center: center, forceRefresh: force);
     }
   }
@@ -406,8 +432,25 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _queueMarkerRefresh(LatLng center, {required bool fromGesture}) {
+    // Only queue refresh if markers are empty or it's been a while since last fetch
+    // This prevents excessive API calls during map panning
+    final lastFetch = _lastMarkerFetchTime;
+    final timeSinceLastFetch = lastFetch != null 
+        ? DateTime.now().difference(lastFetch) 
+        : const Duration(days: 1);
+    
+    // Skip queuing if we recently fetched and have markers
+    if (_artMarkers.isNotEmpty && timeSinceLastFetch < const Duration(minutes: 2)) {
+      return;
+    }
+
     _markerRefreshDebounce?.cancel();
-    _markerRefreshDebounce = Timer(fromGesture ? const Duration(milliseconds: 500) : const Duration(milliseconds: 300), () {
+    // Use longer debounce for gestures to avoid spam during panning
+    final debounceTime = fromGesture 
+        ? const Duration(seconds: 2) 
+        : const Duration(milliseconds: 800);
+    
+    _markerRefreshDebounce = Timer(debounceTime, () {
       _markerRefreshDebounce = null;
       unawaited(_maybeRefreshMarkers(center, force: false));
     });
@@ -1516,10 +1559,14 @@ class _MapScreenState extends State<MapScreen>
         } catch (_) {}
         final shouldCenter = !fromTimer;
         _updateCurrentPosition(resolvedPosition, shouldCenter: shouldCenter);
-        await _maybeRefreshMarkers(
-          resolvedPosition,
-          force: _artMarkers.isEmpty || !fromTimer,
-        );
+        // Only force refresh on initial load (when no markers exist)
+        // Timer-based calls should respect the cache/throttling logic
+        if (!fromTimer || _artMarkers.isEmpty) {
+          await _maybeRefreshMarkers(
+            resolvedPosition,
+            force: false, // Let _maybeRefreshMarkers handle the logic
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error getting location: $e');
@@ -1619,8 +1666,9 @@ class _MapScreenState extends State<MapScreen>
       _animateMapTo(position, zoom: targetZoom, rotation: rotation);
     }
 
-    // Ensure markers are loaded if we have a position now
-    if (_artMarkers.isEmpty) {
+    // Only load markers on initial position, not every update
+    // Subsequent refreshes are handled by _queueMarkerRefresh
+    if (isInitial && _artMarkers.isEmpty && !_isLoadingMarkers) {
       _loadArtMarkers();
     }
   }
@@ -2673,28 +2721,76 @@ class _MapScreenState extends State<MapScreen>
 
   Widget _buildEmptyState(ThemeData theme) {
     final scheme = theme.colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.image_not_supported,
-              size: 48, color: scheme.onSurfaceVariant),
-          const SizedBox(height: 12),
-          Text(
-            'No artworks nearby yet',
-            style:
-                GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Try zooming out, switching filters, or move closer to an art cluster.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.outfit(
-              color: scheme.onSurfaceVariant,
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: scheme.outlineVariant.withValues(alpha: 0.3),
+              width: 1,
             ),
           ),
-        ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: themeProvider.accentColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.explore_outlined,
+                  size: 40,
+                  color: themeProvider.accentColor,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'No artworks nearby',
+                style: GoogleFonts.outfit(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Explore different areas or adjust your filters to discover art around you.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.outfit(
+                  fontSize: 14,
+                  color: scheme.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _EmptyStateChip(
+                    icon: Icons.zoom_out_map,
+                    label: 'Zoom out',
+                    color: themeProvider.accentColor,
+                  ),
+                  const SizedBox(width: 8),
+                  _EmptyStateChip(
+                    icon: Icons.filter_alt_outlined,
+                    label: 'Adjust filters',
+                    color: scheme.tertiary,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -3113,6 +3209,48 @@ class _InfoChip extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: foregroundColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyStateChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _EmptyStateChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.outfit(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
             ),
           ),
         ],

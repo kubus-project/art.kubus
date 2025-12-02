@@ -8,6 +8,7 @@ import 'package:solana/solana.dart';
 import 'package:solana/encoder.dart';
 import 'package:solana/metaplex.dart';
 import '../config/api_keys.dart';
+import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
 
 enum DerivationPathType { standard, legacy }
@@ -53,7 +54,8 @@ class SolanaWalletService {
     WalletUtils.canonical(ApiKeys.kub8MintAddress): {
       'symbol': 'KUB8',
       'name': 'Kubus Governance Token',
-      'logoUrl': 'https://api.kubus.site/tokens/kub8.png',
+      // Intentionally omit a static logo URL so we always resolve imagery from
+      // on-chain/off-chain metadata (Metaplex) rather than hitting backend assets.
       'decimals': ApiKeys.kub8Decimals,
     },
   };
@@ -647,7 +649,7 @@ class SolanaWalletService {
   // Swap SOL -> SPL token (e.g., SOL -> KUB8) via DEX aggregator (Jupiter/Raydium)
   Future<String> swapSolToSpl({required String mint, required double solAmount, double slippage = 0.5}) async {
     return _executeJupiterSwap(
-      inputMint: 'So11111111111111111111111111111111111111112',
+      inputMint: ApiKeys.wrappedSolMintAddress,
       outputMint: mint,
       inputAmountRaw: (solAmount * 1000000000).round(),
       slippageBps: (slippage * 100).round(),
@@ -669,6 +671,48 @@ class SolanaWalletService {
       inputAmountRaw: (amount * pow(10, decimals)).round(),
       slippageBps: (slippage * 10000).round(),
       wrapAndUnwrapSol: false,
+    );
+  }
+
+  Future<SwapQuote> fetchSwapQuote({
+    required String inputMint,
+    required String outputMint,
+    required int inputAmountRaw,
+    required int inputDecimals,
+    required int outputDecimals,
+    int slippageBps = 50,
+  }) async {
+    final uri = Uri.parse('${ApiKeys.jupiterBaseUrl}/quote').replace(
+      queryParameters: {
+        'inputMint': inputMint,
+        'outputMint': outputMint,
+        'amount': inputAmountRaw.toString(),
+        'slippageBps': slippageBps.toString(),
+        'swapMode': 'ExactIn',
+      },
+    );
+
+    final response = await http.get(uri);
+    if (response.statusCode != 200) {
+      throw Exception('Jupiter quote failed (${response.statusCode})');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final routes = decoded['data'] as List?;
+    if (routes == null || routes.isEmpty) {
+      throw Exception('No swap routes available for the selected pair.');
+    }
+
+    final route = Map<String, dynamic>.from(routes.first as Map<String, dynamic>);
+    return SwapQuote.fromRoute(
+      route: route,
+      inputMint: inputMint,
+      outputMint: outputMint,
+      inputDecimals: inputDecimals,
+      outputDecimals: outputDecimals,
+      slippageBps: slippageBps,
+      contextSlot: decoded['contextSlot'] as int?,
+      timeTakenMs: (decoded['timeTaken'] as num?)?.toDouble(),
     );
   }
 

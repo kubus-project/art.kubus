@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
+import '../models/community_group.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
 
@@ -14,8 +15,16 @@ class CommunityPost {
   final String? authorUsername;
   final String content;
   final String? imageUrl;
+  final List<String> mediaUrls;
   final DateTime timestamp;
   final List<String> tags;
+  final List<String> mentions;
+  final String category;
+  final CommunityLocation? location;
+  final CommunityGroupReference? group;
+  final String? groupId;
+  final CommunityArtworkReference? artwork;
+  final double? distanceKm;
   final String? postType; // 'post', 'repost', 'shared_post'
   final String? originalPostId; // If this is a repost
   final CommunityPost? originalPost; // Nested original post for reposts
@@ -37,8 +46,16 @@ class CommunityPost {
     this.authorUsername,
     required this.content,
     this.imageUrl,
+    this.mediaUrls = const [],
     required this.timestamp,
     this.tags = const [],
+    this.mentions = const [],
+    this.category = 'post',
+    this.location,
+    this.group,
+    this.groupId,
+    this.artwork,
+    this.distanceKm,
     this.postType,
     this.originalPostId,
     this.originalPost,
@@ -64,6 +81,16 @@ class CommunityPost {
     String? authorAvatar,
     String? authorUsername,
     String? authorWallet,
+    List<String>? mediaUrls,
+    List<String>? tags,
+    List<String>? mentions,
+    String? category,
+    CommunityLocation? location,
+    CommunityGroupReference? group,
+    String? groupId,
+    CommunityArtworkReference? artwork,
+    double? distanceKm,
+    String? imageUrl,
   }) {
     return CommunityPost(
       id: id,
@@ -73,9 +100,17 @@ class CommunityPost {
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
       content: content,
-      imageUrl: imageUrl,
+      imageUrl: imageUrl ?? this.imageUrl,
+      mediaUrls: mediaUrls ?? this.mediaUrls,
       timestamp: timestamp,
-      tags: tags,
+      tags: tags ?? this.tags,
+      mentions: mentions ?? this.mentions,
+      category: category ?? this.category,
+      location: location ?? this.location,
+      group: group ?? this.group,
+      groupId: groupId ?? this.groupId,
+      artwork: artwork ?? this.artwork,
+      distanceKm: distanceKm ?? this.distanceKm,
       postType: postType,
       originalPostId: originalPostId,
       originalPost: originalPost,
@@ -163,6 +198,42 @@ class CommunityLikeUser {
     this.username,
     this.avatarUrl,
     this.likedAt,
+  });
+}
+
+class CommunityLocation {
+  final String? name;
+  final double? lat;
+  final double? lng;
+
+  const CommunityLocation({
+    this.name,
+    this.lat,
+    this.lng,
+  });
+
+  CommunityLocation copyWith({
+    String? name,
+    double? lat,
+    double? lng,
+  }) {
+    return CommunityLocation(
+      name: name ?? this.name,
+      lat: lat ?? this.lat,
+      lng: lng ?? this.lng,
+    );
+  }
+}
+
+class CommunityArtworkReference {
+  final String id;
+  final String title;
+  final String? imageUrl;
+
+  const CommunityArtworkReference({
+    required this.id,
+    required this.title,
+    this.imageUrl,
   });
 }
 

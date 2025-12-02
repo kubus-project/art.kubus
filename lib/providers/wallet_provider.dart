@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:crypto/crypto.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' show Ed25519HDKeyPair;
 import '../models/wallet.dart';
+import '../models/swap_quote.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
@@ -761,6 +763,23 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  Token? getTokenByMint(String? mint) {
+    if (mint == null) return null;
+    final normalized = mint.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+
+    for (final token in _tokens) {
+      if (token.contractAddress.toLowerCase() == normalized) {
+        return token;
+      }
+    }
+
+    if (normalized == 'native' || normalized == ApiKeys.wrappedSolMintAddress.toLowerCase()) {
+      return getTokenBySymbol('SOL');
+    }
+    return null;
+  }
+
   List<Token> getTokensByType(TokenType type) {
     return _tokens.where((token) => token.type == type).toList();
   }
@@ -975,6 +994,49 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  Future<SwapQuote> previewSwapQuote({
+    required String fromToken,
+    required String toToken,
+    required double amount,
+    double slippagePercent = 0.5,
+  }) async {
+    if (amount <= 0) {
+      throw Exception('Amount must be greater than zero');
+    }
+
+    final from = getTokenBySymbol(fromToken);
+    final to = getTokenBySymbol(toToken);
+    if (from == null || to == null) {
+      throw Exception('Token not available in your wallet');
+    }
+
+    final balance = getTokenBalance(fromToken);
+    if (balance <= 0) {
+      throw Exception('No balance available for $fromToken');
+    }
+    if (amount > balance) {
+      throw Exception('Amount exceeds available $fromToken balance');
+    }
+
+    final inputDecimals = from.decimals;
+    final outputDecimals = to.decimals;
+    final rawAmount = (amount * pow(10, inputDecimals)).round();
+    if (rawAmount <= 0) {
+      throw Exception('Amount too small for $fromToken');
+    }
+
+    final slippageBps = (slippagePercent * 100).round().clamp(1, 500);
+
+    return _solanaWalletService.fetchSwapQuote(
+      inputMint: _resolveMintAddress(from),
+      outputMint: _resolveMintAddress(to),
+      inputAmountRaw: rawAmount,
+      inputDecimals: inputDecimals,
+      outputDecimals: outputDecimals,
+      slippageBps: slippageBps,
+    );
+  }
+
   // Analytics methods
   Map<String, dynamic> getWalletAnalytics() {
     final totalTransactions = _transactions.length;
@@ -1182,4 +1244,11 @@ class WalletProvider extends ChangeNotifier {
   }
 
   String get currentSolanaNetwork => _solanaWalletService.currentNetwork;
+
+  String _resolveMintAddress(Token token) {
+    if (token.symbol.toUpperCase() == 'SOL' || token.contractAddress.toLowerCase() == 'native') {
+      return ApiKeys.wrappedSolMintAddress;
+    }
+    return token.contractAddress;
+  }
 }
