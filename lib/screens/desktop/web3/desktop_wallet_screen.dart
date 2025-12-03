@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../providers/themeprovider.dart';
-import '../../providers/web3provider.dart';
-import '../../providers/wallet_provider.dart';
-import '../../models/wallet.dart';
-import '../../utils/app_animations.dart';
-import 'components/desktop_widgets.dart';
-import '../../services/backend_api_service.dart';
-import '../../widgets/empty_state_card.dart';
+import '../../../providers/themeprovider.dart';
+import '../../../providers/web3provider.dart';
+import '../../../providers/wallet_provider.dart';
+import '../../../models/wallet.dart';
+import '../../../utils/app_animations.dart';
+import '../components/desktop_widgets.dart';
+import '../../../services/backend_api_service.dart';
+import '../../../widgets/empty_state_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../web3/wallet/token_swap.dart';
+import '../../web3/wallet/token_swap.dart';
 
 /// Desktop wallet screen with professional dashboard layout
 /// Web-optimized with hover states and keyboard shortcuts

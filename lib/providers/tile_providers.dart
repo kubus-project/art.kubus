@@ -15,15 +15,15 @@ import 'themeprovider.dart';
 
 class TileProviders with WidgetsBindingObserver {
   static const int _cartoMaxNativeZoom = 20;
-  // Larger buffers to keep adjacent tiles visible while zoom animations settle.
-  static const int _defaultKeepBuffer = 18;
-  static const int _defaultKeepBufferRetina = 20;
-  static const int _defaultPanBuffer = 12;
-  static const int _defaultPanBufferRetina = 14;
+  // Keep buffers modest to avoid over-fetching while still retaining nearby tiles.
+  static const int _defaultKeepBuffer = 4;
+  static const int _defaultKeepBufferRetina = 5;
+  static const int _defaultPanBuffer = 2;
+  static const int _defaultPanBufferRetina = 3;
+  static const Duration _updateThrottle = Duration(milliseconds: 100);
 
   final ThemeProvider themeProvider;
-  _BufferedTileProvider? _retinaProvider;
-  _BufferedTileProvider? _standardProvider;
+  _BufferedTileProvider? _sharedProvider;
 
   TileProviders(this.themeProvider) {
     WidgetsBinding.instance.addObserver(this);
@@ -83,19 +83,14 @@ class TileProviders with WidgetsBindingObserver {
           );
   }
 
-  _BufferedTileProvider _providerFor(bool retinaMode) {
-    final _BufferedTileProvider? existing =
-        retinaMode ? _retinaProvider : _standardProvider;
+  _BufferedTileProvider _provider() {
+    final _BufferedTileProvider? existing = _sharedProvider;
     if (existing != null && !existing.isClosed) {
       return existing;
     }
 
     final _BufferedTileProvider created = _BufferedTileProvider();
-    if (retinaMode) {
-      _retinaProvider = created;
-    } else {
-      _standardProvider = created;
-    }
+    _sharedProvider = created;
     return created;
   }
 
@@ -111,22 +106,18 @@ class TileProviders with WidgetsBindingObserver {
     return TileLayer(
       urlTemplate: _getUrlTemplate(),
       userAgentPackageName: 'dev.art.kubus',
-      tileProvider: _providerFor(retinaMode),
+      tileProvider: _provider(),
       retinaMode: retinaMode,
       subdomains: const ['a', 'b', 'c', 'd'],
       maxNativeZoom: _cartoMaxNativeZoom,
+      maxZoom: _cartoMaxNativeZoom.toDouble(),
       keepBuffer: buffers.keepBuffer,
       panBuffer: buffers.panBuffer,
-      tileUpdateTransformer: TileUpdateTransformers.debounce(const Duration(milliseconds: 120)),
-      // Show tiles immediately at their native opacity to avoid flashes between zoom levels.
-      tileDisplay: const TileDisplay.instantaneous(),
-      tileBuilder: (context, tileWidget, tileImage) {
-        // Keep tiles at native scale so camera zoom drives sizing; per-tile scaling introduced visible gaps.
-        return ColoredBox(
-          color: bgColor,
-          child: tileWidget,
-        );
-      },
+      tileUpdateTransformer: TileUpdateTransformers.throttle(_updateThrottle),
+      tileDisplay: const TileDisplay.fadeIn(
+        duration: Duration(milliseconds: 120),
+        startOpacity: 0.85,
+      ),
     );
   }
 
@@ -143,8 +134,7 @@ class TileProviders with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     themeProvider.removeListener(_updateThemeMode);
-    _retinaProvider?.dispose();
-    _standardProvider?.dispose();
+    _sharedProvider?.dispose();
   }
 }
 
@@ -162,6 +152,11 @@ class _TileBufferConfig {
 /// Extends the cancellable provider so we retain request cancellation on pan/zoom.
 base class _BufferedTileProvider extends CancellableNetworkTileProvider {
   static const int _maxEntries = 4096;
+  static const Duration _tileConnectTimeout = Duration(seconds: 12);
+  static const Duration _tileReceiveTimeout = Duration(seconds: 12);
+  static const Duration _tileSendTimeout = Duration(seconds: 10);
+  static const int _tileRetries = 2;
+  static const Duration _tileRetryDelay = Duration(milliseconds: 200);
   final _TileMemoryCache _memoryCache;
   final Future<TileDiskCache?> _diskCache;
   final Dio _dio;
@@ -172,9 +167,11 @@ base class _BufferedTileProvider extends CancellableNetworkTileProvider {
         _diskCache = diskCache ?? TileDiskCache.create(),
         _dio = Dio(
           BaseOptions(
-            // Give tile fetches a bit more room to complete on slower networks before failing.
-            connectTimeout: const Duration(seconds: 20),
-            receiveTimeout: const Duration(seconds: 20),
+            // Keep requests snappy so we retry quickly when users are panning/zooming fast.
+            connectTimeout: _tileConnectTimeout,
+            receiveTimeout: _tileReceiveTimeout,
+            // sendTimeout is not supported for GET on web; disable it there.
+            sendTimeout: kIsWeb ? null : _tileSendTimeout,
             responseType: ResponseType.bytes,
           ),
         ),
@@ -287,13 +284,34 @@ class _CachingNetworkImageProvider extends ImageProvider<_CachingNetworkImagePro
       }
     }
 
+    final String? targetUrl = useFallback ? fallbackUrl : url;
+    if (targetUrl == null || targetUrl.isEmpty) {
+      // No reachable URL; fall back to cache or a transparent tile to avoid throwing.
+      final cachedBytes = await cache?.read(url);
+      if (cachedBytes != null) {
+        final buffer = await ImmutableBuffer.fromUint8List(cachedBytes);
+        return decode(buffer);
+      }
+      final buffer = await ImmutableBuffer.fromUint8List(TileProvider.transparentImage);
+      return decode(buffer);
+    }
+
     try {
-      final requestedUrl = useFallback ? (fallbackUrl ?? '') : url;
       final response = await dioClient.getUri<Uint8List>(
-        Uri.parse(requestedUrl),
-        options: Options(headers: headers, responseType: ResponseType.bytes),
-      );
+          Uri.parse(targetUrl),
+          options: Options(
+            headers: headers,
+            responseType: ResponseType.bytes,
+            sendTimeout: kIsWeb ? null : _BufferedTileProvider._tileSendTimeout,
+          ),
+        )
+            .timeout(_BufferedTileProvider._tileReceiveTimeout);
       final data = response.data!;
+      final contentType = response.headers.value('content-type') ?? '';
+      if (_isNonImageResponse(contentType, data)) {
+        debugPrint('Tile fetch returned non-image content-type="$contentType" for $targetUrl');
+        return _fallbackFromCacheOrTransparent(cache, url, decode);
+      }
       onBytes(data);
       // Persist to disk cache in background; don't block rendering.
       if (cache != null) {
@@ -301,18 +319,70 @@ class _CachingNetworkImageProvider extends ImageProvider<_CachingNetworkImagePro
       }
       final buffer = await ImmutableBuffer.fromUint8List(data);
       return decode(buffer);
-    } on DioException {
-      if (useFallback || fallbackUrl == null) {
-        // If we have cached bytes, use them instead of surfacing an error to the tile renderer.
-        final cachedBytes = await cache?.read(url);
-        if (cachedBytes != null) {
-          final buffer = await ImmutableBuffer.fromUint8List(cachedBytes);
-          return decode(buffer);
-        }
-        rethrow;
+    } on DioException catch (e) {
+      debugPrint('Tile fetch failed for $targetUrl (${e.type}); falling back.');
+      if (!useFallback && fallbackUrl != null) {
+        // Retry against fallback URL after a short delay to improve hit rate while panning quickly.
+        await Future.delayed(_BufferedTileProvider._tileRetryDelay);
+        return _load(decode, useFallback: true);
       }
-      return _load(decode, useFallback: true);
+      // If we have cached bytes, use them instead of surfacing an error to the tile renderer.
+      return _fallbackFromCacheOrTransparent(cache, url, decode);
+    } on TimeoutException {
+      // Keep UX responsive on timeouts by retrying a limited number of times before falling back.
+      for (int attempt = 0; attempt < _BufferedTileProvider._tileRetries; attempt++) {
+        try {
+          await Future.delayed(_BufferedTileProvider._tileRetryDelay);
+          final retryBytes = await dioClient.getUri<Uint8List>(
+            Uri.parse(targetUrl),
+            options: Options(
+              headers: headers,
+              responseType: ResponseType.bytes,
+              sendTimeout: kIsWeb ? null : _BufferedTileProvider._tileSendTimeout,
+            ),
+          );
+          final data = retryBytes.data!;
+          final contentType = retryBytes.headers.value('content-type') ?? '';
+          if (_isNonImageResponse(contentType, data)) {
+            continue;
+          }
+          onBytes(data);
+          if (cache != null) {
+            unawaited(cache.write(url, data));
+          }
+          final buffer = await ImmutableBuffer.fromUint8List(data);
+          return decode(buffer);
+        } catch (_) {
+          // try next attempt
+        }
+      }
+      return _fallbackFromCacheOrTransparent(cache, url, decode);
     }
+  }
+
+  Future<Codec> _fallbackFromCacheOrTransparent(TileDiskCache? cache, String url, ImageDecoderCallback decode) async {
+    final cachedBytes = await cache?.read(url);
+    if (cachedBytes != null && cachedBytes.isNotEmpty && _looksLikeImageBytes(cachedBytes)) {
+      final buffer = await ImmutableBuffer.fromUint8List(cachedBytes);
+      return decode(buffer);
+    }
+    final buffer = await ImmutableBuffer.fromUint8List(TileProvider.transparentImage);
+    return decode(buffer);
+  }
+
+  bool _isNonImageResponse(String contentType, Uint8List data) {
+    final ct = contentType.toLowerCase();
+    if (ct.isNotEmpty && ct.startsWith('image/')) return false;
+    return !_looksLikeImageBytes(data);
+  }
+
+  bool _looksLikeImageBytes(Uint8List data) {
+    if (data.length < 4) return false;
+    if (data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) return true; // PNG
+    if (data[0] == 0xFF && data[1] == 0xD8) return true; // JPEG
+    if (data[0] == 0x47 && data[1] == 0x49 && data[2] == 0x46) return true; // GIF
+    if (data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46) return true; // WebP/RIFF
+    return false;
   }
 
   @override

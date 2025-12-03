@@ -8,6 +8,7 @@ import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/config_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/dao_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/artwork_provider.dart';
@@ -25,6 +26,9 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
+import '../../widgets/artist_badge.dart';
+import '../../widgets/institution_badge.dart';
+import '../../models/dao.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -48,10 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistEvents = [];
   
   // Privacy settings state
-  bool _privateProfile = false;
   bool _showActivityStatus = true;
-  bool _showCollection = true;
-  bool _allowMessages = true;
 
   @override
   void initState() {
@@ -79,9 +80,10 @@ class _ProfileScreenState extends State<ProfileScreen>
     
     _animationController.forward();
     _loadPrivacySettings();
+    final artworkProvider = context.read<ArtworkProvider>();
     Future.microtask(() {
       try {
-        context.read<ArtworkProvider>().ensureHistoryLoaded();
+        artworkProvider.ensureHistoryLoaded();
       } catch (_) {}
     });
   }
@@ -114,12 +116,30 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
+  
+  bool _hasArtistRole(ProfileProvider profileProvider, DAOReview? review) {
+    if (profileProvider.currentUser?.isArtist ?? false) return true;
+    if (review == null) return false;
+    return review.isArtistApplication && review.isApproved;
+  }
+  
+  bool _hasInstitutionRole(ProfileProvider profileProvider, DAOReview? review) {
+    if (profileProvider.currentUser?.isInstitution ?? false) return true;
+    if (review == null) return false;
+    return review.isInstitutionApplication && review.isApproved;
+  }
+  
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
-    final isArtist = profileProvider.currentUser?.isArtist ?? false;
-    final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
+    final daoProvider = Provider.of<DAOProvider>(context);
+    final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
+    final DAOReview? daoReview = walletAddress.isNotEmpty
+      ? daoProvider.findReviewForWallet(walletAddress)
+      : null;
+    final isArtist = _hasArtistRole(profileProvider, daoReview);
+    final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
     
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode 
@@ -139,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      _buildProfileHeader(),
+                      _buildProfileHeader(isArtist: isArtist, isInstitution: isInstitution),
                       _buildStatsSection(),
                       SliverToBoxAdapter(child: SizedBox(height: 24)),
                       if (isArtist) ...[
@@ -171,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildProfileHeader() {
+  Widget _buildProfileHeader({required bool isArtist, required bool isInstitution}) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -182,65 +202,151 @@ class _ProfileScreenState extends State<ProfileScreen>
           bool isSmallScreen = constraints.maxWidth < 375;
           bool isVerySmallScreen = constraints.maxWidth < 320;
           
-          return Container(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Profile',
-                        style: GoogleFonts.inter(
-                          fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 26 : 28,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+          final coverImageUrl = _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
+          final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
+          
+          return Column(
+            children: [
+              // Cover Image Section
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Cover image or gradient background
+                  Container(
+                    width: double.infinity,
+                    height: hasCoverImage ? 160 : 100,
+                    decoration: BoxDecoration(
+                      gradient: !hasCoverImage ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeProvider.accentColor.withValues(alpha: 0.3),
+                          themeProvider.accentColor.withValues(alpha: 0.1),
+                        ],
+                      ) : null,
+                      image: hasCoverImage ? DecorationImage(
+                        image: NetworkImage(coverImageUrl),
+                        fit: BoxFit.cover,
+                      ) : null,
                     ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Stack(
                       children: [
-                        TopBarIcon(
-                          icon: Icon(
-                            Icons.share_outlined,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            size: isSmallScreen ? 22 : 24,
+                        // Gradient overlay for better text readability
+                        if (hasCoverImage)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                    Colors.black.withValues(alpha: 0.3),
+                                    Colors.transparent,
+                                    Colors.black.withValues(alpha: 0.5),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ),
-                          onPressed: () => _shareProfile(),
-                          tooltip: 'Share',
-                        ),
-                        SizedBox(width: 8),
-                        TopBarIcon(
-                          icon: Icon(
-                            Icons.settings_outlined,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            size: isSmallScreen ? 22 : 24,
+                        // Top bar with title and actions
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: Padding(
+                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    'Profile',
+                                    style: GoogleFonts.inter(
+                                      fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 26 : 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                      shadows: hasCoverImage ? [
+                                        Shadow(
+                                          offset: const Offset(0, 1),
+                                          blurRadius: 3,
+                                          color: Colors.black.withValues(alpha: 0.5),
+                                        ),
+                                      ] : null,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    TopBarIcon(
+                                      icon: Icon(
+                                        Icons.share_outlined,
+                                        color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                        size: isSmallScreen ? 22 : 24,
+                                      ),
+                                      onPressed: () => _shareProfile(),
+                                      tooltip: 'Share',
+                                    ),
+                                    const SizedBox(width: 8),
+                                    TopBarIcon(
+                                      icon: Icon(
+                                        Icons.settings_outlined,
+                                        color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                        size: isSmallScreen ? 22 : 24,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                                        );
+                                      },
+                                      tooltip: 'Settings',
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                            );
-                          },
-                          tooltip: 'Settings',
                         ),
                       ],
                     ),
-                  ],
-                ),
-                SizedBox(height: isSmallScreen ? 24 : 32),
-                AvatarWidget(
-                  wallet: profileProvider.currentUser?.walletAddress ?? '',
-                  avatarUrl: profileProvider.currentUser?.avatar,
-                  radius: isVerySmallScreen ? 50 : isSmallScreen ? 55 : 60,
-                  enableProfileNavigation: false,
-                  showStatusIndicator: _showActivityStatus,
-                  isOnline: !Provider.of<WalletProvider>(context, listen: false).isLocked,
-                ),
-                SizedBox(height: isSmallScreen ? 16 : 20),
+                  ),
+                  // Avatar positioned at bottom of cover, overlapping
+                  Positioned(
+                    bottom: -(isVerySmallScreen ? 40.0 : isSmallScreen ? 45.0 : 50.0),
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            width: 4,
+                          ),
+                        ),
+                        child: AvatarWidget(
+                          wallet: profileProvider.currentUser?.walletAddress ?? '',
+                          avatarUrl: profileProvider.currentUser?.avatar,
+                          radius: isVerySmallScreen ? 40 : isSmallScreen ? 45 : 50,
+                          enableProfileNavigation: false,
+                          showStatusIndicator: _showActivityStatus,
+                          isOnline: Provider.of<Web3Provider>(context, listen: false).isConnected ||
+                              !Provider.of<WalletProvider>(context, listen: false).isLocked,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              // Spacing for avatar overflow
+              SizedBox(height: isVerySmallScreen ? 48 : isSmallScreen ? 53 : 58),
+              // Rest of profile content
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+                child: Column(
+                  children: [
                 Align(
                   alignment: Alignment.center,
                   child: Row(
@@ -258,13 +364,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (profileProvider.currentUser?.isArtist == true) ...[
+                      if (isArtist) ...[
                         SizedBox(width: isSmallScreen ? 6 : 8),
-                        _buildArtistBadge(),
+                        const ArtistBadge(),
                       ],
-                      if (profileProvider.currentUser?.isInstitution == true) ...[
+                      if (isInstitution) ...[
                         SizedBox(width: isSmallScreen ? 6 : 8),
-                        _buildInstitutionBadge(),
+                        const InstitutionBadge(),
                       ],
                     ],
                   ),
@@ -436,8 +542,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         ),
                       ],
                     ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -608,6 +716,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _handleRefresh() async {
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    final wallet = await _resolveCurrentWallet();
+
+    if (!mounted) return;
     setState(() {
       _postsFuture = _loadUserPosts();
       _artistDataRequested = false;
@@ -617,6 +730,19 @@ class _ProfileScreenState extends State<ProfileScreen>
       await _postsFuture;
     } catch (_) {}
     await _maybeLoadArtistData(force: true);
+
+    if (wallet != null && wallet.isNotEmpty) {
+      try {
+        await daoProvider.loadReviewForWallet(wallet, forceRefresh: true);
+      } catch (e) {
+        debugPrint('ProfileScreen: DAO review refresh failed: $e');
+      }
+      try {
+        await profileProvider.loadProfile(wallet);
+      } catch (e) {
+        debugPrint('ProfileScreen: profile reload failed: $e');
+      }
+    }
   }
 
   Future<String?> _resolveCurrentWallet() async {
@@ -822,12 +948,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        post.authorName,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              post.authorName,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (post.authorIsArtist) ...[
+                            const SizedBox(width: 6),
+                            ArtistBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                          ],
+                          if (post.authorIsInstitution) ...[
+                            const SizedBox(width: 6),
+                            InstitutionBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -905,10 +1046,17 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _maybeLoadArtistData({bool force = false}) async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final wallet = profileProvider.currentUser?.walletAddress;
-    final isCreator = (profileProvider.currentUser?.isArtist ?? false) ||
-        (profileProvider.currentUser?.isInstitution ?? false);
-    if (!isCreator || wallet == null || wallet.isEmpty) {
+    final wallet = profileProvider.currentUser?.walletAddress ?? '';
+    if (wallet.isEmpty) {
+      return;
+    }
+    DAOReview? review;
+    try {
+      review = Provider.of<DAOProvider>(context, listen: false).findReviewForWallet(wallet);
+    } catch (_) {}
+    final isArtist = _hasArtistRole(profileProvider, review);
+    final isInstitution = _hasInstitutionRole(profileProvider, review);
+    if (!(isArtist || isInstitution)) {
       return;
     }
     if (_artistDataLoading && !force) {
@@ -1266,12 +1414,23 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null || url.isEmpty) return null;
-    if (url.startsWith('ipfs://')) {
-      final cid = url.replaceFirst('ipfs://', '');
+    if (url == null) return null;
+    final candidate = url.trim();
+    if (candidate.isEmpty) return null;
+    if (candidate.startsWith('data:')) return candidate;
+    if (candidate.startsWith('ipfs://')) {
+      final cid = candidate.replaceFirst('ipfs://', '');
       return 'https://ipfs.io/ipfs/$cid';
     }
-    return url;
+    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
+    if (candidate.startsWith('//')) return 'https:$candidate';
+    if (candidate.startsWith('/')) return '$base$candidate';
+    if (candidate.startsWith('api/')) return '$base/$candidate';
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
+    if (!hasScheme) {
+      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
+    }
+    return candidate;
   }
 
   String _formatDateLabel(dynamic value) {
@@ -1646,50 +1805,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     return cardContent;
   }
 
-  Widget _buildArtistBadge() {
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    return Tooltip(
-      message: 'Artist profile',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: accent.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.brush, size: 14, color: accent),
-            const SizedBox(width: 2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInstitutionBadge() {
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    return Tooltip(
-      message: 'Institution profile',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: accent.withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.apartment_rounded, size: 14, color: accent),
-            const SizedBox(width: 4),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Navigation and interaction methods
   void _shareProfile() {
     showModalBottomSheet(
@@ -1769,8 +1884,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _editProfile() async {
-    final result = await Navigator.push(
-      context,
+    final navigator = Navigator.of(context);
+    final result = await navigator.push(
       MaterialPageRoute(
         builder: (context) => const ProfileEditScreen(),
       ),
@@ -1815,10 +1930,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             _buildOptionItem(Icons.history, 'View History', () {
               Navigator.pop(context);
               _navigateToViewHistory();
-            }),
-            _buildOptionItem(Icons.security, 'Privacy Settings', () {
-              Navigator.pop(context);
-              _navigateToPrivacySettings();
             }),
             _buildOptionItem(Icons.help, 'Help & Support', () {
               Navigator.pop(context);
@@ -1868,109 +1979,20 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _navigateToPrivacySettings() {
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(
-            'Privacy Settings',
-            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildPrivacyOptionStateful('Private Profile', _privateProfile, (val) {
-                setDialogState(() => _privateProfile = val);
-                setState(() {});
-                _savePrivacySettings();
-              }),
-              _buildPrivacyOptionStateful('Show Activity Status', _showActivityStatus, (val) {
-                setDialogState(() => _showActivityStatus = val);
-                setState(() {});
-                _savePrivacySettings();
-              }),
-              _buildPrivacyOptionStateful('Show Collection', _showCollection, (val) {
-                setDialogState(() => _showCollection = val);
-                setState(() {});
-                _savePrivacySettings();
-              }),
-              _buildPrivacyOptionStateful('Allow Messages', _allowMessages, (val) {
-                setDialogState(() => _allowMessages = val);
-                setState(() {});
-                _savePrivacySettings();
-              }),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Close', style: GoogleFonts.inter()),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  Widget _buildPrivacyOptionStateful(String title, bool value, Function(bool) onChanged) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Flexible(
-            child: Text(
-              title,
-              style: GoogleFonts.inter(fontSize: 14),
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
-          ),
-        ],
-      ),
-    );
-  }
   
-  Future<void> _savePrivacySettings() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('private_profile', _privateProfile);
-    await prefs.setBool('show_activity_status', _showActivityStatus);
-    await prefs.setBool('show_collection', _showCollection);
-    await prefs.setBool('allow_messages', _allowMessages);
-    // Persist via provider/backend as well
-    try {
-      await profileProvider.updatePreferences(
-        privateProfile: _privateProfile,
-        showActivityStatus: _showActivityStatus,
-        showCollection: _showCollection,
-        allowMessages: _allowMessages,
-      );
-    } catch (_) {}
-  }
   
   Future<void> _loadPrivacySettings() async {
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     try {
       final prefsModel = profileProvider.preferences;
       setState(() {
-        _privateProfile = prefsModel.privacy.toLowerCase() == 'private';
         _showActivityStatus = prefsModel.showActivityStatus;
-        _showCollection = prefsModel.showCollection;
-        _allowMessages = prefsModel.allowMessages;
       });
     } catch (_) {
       final prefs = await SharedPreferences.getInstance();
       setState(() {
-        _privateProfile = prefs.getBool('private_profile') ?? false;
         _showActivityStatus = prefs.getBool('show_activity_status') ?? true;
-        _showCollection = prefs.getBool('show_collection') ?? true;
-        _allowMessages = prefs.getBool('allow_messages') ?? true;
       });
     }
   }

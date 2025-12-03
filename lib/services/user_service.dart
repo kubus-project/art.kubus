@@ -177,6 +177,7 @@ class UserService {
             : 'Joined recently',
         achievementProgress: achievementProgress,
         profileImageUrl: _extractAvatarCandidate(profile['avatar'], userId),
+        coverImageUrl: (profile['coverImage'] ?? profile['cover_image'] ?? profile['coverImageUrl'] ?? profile['cover_image_url'])?.toString(),
       );
       try { debugPrint('UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}'); } catch (_) {}
       // populate cache & timestamp

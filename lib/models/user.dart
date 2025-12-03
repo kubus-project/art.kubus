@@ -6,6 +6,7 @@ class User {
   final String username;
   final String bio;
   final String? profileImageUrl;
+  final String? coverImageUrl;
   final int followersCount;
   final int followingCount;
   final int postsCount;
@@ -22,6 +23,7 @@ class User {
     required this.username,
     required this.bio,
     this.profileImageUrl,
+    this.coverImageUrl,
     required this.followersCount,
     required this.followingCount,
     required this.postsCount,
@@ -63,6 +65,7 @@ class User {
     String? username,
     String? bio,
     String? profileImageUrl,
+    String? coverImageUrl,
     int? followersCount,
     int? followingCount,
     int? postsCount,
@@ -79,6 +82,7 @@ class User {
       username: username ?? this.username,
       bio: bio ?? this.bio,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      coverImageUrl: coverImageUrl ?? this.coverImageUrl,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       postsCount: postsCount ?? this.postsCount,

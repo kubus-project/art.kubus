@@ -24,6 +24,7 @@ class ProfileScreenMethods {
           try { await UserService.fetchAndUpdateUserStats(targetWallet); } catch (_) {}
         }
       } catch (_) {}
+      if (!context.mounted) return;
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -44,6 +45,7 @@ class ProfileScreenMethods {
           try { await UserService.fetchAndUpdateUserStats(targetWallet); } catch (_) {}
         }
       } catch (_) {}
+      if (!context.mounted) return;
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,

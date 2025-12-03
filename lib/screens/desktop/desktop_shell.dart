@@ -5,12 +5,12 @@ import '../../providers/themeprovider.dart';
 import '../../providers/notification_provider.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
-import 'desktop_community_screen.dart';
-import 'desktop_marketplace_screen.dart';
-import 'desktop_wallet_screen.dart';
-import 'desktop_profile_screen.dart';
+import 'community/desktop_community_screen.dart';
+import 'web3/desktop_marketplace_screen.dart';
+import 'web3/desktop_wallet_screen.dart';
+import 'desktop_settings_screen.dart';
 import 'components/desktop_navigation.dart';
-import '../settings_screen.dart';
+import 'community/desktop_profile_screen.dart';
 
 /// Responsive breakpoints for layout switching
 class DesktopBreakpoints {
@@ -207,7 +207,7 @@ class _DesktopShellState extends State<DesktopShell>
   void _showProfileMenu(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const DesktopProfileScreen(),
+        builder: (context) => const ProfileScreen(),
       ),
     );
   }
@@ -215,7 +215,7 @@ class _DesktopShellState extends State<DesktopShell>
   void _showSettingsScreen(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const SettingsScreen(),
+        builder: (context) => const DesktopSettingsScreen(),
       ),
     );
   }

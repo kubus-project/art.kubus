@@ -8,6 +8,7 @@ import '../services/backend_api_service.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
 import '../services/event_bus.dart';
+import '../models/dao.dart';
 
 class ProfileProvider extends ChangeNotifier {
   UserProfile? _currentUser;
@@ -414,6 +415,8 @@ class ProfileProvider extends ChangeNotifier {
             );
           }
         }
+        // If profile missing role flags but DAO review approved, promote accordingly
+        await _applyDaoReviewRoles(walletAddress);
         // Ensure avatar URL is rasterized and absolute
         try {
           final av = _currentUser?.avatar ?? '';
@@ -454,9 +457,17 @@ class ProfileProvider extends ChangeNotifier {
               updatedAt: DateTime.now(),
             );
           } else {
-            final profileData = await _apiService.getProfileByWallet(walletAddress);
-            _currentUser = UserProfile.fromJson(profileData);
-          }
+          final profileData = await _apiService.getProfileByWallet(walletAddress);
+          _currentUser = UserProfile.fromJson(profileData);
+          // If profile missing artist flag but DAO review approved, promote to artist
+          try {
+            final review = await _apiService.getDAOReview(idOrWallet: walletAddress);
+            final status = review?['status']?.toString().toLowerCase();
+            if (status == 'approved' && (_currentUser?.isArtist ?? false) == false) {
+              _currentUser = _currentUser?.copyWith(isArtist: true);
+            }
+          } catch (_) {}
+        }
           try {
             final av = _currentUser?.avatar ?? '';
             final resolved = _resolveUrl(av);
@@ -814,7 +825,7 @@ class ProfileProvider extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
   }
-  
+
   /// Helper: Generate username from wallet
   String _generateUsername(String walletAddress) {
     return 'user_${walletAddress.substring(0, 8)}';
@@ -849,6 +860,35 @@ class ProfileProvider extends ChangeNotifier {
       );
     } catch (_) {
       return _currentUser?.preferences ?? ProfilePreferences();
+    }
+  }
+
+  Future<void> _applyDaoReviewRoles(String walletAddress) async {
+    try {
+      final reviewPayload = await _apiService.getDAOReview(idOrWallet: walletAddress);
+      if (reviewPayload == null) return;
+      final daoReview = DAOReview.fromJson(reviewPayload);
+      if (!daoReview.isApproved) return;
+
+      final isArtistReview = daoReview.isArtistApplication;
+      final isInstitutionReview = daoReview.isInstitutionApplication;
+
+      final nextArtist = (_currentUser?.isArtist ?? false) || isArtistReview;
+      final nextInstitution = (_currentUser?.isInstitution ?? false) || isInstitutionReview;
+
+      final previousArtist = _currentUser?.isArtist ?? false;
+      final previousInstitution = _currentUser?.isInstitution ?? false;
+
+      if (nextArtist != previousArtist || nextInstitution != previousInstitution) {
+        _currentUser = _currentUser?.copyWith(
+          isArtist: nextArtist,
+          isInstitution: nextInstitution,
+        );
+        notifyListeners();
+        try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint('ProfileProvider._applyDaoReviewRoles failed: $e');
     }
   }
 

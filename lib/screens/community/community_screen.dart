@@ -39,6 +39,8 @@ import 'messages_screen.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
+import '../../widgets/artist_badge.dart';
+import '../../widgets/institution_badge.dart';
 
 enum CommunityFeedType {
   following,
@@ -182,8 +184,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
       await hub.loadGroups(refresh: force);
     } catch (e) {
-      debugPrint('Failed to load groups: $e');
-      _showSnack('Unable to load community groups right now.');
+      debugPrint('Failed to load community groups: $e');
+      _showSnack('Unable to refresh community groups right now.');
     }
   }
 
@@ -209,6 +211,29 @@ class _CommunityScreenState extends State<CommunityScreen>
         });
       }
     }
+  }
+
+  List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10, bool useOnPrimary = false}) {
+    final widgets = <Widget>[];
+    if (post.authorIsArtist) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(ArtistBadge(
+        fontSize: fontSize,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        useOnPrimary: useOnPrimary,
+        iconOnly: true,
+      ));
+    }
+    if (post.authorIsInstitution) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(InstitutionBadge(
+        fontSize: fontSize,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        useOnPrimary: useOnPrimary,
+        iconOnly: true,
+      ));
+    }
+    return widgets;
   }
 
   void _openGroupFeed(CommunityGroupSummary group) {
@@ -1915,28 +1940,39 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
-                                        post.authorName,
-                                        style: GoogleFonts.inter(
-                                          fontSize: isSmallScreen ? 14 : 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              post.authorName,
+                                              style: GoogleFonts.inter(
+                                                fontSize: isSmallScreen ? 14 : 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          ..._buildAuthorRoleBadges(
+                                            post,
+                                            fontSize: isSmallScreen ? 8 : 9,
+                                          ),
+                                        ],
                                       ),
-                                      Text(
-                                        '@${post.authorUsername}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: isSmallScreen ? 12 : 14,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
+                                      if ((post.authorUsername ?? '').trim().isNotEmpty)
+                                        Text(
+                                          '@${post.authorUsername!.trim()}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: isSmallScreen ? 12 : 14,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurface
+                                                .withValues(alpha: 0.6),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -2441,6 +2477,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildRepostInnerCard(CommunityPost originalPost) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
+    final originalHandle = (originalPost.authorUsername ?? '').trim();
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -2471,21 +2508,33 @@ class _CommunityScreenState extends State<CommunityScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        originalPost.authorName,
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: scheme.onSurface),
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              originalPost.authorName,
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: scheme.onSurface),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          ..._buildAuthorRoleBadges(
+                            originalPost,
+                            fontSize: 8,
+                          ),
+                        ],
                       ),
-                      Text(
-                        '@${originalPost.authorUsername}',
-                        style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: scheme.onSurface.withValues(alpha: 0.6)),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      if (originalHandle.isNotEmpty)
+                        Text(
+                          '@$originalHandle',
+                          style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: scheme.onSurface
+                                  .withValues(alpha: 0.6)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),

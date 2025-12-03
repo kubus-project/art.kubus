@@ -36,6 +36,8 @@ class CommunityPost {
   bool isBookmarked;
   bool isFollowing;
   List<Comment> comments;
+  final bool authorIsArtist;
+  final bool authorIsInstitution;
 
   CommunityPost({
     required this.id,
@@ -67,6 +69,8 @@ class CommunityPost {
     this.isBookmarked = false,
     this.isFollowing = false,
     this.comments = const [],
+    this.authorIsArtist = false,
+    this.authorIsInstitution = false,
   });
 
   CommunityPost copyWith({
@@ -91,6 +95,8 @@ class CommunityPost {
     CommunityArtworkReference? artwork,
     double? distanceKm,
     String? imageUrl,
+    bool? authorIsArtist,
+    bool? authorIsInstitution,
   }) {
     return CommunityPost(
       id: id,
@@ -122,8 +128,26 @@ class CommunityPost {
       isBookmarked: isBookmarked ?? this.isBookmarked,
       isFollowing: isFollowing ?? this.isFollowing,
       comments: comments ?? this.comments,
+      authorIsArtist: authorIsArtist ?? this.authorIsArtist,
+      authorIsInstitution: authorIsInstitution ?? this.authorIsInstitution,
     );
   }
+}
+
+// Normalize truthy/falsey backend flags for community-related payloads.
+bool communityBool(dynamic value) {
+  if (value == null) return false;
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) return false;
+    return normalized == 'true' ||
+        normalized == '1' ||
+        normalized == 'yes' ||
+        normalized == 'approved';
+  }
+  return false;
 }
 
 class Comment {

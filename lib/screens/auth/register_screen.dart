@@ -115,11 +115,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<String?> _ensureWalletProvisioned(String? existingWallet, {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    String? address = walletProvider.currentWalletAddress ?? existingWallet;
+    final sanitizedExisting = existingWallet?.trim();
+    String? address = walletProvider.currentWalletAddress;
+    bool createdFreshWallet = false;
 
-    if (address != null && address.isNotEmpty && walletProvider.wallet != null) {
+    if (address == null || address.isEmpty) {
+      if (sanitizedExisting != null && sanitizedExisting.isNotEmpty) {
+        address = sanitizedExisting;
+      }
+    }
+
+    if (address != null && address.isNotEmpty) {
+      if ((walletProvider.currentWalletAddress ?? '').isEmpty) {
+        try {
+          await walletProvider.connectWalletWithAddress(address);
+        } catch (e) {
+          debugPrint('RegisterScreen: connectWalletWithAddress failed: $e');
+        }
+      }
       try {
-        await web3Provider.connectExistingWallet(address);
+        if (!web3Provider.isConnected || web3Provider.walletAddress != address) {
+          await web3Provider.connectExistingWallet(address);
+        }
       } catch (e) {
         debugPrint('RegisterScreen: connectExistingWallet failed: $e');
       }
@@ -130,6 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final result = await walletProvider.createWallet();
       final mnemonic = result['mnemonic']!;
       address = result['address']!;
+      createdFreshWallet = true;
       try {
         await web3Provider.importWallet(mnemonic);
       } catch (e) {
@@ -140,10 +158,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } catch (e) {
         debugPrint('RegisterScreen: issueTokenForWallet failed: $e');
       }
-      await _upsertProfileWithUsername(address, desiredUsername);
     } catch (e) {
       debugPrint('RegisterScreen: wallet creation failed: $e');
     }
+
+    if (address != null && address.isNotEmpty && createdFreshWallet) {
+      await _upsertProfileWithUsername(address, desiredUsername);
+    }
+
     return address;
   }
 

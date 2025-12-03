@@ -84,12 +84,28 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<String?> _ensureWalletProvisioned(String? existingWallet, {String? desiredUsername}) async {
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    String? address = walletProvider.currentWalletAddress ?? existingWallet;
+    final sanitizedExisting = existingWallet?.trim();
+    String? address = walletProvider.currentWalletAddress;
+    bool createdFreshWallet = false;
 
-    // If we already have a connected wallet, ensure web3 provider is synced.
-    if (address != null && address.isNotEmpty && walletProvider.wallet != null) {
+    if (address == null || address.isEmpty) {
+      if (sanitizedExisting != null && sanitizedExisting.isNotEmpty) {
+        address = sanitizedExisting;
+      }
+    }
+
+    if (address != null && address.isNotEmpty) {
+      if ((walletProvider.currentWalletAddress ?? '').isEmpty) {
+        try {
+          await walletProvider.connectWalletWithAddress(address);
+        } catch (e) {
+          debugPrint('SignInScreen: connectWalletWithAddress failed: $e');
+        }
+      }
       try {
-        await web3Provider.connectExistingWallet(address);
+        if (!web3Provider.isConnected || web3Provider.walletAddress != address) {
+          await web3Provider.connectExistingWallet(address);
+        }
       } catch (e) {
         debugPrint('SignInScreen: connectExistingWallet failed: $e');
       }
@@ -100,22 +116,25 @@ class _SignInScreenState extends State<SignInScreen> {
       final result = await walletProvider.createWallet();
       final mnemonic = result['mnemonic']!;
       address = result['address']!;
+      createdFreshWallet = true;
       try {
         await web3Provider.importWallet(mnemonic);
       } catch (e) {
         debugPrint('SignInScreen: web3 import failed: $e');
       }
-      // Issue backend token for new wallet
       try {
         await BackendApiService().issueTokenForWallet(address);
       } catch (e) {
         debugPrint('SignInScreen: issueTokenForWallet failed: $e');
       }
-      // Ensure profile exists for this wallet
-      await _upsertProfileWithUsername(address, desiredUsername);
     } catch (e) {
       debugPrint('SignInScreen: wallet creation failed: $e');
     }
+
+    if (address != null && address.isNotEmpty && createdFreshWallet) {
+      await _upsertProfileWithUsername(address, desiredUsername);
+    }
+
     return address;
   }
 
@@ -127,8 +146,6 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (e) {
       debugPrint('SignInScreen: createProfileFromWallet failed: $e');
     }
-    // Best-effort backend patch to set username/displayName even if creation succeeded,
-    // to ensure the user-provided username is persisted.
     if (effectiveUsername != null && effectiveUsername.isNotEmpty) {
       try {
         await BackendApiService().updateProfile(address, {
@@ -174,6 +191,7 @@ class _SignInScreenState extends State<SignInScreen> {
     // Honor any server-provided rate-limit cooldown persisted from prior attempts.
     try {
       final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
       final untilMs = prefs.getInt('rate_limit_auth_google_until');
       if (untilMs != null) {
         final until = DateTime.fromMillisecondsSinceEpoch(untilMs);
@@ -182,6 +200,7 @@ class _SignInScreenState extends State<SignInScreen> {
           final mins = remaining.inMinutes;
           final secs = remaining.inSeconds % 60;
           final friendly = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
+          if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Google sign-in is temporarily rate limited. Retry in ~$friendly.')),
           );
@@ -194,6 +213,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final googleResult = await GoogleAuthService().signIn();
       if (googleResult == null) {
+        if (!mounted) return;
         setState(() => _isGoogleSubmitting = false);
         return;
       }

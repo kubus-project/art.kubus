@@ -6,8 +6,11 @@ import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../models/dao.dart';
+import '../../../utils/wallet_utils.dart';
+import '../../../config/config.dart';
 
 
 class GovernanceHub extends StatefulWidget {
@@ -21,6 +24,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   int _selectedIndex = 0;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  String? _reviewActionId;
 
   // Proposal creation form controllers
   final _titleController = TextEditingController();
@@ -389,6 +393,28 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         : review.status.toLowerCase() == 'rejected'
             ? colorScheme.error
             : daoColor;
+    final profileProvider = context.read<ProfileProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final viewerWallet = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+    final isOwnSubmission = WalletUtils.equals(viewerWallet, review.walletAddress);
+    final votingDisabledOverride = review.metadata?['votingDisabled'] == true || review.metadata?['voting_disabled'] == true;
+    final normalizedStatus = review.status.toLowerCase();
+    final moderationEnabled = AppConfig.isFeatureEnabled('daoReviewDecisions');
+    final voteHelperText = !moderationEnabled
+        ? 'Voting is handled directly by the DAO; use proposals to decide.'
+        : normalizedStatus == 'pending'
+            ? (isOwnSubmission
+                ? 'You cannot vote on your own submission'
+                : votingDisabledOverride
+                    ? 'Voting disabled for this submission'
+                    : 'Voting opens after review')
+            : 'Decision recorded: ${review.status.toUpperCase()}';
+    final isPending = normalizedStatus == 'pending';
+    final canModerate = moderationEnabled && !isOwnSubmission && isPending;
+    final isActionInFlight = _reviewActionId == review.id;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -477,7 +503,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           Row(
             children: [
               ElevatedButton.icon(
-                onPressed: () => _showReviewDetails(review),
+                onPressed: isActionInFlight ? null : () => _showReviewDetails(review),
                 icon: Icon(Icons.visibility, color: colorScheme.onSurface, size: 16),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
@@ -494,13 +520,74 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                review.canVote
-                    ? 'Voting opens after review'
-                    : 'You cannot vote on your own submission',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      voteHelperText,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    if (canModerate) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'approved'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: colorScheme.onPrimary,
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: isActionInFlight && _reviewActionId == review.id
+                                  ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Approve',
+                                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'rejected'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: colorScheme.error,
+                                side: BorderSide(color: colorScheme.error),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: isActionInFlight && _reviewActionId == review.id
+                                  ? SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.error),
+                                      ),
+                                    )
+                                  : Text(
+                                      'Reject',
+                                      style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
                 ),
               ),
             ],
@@ -510,7 +597,144 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 
+  Future<void> _confirmReviewDecision(DAOReview review, String decision) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    final notesController = TextEditingController();
+    final decisionLabel = decision == 'approved' ? 'Approve' : decision == 'rejected' ? 'Reject' : 'Set Pending';
+
+    final shouldProceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        title: Text(
+          '$decisionLabel submission?',
+          style: GoogleFonts.inter(color: colorScheme.onSurface),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Provide optional reviewer notes for the applicant.',
+              style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.75)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              decoration: const InputDecoration(
+                labelText: 'Reviewer notes (optional)',
+              ),
+              maxLines: 3,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(decisionLabel),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldProceed == true) {
+      await _handleReviewDecision(review, decision, notesController.text.trim(), messenger);
+    }
+  }
+
+  Future<void> _handleReviewDecision(
+    DAOReview review,
+    String decision,
+    String reviewerNotes,
+    ScaffoldMessengerState messenger,
+  ) async {
+    final profileProvider = context.read<ProfileProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final reviewerWallet = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+
+    if (!AppConfig.isFeatureEnabled('daoReviewDecisions')) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Review moderation is disabled.')),
+      );
+      return;
+    }
+
+    if (reviewerWallet.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Connect a wallet to moderate submissions.')),
+      );
+      return;
+    }
+
+    if (WalletUtils.equals(reviewerWallet, review.walletAddress)) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('You cannot moderate your own submission.')),
+      );
+      return;
+    }
+
+    setState(() {
+      _reviewActionId = review.id;
+    });
+
+    try {
+      final updated = await context.read<DAOProvider>().decideReview(
+            idOrWallet: review.id,
+            status: decision,
+            reviewerNotes: reviewerNotes.isNotEmpty ? reviewerNotes : null,
+            reviewerWallet: reviewerWallet,
+          );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            updated != null ? 'Submission ${decision == 'approved' ? 'approved' : 'updated'}' : 'No changes saved',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Unable to update review: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _reviewActionId = null;
+        });
+      }
+    }
+  }
+
   void _showReviewDetails(DAOReview review) {
+    final profileProvider = context.read<ProfileProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final viewerWallet = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+    final isOwnSubmission = WalletUtils.equals(viewerWallet, review.walletAddress);
+    final votingDisabledOverride = review.metadata?['votingDisabled'] == true || review.metadata?['voting_disabled'] == true;
+    final voteDetailsText = isOwnSubmission
+        ? 'Voting disabled for the applicant profile.'
+        : votingDisabledOverride
+            ? 'Voting is disabled for this submission.'
+            : 'Voting will be added with on-chain governance.'; // TODO(web3): wire vote on-chain
+    final isPending = review.status.toLowerCase() == 'pending';
+    final canModerate = AppConfig.isFeatureEnabled('daoReviewDecisions') && !isOwnSubmission && isPending;
+    final isActionInFlight = _reviewActionId == review.id;
+
     final colorScheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
@@ -544,17 +768,40 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 'Status: ${review.status}',
                 style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.8)),
               ),
+              if ((review.reviewerNotes ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Reviewer notes:',
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  review.reviewerNotes ?? '',
+                  style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.8)),
+                ),
+              ],
               const SizedBox(height: 4),
               Text(
-                review.canVote
-                    ? 'Voting will be added with on-chain governance.' // TODO(web3): wire vote on-chain
-                    : 'Voting disabled for the applicant profile.',
+                voteDetailsText,
                 style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7)),
               ),
             ],
           ),
         ),
         actions: [
+          if (canModerate) ...[
+            TextButton(
+              onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'rejected'),
+              child: Text(
+                'Reject',
+                style: TextStyle(color: colorScheme.error),
+              ),
+            ),
+            TextButton(
+              onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'approved'),
+              child: const Text('Approve'),
+            ),
+          ],
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Close'),

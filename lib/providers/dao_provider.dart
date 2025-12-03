@@ -47,6 +47,7 @@ class DAOProvider extends ChangeNotifier {
   Future<void> _loadFromBackend() async {
     try {
       final api = BackendApiService();
+      try { await api.ensureAuthLoaded(); } catch (_) {}
 
       final proposalsJson = await api.getDAOProposals();
       _proposals = proposalsJson.map((e) => Proposal.fromJson(e)).toList();
@@ -84,6 +85,15 @@ class DAOProvider extends ChangeNotifier {
       _reviews = [];
       _treasuryOnChainBalance = null;
     }
+  }
+
+  /// Public refresh hook so UI flows can ensure delegates/groups are present.
+  Future<void> refreshData({bool force = false}) async {
+    if (_isLoading) return;
+    final bool hasData =
+        _delegates.isNotEmpty || _proposals.isNotEmpty || _transactions.isNotEmpty;
+    if (!force && hasData) return;
+    await _loadData();
   }
 
   // Proposal methods
@@ -147,17 +157,22 @@ class DAOProvider extends ChangeNotifier {
     required String statement,
     String? title,
     Map<String, dynamic>? metadata,
+    String role = 'artist',
   }) async {
     try {
       final api = BackendApiService();
       await api.ensureAuthLoaded(walletAddress: walletAddress);
+      final metadataPayload = <String, dynamic>{
+        ...?metadata,
+      };
+      metadataPayload.putIfAbsent('role', () => role);
       final payload = await api.submitDAOReview(
         walletAddress: walletAddress,
         portfolioUrl: portfolioUrl,
         medium: medium,
         statement: statement,
         title: title,
-        metadata: metadata,
+        metadata: metadataPayload,
       );
       if (payload != null) {
         final review = DAOReview.fromJson(payload);
@@ -172,6 +187,62 @@ class DAOProvider extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('DAOProvider submitReview error: $e');
+    }
+    return null;
+  }
+
+  Future<DAOReview?> submitInstitutionReview({
+    required String walletAddress,
+    required String organization,
+    required String contact,
+    required String focus,
+    required String mission,
+    Map<String, dynamic>? metadata,
+  }) {
+    final mergedMeta = {
+      'role': 'institution',
+      'organization': organization,
+      'contact': contact,
+      'focus': focus,
+      ...?metadata,
+    };
+    return submitReview(
+      walletAddress: walletAddress,
+      portfolioUrl: contact,
+      medium: focus,
+      statement: mission,
+      title: organization,
+      metadata: mergedMeta,
+      role: 'institution',
+    );
+  }
+
+  Future<DAOReview?> decideReview({
+    required String idOrWallet,
+    required String status,
+    String? reviewerNotes,
+    required String reviewerWallet,
+  }) async {
+    try {
+      final api = BackendApiService();
+      final payload = await api.decideDAOReview(
+        idOrWallet: idOrWallet,
+        status: status,
+        reviewerNotes: reviewerNotes,
+        walletAddress: reviewerWallet,
+      );
+      if (payload != null) {
+        final review = DAOReview.fromJson(payload);
+        _reviews.removeWhere((r) =>
+            r.id == review.id ||
+            WalletUtils.equals(r.walletAddress, review.walletAddress));
+        _reviews.insert(0, review);
+        notifyListeners();
+        return review;
+      }
+    } catch (e) {
+      debugPrint('DAOProvider.decideReview error: $e');
+      rethrow;
     }
     return null;
   }
@@ -393,10 +464,6 @@ class DAOProvider extends ChangeNotifier {
           type.name: getProposalsByType(type).length,
       },
     };
-  }
-
-  Future<void> refreshData() async {
-    await _loadData();
   }
 
   Future<void> _refreshOnChainTreasuryBalance() async {

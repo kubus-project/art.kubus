@@ -1,24 +1,32 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:typed_data';
-import '../../providers/themeprovider.dart';
-import '../../providers/profile_provider.dart';
-import '../../providers/community_hub_provider.dart';
-import '../../providers/chat_provider.dart';
-import '../../community/community_interactions.dart';
-import '../../models/community_group.dart';
-import '../../models/conversation.dart';
-import '../../services/backend_api_service.dart';
-import '../../widgets/avatar_widget.dart';
-import '../../utils/app_animations.dart';
-import 'components/desktop_widgets.dart';
-import '../community/group_feed_screen.dart';
-import '../community/user_profile_screen.dart';
-import '../download_app_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import '../../../providers/themeprovider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/community_hub_provider.dart';
+import '../../../providers/chat_provider.dart';
+import '../../../providers/wallet_provider.dart';
+import '../../../community/community_interactions.dart';
+import '../../../models/community_group.dart';
+import '../../../models/conversation.dart';
+import '../../../services/backend_api_service.dart';
+import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/artist_badge.dart';
+import '../../../widgets/institution_badge.dart';
+import '../../../utils/app_animations.dart';
+import '../../../utils/wallet_utils.dart';
+import '../components/desktop_widgets.dart';
+import '../../community/group_feed_screen.dart';
+import '../../community/conversation_screen.dart';
+import 'desktop_user_profile_screen.dart';
+import '../../community/post_detail_screen.dart';
+import '../../download_app_screen.dart';
 
 /// Desktop community screen with Twitter/Instagram-style feed
 /// Features multi-column layout with trending and suggestions
@@ -36,13 +44,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   late ScrollController _scrollController;
   late TextEditingController _groupSearchController;
   late TextEditingController _communitySearchController;
+  late TextEditingController _messageSearchController;
   Timer? _groupSearchDebounce;
   Timer? _searchDebounce;
   bool _isFabExpanded = false;
   final LayerLink _searchFieldLink = LayerLink();
   final List<String> _tabs = ['Discover', 'Following', 'Groups', 'Art'];
   final BackendApiService _backendApi = BackendApiService();
-  List<Map<String, dynamic>> _searchSuggestions = [];
+  List<Map<String, dynamic>> _searchResults = [];
   bool _isFetchingSearch = false;
   String _searchQuery = '';
   bool _showSearchOverlay = false;
@@ -85,9 +94,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   List<Map<String, dynamic>> _trendingTopics = [];
   bool _isLoadingTrending = false;
   String? _trendingError;
+  bool _trendingFromFeed = false;
   List<Map<String, dynamic>> _suggestedArtists = [];
   bool _isLoadingSuggestions = false;
   String? _suggestionsError;
+  String? _activeConversationId;
+  bool _conversationModalVisible = false;
+  String _messageSearchQuery = '';
   
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
@@ -114,6 +127,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _scrollController = ScrollController();
     _groupSearchController = TextEditingController();
     _communitySearchController = TextEditingController();
+    _messageSearchController = TextEditingController();
+    _messageSearchController.addListener(_handleMessageSearchChanged);
     _animationController.forward();
     
     // Load community feed data
@@ -192,11 +207,37 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
     try {
       final backend = BackendApiService();
-      final results = await backend.getTrendingSearches(limit: 12);
+      final results = await backend.getTrendingSearches(limit: 24);
+      var normalized = _normalizeTrendingTopics(results);
+      var usedFallback = false;
+      final fallback = _buildFallbackTrendingTopics();
+
+      if (normalized.isEmpty && fallback.isNotEmpty) {
+        normalized = List<Map<String, dynamic>>.from(fallback);
+        usedFallback = true;
+      } else if (normalized.length < 6 && fallback.isNotEmpty) {
+        final seen = normalized
+            .map((entry) => entry['tag']?.toString().toLowerCase())
+            .whereType<String>()
+            .toSet();
+        for (final entry in fallback) {
+          final key = entry['tag']?.toString().toLowerCase();
+          if (key == null || seen.contains(key)) continue;
+          normalized.add(entry);
+          seen.add(key);
+          usedFallback = true;
+          if (normalized.length >= 12) break;
+        }
+      }
+
+      if (normalized.length > 12) {
+        normalized = normalized.sublist(0, 12);
+      }
       if (mounted) {
         setState(() {
-          _trendingTopics = results;
+          _trendingTopics = normalized;
           _isLoadingTrending = false;
+          _trendingFromFeed = usedFallback;
         });
       }
     } catch (e) {
@@ -204,6 +245,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         setState(() {
           _trendingError = e.toString();
           _isLoadingTrending = false;
+          _trendingFromFeed = false;
         });
       }
     }
@@ -217,11 +259,34 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
     try {
       final backend = BackendApiService();
-      final artists = await backend.listArtists(
-        featured: true,
-        limit: 8,
-        offset: 0,
-      );
+      final aggregated = <Map<String, dynamic>>[];
+
+      try {
+        final featured = await backend.listArtists(featured: true, limit: 12, offset: 0);
+        aggregated.addAll(featured);
+      } catch (e) {
+        debugPrint('Featured artists fetch failed: $e');
+      }
+
+      if (aggregated.length < 8) {
+        try {
+          final general = await backend.listArtists(limit: 20, offset: 0);
+          aggregated.addAll(general);
+        } catch (e) {
+          debugPrint('General artists fetch failed: $e');
+        }
+      }
+
+      if (aggregated.length < 8) {
+        try {
+          final response = await backend.search(query: 'art', type: 'profiles', limit: 20);
+          aggregated.addAll(_parseProfileSearchResults(response));
+        } catch (e) {
+          debugPrint('Profile search fallback failed: $e');
+        }
+      }
+
+      final artists = _dedupeSuggestedProfiles(aggregated, take: 8);
       if (mounted) {
         setState(() {
           _suggestedArtists = artists;
@@ -275,6 +340,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _searchDebounce?.cancel();
     _groupSearchController.dispose();
     _communitySearchController.dispose();
+    _messageSearchController.removeListener(_handleMessageSearchChanged);
+    _messageSearchController.dispose();
     _tagController.dispose();
     _mentionController.dispose();
     _composeController.dispose();
@@ -430,7 +497,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     final trimmedQuery = _searchQuery.trim();
-    if (!_isFetchingSearch && _searchSuggestions.isEmpty && trimmedQuery.length < 2) {
+    if (!_isFetchingSearch && _searchResults.isEmpty && trimmedQuery.length < 2) {
       return const SizedBox.shrink();
     }
 
@@ -472,7 +539,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     );
                   }
 
-                  if (_searchSuggestions.isEmpty) {
+                  if (_searchResults.isEmpty) {
                     return Padding(
                       padding: const EdgeInsets.all(16),
                       child: Row(
@@ -492,41 +559,56 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
                   return ListView.separated(
                     shrinkWrap: true,
-                    itemCount: _searchSuggestions.length,
+                    itemCount: _searchResults.length,
                     separatorBuilder: (_, __) => Divider(
                       height: 1,
                       color: scheme.outlineVariant,
                     ),
                     itemBuilder: (context, index) {
-                      final suggestion = _searchSuggestions[index];
-                      final type = suggestion['type']?.toString() ?? 'profile';
-                      final label = suggestion['label']?.toString() ??
-                          suggestion['displayName']?.toString() ??
-                          suggestion['title']?.toString() ??
-                          suggestion['tag']?.toString() ??
-                          'Result';
-                      final subtitle = suggestion['subtitle']?.toString();
+                      final profile = _searchResults[index];
+                      final displayName = profile['displayName']?.toString() ??
+                          profile['display_name']?.toString() ??
+                          profile['username']?.toString() ??
+                          profile['wallet']?.toString() ??
+                          'Profile';
+                      final username = profile['username']?.toString() ??
+                          profile['handle']?.toString();
+                      final wallet = (profile['wallet_address'] ??
+                              profile['walletAddress'] ??
+                              profile['wallet'])
+                          ?.toString();
+                      final subtitleText = () {
+                        if (username != null && username.isNotEmpty) {
+                          return '@$username';
+                        }
+                        if (wallet != null && wallet.isNotEmpty) {
+                          return _formatWalletPreview(wallet);
+                        }
+                        return null;
+                      }();
+                      final avatarUrl = profile['avatar'] ??
+                          profile['avatar_url'] ??
+                          profile['profileImageUrl'];
                       return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: themeProvider.accentColor.withValues(alpha: 0.1),
-                          child: Icon(
-                            _iconForSuggestionType(type),
-                            color: themeProvider.accentColor,
-                          ),
+                        leading: AvatarWidget(
+                          avatarUrl: avatarUrl?.toString(),
+                          wallet: wallet ?? '',
+                          radius: 20,
+                          allowFabricatedFallback: true,
                         ),
                         title: Text(
-                          label,
+                          displayName,
                           style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                         ),
-                        subtitle: subtitle == null
+                        subtitle: subtitleText == null
                             ? null
                             : Text(
-                                subtitle,
+                                subtitleText,
                                 style: GoogleFonts.inter(
                                   color: scheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
-                        onTap: () => _handleSearchSuggestionTap(suggestion),
+                        onTap: () => _handleSearchResultTap(profile),
                       );
                     },
                   );
@@ -618,7 +700,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final trimmed = value.trim();
     if (trimmed.length < 2) {
       setState(() {
-        _searchSuggestions = [];
+        _searchResults = [];
         _isFetchingSearch = false;
       });
       return;
@@ -627,71 +709,119 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
       setState(() => _isFetchingSearch = true);
       try {
-        final raw = await _backendApi.getSearchSuggestions(query: trimmed, limit: 8);
-        final normalized = _backendApi.normalizeSearchSuggestions(raw);
+        final response = await _backendApi.search(
+          query: trimmed,
+          type: 'profiles',
+          limit: 12,
+        );
+        final parsed = _parseProfileSearchResults(response);
         if (!mounted) return;
         setState(() {
-          _searchSuggestions = normalized;
+          _searchResults = parsed;
           _isFetchingSearch = false;
           _showSearchOverlay = true;
         });
       } catch (e) {
         if (!mounted) return;
         setState(() {
-          _searchSuggestions = [];
+          _searchResults = [];
           _isFetchingSearch = false;
         });
       }
     });
   }
 
+  List<Map<String, dynamic>> _parseProfileSearchResults(Map<String, dynamic> payload) {
+    final results = <Map<String, dynamic>>[];
+
+    void addEntries(List<dynamic>? entries) {
+      if (entries == null) return;
+      for (final item in entries) {
+        if (item is Map<String, dynamic>) {
+          results.add(item);
+        } else if (item is Map) {
+          results.add(_toStringKeyedMap(item));
+        }
+      }
+    }
+
+    final dynamic resultsNode = payload['results'];
+    if (resultsNode is Map<String, dynamic>) {
+      addEntries((resultsNode['profiles'] as List?) ?? (resultsNode['results'] as List?));
+    } else if (resultsNode is List) {
+      addEntries(resultsNode);
+    }
+
+    final dynamic dataNode = payload['data'];
+    if (dataNode is Map<String, dynamic>) {
+      addEntries((dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
+    } else if (dataNode is List) {
+      addEntries(dataNode);
+    }
+
+    if (results.isEmpty) {
+      final dynamic profilesRoot = payload['profiles'];
+      if (profilesRoot is List) {
+        addEntries(profilesRoot);
+      }
+      if (payload['data'] is Map<String, dynamic>) {
+        final dynamic nestedProfiles = (payload['data'] as Map<String, dynamic>)['profiles'];
+        if (nestedProfiles is List) {
+          addEntries(nestedProfiles);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  Map<String, dynamic> _toStringKeyedMap(Map<dynamic, dynamic> source) {
+    final mapped = <String, dynamic>{};
+    source.forEach((key, value) {
+      mapped[key.toString()] = value;
+    });
+    return mapped;
+  }
+
+  String _formatWalletPreview(String wallet) {
+    if (wallet.length <= 10) {
+      return wallet;
+    }
+    return '${wallet.substring(0, 4)}...${wallet.substring(wallet.length - 4)}';
+  }
+
   void _handleSearchSubmit(String value) {
     setState(() {
       _searchQuery = value.trim();
       _showSearchOverlay = false;
-      _searchSuggestions = [];
+      _searchResults = [];
       _isFetchingSearch = false;
     });
   }
 
-  void _handleSearchSuggestionTap(Map<String, dynamic> suggestion) {
-    final label = suggestion['label']?.toString() ??
-        suggestion['displayName']?.toString() ??
-        suggestion['title']?.toString() ??
-        suggestion['tag']?.toString() ??
+  void _handleSearchResultTap(Map<String, dynamic> profile) {
+    final label = profile['displayName']?.toString() ??
+        profile['display_name']?.toString() ??
+        profile['username']?.toString() ??
+        profile['wallet']?.toString() ??
         '';
-    if (label.isNotEmpty) {
-      _communitySearchController.text = label;
-      _handleSearchSubmit(label);
-    }
+    setState(() {
+      if (label.isNotEmpty) {
+        _communitySearchController.text = label;
+        _searchQuery = label;
+      }
+      _showSearchOverlay = false;
+      _searchResults = [];
+      _isFetchingSearch = false;
+    });
 
-    final type = suggestion['type']?.toString() ?? '';
-    final id = suggestion['id']?.toString() ??
-        suggestion['wallet']?.toString() ??
-        suggestion['wallet_address']?.toString();
+    final wallet = profile['wallet_address'] ??
+        profile['walletAddress'] ??
+        profile['wallet'] ??
+        profile['id'];
 
-    if (type == 'profile' && id != null && id.isNotEmpty) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => UserProfileScreen(userId: id),
-        ),
-      );
-    }
-  }
-
-  IconData _iconForSuggestionType(String type) {
-    switch (type) {
-      case 'profile':
-        return Icons.account_circle_outlined;
-      case 'tag':
-      case 'tags':
-        return Icons.tag;
-      case 'artwork':
-        return Icons.auto_awesome;
-      case 'group':
-        return Icons.groups_rounded;
-      default:
-        return Icons.search;
+    if (wallet != null && wallet.toString().isNotEmpty) {
+      _openUserProfileModal(userId: wallet.toString());
     }
   }
 
@@ -1224,9 +1354,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) return;
+              final navigator = Navigator.of(context);
               await communityProvider.createGroup(name: name, description: descController.text.trim());
-              if (!mounted) return;
-              Navigator.pop(context);
+              if (!navigator.mounted) return;
+              navigator.pop();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: themeProvider.accentColor,
@@ -1394,6 +1525,28 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
+  List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10}) {
+    final widgets = <Widget>[];
+    debugPrint('DEBUG: Building badges for post ${post.id}: artist=${post.authorIsArtist}, institution=${post.authorIsInstitution}');
+    if (post.authorIsArtist) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(ArtistBadge(
+        fontSize: fontSize,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        iconOnly: true,
+      ));
+    }
+    if (post.authorIsInstitution) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(InstitutionBadge(
+        fontSize: fontSize,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        iconOnly: true,
+      ));
+    }
+    return widgets;
+  }
+
   Widget _buildLoadingState(ThemeProvider themeProvider, String message) {
     return Center(
       child: Column(
@@ -1524,6 +1677,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildPostCard(CommunityPost post, ThemeProvider themeProvider) {
     return DesktopCard(
+      onTap: () => _openPostDetailModal(post),
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1544,32 +1698,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   children: [
                     Row(
                       children: [
-                        Text(
-                          post.authorName,
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
+                        Expanded(
+                          child: Text(
+                            post.authorName,
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (post.category == 'artist') ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: themeProvider.accentColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Artist',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: themeProvider.accentColor,
-                              ),
-                            ),
-                          ),
-                        ],
+                        ..._buildAuthorRoleBadges(post, fontSize: 9),
                       ],
                     ),
                     Text(
@@ -1723,35 +1863,40 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           Row(
             children: [
               _buildActionButton(
-                Icons.favorite_border,
-                post.likeCount.toString(),
-                themeProvider,
-                onPressed: () {},
+                icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
+                label: _formatTrendingCount(post.likeCount),
+                themeProvider: themeProvider,
+                isActive: post.isLiked,
+                onPressed: () => _togglePostLike(post),
               ),
               const SizedBox(width: 24),
               _buildActionButton(
-                Icons.chat_bubble_outline,
-                post.commentCount.toString(),
-                themeProvider,
-                onPressed: () {},
+                icon: Icons.chat_bubble_outline,
+                label: _formatTrendingCount(post.commentCount),
+                themeProvider: themeProvider,
+                onPressed: () => _openPostDetailModal(post),
               ),
               const SizedBox(width: 24),
               _buildActionButton(
-                Icons.repeat,
-                post.shareCount.toString(),
-                themeProvider,
-                onPressed: () {},
+                icon: Icons.repeat,
+                label: _formatTrendingCount(post.shareCount),
+                themeProvider: themeProvider,
+                onPressed: () => _showRepostOptions(post),
               ),
               const Spacer(),
               IconButton(
-                onPressed: () {},
+                tooltip: post.isBookmarked ? 'Remove bookmark' : 'Save for later',
+                onPressed: () => _toggleBookmark(post),
                 icon: Icon(
-                  Icons.bookmark_border,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
+                  color: post.isBookmarked
+                      ? themeProvider.accentColor
+                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
               IconButton(
-                onPressed: () {},
+                tooltip: 'Share',
+                onPressed: () => _showShareDialog(post),
                 icon: Icon(
                   Icons.share_outlined,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
@@ -1764,12 +1909,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildActionButton(
-    IconData icon,
-    String count,
-    ThemeProvider themeProvider, {
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required ThemeProvider themeProvider,
     required VoidCallback onPressed,
+    bool isActive = false,
+    VoidCallback? onLabelTap,
   }) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = isActive
+        ? themeProvider.accentColor
+        : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -1778,28 +1930,351 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         hoverColor: themeProvider.accentColor.withValues(alpha: 0.08),
         splashColor: themeProvider.accentColor.withValues(alpha: 0.12),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.55),
+              AnimatedScale(
+                scale: isActive ? 1.15 : 1.0,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                child: Icon(icon, size: 18, color: color),
               ),
-              const SizedBox(width: 6),
-              Text(
-                count,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              if (label.isNotEmpty) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onLabelTap ?? onPressed,
+                  child: Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      color: color,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _togglePostLike(CommunityPost post) async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final wasLiked = post.isLiked;
+    try {
+      await CommunityService.togglePostLike(
+        post,
+        currentUserWallet: walletProvider.currentWalletAddress,
+      );
+      if (!mounted) return;
+      setState(() {});
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(wasLiked ? 'Post unliked' : 'Post liked'),
+          duration: const Duration(milliseconds: 1300),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {});
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Failed to ${wasLiked ? 'unlike' : 'like'} post: $e'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _toggleBookmark(CommunityPost post) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await CommunityService.toggleBookmark(post);
+      if (!mounted) return;
+      setState(() {});
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(post.isBookmarked ? 'Saved to bookmarks' : 'Removed from bookmarks'),
+          duration: const Duration(milliseconds: 1500),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to update bookmark: $e')),
+      );
+    }
+  }
+
+  Future<void> _showShareDialog(CommunityPost post) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final shareUrl = _buildPostShareLink(post);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Share post'),
+          content: SizedBox(
+            width: 420,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(Icons.link, color: themeProvider.accentColor),
+                  title: const Text('Copy link'),
+                  onTap: () async {
+                    final navigator = Navigator.of(dialogContext);
+                    navigator.pop();
+                    await Clipboard.setData(ClipboardData(text: shareUrl));
+                    if (!mounted) return;
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Link copied to clipboard')),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: Icon(Icons.share_outlined, color: themeProvider.accentColor),
+                  title: const Text('Share via...'),
+                  onTap: () async {
+                    Navigator.of(dialogContext).pop();
+                    try {
+                      await SharePlus.instance.share(
+                        ShareParams(
+                          text: '${post.content}\n\n$shareUrl',
+                        ),
+                      );
+                    } catch (e) {
+                      if (!mounted) return;
+                      messenger.showSnackBar(
+                        SnackBar(content: Text('Unable to share post: $e')),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showRepostOptions(CommunityPost post) async {
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return SimpleDialog(
+          title: const Text('Share post'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _createRepost(post);
+              },
+              child: Row(
+                children: const [
+                  Icon(Icons.repeat, size: 18),
+                  SizedBox(width: 10),
+                  Text('Quick repost'),
+                ],
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+                await _showQuoteRepostDialog(post);
+              },
+              child: Row(
+                children: const [
+                  Icon(Icons.edit_note, size: 18),
+                  SizedBox(width: 10),
+                  Text('Repost with comment'),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showQuoteRepostDialog(CommunityPost post) async {
+    final controller = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Repost with comment'),
+              content: SizedBox(
+                width: 520,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Add your thoughts (optional)',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    _buildRepostPreview(post),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final navigator = Navigator.of(dialogContext);
+                          setDialogState(() => isSubmitting = true);
+                          final success = await _createRepost(post, comment: controller.text.trim());
+                          if (!mounted) return;
+                          setDialogState(() => isSubmitting = false);
+                          if (success) {
+                            navigator.pop();
+                          }
+                        },
+                  child: isSubmitting
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        )
+                      : const Text('Repost'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+    controller.dispose();
+  }
+
+  Future<bool> _createRepost(CommunityPost post, {String? comment}) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final createdRepost = await BackendApiService().createRepost(
+        originalPostId: post.id,
+        content: comment != null && comment.trim().isNotEmpty ? comment.trim() : null,
+      );
+      if (!mounted) return false;
+      setState(() {
+        post.shareCount++;
+        _discoverPosts = _prependUniquePost(_discoverPosts, createdRepost);
+        _followingPosts = _prependUniquePost(_followingPosts, createdRepost);
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(comment != null && comment.trim().isNotEmpty
+              ? 'Reposted with comment'
+              : 'Reposted'),
+        ),
+      );
+      return true;
+    } catch (e) {
+      if (!mounted) return false;
+      messenger.showSnackBar(
+        SnackBar(content: Text('Failed to repost: $e')),
+      );
+      return false;
+    }
+  }
+
+  Widget _buildRepostPreview(CommunityPost post) {
+    final scheme = Theme.of(context).colorScheme;
+    final originalPost = post.originalPost;
+    final displayPost = originalPost ?? post;
+
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  displayPost.authorName,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              ..._buildAuthorRoleBadges(displayPost, fontSize: 8),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            displayPost.content,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: scheme.onSurface.withValues(alpha: 0.8),
+              height: 1.4,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _buildPostShareLink(CommunityPost post) => 'https://app.kubus.site/post/${post.id}';
+
+  List<CommunityPost> _prependUniquePost(List<CommunityPost> source, CommunityPost post) {
+    final filtered = source.where((existing) => existing.id != post.id).toList();
+    return [post, ...filtered];
+  }
+
+  void _handleSidebarTabChange(bool showMessages) {
+    if (!showMessages && _conversationModalVisible) {
+      try {
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (_) {}
+    }
+
+    setState(() {
+      _showMessagesPanel = showMessages;
+      if (!showMessages) {
+        _activeConversationId = null;
+      }
+    });
   }
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
@@ -1824,7 +2299,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     'Feed',
                     Icons.dynamic_feed,
                     !_showMessagesPanel,
-                    () => setState(() => _showMessagesPanel = false),
+                    () => _handleSidebarTabChange(false),
                     themeProvider,
                   ),
                 ),
@@ -1832,9 +2307,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 Expanded(
                   child: _buildSidebarTab(
                     'Messages',
-                    Icons.message,
+                    Icons.mail_outline,
                     _showMessagesPanel,
-                    () => setState(() => _showMessagesPanel = true),
+                    () => _handleSidebarTabChange(true),
                     themeProvider,
                   ),
                 ),
@@ -1848,19 +2323,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 : ListView(
                     padding: const EdgeInsets.all(24),
                     children: [
-                      // Create post prompt
                       _buildCreatePostPrompt(themeProvider),
                       const SizedBox(height: 24),
-
-                      // Trending section
                       _buildTrendingSection(themeProvider),
                       const SizedBox(height: 24),
-
-                      // Who to follow
                       _buildWhoToFollowSection(themeProvider),
                       const SizedBox(height: 24),
-
-                      // Active communities
                       _buildActiveCommunitiesSection(themeProvider),
                     ],
                   ),
@@ -1945,10 +2413,26 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
+  void _handleMessageSearchChanged() {
+    if (!mounted) return;
+    final next = _messageSearchController.text;
+    if (next == _messageSearchQuery) return;
+    setState(() {
+      _messageSearchQuery = next;
+    });
+  }
+
   Widget _buildMessagesPanel(ThemeProvider themeProvider) {
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, _) {
         final conversations = chatProvider.conversations;
+        final trimmedQuery = _messageSearchQuery.trim();
+        final queryVariants = _buildMessageSearchVariants(_messageSearchQuery);
+        final isSearching = queryVariants.isNotEmpty;
+        final highlightMap = <String, String>{};
+        final filteredConversations = isSearching
+            ? _applyMessageSearchFilters(conversations, chatProvider, queryVariants, highlightMap)
+            : conversations;
 
         return Column(
           children: [
@@ -1965,6 +2449,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: TextField(
+                        controller: _messageSearchController,
+                        textInputAction: TextInputAction.search,
                         decoration: InputDecoration(
                           hintText: 'Search messages...',
                           hintStyle: GoogleFonts.inter(
@@ -1972,11 +2458,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
                           border: InputBorder.none,
-                          icon: Icon(
+                          prefixIcon: Icon(
                             Icons.search,
                             size: 20,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
                           ),
+                          suffixIcon: trimmedQuery.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Clear search',
+                                  icon: const Icon(Icons.close),
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                  onPressed: () => _messageSearchController.clear(),
+                                ),
                         ),
                         style: GoogleFonts.inter(fontSize: 14),
                       ),
@@ -1994,49 +2488,43 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ],
               ),
             ),
+            if (isSearching && filteredConversations.isNotEmpty)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: Text(
+                    filteredConversations.length == 1
+                        ? 'Showing 1 result for “$trimmedQuery”'
+                        : 'Showing ${filteredConversations.length} results for “$trimmedQuery”',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ),
+              ),
             // Conversations list
             Expanded(
               child: conversations.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No messages yet',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Start a conversation with an artist',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      itemCount: conversations.length,
-                      itemBuilder: (context, index) {
-                        return _buildConversationItem(
-                          conversations[index],
-                          themeProvider,
-                          chatProvider,
-                        );
-                      },
-                    ),
+                  ? _buildEmptyMessagesState(themeProvider)
+                  : filteredConversations.isEmpty && isSearching
+                      ? _buildNoConversationMatchesState(themeProvider, trimmedQuery)
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          itemCount: filteredConversations.length,
+                          itemBuilder: (context, index) {
+                            final conversation = filteredConversations[index];
+                            return _buildConversationItem(
+                              conversation,
+                              themeProvider,
+                              chatProvider,
+                              searchHighlight: highlightMap[conversation.id],
+                              showSearchContext: isSearching,
+                            );
+                          },
+                        ),
             ),
           ],
         );
@@ -2044,9 +2532,40 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildConversationItem(Conversation conversation, ThemeProvider themeProvider, ChatProvider chatProvider) {
+  Widget _buildConversationItem(
+    Conversation conversation,
+    ThemeProvider themeProvider,
+    ChatProvider chatProvider, {
+    String? searchHighlight,
+    bool showSearchContext = false,
+  }) {
     final unreadCount = chatProvider.unreadCounts[conversation.id] ?? 0;
     final hasUnread = unreadCount > 0;
+    final isActive = _activeConversationId == conversation.id;
+    final baseColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05);
+    final bool highlightActive = showSearchContext && (searchHighlight?.isNotEmpty ?? false);
+    final Widget? subtitleWidget = highlightActive
+        ? Text(
+            searchHighlight!,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: themeProvider.accentColor,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          )
+        : (conversation.lastMessage != null && conversation.lastMessage!.isNotEmpty
+            ? Text(
+                conversation.lastMessage!,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+            : null);
     
     return Material(
       color: Colors.transparent,
@@ -2057,10 +2576,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           padding: const EdgeInsets.all(12),
           margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
-            color: hasUnread
-                ? themeProvider.accentColor.withValues(alpha: 0.05)
-                : Colors.transparent,
+            color: isActive
+                ? themeProvider.accentColor.withValues(alpha: 0.12)
+                : hasUnread
+                    ? themeProvider.accentColor.withValues(alpha: 0.05)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
+            border: isActive
+                ? Border.all(color: themeProvider.accentColor.withValues(alpha: 0.4), width: 1.2)
+                : Border.all(color: baseColor, width: hasUnread ? 1 : 0),
           ),
           child: Row(
             children: [
@@ -2118,16 +2642,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (conversation.lastMessage != null)
-                      Text(
-                        conversation.lastMessage!,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    if (subtitleWidget != null) subtitleWidget,
                   ],
                 ),
               ),
@@ -2146,6 +2661,296 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
+  Widget _buildEmptyMessagesState(ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.chat_bubble_outline,
+            size: 48,
+            color: scheme.onSurface.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No messages yet',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start a conversation with an artist',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: scheme.onSurface.withValues(alpha: 0.45),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoConversationMatchesState(ThemeProvider themeProvider, String queryLabel) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 48,
+            color: scheme.onSurface.withValues(alpha: 0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No matches found',
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          if (queryLabel.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                'We couldn\'t find any conversations, members, or messages matching “$queryLabel”.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.55),
+                  height: 1.4,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: () => _messageSearchController.clear(),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Clear search'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<String> _buildMessageSearchVariants(String rawQuery) {
+    final normalized = rawQuery.trim().toLowerCase();
+    if (normalized.isEmpty) return const [];
+    final variants = <String>[];
+
+    void addVariant(String value) {
+      final candidate = value.trim().toLowerCase();
+      if (candidate.isEmpty) return;
+      if (!variants.contains(candidate)) variants.add(candidate);
+    }
+
+    addVariant(normalized);
+    addVariant(normalized.replaceAll(RegExp(r'\s+'), ' '));
+
+    for (final token in normalized.split(RegExp(r'\s+'))) {
+      if (token.isEmpty) continue;
+      addVariant(token);
+      if (token.startsWith('@') && token.length > 1) {
+        addVariant(token.substring(1));
+      }
+    }
+
+    return variants;
+  }
+
+  List<Conversation> _applyMessageSearchFilters(
+    List<Conversation> conversations,
+    ChatProvider chatProvider,
+    List<String> queryVariants,
+    Map<String, String> highlightMap,
+  ) {
+    if (queryVariants.isEmpty) return conversations;
+    final hits = <_ConversationSearchResult>[];
+
+    for (final conversation in conversations) {
+      final match = _matchConversationForSearch(conversation, chatProvider, queryVariants);
+      if (match == null) continue;
+      if ((match.highlight ?? '').isNotEmpty) {
+        highlightMap[conversation.id] = match.highlight!;
+      }
+      hits.add(match);
+    }
+
+    hits.sort((a, b) {
+      final scoreDiff = b.score.compareTo(a.score);
+      if (scoreDiff != 0) return scoreDiff;
+      final aDate = a.conversation.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bDate = b.conversation.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final dateDiff = bDate.compareTo(aDate);
+      if (dateDiff != 0) return dateDiff;
+      final aTitle = a.conversation.title ?? a.conversation.rawTitle ?? '';
+      final bTitle = b.conversation.title ?? b.conversation.rawTitle ?? '';
+      return aTitle.compareTo(bTitle);
+    });
+
+    return hits.map((hit) => hit.conversation).toList();
+  }
+
+  _ConversationSearchResult? _matchConversationForSearch(
+    Conversation conversation,
+    ChatProvider chatProvider,
+    List<String> queryVariants,
+  ) {
+    if (queryVariants.isEmpty) return null;
+    double bestScore = 0;
+    String? bestHighlight;
+
+    void register(double score, String highlight) {
+      if (score > bestScore || (score == bestScore && (bestHighlight == null || highlight.length < bestHighlight!.length))) {
+        bestScore = score;
+        bestHighlight = highlight;
+      }
+    }
+
+    final title = (conversation.title ?? conversation.rawTitle ?? '').trim();
+    final titlePreview = _matchField(title, queryVariants);
+    if (titlePreview != null) {
+      register(4.0, 'Title match • $titlePreview');
+    }
+
+    final preloaded = chatProvider.getPreloadedProfileMapsForConversation(conversation.id);
+    final memberNames = <String>{};
+    final memberWallets = <String>{};
+
+    void addName(String? value) {
+      final trimmed = value?.trim();
+      if (trimmed == null || trimmed.isEmpty) return;
+      memberNames.add(trimmed);
+    }
+
+    void addWallet(String? wallet) {
+      final normalized = WalletUtils.normalize(wallet);
+      if (normalized.isEmpty) return;
+      memberWallets.add(normalized);
+    }
+
+    for (final profile in conversation.memberProfiles) {
+      addName(profile.displayName);
+      addWallet(profile.wallet);
+    }
+    if (conversation.counterpartProfile != null) {
+      addName(conversation.counterpartProfile!.displayName);
+      addWallet(conversation.counterpartProfile!.wallet);
+    }
+    for (final wallet in conversation.memberWallets) {
+      addWallet(wallet);
+    }
+
+    final namesMap = preloaded['names'];
+    if (namesMap is Map) {
+      namesMap.forEach((key, value) {
+        if (key is String) addWallet(key);
+        if (value is String) addName(value);
+      });
+    }
+    final membersList = preloaded['members'];
+    if (membersList is List) {
+      for (final entry in membersList) {
+        if (entry == null) continue;
+        addWallet(entry.toString());
+      }
+    }
+
+    for (final name in memberNames) {
+      final snippet = _matchField(name, queryVariants);
+      if (snippet != null) {
+        register(3.2, 'Member • $snippet');
+        break;
+      }
+    }
+
+    for (final wallet in memberWallets) {
+      final snippet = _matchWallet(wallet, queryVariants);
+      if (snippet != null) {
+        register(2.8, snippet);
+        break;
+      }
+    }
+
+    final lastMessageSnippet = _matchField(conversation.lastMessage, queryVariants);
+    if (lastMessageSnippet != null) {
+      register(2.6, 'Latest message • “$lastMessageSnippet”');
+    }
+
+    final cachedMessages = chatProvider.messages[conversation.id];
+    if (cachedMessages != null && cachedMessages.isNotEmpty) {
+      for (final message in cachedMessages) {
+        final snippet = _matchField(message.message, queryVariants);
+        if (snippet != null) {
+          final sender = (message.senderDisplayName ?? message.senderUsername ?? message.senderWallet).trim();
+          final prefix = sender.isNotEmpty ? '$sender • ' : '';
+          register(2.4, 'Message • $prefix“$snippet”');
+          break;
+        }
+      }
+    }
+
+    if (bestScore <= 0 || bestHighlight == null || bestHighlight!.isEmpty) {
+      return null;
+    }
+
+    return _ConversationSearchResult(
+      conversation: conversation,
+      score: bestScore,
+      highlight: bestHighlight,
+    );
+  }
+
+  String? _matchField(String? source, List<String> queryVariants) {
+    final value = source?.trim();
+    if (value == null || value.isEmpty) return null;
+    final lower = value.toLowerCase();
+    for (final variant in queryVariants) {
+      if (variant.isEmpty) continue;
+      final index = lower.indexOf(variant);
+      if (index != -1) {
+        return _buildMatchPreview(value, index, variant.length);
+      }
+    }
+    return null;
+  }
+
+  String? _matchWallet(String? wallet, List<String> queryVariants) {
+    final normalized = WalletUtils.normalize(wallet);
+    if (normalized.isEmpty) return null;
+    final lower = normalized.toLowerCase();
+    for (final variant in queryVariants) {
+      if (variant.isEmpty) continue;
+      if (lower.contains(variant)) {
+        return 'Wallet match • ${_shortenWallet(normalized)}';
+      }
+    }
+    return null;
+  }
+
+  String _buildMatchPreview(String value, int matchStart, int matchLength) {
+    const radius = 18;
+    final start = math.max(0, matchStart - radius);
+    final end = math.min(value.length, matchStart + matchLength + radius);
+    final prefix = start > 0 ? '…' : '';
+    final suffix = end < value.length ? '…' : '';
+    final snippet = value.substring(start, end).trim();
+    if (snippet.isEmpty) return value;
+    return '$prefix$snippet$suffix';
+  }
+
+  String _shortenWallet(String wallet) {
+    if (wallet.length <= 12) return wallet;
+    return '${wallet.substring(0, 4)}…${wallet.substring(wallet.length - 4)}';
+  }
+
   void _startNewConversation() {
     // Show dialog to start new conversation
     showDialog(
@@ -2160,14 +2965,32 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  void _openConversation(Conversation conversation) {
-    // Open conversation detail - for now show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Opening conversation with ${conversation.title ?? "user"}...'),
-        behavior: SnackBarBehavior.floating,
-      ),
+  Future<void> _openConversation(Conversation conversation) async {
+    if (_conversationModalVisible) {
+      try {
+        Navigator.of(context, rootNavigator: true).pop();
+      } catch (_) {}
+    }
+
+    setState(() {
+      _showMessagesPanel = true;
+      _activeConversationId = conversation.id;
+      _conversationModalVisible = true;
+    });
+
+    await _showDesktopModal(
+      builder: (_) => ConversationScreen(conversation: conversation),
+      maxWidth: 1024,
+      maxHeight: 900,
+      minWidth: 560,
+      wrapWithSurface: false,
     );
+
+    if (!mounted) return;
+    setState(() {
+      _conversationModalVisible = false;
+      _activeConversationId = null;
+    });
   }
 
   Widget _buildCreatePostPrompt(ThemeProvider themeProvider) {
@@ -2473,6 +3296,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 themeProvider,
                 onTap: () => _showAddTagDialog(hub),
               ),
+              _buildCompactActionButton(
+                Icons.alternate_email_outlined,
+                'Mention',
+                themeProvider,
+                onTap: () => _showMentionPicker(hub),
+              ),
               const Spacer(),
               // Character count
               Text(
@@ -2624,6 +3453,297 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
+  Future<T?> _showDesktopModal<T>({
+    required WidgetBuilder builder,
+    double maxWidth = 900,
+    double maxHeight = 880,
+    double minWidth = 420,
+    bool barrierDismissible = true,
+    bool wrapWithSurface = true,
+  }) {
+    final theme = Theme.of(context);
+    final radius = BorderRadius.circular(28);
+
+    return showGeneralDialog<T>(
+      context: context,
+      barrierDismissible: barrierDismissible,
+      barrierLabel: 'Desktop modal',
+      barrierColor: Colors.black.withValues(alpha: 0.55),
+      transitionDuration: const Duration(milliseconds: 220),
+      pageBuilder: (modalContext, _, __) {
+        final modalShell = Container(
+          decoration: BoxDecoration(
+            color: wrapWithSurface ? theme.colorScheme.surface : Colors.transparent,
+            borderRadius: radius,
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x2F000000),
+                blurRadius: 32,
+                offset: Offset(0, 18),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: radius,
+            child: builder(modalContext),
+          ),
+        );
+
+        return SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minWidth: minWidth,
+                  maxWidth: maxWidth,
+                  maxHeight: maxHeight,
+                ),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: modalShell,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _openUserProfileModal({
+    required String userId,
+    String? username,
+  }) async {
+    if (userId.isEmpty) return;
+    await _showDesktopModal(
+      builder: (_) => UserProfileScreen(userId: userId, username: username),
+      maxWidth: 920,
+      maxHeight: 920,
+      minWidth: 520,
+      wrapWithSurface: false,
+    );
+  }
+
+  Future<void> _openPostDetailModal(CommunityPost post) async {
+    await _showDesktopModal(
+      builder: (_) => PostDetailScreen(post: post),
+      maxWidth: 860,
+      maxHeight: 900,
+      minWidth: 520,
+      wrapWithSurface: false,
+    );
+  }
+
+  Future<void> _showMentionPicker(CommunityHubProvider hub) async {
+    final selectedHandle = await _presentMentionPickerDialog();
+    if (selectedHandle == null || selectedHandle.isEmpty) return;
+    hub.addMention(selectedHandle);
+    if (mounted) setState(() {});
+  }
+
+  Future<String?> _presentMentionPickerDialog() async {
+    final controller = TextEditingController();
+    List<Map<String, dynamic>> results = <Map<String, dynamic>>[];
+    bool isLoading = false;
+    String? errorMessage;
+    Timer? debounce;
+
+    final selection = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> runSearch(String query) async {
+              if (query.length < 2) {
+                setDialogState(() {
+                  results = <Map<String, dynamic>>[];
+                  isLoading = false;
+                  errorMessage = null;
+                });
+                return;
+              }
+              setDialogState(() {
+                isLoading = true;
+                errorMessage = null;
+              });
+              try {
+                final response = await _backendApi.search(
+                  query: query,
+                  type: 'profiles',
+                  limit: 12,
+                );
+                final parsed = _parseProfileSearchResults(response);
+                setDialogState(() {
+                  results = parsed;
+                  isLoading = false;
+                  errorMessage = parsed.isEmpty ? 'No profiles found' : null;
+                });
+              } catch (e) {
+                debugPrint('Mention picker search failed: $e');
+                setDialogState(() {
+                  isLoading = false;
+                  results = <Map<String, dynamic>>[];
+                  errorMessage = 'Search failed. Try again.';
+                });
+              }
+            }
+
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Mention someone',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+              ),
+              content: SizedBox(
+                width: 420,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Search artists, collectors, or wallets',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: controller.text.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  controller.clear();
+                                  setDialogState(() {
+                                    results = <Map<String, dynamic>>[];
+                                    errorMessage = null;
+                                  });
+                                },
+                              ),
+                      ),
+                      onChanged: (value) {
+                        debounce?.cancel();
+                        final query = value.trim();
+                        if (query.length < 2) {
+                          setDialogState(() {
+                            results = <Map<String, dynamic>>[];
+                            isLoading = false;
+                            errorMessage = null;
+                          });
+                          return;
+                        }
+                        debounce = Timer(const Duration(milliseconds: 275), () {
+                          unawaited(runSearch(query));
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 260,
+                      child: isLoading
+                          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                          : results.isEmpty
+                              ? Center(
+                                  child: Text(
+                                    controller.text.trim().length < 2
+                                        ? 'Type at least 2 characters to search'
+                                        : (errorMessage ?? 'No profiles found'),
+                                    style: GoogleFonts.inter(
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              : ListView.separated(
+                                  itemCount: results.length,
+                                  separatorBuilder: (_, __) => Divider(
+                                    height: 1,
+                                    color: Theme.of(context).colorScheme.outlineVariant,
+                                  ),
+                                  itemBuilder: (_, index) {
+                                    final profile = results[index];
+                                    final displayName = profile['displayName']?.toString() ??
+                                        profile['display_name']?.toString() ??
+                                        profile['username']?.toString() ??
+                                        profile['wallet']?.toString() ??
+                                        'Profile';
+                                    final handle = _sanitizeHandle(
+                                      profile['username'] ?? profile['handle'] ?? profile['wallet_address'] ?? profile['wallet'] ?? profile['id'] ?? '',
+                                    );
+                                    final wallet = (profile['wallet_address'] ?? profile['wallet'] ?? profile['id'])?.toString() ?? '';
+                                    final avatarUrl = profile['avatar'] ?? profile['avatar_url'] ?? profile['profileImageUrl'];
+                                    return ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                                      leading: AvatarWidget(
+                                        avatarUrl: avatarUrl?.toString(),
+                                        wallet: wallet,
+                                        radius: 20,
+                                        allowFabricatedFallback: true,
+                                      ),
+                                      title: Text(
+                                        displayName,
+                                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                      ),
+                                      subtitle: Text(
+                                        handle.isNotEmpty ? '@$handle' : _formatWalletPreview(wallet),
+                                        style: GoogleFonts.inter(
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                      trailing: Icon(Icons.person_add_alt_1_outlined,
+                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
+                                      onTap: () => Navigator.of(dialogContext).pop(handle.isNotEmpty ? handle : wallet),
+                                    );
+                                  },
+                                ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: controller.text.trim().isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(_sanitizeHandle(controller.text)),
+                  child: const Text('Add handle'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    debounce?.cancel();
+    controller.dispose();
+    final sanitized = _sanitizeHandle(selection ?? '');
+    return sanitized.isEmpty ? null : sanitized;
+  }
+
+  String _sanitizeHandle(Object? raw) {
+    final value = (raw ?? '').toString().trim();
+    if (value.isEmpty) return '';
+    return value.replaceFirst(RegExp(r'^@+'), '');
+  }
+
   Future<void> _submitInlinePost() async {
     if (_composeController.text.trim().isEmpty) return;
 
@@ -2702,6 +3822,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildTrendingSection(ThemeProvider themeProvider) {
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2764,28 +3885,51 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: 12),
+                Expanded(
+                  child:
                 Text(
-                  'No trending topics yet. Engage with the community to surface trends.',
+                  'No trending tags yet. Engage with the community to surface trends.',
                   style: GoogleFonts.inter(
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
+                ),
                 ),
               ],
             ),
           )
         else
           Column(
-            children: _trendingTopics.asMap().entries.map((entry) {
-              final topic = entry.value;
-              final rank = entry.key + 1;
-              final title = (topic['term'] ?? topic['tag'] ?? topic['query'] ?? topic['search'] ?? '').toString();
-              final count = topic['count'] ?? topic['search_count'] ?? topic['occurrences'] ?? 0;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: DesktopCard(
-                  onTap: () => _composeController.text = '${_composeController.text} #$title '.trim(),
-                  child: Row(
-                    children: [
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_trendingFromFeed)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8, left: 4, right: 4),
+                  child: Text(
+                    'Based on recent posts',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ..._trendingTopics.asMap().entries.map((entry) {
+                final topic = entry.value;
+                final rank = entry.key + 1;
+                final rawTag = topic['tag']?.toString() ?? '';
+                if (rawTag.isEmpty) return const SizedBox.shrink();
+                final displayTag = rawTag.startsWith('#') ? rawTag : '#$rawTag';
+                final count = topic['count'] is num
+                    ? topic['count'] as num
+                    : num.tryParse(topic['count']?.toString() ?? '') ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: DesktopCard(
+                    onTap: () {
+                      hub.addTag(rawTag);
+                      _appendComposerToken(displayTag);
+                    },
+                    child: Row(
+                      children: [
                       Container(
                         width: 36,
                         height: 36,
@@ -2809,17 +3953,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              title,
+                              displayTag,
                               style: GoogleFonts.inter(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '$count mentions',
+                              '${_formatTrendingCount(count)} tagged posts',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -2833,14 +3978,125 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         size: 18,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }),
+            ],
           ),
       ],
     );
+  }
+
+  void _appendComposerToken(String token) {
+    final trimmed = token.trim();
+    if (trimmed.isEmpty) return;
+    final existing = _composeController.text.trimRight();
+    final updated = existing.isEmpty ? trimmed : '$existing $trimmed';
+    setState(() {
+      _composeController.text = '$updated ';
+    });
+  }
+
+  List<Map<String, dynamic>> _normalizeTrendingTopics(List<Map<String, dynamic>> raw) {
+    final normalized = <Map<String, dynamic>>[];
+    final seen = <String>{};
+    for (final entry in raw) {
+      final tag = _extractTrendingTag(entry);
+      if (tag == null) continue;
+      final key = tag.toLowerCase();
+      if (seen.contains(key)) continue;
+      final countValue = entry['count'] ?? entry['search_count'] ?? entry['occurrences'] ?? entry['uses'] ?? 0;
+      final numCount = countValue is num ? countValue : num.tryParse(countValue.toString()) ?? 0;
+      normalized.add({'tag': tag, 'count': numCount});
+      seen.add(key);
+    }
+    return normalized;
+  }
+
+  String? _extractTrendingTag(Map<String, dynamic> topic) {
+    final rawTerm = topic['tag'] ?? topic['term'] ?? topic['query'] ?? topic['search'];
+    if (rawTerm == null) return null;
+    final type = (topic['type'] ?? topic['category'] ?? topic['kind'] ?? '').toString().toLowerCase();
+    final rawString = rawTerm.toString().trim();
+    if (rawString.isEmpty) return null;
+    if (rawString.startsWith('@')) return null;
+
+    if (type.isNotEmpty && type != 'tag' && type != 'tags' && type != 'hashtag') {
+      if (!rawString.startsWith('#') && topic['tag'] == null) {
+        return null;
+      }
+    }
+
+    final sanitized = _sanitizeTagValue(rawString);
+    return sanitized;
+  }
+
+  String? _sanitizeTagValue(Object? raw) {
+    if (raw == null) return null;
+    var value = raw.toString().trim();
+    if (value.isEmpty) return null;
+    value = value.replaceFirst(RegExp(r'^#+'), '');
+    value = value.replaceAll(RegExp(r'\s+'), '');
+    if (value.isEmpty) return null;
+    if (!RegExp(r'[a-zA-Z0-9]').hasMatch(value)) return null;
+    return value;
+  }
+
+  List<Map<String, dynamic>> _buildFallbackTrendingTopics() {
+    final combinedPosts = <CommunityPost>[];
+    combinedPosts
+      ..addAll(_discoverPosts)
+      ..addAll(_followingPosts);
+    if (combinedPosts.isEmpty) return const [];
+
+    final counts = <String, Map<String, dynamic>>{};
+    for (final post in combinedPosts) {
+      for (final tag in post.tags) {
+        final sanitized = _sanitizeTagValue(tag);
+        if (sanitized == null) continue;
+        final key = sanitized.toLowerCase();
+        final existing = counts.putIfAbsent(key, () => {'tag': sanitized, 'count': 0});
+        existing['count'] = (existing['count'] as int) + 1;
+      }
+    }
+
+    final sorted = counts.values.toList()
+      ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
+    return sorted;
+  }
+
+  String _formatTrendingCount(num? count) {
+    final value = count ?? 0;
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1)}M';
+    }
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}K';
+    }
+    return value.toStringAsFixed(0);
+  }
+
+  List<Map<String, dynamic>> _dedupeSuggestedProfiles(List<Map<String, dynamic>> source, {int take = 8}) {
+    if (source.isEmpty) return const [];
+    final seen = <String>{};
+    final deduped = <Map<String, dynamic>>[];
+    for (final entry in source) {
+      if (entry.isEmpty) continue;
+      final key = (entry['walletAddress'] ??
+              entry['wallet_address'] ??
+              entry['wallet'] ??
+              entry['id'] ??
+              entry['username'])
+          ?.toString()
+          .toLowerCase();
+      if (key == null || key.isEmpty || seen.contains(key)) continue;
+      seen.add(key);
+      deduped.add(entry);
+      if (deduped.length >= take) break;
+    }
+    return deduped;
   }
 
   Widget _buildWhoToFollowSection(ThemeProvider themeProvider) {
@@ -2930,12 +4186,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 child: DesktopCard(
                   onTap: profileId.isEmpty
                       ? null
-                      : () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => UserProfileScreen(userId: profileId, username: handle),
-                            ),
-                          ),
+                      : () => _openUserProfileModal(userId: profileId, username: handle.isEmpty ? null : handle),
                   child: Row(
                     children: [
                       AvatarWidget(
@@ -3168,6 +4419,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final profileProvider = Provider.of<ProfileProvider>(context);
     final user = profileProvider.currentUser;
     final remainingChars = 280 - _composeController.text.length;
+    final hub = Provider.of<CommunityHubProvider>(context);
 
     return GestureDetector(
       onTap: () {
@@ -3306,6 +4558,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ),
                           const SizedBox(height: 12),
                           _buildTagMentionRow(themeProvider, inset: false),
+                          const SizedBox(height: 16),
+                          _buildGroupAttachmentCard(themeProvider, hub),
+                          const SizedBox(height: 12),
+                          _buildArtworkAttachmentCard(themeProvider, hub),
+                          const SizedBox(height: 12),
+                          _buildLocationAttachmentCard(themeProvider, hub),
                           // Selected images preview
                           if (_selectedImages.isNotEmpty) ...[
                             const SizedBox(height: 16),
@@ -3358,44 +4616,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                               ),
                             ),
                           ],
-                          // Location indicator
-                          if (_selectedLocation != null) ...[
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: themeProvider.accentColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    size: 16,
-                                    color: themeProvider.accentColor,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    _selectedLocation!,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: themeProvider.accentColor,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () => setState(() => _selectedLocation = null),
-                                    child: Icon(
-                                      Icons.close,
-                                      size: 14,
-                                      color: themeProvider.accentColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
                         ],
                       ),
                     ),
@@ -3427,6 +4647,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           onPressed: _pickLocation,
                           icon: Icon(Icons.location_on_outlined, color: themeProvider.accentColor),
                           tooltip: 'Add location',
+                        ),
+                        IconButton(
+                          onPressed: () => _showMentionPicker(Provider.of<CommunityHubProvider>(context, listen: false)),
+                          icon: Icon(Icons.alternate_email_outlined, color: themeProvider.accentColor),
+                          tooltip: 'Mention user',
                         ),
                         IconButton(
                           onPressed: _showEmojiPicker,
@@ -3634,9 +4859,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             Expanded(
               child: TextField(
                 controller: _tagController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Add tag',
                   prefixText: '# ',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.tag),
+                    tooltip: 'Browse tags',
+                    onPressed: () => _showAddTagDialog(hub),
+                  ),
                 ),
                 onSubmitted: (value) {
                   final v = value.trim();
@@ -3651,9 +4881,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             Expanded(
               child: TextField(
                 controller: _mentionController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Mention',
                   prefixText: '@ ',
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.alternate_email_outlined),
+                    tooltip: 'Find profiles',
+                    onPressed: () => _showMentionPicker(hub),
+                  ),
                 ),
                 onSubmitted: (value) {
                   final v = value.trim();
@@ -3667,6 +4902,526 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildGroupAttachmentCard(ThemeProvider themeProvider, CommunityHubProvider hub) {
+    final scheme = Theme.of(context).colorScheme;
+    final group = hub.draft.targetGroup;
+    final animationTheme = context.animationTheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          final selection = await _showGroupPicker();
+          if (selection != null) {
+            hub.setDraftGroup(selection);
+          }
+        },
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          decoration: BoxDecoration(
+            color: group != null ? scheme.primaryContainer.withValues(alpha: 0.2) : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: group != null
+                  ? themeProvider.accentColor.withValues(alpha: 0.4)
+                  : scheme.outline.withValues(alpha: 0.2),
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.groups_3_outlined, color: scheme.onSurface.withValues(alpha: 0.8)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      group?.name ?? 'Target a community (optional)',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      group == null
+                          ? 'Posts shared to groups notify members instantly.'
+                          : (group.description?.isNotEmpty == true
+                              ? group.description!
+                              : 'Posting to ${group.name}'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (group != null)
+                IconButton(
+                  tooltip: 'Remove group',
+                  onPressed: () => hub.setDraftGroup(null),
+                  icon: const Icon(Icons.close),
+                )
+              else
+                Icon(
+                  Icons.add_circle_outline,
+                  color: themeProvider.accentColor,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildArtworkAttachmentCard(ThemeProvider themeProvider, CommunityHubProvider hub) {
+    final scheme = Theme.of(context).colorScheme;
+    final artwork = hub.draft.artwork;
+    final animationTheme = context.animationTheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () async {
+          final selection = await _showArtworkPicker();
+          if (selection != null) {
+            hub.setDraftArtwork(selection);
+          }
+        },
+        child: AnimatedContainer(
+          duration: animationTheme.short,
+          curve: animationTheme.defaultCurve,
+          decoration: BoxDecoration(
+            color: artwork != null ? scheme.primaryContainer.withValues(alpha: 0.2) : scheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: artwork != null
+                  ? themeProvider.accentColor.withValues(alpha: 0.35)
+                  : scheme.outline.withValues(alpha: 0.2),
+            ),
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              if (artwork?.imageUrl != null && artwork!.imageUrl!.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    artwork.imageUrl!,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(Icons.image_outlined, color: themeProvider.accentColor),
+                  ),
+                )
+              else
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.collections_bookmark_outlined, color: themeProvider.accentColor),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      artwork?.title ?? 'Link an artwork (optional)',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      artwork == null
+                          ? 'Attach provenance so collectors discover it faster.'
+                          : 'Attached to ${artwork.title}.',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (artwork != null)
+                IconButton(
+                  tooltip: 'Remove artwork',
+                  onPressed: () => hub.setDraftArtwork(null),
+                  icon: const Icon(Icons.close),
+                )
+              else
+                Icon(
+                  Icons.add_circle_outline,
+                  color: themeProvider.accentColor,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationAttachmentCard(ThemeProvider themeProvider, CommunityHubProvider hub) {
+    final scheme = Theme.of(context).colorScheme;
+    final location = hub.draft.location;
+    final label = _selectedLocation ?? hub.draft.locationLabel ?? location?.name;
+    final animationTheme = context.animationTheme;
+
+    return AnimatedSwitcher(
+      duration: animationTheme.short,
+      switchInCurve: animationTheme.defaultCurve,
+      switchOutCurve: animationTheme.fadeCurve,
+      child: label == null
+          ? Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                key: const ValueKey('location_add'),
+                onPressed: _pickLocation,
+                icon: const Icon(Icons.location_on_outlined),
+                label: const Text('Tag a location'),
+              ),
+            )
+          : Container(
+              key: ValueKey(label),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: themeProvider.accentColor.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.location_on, color: themeProvider.accentColor),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        if (location?.lat != null && location?.lng != null)
+                          Text(
+                            '${location!.lat!.toStringAsFixed(4)}, ${location.lng!.toStringAsFixed(4)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Edit label',
+                    onPressed: _pickLocation,
+                    icon: const Icon(Icons.edit_location_alt_outlined),
+                  ),
+                  IconButton(
+                    tooltip: 'Remove location',
+                    onPressed: () {
+                      setState(() => _selectedLocation = null);
+                      hub.setDraftLocation(null);
+                    },
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Future<CommunityGroupSummary?> _showGroupPicker() async {
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    if (!hub.groupsInitialized && !hub.groupsLoading) {
+      try {
+        await hub.loadGroups(refresh: true);
+      } catch (e) {
+        debugPrint('Failed to refresh community groups: $e');
+      }
+    }
+    if (!mounted) return null;
+    final groups = hub.groups.where((g) => g.isMember || g.isOwner).toList();
+    if (groups.isEmpty) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Join a community group to target your post.')),
+      );
+      return null;
+    }
+
+    return showDialog<CommunityGroupSummary>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Select community',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(24),
+                    itemCount: groups.length,
+                    itemBuilder: (context, index) {
+                      final group = groups[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          group.name,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (group.description?.isNotEmpty == true)
+                              Text(
+                                group.description!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              )
+                            else
+                              Text(
+                                '${group.memberCount} members',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
+                              ),
+                          ],
+                        ),
+                        trailing: Icon(
+                          Icons.chevron_right,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                        onTap: () => Navigator.of(dialogContext).pop(group),
+                      );
+                    },
+                    separatorBuilder: (_, __) => Divider(
+                      height: 1,
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                  child: Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(null),
+                        child: const Text('Clear selection'),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<CommunityArtworkReference?> _showArtworkPicker() async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final wallet = walletProvider.currentWalletAddress;
+    if (wallet == null || wallet.isEmpty) {
+      if (!mounted) return null;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Connect your wallet to link an artwork.')),
+      );
+      return null;
+    }
+
+    return showDialog<CommunityArtworkReference>(
+      context: context,
+      builder: (dialogContext) {
+        return Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 580),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Link artwork',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        icon: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: BackendApiService().getArtistArtworks(wallet, limit: 60),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState != ConnectionState.done) {
+                        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              'Unable to load artworks: ${snapshot.error}',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      }
+                      final artworks = snapshot.data ?? const [];
+                      if (artworks.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              'No artworks found. Mint or upload an artwork first.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+                      return ListView.separated(
+                        padding: const EdgeInsets.all(24),
+                        itemCount: artworks.length,
+                        itemBuilder: (context, index) {
+                          final raw = artworks[index];
+                          final reference = CommunityArtworkReference(
+                            id: (raw['id'] ?? raw['artworkId'] ?? raw['uuid']).toString(),
+                            title: (raw['title'] ?? raw['name'] ?? 'Untitled').toString(),
+                            imageUrl: (raw['imageUrl'] ?? raw['image_url'] ?? raw['coverImage'] ?? raw['cover_image'])?.toString(),
+                          );
+                          final artist = raw['artistName'] ?? raw['artist_name'];
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: reference.imageUrl != null
+                                ? ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.network(
+                                      reference.imageUrl!,
+                                      width: 56,
+                                      height: 56,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => Icon(
+                                        Icons.image_outlined,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                      ),
+                                    ),
+                                  )
+                                : Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                  ),
+                            title: Text(
+                              reference.title,
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            subtitle: artist != null
+                                ? Text(
+                                    'by $artist',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                  )
+                                : null,
+                            trailing: const Icon(Icons.add_circle_outline),
+                            onTap: () => Navigator.of(dialogContext).pop(reference),
+                          );
+                        },
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                  child: Row(
+                    children: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: const Text('Cancel'),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -3971,4 +5726,16 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
       ),
     );
   }
+}
+
+class _ConversationSearchResult {
+  final Conversation conversation;
+  final double score;
+  final String? highlight;
+
+  const _ConversationSearchResult({
+    required this.conversation,
+    required this.score,
+    this.highlight,
+  });
 }

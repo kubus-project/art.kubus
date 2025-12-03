@@ -10,12 +10,15 @@ import '../../providers/notification_provider.dart';
 import '../../providers/recent_activity_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/navigation_provider.dart';
+import '../../providers/config_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/recent_activity.dart';
 import '../../models/wallet.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/artist_badge.dart';
+import '../../widgets/institution_badge.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import 'components/desktop_widgets.dart';
@@ -26,10 +29,11 @@ import '../web3/marketplace/marketplace.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../web3/onboarding/web3_onboarding.dart' as web3;
 import '../art/art_detail_screen.dart';
-import '../community/user_profile_screen.dart';
-import 'desktop_profile_screen.dart';
+import 'community/desktop_user_profile_screen.dart';
+import 'desktop_settings_screen.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
+import '../home_screen.dart' show ActivityScreen;
 
 /// Desktop home screen with spacious layout and proper grid systems
 /// Inspired by Twitter/X feed presentation and Google Maps panels
@@ -206,6 +210,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final profileProvider = Provider.of<ProfileProvider>(context);
     final user = profileProvider.currentUser;
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isArtist = user?.isArtist ?? false;
+    final isInstitution = user?.isInstitution ?? false;
 
     return Container(
       padding: const EdgeInsets.all(32),
@@ -216,31 +222,52 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const AppLogo(width: 44, height: 44),
-                    const SizedBox(width: 16),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _getGreeting(),
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                SizedBox(
+                  width: double.infinity,
+                  child: Row(
+                    children: [
+                      const AppLogo(width: 44, height: 44),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _getGreeting(),
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
                           ),
-                        ),
-                        Text(
-                          user?.displayName ?? 'Welcome to art.kubus',
-                          style: GoogleFonts.inter(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                fit: FlexFit.loose,
+                                child: Text(
+                                  user?.displayName ?? 'Welcome to art.kubus',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                ),
+                              ),
+                              if (isArtist) ...[
+                                const SizedBox(width: 8),
+                                const ArtistBadge(),
+                              ],
+                              if (isInstitution) ...[
+                                const SizedBox(width: 8),
+                                const InstitutionBadge(),
+                              ],
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -273,7 +300,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _showNotificationsPanel(context, themeProvider, np),
+            onTap: () {
+              _showNotificationsPanel(themeProvider, np);
+            },
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.all(12),
@@ -368,9 +397,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     _buildWalletBalances()
                   else
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushNamed('/connect-wallet');
-                      },
+                      onPressed: _showWalletOnboarding,
                       icon: const Icon(Icons.account_balance_wallet),
                       label: const Text('Connect Wallet'),
                       style: ElevatedButton.styleFrom(
@@ -654,10 +681,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         _openShellTab(4);
         return;
       case 'profile':
-        _pushScreen(const DesktopProfileScreen(), screenKey);
+        _pushScreen(const DesktopSettingsScreen(), screenKey);
         return;
       case 'analytics':
-        _pushScreen(const AdvancedAnalyticsScreen(statType: 'Engagement'), screenKey);
+        _pushScreen(const AdvancedAnalyticsScreen(statType: ''), screenKey);
         return;
       case 'dao_hub':
         _pushScreen(const GovernanceHub(), screenKey);
@@ -724,6 +751,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       default:
         _handleQuickAction('map');
     }
+  }
+
+  void _openFullActivity() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const ActivityScreen()),
+    );
   }
 
   void _showARInfo() {
@@ -862,7 +895,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               subtitle: 'Discover trending AR art',
               icon: Icons.auto_awesome,
               action: TextButton.icon(
-                onPressed: () {},
+                onPressed: () => _openShellTab(3),
                 icon: const Icon(Icons.arrow_forward, size: 18),
                 label: const Text('View All'),
               ),
@@ -1037,7 +1070,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           subtitle: 'Access decentralized features',
           icon: Icons.hub,
           action: isConnected ? null : TextButton.icon(
-            onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
+            onPressed: _showWalletOnboarding,
             icon: const Icon(Icons.link, size: 18),
             label: const Text('Connect Wallet'),
           ),
@@ -1134,24 +1167,103 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return [
       const web3.OnboardingPage(
         title: 'Welcome to Web3',
-        description: 'Connect your wallet to unlock decentralized features.',
+        description:
+            'Connect your wallet to unlock decentralized features powered by blockchain technology.',
         icon: Icons.account_balance_wallet,
-        gradientColors: [Colors.white, Color(0xFF3F51B5)],
+        gradientColors: [
+          Colors.white,
+          Color(0xFF3F51B5),
+        ],
         features: [
           'Secure wallet-based authentication',
           'True ownership of digital assets',
           'Decentralized transactions',
+          'Cross-platform compatibility',
         ],
       ),
       const web3.OnboardingPage(
         title: 'NFT Marketplace',
-        description: 'Buy, sell, and trade unique digital artworks.',
+        description:
+            'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
         icon: Icons.store,
-        gradientColors: [Color(0xFFFF6B6B), Color(0xFFE91E63)],
+        gradientColors: [
+          Color(0xFFFF6B6B),
+          Color(0xFFE91E63),
+        ],
         features: [
           'Browse trending digital artworks',
           'Purchase NFTs with SOL tokens',
-          'List your own creations',
+          'List your own creations for sale',
+          'Track marketplace analytics',
+          'Discover featured collections',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'Artist Studio',
+        description:
+            'Create, mint, and manage your digital artworks with professional tools.',
+        icon: Icons.palette,
+        gradientColors: [
+          Color(0xFFFF9A8B),
+          Color(0xFFFF7043),
+        ],
+        features: [
+          'Upload and mint AR artworks as NFTs',
+          'Set pricing and royalties',
+          'Track creation analytics',
+          'Manage your digital portfolio',
+          'Collaborate with other artists',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'DAO Governance',
+        description:
+            'Participate in community decisions and help shape the future of the platform.',
+        icon: Icons.how_to_vote,
+        gradientColors: [
+          Color(0xFF4ECDC4),
+          Color(0xFF26A69A),
+        ],
+        features: [
+          'Vote on platform proposals',
+          'Submit improvement suggestions',
+          'Earn governance tokens',
+          'Access exclusive DAO benefits',
+          'Shape community guidelines',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'Institution Hub',
+        description:
+            'Connect with galleries, museums, and cultural institutions in the Web3 space.',
+        icon: Icons.museum,
+        gradientColors: [
+          Color(0xFF667eea),
+          Color(0xFF764ba2),
+        ],
+        features: [
+          'Partner with verified institutions',
+          'Access exclusive exhibitions',
+          'Institutional-grade security',
+          'Professional networking tools',
+          'Curated collection management',
+        ],
+      ),
+      const web3.OnboardingPage(
+        title: 'KUB8 Token Economy',
+        description:
+            'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
+        icon: Icons.monetization_on,
+        gradientColors: [
+          Color(0xFFFFD700),
+          Color(0xFFFF8C00),
+        ],
+        features: [
+          'Earn tokens for discoveries',
+          'Reward system for creators',
+          'Stake tokens for benefits',
+          'Pay for premium features',
+          'Trade on decentralized exchanges',
         ],
       ),
     ];
@@ -1734,6 +1846,27 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return Consumer<RecentActivityProvider>(
       builder: (context, activityProvider, _) {
         final activities = activityProvider.activities.take(5).toList();
+        final isLoading = activityProvider.isLoading && activities.isEmpty;
+        final error = activityProvider.error;
+
+        Widget content;
+        if (isLoading) {
+          content = _buildRecentActivityLoading(themeProvider);
+        } else if (error != null && activities.isEmpty) {
+          content = _buildRecentActivityError(
+            themeProvider,
+            error,
+            () => activityProvider.refresh(force: true),
+          );
+        } else if (activities.isEmpty) {
+          content = _buildRecentActivityEmpty(themeProvider);
+        } else {
+          content = Column(
+            children: activities
+                .map((activity) => _buildActivityItem(activity, themeProvider))
+                .toList(),
+          );
+        }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1750,7 +1883,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   ),
                 ),
                 TextButton(
-                  onPressed: () {},
+                  onPressed: _openFullActivity,
                   child: Text(
                     'View All',
                     style: GoogleFonts.inter(
@@ -1762,34 +1895,35 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ],
             ),
             const SizedBox(height: 12),
-            if (activities.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(
-                    'No recent activity',
-                    style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-                ),
-              )
-            else
-              ...activities.map((activity) => _buildActivityItem(activity, themeProvider)),
+            content,
           ],
         );
       },
     );
   }
 
-  Widget _buildActivityItem(dynamic activity, ThemeProvider themeProvider) {
+  Widget _buildRecentActivityLoading(ThemeProvider themeProvider) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      alignment: Alignment.center,
+      child: SizedBox(
+        width: 28,
+        height: 28,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivityError(
+    ThemeProvider themeProvider,
+    String error,
+    VoidCallback onRetry,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
@@ -1797,49 +1931,118 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              _getActivityIcon(activity.category),
-              color: themeProvider.accentColor,
-              size: 18,
+          Text(
+            'Unable to load activity',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activity.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  activity.description,
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          const SizedBox(height: 6),
+          Text(
+            error,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            onPressed: onRetry,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: themeProvider.accentColor,
+              side: BorderSide(color: themeProvider.accentColor.withValues(alpha: 0.5)),
+            ),
+            child: const Text('Retry'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRecentActivityEmpty(ThemeProvider themeProvider) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Center(
+        child: Text(
+          'No recent activity',
+          style: GoogleFonts.inter(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(RecentActivity activity, ThemeProvider themeProvider) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => ActivityNavigation.open(context, activity),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: themeProvider.accentColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _getActivityIcon(activity.category),
+                  color: themeProvider.accentColor,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activity.title,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      activity.description,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1930,18 +2133,39 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return 'Good evening,';
   }
 
-  void _showNotificationsPanel(BuildContext context, ThemeProvider themeProvider, NotificationProvider np) {
-    showDialog(
+  Future<void> _showNotificationsPanel(
+    ThemeProvider themeProvider,
+    NotificationProvider np,
+  ) async {
+    final configProvider = context.read<ConfigProvider>();
+    if (configProvider.useMockData) {
+      await _showMockNotificationsDialog(themeProvider);
+      return;
+    }
+
+    final activityProvider = context.read<RecentActivityProvider>();
+    if (activityProvider.initialized) {
+      await activityProvider.refresh(force: true);
+    } else {
+      await activityProvider.initialize(force: true);
+    }
+
+    if (!mounted) return;
+
+    await np.markViewed();
+    if (!mounted) return;
+
+    await showDialog(
       context: context,
       barrierColor: Colors.black26,
-      builder: (context) => Align(
+      builder: (dialogContext) => Align(
         alignment: Alignment.topRight,
         child: Container(
           width: 400,
-          height: MediaQuery.of(context).size.height * 0.7,
+          height: MediaQuery.of(dialogContext).size.height * 0.7,
           margin: const EdgeInsets.only(top: 80, right: 32),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: Theme.of(dialogContext).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
@@ -1953,13 +2177,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           ),
           child: Column(
             children: [
-              // Header
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                      color: Theme.of(dialogContext).colorScheme.outline.withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -1970,7 +2193,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: Theme.of(dialogContext).colorScheme.onSurface,
                       ),
                     ),
                     const Spacer(),
@@ -1986,17 +2209,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         ),
                       ),
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                       icon: Icon(
                         Icons.close,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: Theme.of(dialogContext).colorScheme.onSurface,
                       ),
                     ),
                   ],
                 ),
               ),
-              
-              // Content
               Expanded(
                 child: np.unreadCount == 0
                     ? Center(
@@ -2006,13 +2227,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             Icon(
                               Icons.notifications_none,
                               size: 64,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                              color: Theme.of(dialogContext).colorScheme.onSurface.withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               'No notifications yet',
                               style: GoogleFonts.inter(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: Theme.of(dialogContext).colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -2020,15 +2241,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                               'You\'ll see activity here as you interact',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                color: Theme.of(dialogContext).colorScheme.onSurface.withValues(alpha: 0.4),
                               ),
                             ),
                           ],
                         ),
                       )
                     : Consumer<RecentActivityProvider>(
-                        builder: (context, activityProvider, _) {
-                          final activities = activityProvider.activities.where((a) => !a.isRead).take(10).toList();
+                        builder: (dialogInnerContext, activityProvider, _) {
+                          final activities = activityProvider.activities
+                              .where((a) => !a.isRead)
+                              .take(10)
+                              .toList();
                           if (activities.isEmpty) {
                             return Center(
                               child: Column(
@@ -2057,7 +2281,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                     'unread notifications',
                                     style: GoogleFonts.inter(
                                       fontSize: 14,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: Theme.of(dialogInnerContext).colorScheme.onSurface.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -2067,13 +2291,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           return ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: activities.length,
-                            itemBuilder: (context, index) {
+                            itemBuilder: (itemContext, index) {
                               final activity = activities[index];
                               return Material(
                                 color: Colors.transparent,
                                 child: InkWell(
                                   onTap: () {
-                                    Navigator.pop(context);
+                                    Navigator.pop(dialogContext);
                                     ActivityNavigation.open(context, activity);
                                   },
                                   borderRadius: BorderRadius.circular(12),
@@ -2081,7 +2305,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                     margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                      color: Theme.of(dialogInnerContext).colorScheme.primaryContainer.withValues(alpha: 0.5),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Row(
@@ -2109,7 +2333,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                                 style: GoogleFonts.inter(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
-                                                  color: Theme.of(context).colorScheme.onSurface,
+                                                  color: Theme.of(dialogInnerContext).colorScheme.onSurface,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -2118,7 +2342,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                                 activity.description,
                                                 style: GoogleFonts.inter(
                                                   fontSize: 12,
-                                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  color: Theme.of(dialogInnerContext).colorScheme.onSurface.withValues(alpha: 0.6),
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -2139,6 +2363,172 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ],
           ),
         ),
+      ),
+    );
+
+    if (!mounted) return;
+    activityProvider.markAllReadLocally();
+  }
+
+  Future<void> _showMockNotificationsDialog(ThemeProvider themeProvider) async {
+    final mockNotifications = [
+      {
+        'title': 'New artwork discovered nearby',
+        'description': 'Check out "Digital Dreams" by @artist_maya',
+        'icon': Icons.location_on,
+        'time': '5 min ago',
+      },
+      {
+        'title': 'KUB8 rewards earned',
+        'description': 'You earned 15 KUB8 tokens for discovering 3 artworks',
+        'icon': Icons.account_balance_wallet,
+        'time': '1 hour ago',
+      },
+      {
+        'title': 'Friend request',
+        'description': '@collector_sam wants to connect with you',
+        'icon': Icons.person_add,
+        'time': '2 hours ago',
+      },
+      {
+        'title': 'Artwork featured',
+        'description': 'Your AR sculpture was featured in trending',
+        'icon': Icons.star,
+        'time': '4 hours ago',
+      },
+    ];
+
+    await showDialog(
+      context: context,
+      barrierColor: Colors.black26,
+      builder: (dialogContext) => Align(
+        alignment: Alignment.topRight,
+        child: Container(
+          width: 380,
+          height: MediaQuery.of(dialogContext).size.height * 0.6,
+          margin: const EdgeInsets.only(top: 80, right: 32),
+          decoration: BoxDecoration(
+            color: Theme.of(dialogContext).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 20,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Theme.of(dialogContext).colorScheme.outline.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      'Notifications',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(dialogContext).colorScheme.onSurface,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () => Navigator.pop(dialogContext),
+                      icon: Icon(
+                        Icons.close,
+                        color: Theme.of(dialogContext).colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: mockNotifications.length,
+                  itemBuilder: (context, index) => _buildMockNotificationItem(
+                    themeProvider,
+                    mockNotifications[index],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMockNotificationItem(
+    ThemeProvider themeProvider,
+    Map<String, dynamic> notification,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: themeProvider.accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              notification['icon'] as IconData,
+              color: themeProvider.accentColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  notification['title'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  notification['description'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  notification['time'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

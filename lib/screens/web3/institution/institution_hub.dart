@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../onboarding/web3_onboarding.dart';
 import '../onboarding/onboarding_data.dart';
 import 'event_creator.dart';
 import 'event_manager.dart';
 import 'institution_analytics.dart';
+import '../../../providers/dao_provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/web3provider.dart';
+import '../../../models/dao.dart';
+import '../../../utils/wallet_utils.dart';
 
 class InstitutionHub extends StatefulWidget {
   const InstitutionHub({super.key});
@@ -15,17 +21,32 @@ class InstitutionHub extends StatefulWidget {
 
 class _InstitutionHubState extends State<InstitutionHub> {
   int _selectedIndex = 0;
-
-  final List<Widget> _pages = [
-    const EventManager(),
-    const EventCreator(),
-    const InstitutionAnalytics(),
-  ];
+  DAOReview? _institutionReview;
+  bool _reviewLoading = false;
+  bool _hasFetchedReviewForWallet = false;
+  String _lastReviewWallet = '';
+  final TextEditingController _organizationController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
+  final TextEditingController _missionController = TextEditingController();
+  final TextEditingController _focusController = TextEditingController();
+  final GlobalKey<FormState> _applicationFormKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
     _checkOnboarding();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadInstitutionReviewStatus(forceRefresh: true));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final wallet = _resolveWalletAddress(listen: true);
+    final walletChanged = wallet != _lastReviewWallet;
+    if (!walletChanged && _hasFetchedReviewForWallet) return;
+    if (wallet.isNotEmpty) {
+      _loadInstitutionReviewStatus(forceRefresh: true);
+    }
   }
 
   Future<void> _checkOnboarding() async {
@@ -51,8 +72,86 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
+  String _resolveWalletAddress({bool listen = false}) {
+    final profileProvider = listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
+    final web3Provider = listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
+    return WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+  }
+
+  Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
+    final wallet = _resolveWalletAddress();
+    if (wallet.isEmpty || _reviewLoading) return;
+    if (!forceRefresh && _hasFetchedReviewForWallet && wallet == _lastReviewWallet) return;
+
+    final requestedWallet = wallet;
+    setState(() {
+      _reviewLoading = true;
+      _lastReviewWallet = requestedWallet;
+    });
+    try {
+      final daoProvider = context.read<DAOProvider>();
+      final review = await daoProvider.loadReviewForWallet(requestedWallet, forceRefresh: forceRefresh);
+      if (!mounted || requestedWallet != _lastReviewWallet) return;
+      setState(() {
+        _institutionReview = review ?? daoProvider.findReviewForWallet(requestedWallet);
+        _hasFetchedReviewForWallet = true;
+      });
+      final isInstitutionReview = _institutionReview?.isInstitutionApplication ?? false;
+      final isApproved = isInstitutionReview && (_institutionReview?.status.toLowerCase() == 'approved');
+      if (isApproved) {
+        try {
+          context.read<ProfileProvider>().setRoleFlags(isInstitution: true);
+        } catch (_) {}
+      }
+    } catch (_) {
+      if (mounted && requestedWallet == _lastReviewWallet) {
+        setState(() {
+          _hasFetchedReviewForWallet = true;
+        });
+      }
+    } finally {
+      if (mounted && requestedWallet == _lastReviewWallet) {
+        setState(() {
+          _reviewLoading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _organizationController.dispose();
+    _contactController.dispose();
+    _missionController.dispose();
+    _focusController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final profileProvider = context.watch<ProfileProvider>();
+    final daoProvider = context.watch<DAOProvider>();
+    final wallet = _resolveWalletAddress(listen: true);
+    final review = _institutionReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final hasInstitutionBadge = profileProvider.currentUser?.isInstitution ?? false;
+    final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
+    final reviewStatus = review?.status.toLowerCase() ?? '';
+    final reviewIsInstitution = review?.isInstitutionApplication ?? false;
+    final reviewIsArtist = review?.isArtistApplication ?? false;
+    final isApprovedInstitution = hasInstitutionBadge || (reviewIsInstitution && reviewStatus == 'approved');
+    final isReviewRejected = reviewStatus == 'rejected';
+    final hasConflictingArtistReview = reviewIsArtist && !isReviewRejected;
+    final isCrossRoleBlocked = hasArtistBadge || hasConflictingArtistReview;
+
+    final pages = <Widget>[
+      const EventManager(),
+      const EventCreator(),
+      const InstitutionAnalytics(),
+    ];
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -85,14 +184,31 @@ class _InstitutionHubState extends State<InstitutionHub> {
               child: Column(
                 children: [
                   _buildInstitutionHeader(),
-                  _buildInstitutionApplicationCard(),
-                  _buildNavigationTabs(),
+                  _buildInstitutionApplicationCard(
+                    review,
+                    isApprovedInstitution,
+                    isCrossRoleBlocked: isCrossRoleBlocked,
+                    hasArtistBadge: hasArtistBadge,
+                    hasConflictingArtistReview: hasConflictingArtistReview,
+                  ),
+                  if (!isCrossRoleBlocked)
+                    _buildNavigationTabs(isApprovedInstitution),
                 ],
               ),
             ),
           ];
         },
-        body: _pages[_selectedIndex],
+        body: isCrossRoleBlocked
+            ? _buildRoleBlockedContent(
+                title: hasArtistBadge ? 'Artist badge active' : 'Artist review in progress',
+                description: hasArtistBadge
+                    ? 'Artist wallets unlock creation tooling. Institution flows need a dedicated wallet without creator approvals.'
+                    : 'You have an active artist application. Wait for that decision or reset it before continuing as an institution.',
+                icon: Icons.palette_outlined,
+              )
+            : isApprovedInstitution
+                ? pages[_selectedIndex]
+                : _buildLockedContent(),
       ),
     );
   }
@@ -155,9 +271,65 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildInstitutionApplicationCard() {
+  Widget _buildInstitutionApplicationCard(
+    DAOReview? review,
+    bool isApprovedInstitution, {
+    required bool isCrossRoleBlocked,
+    required bool hasArtistBadge,
+    required bool hasConflictingArtistReview,
+  }) {
+    if (isCrossRoleBlocked) {
+      final scheme = Theme.of(context).colorScheme;
+      final title = hasArtistBadge
+          ? 'Artist badge active'
+          : hasConflictingArtistReview
+              ? 'Artist review in progress'
+              : 'Role conflict detected';
+      final message = hasArtistBadge
+          ? 'Artist wallets are optimized for creation tooling. Switch to a dedicated institutional wallet before applying for curation tools.'
+          : hasConflictingArtistReview
+              ? 'You currently have an artist application pending. Finish that review or request a reset prior to submitting an institution application.'
+              : 'We detected an artist submission for this wallet. Clear it from settings before continuing as an institution.';
+      return _buildRoleBanner(
+        icon: Icons.palette_outlined,
+        title: title,
+        message: message,
+        scheme: scheme,
+      );
+    }
+
     final surface = Theme.of(context).colorScheme.surface;
     final accent = Theme.of(context).colorScheme.primary;
+    final wallet = _resolveWalletAddress();
+    final status = review?.status.toLowerCase() ?? '';
+    final isPending = status == 'pending';
+    final isRejected = status == 'rejected';
+    final statusLabel = isApprovedInstitution
+        ? 'APPROVED'
+        : review != null
+            ? status.toUpperCase()
+            : 'NOT APPLIED';
+    final statusColor = isApprovedInstitution
+        ? Colors.green
+        : isRejected
+            ? Theme.of(context).colorScheme.error
+            : accent;
+    final canSubmit = wallet.isNotEmpty &&
+      !_reviewLoading &&
+      (!isPending && !isApprovedInstitution || isRejected);
+    final ctaLabel = !canSubmit
+        ? (isApprovedInstitution
+            ? 'Approved by DAO'
+            : isPending
+                ? 'Pending DAO review'
+          : 'Connect wallet to apply')
+        : 'Apply for review';
+    final IconData ctaIcon = isApprovedInstitution
+        ? Icons.verified_outlined
+        : isPending
+            ? Icons.hourglass_bottom
+            : Icons.send_rounded;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -206,17 +378,73 @@ class _InstitutionHubState extends State<InstitutionHub> {
               ),
             ],
           ),
+          if (review != null || _reviewLoading) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (_reviewLoading)
+                  SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+                    ),
+                  )
+                else if (review != null)
+                  Text(
+                    'Status synced from DAO',
+                    style: GoogleFonts.inter(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                  ),
+              ],
+            ),
+            if ((review?.reviewerNotes ?? '').isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                review!.reviewerNotes!,
+                style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+              ),
+            ] else if (review != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                isPending
+                    ? 'Your submission is in the DAO review queue.'
+                    : isApprovedInstitution
+                        ? 'Congratulations! Approved for institution tools.'
+                        : isRejected
+                            ? 'Your last submission was rejected. You can resubmit with updates.'
+                            : '',
+                style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+              ),
+            ],
+          ],
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: _showInstitutionApplicationModal,
-              icon: Icon(Icons.send_rounded, color: accent),
+              onPressed: canSubmit ? _showInstitutionApplicationModal : null,
+              icon: Icon(ctaIcon, color: canSubmit ? accent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               label: Text(
-                'Apply for review',
+                ctaLabel,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
-                  color: accent,
+                  color: canSubmit ? accent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               style: OutlinedButton.styleFrom(
@@ -231,7 +459,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildNavigationTabs() {
+  Widget _buildNavigationTabs(bool enabled) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -240,23 +468,27 @@ class _InstitutionHubState extends State<InstitutionHub> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton('Events', Icons.event, 0)),
-          Expanded(child: _buildTabButton('Create', Icons.add_box, 1)),
-          Expanded(child: _buildTabButton('Analytics', Icons.analytics, 2)),
+          Expanded(child: _buildTabButton('Events', Icons.event, 0, enabled)),
+          Expanded(child: _buildTabButton('Create', Icons.add_box, 1, enabled)),
+          Expanded(child: _buildTabButton('Analytics', Icons.analytics, 2, enabled)),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String label, IconData icon, int index) {
+  Widget _buildTabButton(String label, IconData icon, int index, bool enabled) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _selectedIndex = index),
+      onTap: enabled
+          ? () => setState(() => _selectedIndex = index)
+          : () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Institution tools unlock after DAO approval.')),
+              ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF667EEA) : Colors.transparent,
+          color: enabled && isSelected ? const Color(0xFF667EEA) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -264,7 +496,9 @@ class _InstitutionHubState extends State<InstitutionHub> {
           children: [
             Icon(
               icon,
-              color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: enabled && isSelected
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -273,10 +507,108 @@ class _InstitutionHubState extends State<InstitutionHub> {
               style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: enabled && isSelected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRoleBanner({
+    required IconData icon,
+    required String title,
+    required String message,
+    required ColorScheme scheme,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: scheme.error.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: scheme.error.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: scheme.error),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  message,
+                  style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.75)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleBlockedContent({
+    required String title,
+    required String description,
+    required IconData icon,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: scheme.onSecondaryContainer, size: 30),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Tip: Keep artist and institution roles on separate wallets to avoid DAO conflicts.',
+              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -314,11 +646,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   void _showInstitutionApplicationModal() {
-    final organizationController = TextEditingController();
-    final contactController = TextEditingController();
-    final missionController = TextEditingController();
-    final focusController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
+    _organizationController.clear();
+    _contactController.clear();
+    _missionController.clear();
+    _focusController.clear();
     final scaffold = ScaffoldMessenger.of(context);
 
     showModalBottomSheet(
@@ -335,7 +666,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: Form(
-              key: formKey,
+              key: _applicationFormKey,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,7 +700,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
-                    controller: organizationController,
+                    controller: _organizationController,
                     decoration: const InputDecoration(
                       labelText: 'Organization name',
                       border: OutlineInputBorder(),
@@ -380,7 +711,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: contactController,
+                    controller: _contactController,
                     decoration: const InputDecoration(
                       labelText: 'Website or contact email',
                       border: OutlineInputBorder(),
@@ -391,7 +722,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: focusController,
+                    controller: _focusController,
                     decoration: const InputDecoration(
                       labelText: 'Curation focus',
                       border: OutlineInputBorder(),
@@ -402,7 +733,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: missionController,
+                    controller: _missionController,
                     maxLines: 4,
                     decoration: const InputDecoration(
                       labelText: 'Mission and goals',
@@ -417,15 +748,51 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (!formKey.currentState!.validate()) return;
+                      onPressed: () async {
+                        if (!_applicationFormKey.currentState!.validate()) return;
+                        final profileProvider = context.read<ProfileProvider>();
+                        final web3Provider = context.read<Web3Provider>();
+                        final daoProvider = context.read<DAOProvider>();
+                        final wallet = profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress;
+                        if (wallet.isEmpty) {
+                          scaffold.showSnackBar(
+                            const SnackBar(content: Text('Connect your wallet before submitting.')),
+                          );
+                          return;
+                        }
                         Navigator.pop(sheetContext);
-                        scaffold.showSnackBar(
-                          const SnackBar(
-                            content: Text('Application submitted to DAO reviewers.'),
-                            duration: Duration(seconds: 3),
-                          ),
-                        );
+                        try {
+                          final review = await daoProvider.submitInstitutionReview(
+                            walletAddress: wallet,
+                            organization: _organizationController.text.trim(),
+                            contact: _contactController.text.trim(),
+                            focus: _focusController.text.trim(),
+                            mission: _missionController.text.trim(),
+                          );
+                          if (!mounted) return;
+                          if (review != null) {
+                            await _loadInstitutionReviewStatus(forceRefresh: true);
+                          }
+                          if (!mounted) return;
+                          scaffold.showSnackBar(
+                            SnackBar(
+                              content: Text(review != null
+                                  ? 'Application submitted to DAO reviewers.'
+                                  : 'Unable to submit application right now.'),
+                              backgroundColor: review != null
+                                  ? Colors.green
+                                  : Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          scaffold.showSnackBar(
+                            SnackBar(
+                              content: Text('Submission failed: $e'),
+                              backgroundColor: Theme.of(context).colorScheme.error,
+                            ),
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
@@ -445,17 +812,45 @@ class _InstitutionHubState extends State<InstitutionHub> {
           ),
         );
       },
-    ).whenComplete(() {
-      organizationController.dispose();
-      contactController.dispose();
-      missionController.dispose();
-      focusController.dispose();
-    });
+    );
+  }
+
+  Widget _buildLockedContent() {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: scheme.secondaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.lock_outline, color: scheme.onSecondaryContainer, size: 28),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Institution tools are locked',
+              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Apply for DAO review to unlock events, creation tools, and analytics.',
+              style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton.icon(
+              onPressed: () => _showInstitutionApplicationModal(),
+              icon: const Icon(Icons.send_rounded),
+              label: const Text('Apply for DAO review'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
-
-
-
-
-
-

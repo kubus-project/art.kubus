@@ -1161,12 +1161,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 if (identifier == null || identifier.trim().isEmpty) return;
                 final newConversation = await _chatProvider.addMember(widget.conversation.id, identifier.trim());
                 if (!mounted) return;
-                if (newConversation != null && newConversation.id != widget.conversation.id) {
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Created a new group chat for added members.')));
-                  if (!mounted) return;
-                  await Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => ConversationScreen(conversation: newConversation)));
-                  return;
-                }
+                  if (newConversation != null && newConversation.id != widget.conversation.id) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Created a new group chat for added members.')));
+                    if (!mounted) return;
+                    final navigator = Navigator.of(context);
+                    await navigator.pushReplacement(
+                      MaterialPageRoute(builder: (_) => ConversationScreen(conversation: newConversation)),
+                    );
+                    return;
+                  }
                 await _load();
               } catch (e) {
                 debugPrint('ConversationScreen: add member via menu failed: $e');
@@ -2145,12 +2148,14 @@ class MembersDialog extends StatelessWidget {
                           if (!context.mounted) return;
                           if (confirmed == true) {
                             try {
-                              await Provider.of<ChatProvider>(context, listen: false).transferOwnership(conversationId, wallet);
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ownership transferred')));
-                                // Close members dialog to surface updated ownership state
-                                Navigator.of(context).pop();
-                              }
+                              final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+                              final navigator = Navigator.of(context);
+                              final scaffold = ScaffoldMessenger.of(context);
+                              await chatProvider.transferOwnership(conversationId, wallet);
+                              if (!context.mounted) return;
+                              scaffold.showSnackBar(const SnackBar(content: Text('Ownership transferred')));
+                              // Close members dialog to surface updated ownership state
+                              navigator.pop();
                             } catch (e) {
                               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer failed: $e')));
                             }

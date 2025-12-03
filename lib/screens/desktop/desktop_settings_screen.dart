@@ -2,44 +2,74 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../config/config.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../providers/platform_provider.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
-import '../community/profile_edit_screen.dart';
+import 'community/desktop_profile_edit_screen.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/wallet/mnemonic_reveal_screen.dart';
 
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
-class DesktopProfileScreen extends StatefulWidget {
-  const DesktopProfileScreen({super.key});
+class DesktopSettingsScreen extends StatefulWidget {
+  const DesktopSettingsScreen({super.key});
 
   @override
-  State<DesktopProfileScreen> createState() => _DesktopProfileScreenState();
+  State<DesktopSettingsScreen> createState() => _DesktopSettingsScreenState();
 }
 
-class _DesktopProfileScreenState extends State<DesktopProfileScreen>
+class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late TabController _tabController;
 
-  final List<String> _tabs = ['Profile', 'Settings', 'Security', 'Preferences'];
   int _selectedSettingsIndex = 0;
 
-  // Settings state (persisted to SharedPreferences)
+  // Profile settings state
+  String _profileVisibility = 'Public';
+  
+  // Privacy settings state
+  bool _dataCollection = true;
+  bool _personalizedAds = true;
+  bool _locationTracking = true;
+  String _dataRetention = '1 Year';
+  
+  // Security settings state
+  bool _twoFactorAuth = false;
+  bool _sessionTimeout = true;
+  String _autoLockTime = '5 minutes';
+  bool _loginNotifications = true;
+  bool _biometricAuth = false;
+  bool _privacyMode = false;
+  
+  // Account settings state
   bool _emailNotifications = true;
   bool _pushNotifications = true;
   bool _marketingEmails = false;
-  bool _twoFactorAuth = false;
-  bool _biometricAuth = false;
-  bool _privacyMode = false;
+  String _accountType = 'Standard';
+  bool _publicProfile = true;
+  
+  // App settings state
   bool _analytics = true;
   bool _crashReporting = true;
-  String _autoLockTime = '5 minutes';
+  bool _enableAnalytics = true;
+  bool _enableCrashReporting = true;
+  bool _skipOnboardingForReturningUsers = true;
+  
+  // Wallet settings state
+  String _networkSelection = 'Solana';
+  bool _autoBackup = true;
+  
+  // Profile interaction settings
+  bool _showAchievements = true;
+  bool _showFriends = true;
+  bool _allowMessages = true;
 
   @override
   void initState() {
@@ -48,37 +78,98 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(length: 11, vsync: this);
     _animationController.forward();
     _loadSettings();
   }
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+    
     setState(() {
-      _emailNotifications = prefs.getBool('email_notifications') ?? true;
-      _pushNotifications = prefs.getBool('push_notifications') ?? true;
-      _marketingEmails = prefs.getBool('marketing_emails') ?? false;
-      _twoFactorAuth = prefs.getBool('two_factor_auth') ?? false;
-      _biometricAuth = prefs.getBool('biometric_auth') ?? false;
-      _privacyMode = prefs.getBool('privacy_mode') ?? false;
+      // Profile settings
+      _profileVisibility = prefs.getString('profileVisibility') ?? 'Public';
+      _showAchievements = prefs.getBool('showAchievements') ?? true;
+      _showFriends = prefs.getBool('showFriends') ?? true;
+      _allowMessages = prefs.getBool('allowMessages') ?? true;
+      
+      // Privacy settings
+      _dataCollection = prefs.getBool('dataCollection') ?? true;
+      _personalizedAds = prefs.getBool('personalizedAds') ?? true;
+      _locationTracking = prefs.getBool('locationTracking') ?? true;
+      _dataRetention = prefs.getString('dataRetention') ?? '1 Year';
+      
+      // Security settings
+      _twoFactorAuth = prefs.getBool('twoFactorAuth') ?? false;
+      _sessionTimeout = prefs.getBool('sessionTimeout') ?? true;
+      _autoLockTime = prefs.getString('autoLockTime') ?? '5 minutes';
+      _loginNotifications = prefs.getBool('loginNotifications') ?? true;
+      _biometricAuth = prefs.getBool('biometricAuth') ?? false;
+      _privacyMode = prefs.getBool('privacyMode') ?? false;
+      
+      // Account settings
+      _emailNotifications = prefs.getBool('emailNotifications') ?? true;
+      _pushNotifications = prefs.getBool('pushNotifications') ?? true;
+      _marketingEmails = prefs.getBool('marketingEmails') ?? false;
+      _accountType = prefs.getString('accountType') ?? 'Standard';
+      _publicProfile = prefs.getBool('publicProfile') ?? true;
+      
+      // App settings
       _analytics = prefs.getBool('analytics') ?? true;
-      _crashReporting = prefs.getBool('crash_reporting') ?? true;
-      _autoLockTime = prefs.getString('auto_lock_time') ?? '5 minutes';
+      _crashReporting = prefs.getBool('crashReporting') ?? true;
+      _enableAnalytics = prefs.getBool('enableAnalytics') ?? true;
+      _enableCrashReporting = prefs.getBool('enableCrashReporting') ?? true;
+      _skipOnboardingForReturningUsers = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
+      
+      // Wallet settings
+      _networkSelection = web3Provider.currentNetwork.isNotEmpty 
+          ? web3Provider.currentNetwork 
+          : (prefs.getString('networkSelection') ?? 'Mainnet');
+      _autoBackup = prefs.getBool('autoBackup') ?? true;
     });
   }
 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // Profile settings
+    await prefs.setString('profileVisibility', _profileVisibility);
+    await prefs.setBool('showAchievements', _showAchievements);
+    await prefs.setBool('showFriends', _showFriends);
+    await prefs.setBool('allowMessages', _allowMessages);
+    
+    // Privacy settings
+    await prefs.setBool('dataCollection', _dataCollection);
+    await prefs.setBool('personalizedAds', _personalizedAds);
+    await prefs.setBool('locationTracking', _locationTracking);
+    await prefs.setString('dataRetention', _dataRetention);
+    
+    // Security settings
+    await prefs.setBool('twoFactorAuth', _twoFactorAuth);
+    await prefs.setBool('sessionTimeout', _sessionTimeout);
+    await prefs.setString('autoLockTime', _autoLockTime);
+    await prefs.setBool('loginNotifications', _loginNotifications);
+    await prefs.setBool('biometricAuth', _biometricAuth);
+    await prefs.setBool('privacyMode', _privacyMode);
+    
+    // Account settings
     await prefs.setBool('email_notifications', _emailNotifications);
     await prefs.setBool('push_notifications', _pushNotifications);
     await prefs.setBool('marketing_emails', _marketingEmails);
-    await prefs.setBool('two_factor_auth', _twoFactorAuth);
-    await prefs.setBool('biometric_auth', _biometricAuth);
-    await prefs.setBool('privacy_mode', _privacyMode);
+    await prefs.setString('accountType', _accountType);
+    await prefs.setBool('publicProfile', _publicProfile);
+    
+    // App settings
     await prefs.setBool('analytics', _analytics);
-    await prefs.setBool('crash_reporting', _crashReporting);
-    await prefs.setString('auto_lock_time', _autoLockTime);
+    await prefs.setBool('crashReporting', _crashReporting);
+    await prefs.setBool('enableAnalytics', _enableAnalytics);
+    await prefs.setBool('enableCrashReporting', _enableCrashReporting);
+    await prefs.setBool('skipOnboardingForReturningUsers', _skipOnboardingForReturningUsers);
+    
+    // Wallet settings
+    await prefs.setString('networkSelection', _networkSelection);
+    await prefs.setBool('autoBackup', _autoBackup);
   }
 
   @override
@@ -146,8 +237,10 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
       _SettingsItem('Privacy', Icons.lock_outline, 4),
       _SettingsItem('Security', Icons.security, 5),
       _SettingsItem('Achievements', Icons.emoji_events_outlined, 6),
-      _SettingsItem('Help & Support', Icons.help_outline, 7),
-      _SettingsItem('About', Icons.info_outline, 8),
+      _SettingsItem('Platform', Icons.phone_android_outlined, 7),
+      _SettingsItem('Help & Support', Icons.help_outline, 8),
+      _SettingsItem('About', Icons.info_outline, 9),
+      _SettingsItem('Danger Zone', Icons.warning_outlined, 10),
     ];
 
     return ListView(
@@ -356,18 +449,18 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
                       ),
                       ElevatedButton.icon(
                         onPressed: () async {
-                          final result = await Navigator.push(
-                            context,
+                          final navigator = Navigator.of(context);
+                          final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+                          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+                          final result = await navigator.push(
                             MaterialPageRoute(
                               builder: (context) => const ProfileEditScreen(),
                             ),
                           );
                           // Reload profile if changes were saved
-                          if (result == true && mounted) {
-                            final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-                            if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
-                              await profileProvider.loadProfile(web3Provider.walletAddress);
-                            }
+                          if (!mounted) return;
+                          if (result == true && web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
+                            await profileProvider.loadProfile(web3Provider.walletAddress);
                           }
                         },
                         icon: const Icon(Icons.edit, size: 18),
@@ -432,9 +525,13 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
       case 6:
         return _buildAchievementsSettings();
       case 7:
-        return _buildHelpSettings();
+        return _buildPlatformCapabilitiesSection();
       case 8:
+        return _buildHelpSettings();
+      case 9:
         return _buildAboutSettings();
+      case 10:
+        return _buildDangerZoneSettings();
       default:
         return _buildProfileSettings(themeProvider);
     }
@@ -825,6 +922,465 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
             child: const Text('Disconnect'),
           ),
         ],
+      ),
+    );
+  }
+
+  // Dialog Methods from Mobile Settings
+  void _showVersionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('App Version', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('art.kubus', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+            const SizedBox(height: 8),
+            Text('Version: ${AppInfo.version}', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+            Text('Build: ${AppInfo.buildNumber}', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+            const SizedBox(height: 16),
+            Text('© 2025 kubus', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+            Text('All rights reserved.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7))),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Terms of Service', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: SingleChildScrollView(
+          child: Text(
+            'By using ART.KUBUS, you agree to these terms:\n\n'
+            '1. You are responsible for maintaining the security of your wallet.\n'
+            '2. We do not store your private keys or seed phrases.\n'
+            '3. All transactions are final and irreversible.\n'
+            '4. Use the app at your own risk.\n'
+            '5. We reserve the right to update these terms.\n\n'
+            'For the complete terms, visit our website.',
+            style: GoogleFonts.inter(height: 1.5, color: Theme.of(context).colorScheme.onSurface),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Privacy Policy', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: SingleChildScrollView(
+          child: Text(
+            'Your privacy is important to us:\n\n'
+            '• We do not collect personal data without consent\n'
+            '• Your wallet data is stored locally on your device\n'
+            '• We may collect anonymous usage statistics\n'
+            '• We do not share your data with third parties\n'
+            '• You can disable analytics in Privacy settings\n\n'
+            'For our complete privacy policy, visit our website.',
+            style: GoogleFonts.inter(height: 1.5, color: Theme.of(context).colorScheme.onSurface),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Support', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Need help? Choose an option:', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+              onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening FAQ...'))); },
+              icon: const Icon(Icons.help_outline),
+              label: const Text('View FAQ'),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+              onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening email client...'))); },
+              icon: const Icon(Icons.email),
+              label: const Text('Contact Support'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showLicensesDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Open Source Licenses', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: SingleChildScrollView(
+          child: Text(
+            'This app uses the following open source libraries:\n\n'
+            '• Flutter & Dart SDK\n'
+            '• Provider (State Management)\n'
+            '• Solana Web3 (Blockchain)\n'
+            '• Google Fonts\n'
+            '• And many more...\n\n'
+            'See LICENSE file for complete list.',
+            style: GoogleFonts.inter(height: 1.5, color: Theme.of(context).colorScheme.onSurface),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ],
+      ),
+    );
+  }
+
+  void _showRateAppDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Rate App', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('Do you enjoy using art.kubus? Please leave a rating on the app store!', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Later')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Opening app store...'))); },
+            child: const Text('Rate Now'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Reset App', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('This will clear all app data and settings. Your wallet will be disconnected but not deleted.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.clear();
+              if (web3Provider.isConnected) { web3Provider.disconnectWallet(); }
+              navigator.pop();
+              messenger.showSnackBar(const SnackBar(content: Text('App reset successfully. Please restart.'), duration: Duration(seconds: 3)));
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Delete Account', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('This action cannot be undone. All your data will be permanently deleted.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account deletion requested. Confirmation sent to email.')));
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDataExportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Export Data', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('Your data will be exported as JSON and downloaded to your device.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Exporting data...')));
+            },
+            child: const Text('Export'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showClearCacheDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Clear Cache', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('This will free up storage space but may slow down app performance initially.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared')));
+            },
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showResetPermissionFlagsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: Text('Reset Permissions', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
+        content: Text('This will reset all permission prompts so you can grant them again.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(context);
+              await _resetPermissionFlags();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permission flags reset')));
+            },
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resetPermissionFlags() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final keys = prefs.getKeys();
+      const keepKeys = {'has_wallet', 'wallet_address', 'private_key', 'mnemonic'};
+      for (final key in keys) {
+        if (!keepKeys.contains(key) && key.contains('permission')) {
+          await prefs.remove(key);
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to reset permission flags: $e');
+    }
+  }
+
+  Widget _buildPlatformCapabilitiesSection() {
+    return Consumer<PlatformProvider>(
+      builder: (context, platformProvider, child) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Platform Capabilities',
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'View available device features',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ...platformProvider.capabilities.entries.map((entry) {
+                  final capability = entry.key;
+                  final isAvailable = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isAvailable ? Icons.check_circle : Icons.cancel,
+                          color: isAvailable ? Colors.green : Colors.red,
+                          size: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getCapabilityDisplayName(capability),
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              ),
+                              Text(
+                                isAvailable ? 'Available' : 'Not available',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: isAvailable ? Colors.green : Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getCapabilityDisplayName(PlatformCapability capability) {
+    switch (capability) {
+      case PlatformCapability.camera:
+        return 'Camera Access (QR Scanner, AR)';
+      case PlatformCapability.ar:
+        return 'Augmented Reality Features';
+      case PlatformCapability.nfc:
+        return 'NFC Communication';
+      case PlatformCapability.gps:
+        return 'Location Services';
+      case PlatformCapability.biometrics:
+        return 'Biometric Authentication';
+      case PlatformCapability.notifications:
+        return 'Push Notifications';
+      case PlatformCapability.fileSystem:
+        return 'File System Access';
+      case PlatformCapability.bluetooth:
+        return 'Bluetooth Connectivity';
+      case PlatformCapability.vibration:
+        return 'Haptic Feedback';
+      case PlatformCapability.orientation:
+        return 'Device Orientation';
+      case PlatformCapability.background:
+        return 'Background Processing';
+    }
+  }
+
+  Widget _buildDangerZoneSettings() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Danger Zone',
+              style: GoogleFonts.inter(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Irreversible actions that require caution',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            _buildSettingsRow(
+              'Clear Cache',
+              'Free up storage space',
+              Icons.delete_outline,
+              isDestructive: true,
+              onTap: _showClearCacheDialog,
+            ),
+            const SizedBox(height: 12),
+            
+            _buildSettingsRow(
+              'Reset Permission Flags',
+              'Clear saved permission prompts',
+              Icons.location_off,
+              isDestructive: true,
+              onTap: _showResetPermissionFlagsDialog,
+            ),
+            const SizedBox(height: 12),
+            
+            _buildSettingsRow(
+              'Export Data',
+              'Download your data as JSON',
+              Icons.download,
+              isDestructive: true,
+              onTap: _showDataExportDialog,
+            ),
+            const SizedBox(height: 12),
+            
+            _buildSettingsRow(
+              'Reset App',
+              'Clear all data and settings',
+              Icons.refresh,
+              isDestructive: true,
+              onTap: _showResetDialog,
+            ),
+            const SizedBox(height: 12),
+            
+            _buildSettingsRow(
+              'Delete Account',
+              'Permanently delete your account',
+              Icons.delete_forever,
+              isDestructive: true,
+              onTap: _showDeleteAccountDialog,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1429,132 +1985,40 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
             ),
           ),
           const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                _buildSettingsRow(
-                  'FAQ',
-                  'Frequently asked questions',
-                  Icons.help_outline,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'User Guide',
-                  'Learn how to use the app',
-                  Icons.menu_book,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'AR Tutorial',
-                  'Get started with AR experiences',
-                  Icons.view_in_ar,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'Web3 Guide',
-                  'Learn about wallets, tokens & NFTs',
-                  Icons.account_balance_wallet,
-                  onTap: () {},
-                ),
-              ],
-            ),
+          _buildSettingsRow(
+            'FAQ',
+            'Frequently asked questions',
+            Icons.help_outline,
+            onTap: _showSupportDialog,
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Contact Us',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          const SizedBox(height: 12),
+          _buildSettingsRow(
+            'Contact Support',
+            'Get help from our team',
+            Icons.email_outlined,
+            onTap: _showSupportDialog,
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                _buildSettingsRow(
-                  'Email Support',
-                  'support@art-kubus.io',
-                  Icons.email_outlined,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'Discord Community',
-                  'Join our Discord server',
-                  Icons.chat_bubble_outline,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'Report a Bug',
-                  'Help us improve the app',
-                  Icons.bug_report_outlined,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'Feature Request',
-                  'Suggest new features',
-                  Icons.lightbulb_outline,
-                  onTap: () {},
-                ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          _buildSettingsRow(
+            'Report a Bug',
+            'Help us improve the app',
+            Icons.bug_report_outlined,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Opening bug report form...')),
+              );
+            },
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Legal',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              children: [
-                _buildSettingsRow(
-                  'Terms of Service',
-                  'Read our terms',
-                  Icons.description_outlined,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'Privacy Policy',
-                  'How we handle your data',
-                  Icons.privacy_tip_outlined,
-                  onTap: () {},
-                ),
-                const Divider(height: 32),
-                _buildSettingsRow(
-                  'Licenses',
-                  'Open source licenses',
-                  Icons.article_outlined,
-                  onTap: () {},
-                ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          _buildSettingsRow(
+            'Join our Community',
+            'Connect on Discord',
+            Icons.groups_outlined,
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Opening Discord invite...')),
+              );
+            },
           ),
         ],
       ),
@@ -1584,116 +2048,17 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
             ),
           ),
           const SizedBox(height: 32),
-          // App Info Card
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.15),
-                  Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.05),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      'assets/images/app_icon.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => Icon(
-                        Icons.view_in_ar,
-                        size: 40,
-                        color: Provider.of<ThemeProvider>(context).accentColor,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'art.kubus',
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Version 0.0.2',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Desktop Web App',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Provider.of<ThemeProvider>(context).accentColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'What is art.kubus?',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+          
+          // Version Info
+          _buildSettingsRow(
+            'Version',
+            AppInfo.version,
+            Icons.app_registration,
+            onTap: _showVersionDialog,
           ),
           const SizedBox(height: 12),
-          Text(
-            'art.kubus is an AR art platform that bridges the gap between digital and physical art worlds. '
-            'We connect artists, collectors, and cultural institutions through immersive augmented reality experiences, '
-            'blockchain-based ownership verification, and a vibrant community of art enthusiasts.',
-            style: GoogleFonts.inter(
-              fontSize: 15,
-              height: 1.6,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(height: 32),
+          
+          // Features Section
           Text(
             'Features',
             style: GoogleFonts.inter(
@@ -1703,18 +2068,22 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
+          
           _buildFeatureItem(Icons.view_in_ar, 'AR Art Discovery', 'Experience artworks in augmented reality'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildFeatureItem(Icons.account_balance_wallet, 'Web3 Integration', 'Solana blockchain with KUB8 tokens'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildFeatureItem(Icons.auto_awesome, 'NFT Minting', 'Create and trade digital art collectibles'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildFeatureItem(Icons.groups, 'Community', 'Connect with artists and collectors'),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildFeatureItem(Icons.museum, 'Institutions', 'Partner with galleries and museums'),
+          
           const SizedBox(height: 32),
+          
+          // Legal Links
           Text(
-            'Connect With Us',
+            'Legal',
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1722,40 +2091,71 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
             ),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildSocialButton(Icons.language, 'Website', () {}),
-              const SizedBox(width: 12),
-              _buildSocialButton(Icons.alternate_email, 'Instagram', () {}),
-              const SizedBox(width: 12),
-              _buildSocialButton(Icons.code, 'GitHub', () {}),
-              const SizedBox(width: 12),
-              _buildSocialButton(Icons.work_outline, 'LinkedIn', () {}),
-            ],
+          
+          _buildSettingsRow(
+            'Terms of Service',
+            'Read our terms',
+            Icons.description,
+            onTap: _showTermsDialog,
           ),
+          const SizedBox(height: 12),
+          
+          _buildSettingsRow(
+            'Privacy Policy',
+            'Read our privacy policy',
+            Icons.privacy_tip,
+            onTap: _showPrivacyPolicyDialog,
+          ),
+          const SizedBox(height: 12),
+          
+          _buildSettingsRow(
+            'Open Source Licenses',
+            'View third-party licenses',
+            Icons.code,
+            onTap: _showLicensesDialog,
+          ),
+          
           const SizedBox(height: 32),
-          Center(
-            child: Column(
-              children: [
-                Text(
-                  '© 2025 KUBUS',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Made with ❤️ in Slovenia',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-              ],
+          
+          // Support Section
+          Text(
+            'Support',
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
+          const SizedBox(height: 16),
+          
+          _buildSettingsRow(
+            'Support',
+            'Get help or report issues',
+            Icons.help,
+            onTap: _showSupportDialog,
+          ),
+          const SizedBox(height: 12),
+          
+          _buildSettingsRow(
+            'Rate App',
+            'Rate us on the app store',
+            Icons.star,
+            onTap: _showRateAppDialog,
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Copyright
+          Center(
+            child: Text(
+              '© 2025 kubus • All rights reserved',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
         ],
       ),
     );
@@ -1801,42 +2201,6 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSocialButton(IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1952,6 +2316,50 @@ class _DesktopProfileScreenState extends State<DesktopProfileScreen>
             }
             return null;
           }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownSetting(
+    String title,
+    String subtitle,
+    String initialValue,
+    List<String> options,
+    ValueChanged<String?>? onChanged,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButton<String>(
+          isExpanded: true,
+          value: initialValue,
+          items: options.map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (value) {
+            onChanged?.call(value);
+          },
         ),
       ],
     );

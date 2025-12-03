@@ -3,6 +3,8 @@ enum ProposalType { platformUpdate, rewards, featureRequest, governance, communi
 enum ProposalStatus { draft, active, voting, passed, failed, executed }
 enum VoteChoice { yes, no, abstain }
 
+enum DAOReviewRole { artist, institution, general }
+
 class DAOReview {
   final String id;
   final String walletAddress;
@@ -47,6 +49,8 @@ class DAOReview {
       return false;
     }
 
+    final canVoteField = json['canVote'] ?? json['can_vote'];
+
     return DAOReview(
       id: json['id']?.toString() ?? '',
       walletAddress: json['walletAddress']?.toString() ?? json['wallet_address']?.toString() ?? '',
@@ -63,7 +67,7 @@ class DAOReview {
       applicantProfile: json['applicantProfile'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(json['applicantProfile'] as Map<String, dynamic>)
           : null,
-      canVote: parseBool(json['canVote'] ?? json['can_vote']),
+      canVote: canVoteField == null ? true : parseBool(canVoteField),
     );
   }
 
@@ -83,6 +87,37 @@ class DAOReview {
       'canVote': canVote,
     };
   }
+}
+
+extension DAOReviewRoleParsing on DAOReview {
+  String get _normalizedRoleValue {
+    final candidates = ['role', 'type', 'category', 'source'];
+    for (final key in candidates) {
+      final value = metadata?[key];
+      if (value == null) continue;
+      final normalized = value.toString().trim().toLowerCase();
+      if (normalized.isNotEmpty) return normalized;
+    }
+    return '';
+  }
+
+  DAOReviewRole get role {
+    final normalized = _normalizedRoleValue;
+    if (normalized.contains('institution') || normalized.contains('museum') || normalized.contains('gallery') || normalized.contains('org')) {
+      return DAOReviewRole.institution;
+    }
+    if (normalized.contains('artist') || normalized.contains('creator')) {
+      return DAOReviewRole.artist;
+    }
+    return DAOReviewRole.general;
+  }
+
+  bool get isArtistApplication => role == DAOReviewRole.artist || role == DAOReviewRole.general;
+  bool get isInstitutionApplication => role == DAOReviewRole.institution;
+
+  bool get isApproved => status.toLowerCase() == 'approved';
+  bool get isPending => status.toLowerCase() == 'pending';
+  bool get isRejected => status.toLowerCase() == 'rejected';
 }
 
 class Proposal {

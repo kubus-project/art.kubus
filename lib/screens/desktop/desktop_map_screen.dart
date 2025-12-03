@@ -8,12 +8,14 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/tile_providers.dart';
 import '../../models/artwork.dart';
 import '../../services/backend_api_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
-import '../community/user_profile_screen.dart';
+import '../art/art_detail_screen.dart';
+import 'community/desktop_user_profile_screen.dart';
 
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
@@ -43,7 +45,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   String _searchQuery = '';
   bool _showSearchOverlay = false;
 
-  final List<String> _filterOptions = ['all', 'ar', 'nft', 'nearby', 'saved'];
+  final List<String> _filterOptions = ['all', 'nearby', 'discovered', 'undiscovered', 'ar', 'favorites'];
   final BackendApiService _backendApi = BackendApiService();
 
   @override
@@ -126,6 +128,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, _) {
         final artworks = _getFilteredArtworks(artworkProvider.artworks);
+        final tileProviders = Provider.of<TileProviders?>(context, listen: false);
+        final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+        final isRetina = devicePixelRatio >= 2.0;
 
         return FlutterMap(
           mapController: _mapController,
@@ -143,13 +148,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             },
           ),
           children: [
-            TileLayer(
-              urlTemplate: themeProvider.isDarkMode
-                  ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
-                  : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
-              subdomains: const ['a', 'b', 'c', 'd'],
-              userAgentPackageName: 'com.kubus.art',
-            ),
+            if (tileProviders != null)
+              (isRetina
+                  ? tileProviders.getTileLayer()
+                  : tileProviders.getNonRetinaTileLayer())
+            else
+              TileLayer(
+                urlTemplate: themeProvider.isDarkMode
+                    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png'
+                    : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+                subdomains: const ['a', 'b', 'c', 'd'],
+                userAgentPackageName: 'com.kubus.art',
+              ),
             MarkerLayer(
               markers: [
                 // User location marker
@@ -1183,13 +1193,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final match = artworkProvider.getArtworkById(suggestion.id!);
       if (match != null) {
         setState(() => _selectedArtwork = match);
+        unawaited(Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ArtDetailScreen(artworkId: match.id),
+          ),
+        ));
       }
     } else if (suggestion.type == 'profile' && suggestion.id != null) {
-      Navigator.of(context).push(
+      unawaited(Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => UserProfileScreen(userId: suggestion.id!),
         ),
-      );
+      ));
     }
   }
 
@@ -1208,18 +1223,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     switch (_selectedFilter) {
-      case 'ar':
-        filtered = filtered.where((a) => a.arEnabled).toList();
-        break;
-      case 'nft':
-        // NFT artworks - filter by those with rewards (placeholder for actual NFT check)
-        filtered = filtered.where((a) => a.rewards > 0).toList();
-        break;
       case 'nearby':
-        filtered = filtered.take(10).toList();
+        final center = _mapController.camera.center;
+        filtered = filtered
+            .where((artwork) => artwork.getDistanceFrom(center) <= 1000)
+            .toList();
         break;
-      case 'saved':
-        filtered = filtered.where((a) => a.isDiscovered).toList();
+      case 'discovered':
+        filtered = filtered.where((artwork) => artwork.isDiscovered).toList();
+        break;
+      case 'undiscovered':
+        filtered = filtered.where((artwork) => !artwork.isDiscovered).toList();
+        break;
+      case 'ar':
+        filtered = filtered.where((artwork) => artwork.arEnabled).toList();
+        break;
+      case 'favorites':
+        filtered = filtered
+            .where((artwork) =>
+                artwork.isFavoriteByCurrentUser || artwork.isFavorite)
+            .toList();
         break;
       case 'all':
       default:
@@ -1232,14 +1255,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     switch (filter) {
       case 'all':
         return 'All';
-      case 'ar':
-        return 'AR';
-      case 'nft':
-        return 'NFT';
       case 'nearby':
         return 'Nearby';
-      case 'saved':
-        return 'Saved';
+      case 'discovered':
+        return 'Discovered';
+      case 'undiscovered':
+        return 'Undiscovered';
+      case 'ar':
+        return 'AR';
+      case 'favorites':
+        return 'Favorites';
       default:
         return filter;
     }

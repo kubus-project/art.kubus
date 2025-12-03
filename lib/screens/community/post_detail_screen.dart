@@ -9,6 +9,8 @@ import '../../services/backend_api_service.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/artist_badge.dart';
+import '../../widgets/institution_badge.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final CommunityPost? post;
@@ -99,6 +101,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     return 'Just now';
   }
 
+  List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10}) {
+    final widgets = <Widget>[];
+    if (post.authorIsArtist) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(ArtistBadge(
+        fontSize: fontSize,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        iconOnly: true,
+      ));
+    }
+    if (post.authorIsInstitution) {
+      widgets.add(const SizedBox(width: 6));
+      widgets.add(InstitutionBadge(
+        fontSize: fontSize,
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        iconOnly: true,
+      ));
+    }
+    return widgets;
+  }
+
   Future<void> _toggleLike() async {
     if (_post == null) return;
     try {
@@ -106,9 +129,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _post!,
         currentUserWallet: _currentWalletAddress(),
       );
+      if (!mounted) return;
       setState(() {});
 
       // Show undo option
+      if (!mounted) return;
       final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -122,8 +147,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   _post!,
                   currentUserWallet: _currentWalletAddress(),
                 );
+                if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to undo like: $e')));
               }
             },
@@ -133,8 +160,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     } catch (e) {
       // On failure ensure rollback and show retry option
       try {
-        setState(() {});
+        if (mounted) setState(() {});
       } catch (_) {}
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update like: $e'),
@@ -147,8 +175,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   _post!,
                   currentUserWallet: _currentWalletAddress(),
                 );
+                if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Retry failed: $e')));
               }
             },
@@ -190,9 +220,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       );
 
       // Service already updated the post/comments optimistically, refresh UI
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
 
       // Show undo snackbar which attempts to delete the comment from backend and locally
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Comment added'),
@@ -206,12 +238,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               } catch (_) {}
               // Remove locally
               CommunityService.deleteComment(_post!, newComment.id);
-              setState(() {});
+              if (mounted) setState(() {});
             },
           ),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add comment: $e')));
     }
   }
@@ -364,12 +397,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ListTile(
                       leading: Icon(Icons.link, color: theme.colorScheme.primary),
                       title: Text('Copy Link', style: GoogleFonts.inter()),
-                      onTap: () async {
-                        await Clipboard.setData(ClipboardData(text: 'https://app.kubus.site/post/${_post!.id}'));
-                        Navigator.pop(sheetContext);
-                        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
-                      },
-                    ),
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(text: 'https://app.kubus.site/post/${_post!.id}'));
+                      Navigator.pop(sheetContext);
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
+                    },
+                  ),
                     ListTile(
                       leading: Icon(Icons.share, color: theme.colorScheme.primary),
                       title: Text('Share via...', style: GoogleFonts.inter()),
@@ -412,29 +445,27 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   title: Text(display ?? 'Unnamed', style: GoogleFonts.inter()),
                                   subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
                                   onTap: () async {
-                                    Navigator.pop(sheetContext);
-                                    
-                                    try {
-                                      await BackendApiService().sharePostViaDM(
-                                        postId: _post!.id,
-                                        recipientWallet: walletAddr ?? username,
-                                        message: 'Check out this post!',
-                                      );
-                                      
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Shared post with @$username')),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Failed to share: $e')),
-                                        );
-                                      }
-                                    }
-                                  },
-                                );
+                        Navigator.pop(sheetContext);
+                        
+                        try {
+                          await BackendApiService().sharePostViaDM(
+                            postId: _post!.id,
+                            recipientWallet: walletAddr ?? username,
+                            message: 'Check out this post!',
+                          );
+                          
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Shared post with @$username')),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to share: $e')),
+                          );
+                        }
+                      },
+                    );
                               },
                             ),
                 ),
@@ -479,24 +510,24 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         ElevatedButton(
                           onPressed: () async {
                             final content = repostContentController.text.trim();
-                            Navigator.pop(sheetContext);
-                            
-                            try {
-                              await BackendApiService().createRepost(
-                                originalPostId: _post!.id,
-                                content: content.isNotEmpty ? content : null,
-                              );
+                        Navigator.pop(sheetContext);
+                        
+                        try {
+                          await BackendApiService().createRepost(
+                            originalPostId: _post!.id,
+                            content: content.isNotEmpty ? content : null,
+                          );
 
-                              if (mounted) {
-                                // Refresh post to potentially show updated share count
-                                if (widget.postId != null) {
-                                  await _fetchPost(widget.postId!);
-                                }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(content.isEmpty ? 'Reposted!' : 'Reposted with comment!')),
-                                );
+                              if (!mounted) return;
+                              // Refresh post to potentially show updated share count
+                              if (widget.postId != null) {
+                                await _fetchPost(widget.postId!);
+                                if (!mounted) return;
                               }
-                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(content.isEmpty ? 'Reposted!' : 'Reposted with comment!')),
+                              );
+                        } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(content: Text('Failed to repost: $e')),
@@ -549,7 +580,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(_post!.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                                      Row(
+                                        children: [
+                                          Text(_post!.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
+                                          if (_post!.authorIsArtist) ...[
+                                            const SizedBox(width: 6),
+                                            const ArtistBadge(fontSize: 10, iconOnly: true),
+                                          ],
+                                          if (_post!.authorIsInstitution) ...[
+                                            const SizedBox(width: 6),
+                                            const InstitutionBadge(fontSize: 10, iconOnly: true),
+                                          ],
+                                        ],
+                                      ),
                                       Text(_timeAgo(_post!.timestamp), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
                                     ],
                                   ),
@@ -937,14 +980,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                post.authorName,
-                style: GoogleFonts.inter(
-                  fontSize: isCompact ? 15 : 17,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
-                overflow: TextOverflow.ellipsis,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      post.authorName,
+                      style: GoogleFonts.inter(
+                        fontSize: isCompact ? 15 : 17,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  ..._buildAuthorRoleBadges(post, fontSize: 9),
+                ],
               ),
               if (handle.isNotEmpty)
                 Text(
@@ -1020,13 +1070,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        originalPost.authorName,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              originalPost.authorName,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onSurface,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          ..._buildAuthorRoleBadges(originalPost, fontSize: 8),
+                        ],
                       ),
                       if (originalHandle != null && originalHandle.isNotEmpty)
                         Text(
@@ -1187,7 +1244,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             highlight: _post!.isLiked,
                           ),
                           _buildDetailAction(
-                            icon: Icons.comment,
+                            icon: Icons.chat_bubble_outline,
                             label: '${_post!.commentCount}',
                             onTap: () {
                               FocusScope.of(context).requestFocus(_commentFocusNode);

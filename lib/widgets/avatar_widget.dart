@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
-import '../screens/community/user_profile_screen.dart';
+import '../screens/community/user_profile_screen.dart' as mobile;
+import '../screens/desktop/community/desktop_user_profile_screen.dart' as desktop;
 import '../utils/wallet_utils.dart';
 
 class AvatarWidget extends StatefulWidget {
@@ -140,6 +141,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     // Boxy shape: Rounded Rectangle with corner radius ~25% of width
     final borderRadius = BorderRadius.circular(radius * 0.5); 
 
+    final backgroundColor = Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white;
     Widget content;
     if (useNetwork) {
       content = SizedBox(
@@ -147,23 +149,26 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
         height: size,
         child: ClipRRect(
           borderRadius: borderRadius,
-          child: Image.network(
-            effective,
-            width: size,
-            height: size,
-            fit: BoxFit.cover,
-            errorBuilder: (ctx, error, stack) {
-              final parts = widget.wallet.trim().split(RegExp(r'\s+'));
-              final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: borderRadius,
-                ),
-                alignment: Alignment.center,
-                child: Text(initials.isNotEmpty ? initials : 'U', style: TextStyle(fontSize: (radius * 0.7).clamp(10, 14).toDouble(), fontWeight: FontWeight.w600)),
-              );
-            },
+          child: Container(
+            color: backgroundColor,
+            child: Image.network(
+              effective,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, error, stack) {
+                final parts = widget.wallet.trim().split(RegExp(r'\s+'));
+                final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: borderRadius,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(initials.isNotEmpty ? initials : 'U', style: TextStyle(fontSize: (radius * 0.7).clamp(10, 14).toDouble(), fontWeight: FontWeight.w600)),
+                );
+              },
+            ),
           ),
         ),
       );
@@ -244,14 +249,21 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     if (widget.enableProfileNavigation) {
       return GestureDetector(
         onTap: () {
-          // Generate unique hero tag for this navigation so each tap animates fresh
+          // Generate unique hero tag for this navigation
           final newTag = 'avatar_${WalletUtils.normalize(widget.wallet)}_${DateTime.now().microsecondsSinceEpoch}';
           setState(() { _currentHeroTag = newTag; });
+          
+          // Detect if we're on desktop and route to desktop profile screen
+          final screenWidth = MediaQuery.of(context).size.width;
+          final isDesktop = screenWidth >= 900;
+          
+          final profileScreen = isDesktop
+              ? desktop.UserProfileScreen(userId: widget.wallet, heroTag: newTag)
+              : mobile.UserProfileScreen(userId: widget.wallet, heroTag: newTag);
+          
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => UserProfileScreen(userId: widget.wallet, heroTag: newTag),
-            ),
+            MaterialPageRoute(builder: (context) => profileScreen),
           ).then((_) {
             // clear temporary hero tag after return
             if (mounted) setState(() { _currentHeroTag = null; });

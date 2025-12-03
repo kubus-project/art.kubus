@@ -1034,6 +1034,8 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
     setState(() => _isSubmitting = true);
 
     try {
+      await _api.ensureAuthLoaded(walletAddress: wallet);
+
       final coverUpload = await _api.uploadFile(
         fileBytes: _selectedImageBytes!,
         fileName: _selectedImageName ?? 'artwork_cover.jpg',
@@ -1042,6 +1044,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
           'source': 'artist_studio',
           'uploadFolder': 'artworks/covers',
         },
+        walletAddress: wallet,
       );
 
       final coverUrl = coverUpload['uploadedUrl'] as String? ?? coverUpload['data']?['url'] as String?;
@@ -1064,6 +1067,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
             'source': 'artist_studio',
             'uploadFolder': 'ar/models',
           },
+          walletAddress: wallet,
         );
         modelUrl = modelUpload['uploadedUrl'] as String? ?? modelUpload['data']?['url'] as String?;
         modelCid = modelUpload['data']?['cid'] as String?;

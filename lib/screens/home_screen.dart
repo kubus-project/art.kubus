@@ -21,7 +21,8 @@ import 'web3/onboarding/web3_onboarding.dart' as web3;
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
-
+import '../widgets/artist_badge.dart';
+import '../widgets/institution_badge.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import 'activity/advanced_analytics_screen.dart';
@@ -260,6 +261,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final greeting = _getGreeting();
+    final isArtist = profileProvider.currentUser?.isArtist ?? false;
+    final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -293,26 +296,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$greeting ${profileProvider.currentUser?.displayName ?? 'Explorer'}',
-                          style: GoogleFonts.inter(
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(height: isSmallScreen ? 6 : 8),
-                        Text(
-                          'Discover amazing AR art and connect with creators',
-                          style: GoogleFonts.inter(
-                            fontSize: descriptionSize,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        '$greeting ${profileProvider.currentUser?.displayName ?? 'Explorer'}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: titleSize,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (isArtist) ...[
+                                      const SizedBox(width: 8),
+                                      ArtistBadge(
+                                        fontSize: isSmallScreen ? 9 : 10,
+                                        useOnPrimary: true,
+                                      ),
+                                    ],
+                                    if (isInstitution) ...[
+                                      const SizedBox(width: 8),
+                                      InstitutionBadge(
+                                        fontSize: isSmallScreen ? 9 : 10,
+                                        useOnPrimary: true,
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                SizedBox(height: isSmallScreen ? 6 : 8),
+                                Text(
+                                  'Discover amazing AR art and connect with creators',
+                                  style: GoogleFonts.inter(
+                                    fontSize: descriptionSize,
                             color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),

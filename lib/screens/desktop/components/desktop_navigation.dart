@@ -414,6 +414,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     avatarUrl: user?.avatar,
                     radius: widget.isExpanded ? 20 : 18,
                     allowFabricatedFallback: true,
+                    enableProfileNavigation: false,
                   ),
                   if (widget.isExpanded) ...[
                     const SizedBox(width: 12),
@@ -425,7 +426,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              user?.displayName ?? 'Guest User',
+                              user?.displayName ?? 'Art Enthusiast',
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,

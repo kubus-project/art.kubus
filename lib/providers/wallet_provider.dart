@@ -479,6 +479,25 @@ class WalletProvider extends ChangeNotifier {
     } catch (e) {
       debugPrint('❌ Error loading cached wallet: $e');
     }
+
+    // Fallback: if no cached mnemonic restored a wallet, try SharedPreferences so web
+    // refreshes keep a read-only connection at minimum.
+    if (_currentWalletAddress == null || _currentWalletAddress!.isEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final storedAddress = (prefs.getString('wallet_address') ??
+                prefs.getString('walletAddress') ??
+                prefs.getString('wallet'))
+            ?.trim();
+        if (storedAddress != null && storedAddress.isNotEmpty) {
+          _currentWalletAddress = storedAddress;
+          debugPrint('🔐 Fallback restored wallet from SharedPreferences: $_currentWalletAddress');
+          await _loadData();
+        }
+      } catch (e) {
+        debugPrint('⚠️ WalletProvider fallback restore failed: $e');
+      }
+    }
   }
 
   // Attempt import immediately (returns true on success)
@@ -1192,11 +1211,28 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> connectWalletWithAddress(String address) async {
-    _currentWalletAddress = address;
+    final sanitized = address.trim();
+    if (sanitized.isEmpty) {
+      debugPrint('connectWalletWithAddress called with empty address');
+      return;
+    }
+
+    _currentWalletAddress = sanitized;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('wallet_address', sanitized);
+      await prefs.setString('walletAddress', sanitized);
+      await prefs.setString('wallet', sanitized);
+      await prefs.setBool('has_wallet', true);
+    } catch (e) {
+      debugPrint('connectWalletWithAddress: failed to persist wallet address -> $e');
+    }
     
     // Load the connected wallet from blockchain
     await _loadData();
-    await _syncBackendData(address);
+    await _syncBackendData(sanitized);
+    notifyListeners();
   }
 
   void disconnectWallet() {

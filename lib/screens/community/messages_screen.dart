@@ -677,7 +677,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     }
                   }
 
-                  await ConversationNavigator.openConversationWithPreload(context, c, preloadedMembers: finalMembers, preloadedAvatars: preAvatars.isNotEmpty ? preAvatars : null, preloadedDisplayNames: preNames.isNotEmpty ? preNames : null);
+                  if (!mounted) return;
+                  final currentContext = context;
+                  await ConversationNavigator.openConversationWithPreload(
+                    currentContext,
+                    c,
+                    preloadedMembers: finalMembers,
+                    preloadedAvatars: preAvatars.isNotEmpty ? preAvatars : null,
+                    preloadedDisplayNames: preNames.isNotEmpty ? preNames : null,
+                  );
                 },
               );
             },

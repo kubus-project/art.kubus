@@ -7,8 +7,10 @@ import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
 import '../../providers/profile_provider.dart';
+import '../../providers/dao_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../models/user.dart';
+import '../../models/dao.dart';
 import '../../services/event_bus.dart';
 import '../../providers/themeprovider.dart';
 import '../../widgets/inline_loading.dart';
@@ -29,16 +31,33 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   late TextEditingController _instagramController;
   late TextEditingController _websiteController;
   
+  // Artist-specific fields
+  late TextEditingController _specialtyController;
+  late TextEditingController _yearsActiveController;
+  
   String? _avatarUrl;
+  String? _coverImageUrl;
   bool _isLoading = false;
   Uint8List? _localAvatarBytes;
+  Uint8List? _localCoverBytes;
   final ImagePicker _picker = ImagePicker();
   VoidCallback? _profileListener;
+  
+  // Privacy settings
+  bool _privateProfile = false;
+  bool _showActivityStatus = true;
+  bool _showCollection = true;
+  bool _allowMessages = true;
+  
+  // Role flags
+  bool _isArtist = false;
+  bool _isInstitution = false;
 
   @override
   void initState() {
     super.initState();
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
     final profile = profileProvider.currentUser;
     
     // Show username without any leading '@' in the edit field for a cleaner UX.
@@ -52,6 +71,37 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _instagramController = TextEditingController(text: social['instagram'] ?? '');
     _websiteController = TextEditingController(text: social['website'] ?? '');
     _avatarUrl = profile?.avatar;
+    _coverImageUrl = _normalizeMediaUrl(profile?.coverImage);
+    
+    // Artist-specific fields
+    final artistInfo = profile?.artistInfo;
+    _specialtyController = TextEditingController(
+      text: artistInfo?.specialty.join(', ') ?? '',
+    );
+    _yearsActiveController = TextEditingController(
+      text: artistInfo?.yearsActive.toString() ?? '0',
+    );
+    
+    // Privacy settings
+    final prefs = profile?.preferences ?? profileProvider.preferences;
+    _privateProfile = prefs.privacy.toLowerCase() == 'private';
+    _showActivityStatus = prefs.showActivityStatus;
+    _showCollection = prefs.showCollection;
+    _allowMessages = prefs.allowMessages;
+    
+    // Determine role flags
+    _isArtist = profile?.isArtist ?? false;
+    _isInstitution = profile?.isInstitution ?? false;
+    
+    // Check DAO review for approved artist/institution status
+    final walletAddress = profile?.walletAddress ?? '';
+    if (walletAddress.isNotEmpty) {
+      final daoReview = daoProvider.findReviewForWallet(walletAddress);
+      if (daoReview != null && daoReview.isApproved) {
+        if (daoReview.isArtistApplication) _isArtist = true;
+        if (daoReview.isInstitutionApplication) _isInstitution = true;
+      }
+    }
 
     // Listen to profile provider changes so avatar updates immediately when provider updates
     _profileListener = () {
@@ -59,6 +109,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       if (!mounted) return;
       setState(() {
         _avatarUrl = p?.avatar;
+        _coverImageUrl = _normalizeMediaUrl(p?.coverImage);
       });
     };
     profileProvider.addListener(_profileListener!);
@@ -72,6 +123,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _twitterController.dispose();
     _instagramController.dispose();
     _websiteController.dispose();
+    _specialtyController.dispose();
+    _yearsActiveController.dispose();
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     if (_profileListener != null) {
       profileProvider.removeListener(_profileListener!);
@@ -244,6 +297,101 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     }
   }
 
+  Future<void> _pickCoverImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 90,
+      );
+
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        if (!mounted) return;
+        setState(() {
+          _localCoverBytes = bytes;
+          _isLoading = true;
+        });
+
+        try {
+          final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+          final wallet = profileProvider.currentUser?.walletAddress ?? '';
+
+          if (wallet.isEmpty) {
+            setState(() => _isLoading = false);
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('No wallet connected. Connect your wallet to upload cover image.'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            return;
+          }
+
+          // Upload cover image to backend
+          final fileName = (image.name.isNotEmpty) ? image.name : path.basename(image.path);
+          final api = BackendApiService();
+          final result = await api.uploadFile(
+            fileBytes: bytes,
+            fileName: fileName,
+            fileType: 'cover',
+            metadata: {'uploadFolder': 'profiles/cover'},
+          );
+
+          // Extract URL from result
+          final rawUploadedUrl = result['uploadedUrl']?.toString() ?? 
+                                 result['url']?.toString() ?? 
+                                 result['data']?['url']?.toString() ?? '';
+          final uploadedUrl = _normalizeMediaUrl(rawUploadedUrl);
+
+          if (uploadedUrl == null || uploadedUrl.isEmpty) {
+            throw Exception('Failed to get upload URL');
+          }
+
+          // Save cover image URL to profile
+          final saved = await profileProvider.saveProfile(
+            walletAddress: wallet,
+            coverImage: uploadedUrl,
+          );
+
+          setState(() {
+            _coverImageUrl = uploadedUrl;
+            _localCoverBytes = null;
+            _isLoading = false;
+          });
+
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(saved ? 'Cover image uploaded!' : 'Cover image uploaded locally'),
+              backgroundColor: saved ? Colors.green : Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } catch (e) {
+          setState(() => _isLoading = false);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Cover upload failed: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error picking cover image: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -257,16 +405,29 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         throw Exception('No wallet connected');
       }
 
+      // Save privacy settings first
+      await profileProvider.updatePreferences(
+        privateProfile: _privateProfile,
+        showActivityStatus: _showActivityStatus,
+        showCollection: _showCollection,
+        allowMessages: _allowMessages,
+      );
+
       final success = await profileProvider.saveProfile(
         walletAddress: wallet,
         username: _usernameController.text.trim(),
         displayName: _displayNameController.text.trim(),
         bio: _bioController.text.trim(),
         avatar: _avatarUrl,
+        coverImage: _coverImageUrl,
         social: {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
           'website': _websiteController.text.trim(),
+          // Store artist specialty and years active in social for now
+          // (until backend supports dedicated artistInfo fields)
+          if (_isArtist) 'specialty': _specialtyController.text.trim(),
+          if (_isArtist) 'yearsActive': _yearsActiveController.text.trim(),
         },
       );
 
@@ -438,7 +599,89 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Cover Image section
+              _buildSectionHeader('Cover Image', Icons.panorama),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: _pickCoverImage,
+                child: Container(
+                  width: double.infinity,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: themeProvider.accentColor.withValues(alpha: 0.3),
+                      width: 2,
+                      style: BorderStyle.solid,
+                    ),
+                    image: _localCoverBytes != null
+                        ? DecorationImage(
+                            image: MemoryImage(_localCoverBytes!),
+                            fit: BoxFit.cover,
+                          )
+                        : _coverImageUrl != null && _coverImageUrl!.isNotEmpty
+                            ? DecorationImage(
+                                image: NetworkImage(_coverImageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                  ),
+                  child: (_localCoverBytes == null && (_coverImageUrl == null || _coverImageUrl!.isEmpty))
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 40,
+                              color: themeProvider.accentColor.withValues(alpha: 0.6),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap to add cover image',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        )
+                      : Stack(
+                          children: [
+                            Positioned(
+                              bottom: 12,
+                              right: 12,
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.edit, color: Colors.white, size: 16),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Change',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              
               // Avatar section
+              _buildSectionHeader('Profile Picture', Icons.account_circle),
+              const SizedBox(height: 12),
               Center(
                 child: Column(
                   children: [
@@ -501,6 +744,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              
+              // Basic Info Section
+              _buildSectionHeader('Basic Information', Icons.person_outline),
+              const SizedBox(height: 16),
 
               // Username
               Text(
@@ -657,10 +904,341 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 },
               ),
               const SizedBox(height: 32),
+              
+              // Artist-specific section (only shown for verified artists)
+              if (_isArtist) ...[
+                _buildSectionHeader('Artist Information', Icons.palette),
+                const SizedBox(height: 16),
+                
+                // Specialty
+                Text(
+                  'Specialties',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _specialtyController,
+                  decoration: InputDecoration(
+                    hintText: 'e.g., Digital Art, Sculpture, Photography',
+                    helperText: 'Separate multiple specialties with commas',
+                    prefixIcon: const Icon(Icons.brush),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.primaryContainer,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Years Active
+                Text(
+                  'Years Active',
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _yearsActiveController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    hintText: 'How many years have you been creating art?',
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.primaryContainer,
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      final years = int.tryParse(value);
+                      if (years == null || years < 0) {
+                        return 'Please enter a valid number';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 32),
+              ],
+              
+              // Institution-specific section (only shown for verified institutions)
+              if (_isInstitution) ...[
+                _buildSectionHeader('Institution Information', Icons.business),
+                const SizedBox(height: 16),
+                
+                Text(
+                  'About Your Institution',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: themeProvider.accentColor,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Use the bio and social links above to describe your institution. You can manage exhibitions and events from the Institution Hub.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+              
+              // Privacy Settings Section
+              _buildSectionHeader('Privacy Settings', Icons.security),
+              const SizedBox(height: 16),
+              
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _buildPrivacySwitch(
+                      'Private Profile',
+                      'Only approved followers can see your posts',
+                      Icons.lock_outline,
+                      _privateProfile,
+                      (value) => setState(() => _privateProfile = value),
+                    ),
+                    _buildDivider(),
+                    _buildPrivacySwitch(
+                      'Show Activity Status',
+                      'Let others see when you\'re online',
+                      Icons.circle,
+                      _showActivityStatus,
+                      (value) => setState(() => _showActivityStatus = value),
+                    ),
+                    _buildDivider(),
+                    _buildPrivacySwitch(
+                      'Show Collection',
+                      'Display your NFT collection publicly',
+                      Icons.collections,
+                      _showCollection,
+                      (value) => setState(() => _showCollection = value),
+                    ),
+                    _buildDivider(),
+                    _buildPrivacySwitch(
+                      'Allow Messages',
+                      'Receive direct messages from others',
+                      Icons.message_outlined,
+                      _allowMessages,
+                      (value) => setState(() => _allowMessages = value),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              
+              // Role Status (read-only display)
+              if (_isArtist || _isInstitution) ...[
+                _buildSectionHeader('Verified Status', Icons.verified),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        themeProvider.accentColor.withValues(alpha: 0.1),
+                        themeProvider.accentColor.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: themeProvider.accentColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: themeProvider.accentColor.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isInstitution ? Icons.business : Icons.palette,
+                          color: themeProvider.accentColor,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isInstitution ? 'Verified Institution' : 'Verified Artist',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _isInstitution 
+                                  ? 'Your institution status is verified by the DAO'
+                                  : 'Your artist status is verified by the DAO',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.check_circle,
+                        color: Colors.green,
+                        size: 28,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
             ],
           ),
         ),
       ),
     );
+  }
+  
+  Widget _buildSectionHeader(String title, IconData icon) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return Row(
+      children: [
+        Icon(
+          icon,
+          color: themeProvider.accentColor,
+          size: 20,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildPrivacySwitch(
+    String title,
+    String subtitle,
+    IconData icon,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: value ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            size: 22,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: themeProvider.accentColor.withValues(alpha: 0.5),
+            thumbColor: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.selected) ? themeProvider.accentColor : null),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildDivider() {
+    return Divider(
+      height: 1,
+      indent: 54,
+      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+    );
+  }
+
+  String? _normalizeMediaUrl(String? url) {
+    if (url == null) return null;
+    final candidate = url.trim();
+    if (candidate.isEmpty) return null;
+    if (candidate.startsWith('data:')) return candidate;
+    if (candidate.startsWith('ipfs://')) {
+      final cid = candidate.replaceFirst('ipfs://', '');
+      return 'https://ipfs.io/ipfs/$cid';
+    }
+    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
+    if (candidate.startsWith('//')) return 'https:$candidate';
+    if (candidate.startsWith('/')) return '$base$candidate';
+    if (candidate.startsWith('api/')) return '$base/$candidate';
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
+    if (!hasScheme) {
+      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
+    }
+    return candidate;
   }
 }

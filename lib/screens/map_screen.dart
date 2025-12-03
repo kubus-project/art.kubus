@@ -21,6 +21,8 @@ import '../providers/dao_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
+import '../models/institution.dart';
+import '../models/dao.dart';
 import '../models/map_marker_subject.dart';
 import '../services/task_service.dart';
 import '../services/ar_integration_service.dart';
@@ -42,6 +44,22 @@ class MapScreen extends StatefulWidget {
 
   @override
   State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MarkerSubjectData {
+  final List<Artwork> artworks;
+  final List<Institution> institutions;
+  final List<Event> events;
+  final List<Delegate> delegates;
+  final bool wasRefreshed;
+
+  const _MarkerSubjectData({
+    required this.artworks,
+    required this.institutions,
+    required this.events,
+    required this.delegates,
+    this.wasRefreshed = false,
+  });
 }
 
 class _MapScreenState extends State<MapScreen>
@@ -132,9 +150,11 @@ class _MapScreenState extends State<MapScreen>
       }
       
       await _loadPersistedPermissionFlags();
+      if (!mounted) return;
       _initializeMap();
 
       // Initialize providers and calculate progress after build completes
+      if (!mounted) return;
       context.read<ArtworkProvider>().loadArtworks();
       final taskProvider = context.read<TaskProvider>();
       final walletProvider = context.read<WalletProvider>();
@@ -153,6 +173,7 @@ class _MapScreenState extends State<MapScreen>
             'MapScreen: No wallet connected, using default empty progress');
       }
 
+      if (!mounted) return;
       _calculateProgress(); // Calculate progress after providers are ready
     });
   }
@@ -718,7 +739,7 @@ class _MapScreenState extends State<MapScreen>
 
   // Isometric overlay removed - grid is now integrated in tile provider
 
-  void _handleCurrentLocationTap() {
+  Future<void> _handleCurrentLocationTap() async {
     if (_currentPosition == null) return;
 
     // Check if there's a nearby marker (within 30 meters)
@@ -743,28 +764,86 @@ class _MapScreenState extends State<MapScreen>
       _showArtMarkerDialog(nearbyMarker);
     } else {
       // Show create marker dialog
-      _showMarkerCreationDialog();
+      await _startMarkerCreationFlow();
     }
   }
 
-  void _showMarkerCreationDialog() {
-    if (_currentPosition == null) return;
+  _MarkerSubjectData _snapshotMarkerSubjectData() {
+    final artworkProvider = context.read<ArtworkProvider>();
+    final institutionProvider = context.read<InstitutionProvider>();
+    final daoProvider = context.read<DAOProvider>();
+    return _MarkerSubjectData(
+      artworks: List<Artwork>.from(artworkProvider.artworks),
+      institutions: List<Institution>.from(institutionProvider.institutions),
+      events: List<Event>.from(institutionProvider.events),
+      delegates: List<Delegate>.from(daoProvider.delegates),
+    );
+  }
 
+  Future<_MarkerSubjectData?> _refreshMarkerSubjectData({bool force = false}) async {
     final artworkProvider = context.read<ArtworkProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
     final daoProvider = context.read<DAOProvider>();
 
-    final arEnabledArtworks =
-        artworkProvider.artworks.where(artworkSupportsAR).toList();
+    final fetches = <Future<void>>[];
+    final shouldLoadArtworks = artworkProvider.artworks.isEmpty || force;
+    final shouldLoadInstitutions =
+        force || institutionProvider.institutions.isEmpty || institutionProvider.events.isEmpty;
+    final shouldLoadDelegates = force || daoProvider.delegates.isEmpty;
 
-    final subjectOptionsByType = <MarkerSubjectType, List<MarkerSubjectOption>>{
+    final bool needsFetch = shouldLoadArtworks || shouldLoadInstitutions || shouldLoadDelegates;
+
+    if (!needsFetch) {
+      return null;
+    }
+
+    if (shouldLoadArtworks) {
+      fetches.add(artworkProvider.loadArtworks());
+    }
+    if (shouldLoadInstitutions) {
+      fetches.add(institutionProvider.refreshData());
+    }
+    if (shouldLoadDelegates) {
+      fetches.add(daoProvider.refreshData(force: true));
+    }
+
+    try {
+      await Future.wait(fetches);
+      return _MarkerSubjectData(
+        artworks: List<Artwork>.from(artworkProvider.artworks),
+        institutions: List<Institution>.from(institutionProvider.institutions),
+        events: List<Event>.from(institutionProvider.events),
+        delegates: List<Delegate>.from(daoProvider.delegates),
+        wasRefreshed: true,
+      );
+    } catch (e) {
+      debugPrint('MapScreen: Failed to refresh marker subjects: $e');
+      return null;
+    }
+  }
+
+  Future<void> _startMarkerCreationFlow() async {
+    if (_currentPosition == null) return;
+    final subjectData = _snapshotMarkerSubjectData();
+    if (!mounted) return;
+    _showMarkerCreationDialog(subjectData);
+  }
+
+  void _showMarkerCreationDialog(_MarkerSubjectData subjectData) {
+    if (_currentPosition == null) return;
+
+    List<Artwork> arEnabledArtworks =
+        subjectData.artworks.where(artworkSupportsAR).toList();
+
+    Map<MarkerSubjectType, List<MarkerSubjectOption>> subjectOptionsByType =
+        <MarkerSubjectType, List<MarkerSubjectOption>>{
       for (final type in MarkerSubjectType.values)
         type: buildSubjectOptions(
           type: type,
-          artworks: artworkProvider.artworks,
-          institutions: institutionProvider.institutions,
-          events: institutionProvider.events,
-          delegates: daoProvider.delegates,
+          artworks: subjectData.artworks,
+          institutions: subjectData.institutions,
+          events: subjectData.events,
+          delegates: subjectData.delegates,
         ),
     };
 
@@ -832,16 +911,55 @@ class _MapScreenState extends State<MapScreen>
       });
     }
 
+    Future<void> maybeRefreshSubjectsInDialog(StateSetter refresh) async {
+      // Force a refresh when opening the dialog to ensure options are populated.
+      final fresh = await _refreshMarkerSubjectData(force: true);
+      if (fresh == null || !mounted) return;
+      refresh(() {
+        subjectOptionsByType = {
+          for (final type in MarkerSubjectType.values)
+            type: buildSubjectOptions(
+              type: type,
+              artworks: fresh.artworks,
+              institutions: fresh.institutions,
+              events: fresh.events,
+              delegates: fresh.delegates,
+            ),
+        };
+        arEnabledArtworks =
+            fresh.artworks.where(artworkSupportsAR).toList();
+        // Preserve current selections when possible
+        final updatedOptions = subjectOptionsByType[selectedSubjectType] ?? [];
+        MarkerSubjectOption? preserved;
+        if (selectedSubject != null) {
+          try {
+            preserved = updatedOptions
+                .firstWhere((option) => option.id == selectedSubject!.id);
+          } catch (_) {}
+        }
+        selectedSubject =
+            preserved ?? (updatedOptions.isNotEmpty ? updatedOptions.first : null);
+        selectedArAsset = resolveDefaultAsset(selectedSubjectType, selectedSubject);
+      });
+    }
+
+    bool refreshScheduled = false;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          title: Row(
-            children: [
-              Icon(
-                Icons.add_location_alt,
+        builder: (context, setDialogState) {
+          if (!refreshScheduled) {
+            refreshScheduled = true;
+            unawaited(maybeRefreshSubjectsInDialog(setDialogState));
+          }
+          return AlertDialog(
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            title: Row(
+              children: [
+                Icon(
+                  Icons.add_location_alt,
                 color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 8),
@@ -881,7 +999,7 @@ class _MapScreenState extends State<MapScreen>
                   ),
                   const SizedBox(height: 8),
                   DropdownButtonFormField<MarkerSubjectType>(
-                    value: selectedSubjectType,
+                    initialValue: selectedSubjectType,
                     decoration: InputDecoration(
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -910,7 +1028,7 @@ class _MapScreenState extends State<MapScreen>
                     if ((subjectOptionsByType[selectedSubjectType] ?? [])
                         .isNotEmpty)
                       DropdownButtonFormField<MarkerSubjectOption>(
-                        value: selectedSubject,
+                        initialValue: selectedSubject,
                         decoration: InputDecoration(
                           labelText: '${selectedSubjectType.label} *',
                           border: OutlineInputBorder(
@@ -1017,7 +1135,7 @@ class _MapScreenState extends State<MapScreen>
                       )
                     else
                       DropdownButtonFormField<Artwork>(
-                        value: selectedArAsset,
+                        initialValue: selectedArAsset,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -1125,7 +1243,7 @@ class _MapScreenState extends State<MapScreen>
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<ArtMarkerType>(
-                    value: selectedMarkerType,
+                    initialValue: selectedMarkerType,
                     decoration: InputDecoration(
                       labelText: 'Marker Layer',
                       border: OutlineInputBorder(
@@ -1328,7 +1446,8 @@ class _MapScreenState extends State<MapScreen>
               label: Text('Create Marker', style: GoogleFonts.outfit()),
             ),
           ],
-        ),
+        );
+       }
       ),
     );
   }
@@ -1990,7 +2109,7 @@ class _MapScreenState extends State<MapScreen>
           width: 60,
           height: 60,
           child: GestureDetector(
-            onTap: _handleCurrentLocationTap,
+            onTap: () => unawaited(_handleCurrentLocationTap()),
             child: Container(
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.18),
@@ -2541,7 +2660,7 @@ class _MapScreenState extends State<MapScreen>
           _MapIconButton(
             icon: Icons.add_location_alt,
             tooltip: 'Add map marker',
-            onTap: _showMarkerCreationDialog,
+            onTap: () => unawaited(_startMarkerCreationFlow()),
           ),
         ],
       ),

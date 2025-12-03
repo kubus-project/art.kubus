@@ -33,7 +33,6 @@ class BackendApiService {
   final String baseUrl = ApiKeys.backendUrl;
   String? _authToken;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  bool _authInitialized = false;
   Future<void>? _authInitFuture;
   final Map<String, DateTime> _rateLimitResets = {};
 
@@ -89,14 +88,12 @@ class BackendApiService {
   Future<void> ensureAuthLoaded({String? walletAddress}) async {
     // Fast path when token already present
     if ((_authToken ?? '').isNotEmpty) {
-      _authInitialized = true;
       return;
     }
     // Await any inflight initialization first
     if (_authInitFuture != null) {
       await _authInitFuture!;
       if ((_authToken ?? '').isNotEmpty) {
-        _authInitialized = true;
         return;
       }
     }
@@ -125,7 +122,6 @@ class BackendApiService {
         }
       }
     } finally {
-      _authInitialized = true;
       _authInitFuture = null;
     }
   }
@@ -2983,7 +2979,7 @@ class BackendApiService {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews')
           .replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await http.get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -3008,7 +3004,7 @@ class BackendApiService {
   Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet');
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await http.get(uri, headers: _getHeaders());
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return (data['data'] ?? data['review'] ?? data) as Map<String, dynamic>;
@@ -3020,6 +3016,44 @@ class BackendApiService {
     } catch (e) {
       debugPrint('Error getting DAO review: $e');
       return null;
+    }
+  }
+
+  /// Decide on a DAO review (approve/reject/pending)
+  /// POST /api/dao/reviews/:id/decision
+  Future<Map<String, dynamic>?> decideDAOReview({
+    required String idOrWallet,
+    required String status,
+    String? reviewerNotes,
+    String? walletAddress,
+  }) async {
+    try {
+      if (walletAddress != null && walletAddress.isNotEmpty) {
+        await ensureAuthLoaded(walletAddress: walletAddress);
+      }
+      final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet/decision');
+      final body = jsonEncode({
+        'status': status,
+        if (reviewerNotes != null) 'reviewerNotes': reviewerNotes,
+      });
+      final response = await http.post(uri, headers: _getHeaders(), body: body);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final payload = data['data'] ?? data['review'] ?? data;
+        return payload is Map<String, dynamic> ? payload : null;
+      } else if (response.statusCode == 403 || response.statusCode == 401) {
+        throw Exception('Not authorized to decide on this review');
+      } else if (response.statusCode == 404) {
+        throw Exception('Review not found');
+      } else if (response.statusCode == 503) {
+        throw Exception('Review decisions are currently disabled');
+      } else {
+        throw Exception('Failed to update review: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error deciding DAO review: $e');
+      rethrow;
     }
   }
 
@@ -3211,7 +3245,10 @@ class BackendApiService {
     required String fileName,
     required String fileType,
     Map<String, String>? metadata,
+    String? walletAddress,
   }) async {
+    // Ensure uploads include auth so the backend accepts and attributes them.
+    await _ensureAuthBeforeRequest(walletAddress: walletAddress);
     const int maxRetries = 3;
     int attempt = 0;
     while (true) {
@@ -3897,12 +3934,16 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     'Unknown Artist',
   );
 
+  // Prefer normalized, absolute image URLs so galleries and map markers render correctly.
+  final rawImage = json['imageUrl'] ?? json['image_url'] ?? json['coverUrl'] ?? json['cover_url'];
+  final normalizedImageUrl = _normalizeBackendMediaUrl(rawImage as String?);
+
   return Artwork(
     id: id,
     title: title,
     artist: artist,
     description: stringVal(json['description'], ''),
-    imageUrl: json['imageUrl'] as String?,
+    imageUrl: normalizedImageUrl,
     position: LatLng(
       (json['latitude'] as num?)?.toDouble() ?? 0.0,
       (json['longitude'] as num?)?.toDouble() ?? 0.0,
@@ -4075,6 +4116,32 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
       ?? json['wallet'] as String?
       ?? (authorRaw is String ? authorRaw : null);
 
+  bool authorIsArtistFlag = communityBool(
+    normalizedAuthor['isArtist'] ??
+        normalizedAuthor['is_artist'] ??
+        json['authorIsArtist'] ??
+        json['author_is_artist'],
+  );
+  bool authorIsInstitutionFlag = communityBool(
+    normalizedAuthor['isInstitution'] ??
+        normalizedAuthor['is_institution'] ??
+        json['authorIsInstitution'] ??
+        json['author_is_institution'],
+  );
+  final roleHint = (normalizedAuthor['role'] ??
+          normalizedAuthor['type'] ??
+          json['authorRole'] ?? '')
+      .toString()
+      .toLowerCase();
+  if (roleHint.contains('institution') ||
+      roleHint.contains('museum') ||
+      roleHint.contains('gallery')) {
+    authorIsInstitutionFlag = true;
+  }
+  if (roleHint.contains('artist') || roleHint.contains('creator')) {
+    authorIsArtistFlag = true;
+  }
+
   final dynamic mediaPayload = json['mediaUrls'] ?? json['media_urls'];
   final List<String> mediaUrls = mediaPayload is List
       ? mediaPayload
@@ -4168,6 +4235,14 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     final origJson = json['originalPost'] as Map<String, dynamic>;
     final origAuthor = origJson['author'] as Map<String, dynamic>?;
     
+    final origRoleHint = (origAuthor?['role'] ?? origAuthor?['type'] ?? '')
+        .toString()
+        .toLowerCase();
+    final origIsArtist = communityBool(
+          origAuthor?['isArtist'] ?? origAuthor?['is_artist']);
+    final origIsInstitution = communityBool(
+          origAuthor?['isInstitution'] ?? origAuthor?['is_institution']);
+
     originalPost = CommunityPost(
       id: origJson['id'] as String,
       authorId: origJson['walletAddress'] as String? ?? 'unknown',
@@ -4182,6 +4257,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
       timestamp: origJson['createdAt'] != null 
           ? DateTime.parse(origJson['createdAt'] as String)
           : DateTime.now(),
+      authorIsArtist: origIsArtist || origRoleHint.contains('artist') || origRoleHint.contains('creator'),
+      authorIsInstitution: origIsInstitution || origRoleHint.contains('institution') || origRoleHint.contains('museum') || origRoleHint.contains('gallery'),
     );
   }
 
@@ -4220,6 +4297,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     isLiked: json['isLiked'] as bool? ?? false,
     isBookmarked: json['isBookmarked'] as bool? ?? false,
     isFollowing: json['isFollowing'] as bool? ?? false,
+    authorIsArtist: authorIsArtistFlag,
+    authorIsInstitution: authorIsInstitutionFlag,
   );
 }
 

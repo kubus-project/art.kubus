@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../../providers/themeprovider.dart';
-import '../../providers/web3provider.dart';
-import '../../providers/artwork_provider.dart';
-import '../../models/artwork.dart';
-import '../../utils/app_animations.dart';
-import 'components/desktop_widgets.dart';
+import '../../../providers/themeprovider.dart';
+import '../../../providers/web3provider.dart';
+import '../../../providers/artwork_provider.dart';
+import '../../../models/artwork.dart';
+import '../../../utils/app_animations.dart';
+import '../components/desktop_widgets.dart';
 
 /// Desktop marketplace screen with OpenSea-style NFT grid
 /// Features advanced filtering, sorting, and collection browsing

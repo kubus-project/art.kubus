@@ -11,13 +11,17 @@ import '../../services/backend_api_service.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/dao_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/artist_badge.dart';
+import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
+import '../../models/dao.dart';
 
 class UserProfileScreen extends StatefulWidget {
   final String userId;
@@ -425,17 +429,39 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       );
     }
 
-    final isArtist = user!.isArtist;
-    final isInstitution = user!.isInstitution;
+    // Determine artist/institution status from User model + DAO reviews (like profile_screen.dart)
+    final daoProvider = Provider.of<DAOProvider>(context);
+    final DAOReview? daoReview = daoProvider.findReviewForWallet(user!.id);
+    
+    final isArtist = user!.isArtist || (daoReview != null && daoReview.isArtistApplication && daoReview.isApproved);
+    final isInstitution = user!.isInstitution || (daoReview != null && daoReview.isInstitutionApplication && daoReview.isApproved);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          user!.name,
-          style: GoogleFonts.inter(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              fit: FlexFit.loose,
+              child: Text(
+                user!.name,
+                style: GoogleFonts.inter(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
+            if (isArtist) ...[
+              const SizedBox(width: 8),
+              const ArtistBadge(),
+            ],
+            if (isInstitution) ...[
+              const SizedBox(width: 8),
+              const InstitutionBadge(),
+            ],
+          ],
         ),
         actions: [
           TopBarIcon(
@@ -467,7 +493,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               children: [
-                _buildProfileHeader(themeProvider),
+                _buildProfileHeader(themeProvider, isArtist: isArtist, isInstitution: isInstitution),
                 const SizedBox(height: 12),
                 _buildStatsRow(),
                 const SizedBox(height: 16),
@@ -495,23 +521,81 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildProfileHeader(ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // Profile Image (use actual author avatar if available)
-          AvatarWidget(
-            wallet: user!.id,
-            avatarUrl: user!.profileImageUrl,
-            radius: 50,
-            enableProfileNavigation: false,
-            heroTag: widget.heroTag,
-          ),
-          const SizedBox(height: 16),
-          
-          // Name and Username
-          Align(
+  Widget _buildProfileHeader(ThemeProvider themeProvider, {required bool isArtist, required bool isInstitution}) {
+    final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
+    final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
+    
+    return Column(
+      children: [
+        // Cover Image Section
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Cover image or gradient background
+            Container(
+              width: double.infinity,
+              height: hasCoverImage ? 140 : 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: !hasCoverImage ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    themeProvider.accentColor.withValues(alpha: 0.3),
+                    themeProvider.accentColor.withValues(alpha: 0.1),
+                  ],
+                ) : null,
+                image: hasCoverImage ? DecorationImage(
+                  image: NetworkImage(coverImageUrl),
+                  fit: BoxFit.cover,
+                ) : null,
+              ),
+              child: hasCoverImage ? Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.4),
+                    ],
+                  ),
+                ),
+              ) : null,
+            ),
+            // Avatar positioned at bottom of cover, overlapping
+            Positioned(
+              bottom: -40,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 4,
+                    ),
+                  ),
+                  child: AvatarWidget(
+                    wallet: user!.id,
+                    avatarUrl: user!.profileImageUrl,
+                    radius: 40,
+                    enableProfileNavigation: false,
+                    heroTag: widget.heroTag,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        // Spacing for avatar overflow
+        const SizedBox(height: 48),
+        
+        // Name and Username
+        Align(
             alignment: Alignment.center,
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -535,13 +619,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                     size: 20,
                   ),
                 ],
-                if (user!.isArtist) ...[
+                if (isArtist) ...[
                   const SizedBox(width: 8),
-                  _buildArtistBadge(themeProvider),
+                  const ArtistBadge(),
                 ],
-                if (user!.isInstitution) ...[
+                if (isInstitution) ...[
                   const SizedBox(width: 8),
-                  _buildInstitutionBadge(themeProvider),
+                  const InstitutionBadge(),
                 ],
               ],
             ),
@@ -577,8 +661,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             ),
           ),
         ],
-      ),
-    );
+      );
   }
 
   Widget _buildStatsRow() {
@@ -600,6 +683,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           _buildInlineStat(label: 'Followers', value: _formatCount(user!.followersCount), onTap: () async {
             try { await _loadUserStats(); } catch (_) {}
+            if (!mounted) return;
             ProfileScreenMethods.showFollowers(context, walletAddress: user!.id);
           }),
           Container(
@@ -609,6 +693,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           _buildInlineStat(label: 'Following', value: _formatCount(user!.followingCount), onTap: () async {
             try { await _loadUserStats(); } catch (_) {}
+            if (!mounted) return;
             ProfileScreenMethods.showFollowing(context, walletAddress: user!.id);
           }),
         ],
@@ -926,50 +1011,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildArtistBadge(ThemeProvider themeProvider) {
-    final accent = themeProvider.accentColor;
-    return Tooltip(
-      message: 'Artist profile',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: accent.withValues(alpha: 0.4)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.brush, size: 14, color: accent),
-            const SizedBox(width: 2),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInstitutionBadge(ThemeProvider themeProvider) {
-    final accent = themeProvider.accentColor;
-    return Tooltip(
-      message: 'Institution profile',
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: accent.withValues(alpha: 0.35)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.apartment_rounded, size: 14, color: accent),
-            const SizedBox(width: 2),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildPostsSection() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -1035,7 +1076,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(post.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          post.authorName,
+                                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (post.authorIsArtist) ...[
+                                        const SizedBox(width: 6),
+                                        ArtistBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                                      ],
+                                      if (post.authorIsInstitution) ...[
+                                        const SizedBox(width: 6),
+                                        InstitutionBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                                      ],
+                                    ],
+                                  ),
                                   const SizedBox(height: 2),
                                   Text(_formatPostTime(post.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                                 ],
@@ -1396,12 +1455,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null || url.isEmpty) return null;
-    if (url.startsWith('ipfs://')) {
-      final cid = url.replaceFirst('ipfs://', '');
+    if (url == null) return null;
+    final candidate = url.trim();
+    if (candidate.isEmpty) return null;
+    if (candidate.startsWith('data:')) return candidate;
+    if (candidate.startsWith('ipfs://')) {
+      final cid = candidate.replaceFirst('ipfs://', '');
       return 'https://ipfs.io/ipfs/$cid';
     }
-    return url;
+    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
+    if (candidate.startsWith('//')) return 'https:$candidate';
+    if (candidate.startsWith('/')) return '$base$candidate';
+    if (candidate.startsWith('api/')) return '$base/$candidate';
+    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
+    if (!hasScheme) {
+      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
+    }
+    return candidate;
   }
 
   String _formatDateLabel(dynamic value) {
@@ -1487,15 +1557,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       });
     } catch (e) {
       debugPrint('Failed to load artist showcase data: $e');
-      if (!mounted) return;
-      setState(() {
-        _artistDataLoaded = true;
-      });
+      if (mounted) {
+        setState(() {
+          _artistDataLoaded = true;
+        });
+      }
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _artistDataLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _artistDataLoading = false;
+        });
+      }
     }
   }
 
