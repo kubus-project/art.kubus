@@ -18,6 +18,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/dao_provider.dart';
+import '../providers/navigation_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
 import '../models/map_marker_subject.dart';
@@ -125,6 +126,11 @@ class _MapScreenState extends State<MapScreen>
     super.initState();
     // Load persisted permission/service request flags, then initialize map
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Track this screen visit for quick actions
+      if (mounted) {
+        Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('map');
+      }
+      
       await _loadPersistedPermissionFlags();
       _initializeMap();
 

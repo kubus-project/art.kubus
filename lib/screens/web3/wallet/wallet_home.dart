@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/navigation_provider.dart';
 import '../../../widgets/app_loading.dart';
 import 'mnemonic_reveal_screen.dart';
 import '../../../providers/web3provider.dart';
@@ -22,6 +23,15 @@ class WalletHome extends StatefulWidget {
 }
 
 class _WalletHomeState extends State<WalletHome> {
+  @override
+  void initState() {
+    super.initState();
+    // Track this screen visit for quick actions
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('wallet');
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<WalletProvider>(

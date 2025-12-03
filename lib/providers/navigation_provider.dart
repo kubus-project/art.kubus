@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../screens/map_screen.dart';
+import '../screens/art/ar_screen.dart';
+import '../screens/community/community_screen.dart';
+import '../screens/community/profile_screen.dart';
+import '../screens/web3/marketplace/marketplace.dart';
+import '../screens/web3/wallet/wallet_home.dart';
+import '../screens/settings_screen.dart';
+import '../screens/activity/advanced_analytics_screen.dart';
+import '../screens/activity/advanced_stats_screen.dart';
+import '../screens/web3/achievements/achievements_page.dart';
+import '../screens/web3/dao/governance_hub.dart';
+import '../screens/web3/artist/artist_studio.dart';
+import '../screens/web3/institution/institution_hub.dart';
 
 class NavigationProvider with ChangeNotifier {
   static const String _visitCountKey = 'screen_visit_counts';
   static const String _lastVisitKey = 'screen_last_visit_times';
+  static const Duration _visitDecayDuration = Duration(hours: 24);
   
   Map<String, int> _visitCounts = {};
   Map<String, DateTime> _lastVisitTimes = {};
@@ -96,7 +110,38 @@ class NavigationProvider with ChangeNotifier {
 
   Future<void> initialize() async {
     await _loadVisitCounts();
+    _applyVisitDecay();
     _updateFrequentScreens();
+  }
+
+  /// Apply decay to visit counts - decrement counts for visits older than 24h
+  void _applyVisitDecay() {
+    final now = DateTime.now();
+    final keysToDecay = <String>[];
+    
+    for (final entry in _lastVisitTimes.entries) {
+      final timeSinceVisit = now.difference(entry.value);
+      if (timeSinceVisit > _visitDecayDuration) {
+        keysToDecay.add(entry.key);
+      }
+    }
+    
+    for (final key in keysToDecay) {
+      final currentCount = _visitCounts[key] ?? 0;
+      if (currentCount > 0) {
+        // Decay by 1 for each 24h period elapsed
+        final periodsElapsed = now.difference(_lastVisitTimes[key]!).inHours ~/ 24;
+        final newCount = (currentCount - periodsElapsed).clamp(0, currentCount);
+        if (newCount <= 0) {
+          _visitCounts.remove(key);
+          _lastVisitTimes.remove(key);
+        } else {
+          _visitCounts[key] = newCount;
+        }
+      }
+    }
+    
+    _saveVisitCounts();
   }
 
   Future<void> _loadVisitCounts() async {
@@ -157,6 +202,23 @@ class NavigationProvider with ChangeNotifier {
     }
   }
 
+  /// Clear all visit data - useful for resetting quick actions
+  Future<void> clearVisitData() async {
+    _visitCounts.clear();
+    _lastVisitTimes.clear();
+    _frequentScreens.clear();
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_visitCountKey);
+      await prefs.remove(_lastVisitKey);
+    } catch (e) {
+      // Handle error silently
+    }
+    
+    notifyListeners();
+  }
+
   void trackScreenVisit(String screenKey) {
     if (screenDefinitions.containsKey(screenKey)) {
       _visitCounts[screenKey] = (_visitCounts[screenKey] ?? 0) + 1;
@@ -203,27 +265,98 @@ class NavigationProvider with ChangeNotifier {
     }).toList();
   }
 
+  /// Return only visited screens as quick actions, sorted by most recent.
+  /// Cards only appear once you visit them, and disappear after 24h of inactivity.
+  List<Map<String, dynamic>> getQuickActionScreens({int maxItems = 12}) {
+    // Only include screens that have been visited (have visit count > 0)
+    final visitedScreens = _visitCounts.entries
+        .where((e) => e.value > 0 && screenDefinitions.containsKey(e.key))
+        .map((e) => e.key)
+        .toList();
+    
+    // Sort by most recent visit time
+    visitedScreens.sort((a, b) {
+      final aTime = _lastVisitTimes[a] ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final bTime = _lastVisitTimes[b] ?? DateTime.fromMillisecondsSinceEpoch(0);
+      return bTime.compareTo(aTime);
+    });
+
+    return visitedScreens.take(maxItems).map((key) {
+      final definition = screenDefinitions[key]!;
+      return {
+        'key': key,
+        'name': definition['name'],
+        'icon': definition['icon'],
+        'color': definition['color'],
+        'visitCount': _visitCounts[key] ?? 0,
+      };
+    }).toList();
+  }
+
   void navigateToScreen(BuildContext context, String screenKey) {
     trackScreenVisit(screenKey);
-    
+
+    Widget? destination;
+    switch (screenKey) {
+      case 'map':
+        destination = const MapScreen();
+        break;
+      case 'ar':
+        destination = const ARScreen();
+        break;
+      case 'community':
+        destination = const CommunityScreen();
+        break;
+      case 'profile':
+        destination = const ProfileScreen();
+        break;
+      case 'marketplace':
+        destination = const Marketplace();
+        break;
+      case 'wallet':
+        destination = const WalletHome();
+        break;
+      case 'settings':
+        destination = const SettingsScreen();
+        break;
+      case 'analytics':
+        destination = const AdvancedAnalyticsScreen(statType: 'Engagement');
+        break;
+      case 'stats':
+        destination = const AdvancedStatsScreen(statType: 'Engagement');
+        break;
+      case 'achievements':
+        destination = AchievementsPage();
+        break;
+      case 'dao_hub':
+        destination = const GovernanceHub();
+        break;
+      case 'studio':
+        destination = const ArtistStudio();
+        break;
+      case 'institution_hub':
+        destination = const InstitutionHub();
+        break;
+    }
+
+    if (destination != null) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => destination!));
+      return;
+    }
+
     final definition = screenDefinitions[screenKey];
     if (definition == null) return;
 
-    if (definition.containsKey('route')) {
-      Navigator.pushNamed(context, definition['route']);
-    } else if (definition.containsKey('tabIndex')) {
-      // Switch to specific tab using DefaultTabController
+    if (definition.containsKey('tabIndex')) {
       try {
         final tabController = DefaultTabController.of(context);
         tabController.animateTo(definition['tabIndex'] as int);
       } catch (e) {
-        // If DefaultTabController is not available, show a message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Unable to navigate to ${definition['name']}')),
         );
       }
     } else if (definition.containsKey('action')) {
-      // Handle custom actions
       _handleCustomAction(context, definition['action']);
     }
   }
@@ -231,22 +364,34 @@ class NavigationProvider with ChangeNotifier {
   void _handleCustomAction(BuildContext context, String action) {
     switch (action) {
       case 'analytics':
-        Navigator.pushNamed(context, '/advanced_analytics');
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const AdvancedAnalyticsScreen(statType: 'Engagement'),
+        ));
         break;
       case 'stats':
-        Navigator.pushNamed(context, '/advanced_stats');
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const AdvancedStatsScreen(statType: 'Engagement'),
+        ));
         break;
       case 'achievements':
-        Navigator.pushNamed(context, '/achievements');
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const AchievementsPage(),
+        ));
         break;
       case 'dao':
-        Navigator.pushNamed(context, '/dao');
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const GovernanceHub(),
+        ));
         break;
       case 'artist_studio':
-        Navigator.pushNamed(context, '/artist_studio');
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const ArtistStudio(),
+        ));
         break;
       case 'institution_hub':
-        Navigator.pushNamed(context, '/institution_hub');
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const InstitutionHub(),
+        ));
         break;
       default:
         // Fallback to showing a snackbar or dialog

@@ -16,6 +16,7 @@
 6. **OrbitDB dual-write** – any Postgres mutation touching artworks, AR markers, profiles, collections, or community posts must go through `publicSyncService`. Respect `ORBITDB_SYNC_MODE` (`dual-write`, `catch-up`, `off`).
 7. **Physical hardware for AR** – AR features require ARCore/ARKit capable devices. Simulators/emulators are for UI only.
 8. **Check before creating** – use `grep_search`, `file_search`, or semantic search to avoid duplicate files, widgets, or services.
+9. **Desktop/Mobile parity** – when adding or modifying ANY feature, update BOTH mobile screens (in `lib/screens/`) AND desktop screens (in `lib/screens/desktop/`). Use shared providers, services, and models.
 
 ---
 
@@ -65,6 +66,50 @@ Key reference files:
 ### 3.5 Feature flags & onboarding
 - All features thread through `lib/config/config.dart`. When adding features, add toggles there and expose them via `ConfigProvider`.
 - First-time user experience: OnboardingScreen (wallet optional) → Explore mode vs. wallet-connected mode. Respect `skipOnboardingForReturningUsers`.
+
+### 3.6 Desktop & Mobile Parity
+
+The app supports **responsive layouts** with dedicated desktop screens:
+
+```
+lib/screens/desktop/
+├── desktop_shell.dart              # Main navigation shell with sidebar
+├── desktop_home_screen.dart        # Home feed + quick actions + Web3 hub
+├── desktop_map_screen.dart         # Full-screen map with side panels
+├── desktop_community_screen.dart   # Social feed + messages panel
+├── desktop_marketplace_screen.dart # NFT grid with filters
+├── desktop_wallet_screen.dart      # Portfolio dashboard
+├── desktop_profile_screen.dart     # Profile + settings (10 sections)
+└── components/
+    ├── desktop_widgets.dart        # Shared UI components
+    └── desktop_navigation.dart     # Sidebar navigation
+```
+
+**Responsive breakpoints** (`DesktopBreakpoints`):
+- `compact`: 600px (phone)
+- `medium`: 900px (tablet portrait)
+- `expanded`: 1200px (tablet landscape / small desktop)
+- `large`: 1600px (full desktop)
+
+**⚠️ CRITICAL: Keep Desktop & Mobile In Sync**
+
+When adding or modifying features, **ALWAYS update both versions simultaneously**:
+
+| Feature Area | Mobile Location | Desktop Location |
+|--------------|-----------------|------------------|
+| Home/Feed | `lib/screens/home_screen.dart` | `desktop_home_screen.dart` |
+| Map/Explore | `lib/screens/map_screen.dart` | `desktop_map_screen.dart` |
+| Community | `lib/screens/community/` | `desktop_community_screen.dart` |
+| Marketplace | `lib/screens/web3/marketplace/` | `desktop_marketplace_screen.dart` |
+| Wallet | `lib/screens/web3/wallet/` | `desktop_wallet_screen.dart` |
+| Profile/Settings | `lib/screens/settings/settings_screen.dart` | `desktop_profile_screen.dart` |
+| Messages/Chat | `lib/screens/community/messages_screen.dart` | Sidebar panel in `desktop_community_screen.dart` |
+
+**Desktop-specific patterns**:
+- Side panels instead of bottom sheets (Google Maps style)
+- Dialog overlays instead of `showModalBottomSheet`
+- Hover states and larger touch targets
+- Same providers + services + models as mobile
 
 ---
 
@@ -162,6 +207,7 @@ cd backend; npm run dev
 - [ ] OrbitDB dual-write helpers invoked wherever Postgres is mutated.
 - [ ] IPFS fetching goes through resolver helpers; hybrid fallback verified.
 - [ ] UI colors strictly use theme/accent values; no purple outside AI indicators.
+- [ ] Desktop/Mobile parity maintained (both versions updated simultaneously).
 - [ ] `flutter analyze`, `flutter test`, and backend linters/tests pass.
 - [ ] Sensitive data pulled from `.env` or secure storage (never hardcoded).
 - [ ] Documentation/comments updated for new env vars, feature flags, or workflows.

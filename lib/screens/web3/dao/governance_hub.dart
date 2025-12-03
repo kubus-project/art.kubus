@@ -144,7 +144,6 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildGovernanceHeader() {
     return Consumer2<DAOProvider, Web3Provider>(
       builder: (context, daoProvider, web3Provider, child) {
-        final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
         final kub8Balance = web3Provider.kub8Balance;
         final votingPower = '${kub8Balance.toStringAsFixed(2)} KUB8';
         final activeProposals = daoProvider.getActiveProposals().length.toString();

@@ -53,15 +53,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
 
-      // Add some default visits for demo purposes if no visits exist
-      if (navigationProvider.visitCounts.isEmpty) {
-        navigationProvider.trackScreenVisit('map');
-        navigationProvider.trackScreenVisit('ar');
-        navigationProvider.trackScreenVisit('community');
-        navigationProvider.trackScreenVisit(
-            'map'); // Visit map twice to show it as most visited
-      }
-
       final recentActivityProvider =
           Provider.of<RecentActivityProvider>(context, listen: false);
       recentActivityProvider.initialize();
@@ -268,6 +259,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final greeting = _getGreeting();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -309,9 +301,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          profileProvider.currentUser?.displayName != null
-                              ? 'Welcome back, ${profileProvider.currentUser!.displayName}!'
-                              : 'Welcome Back!',
+                          '$greeting ${profileProvider.currentUser?.displayName ?? 'Explorer'}',
                           style: GoogleFonts.inter(
                             fontSize: titleSize,
                             fontWeight: FontWeight.bold,
@@ -466,9 +456,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildQuickActions() {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isSmallScreen = constraints.maxWidth < 375;
         final navigationProvider = Provider.of<NavigationProvider>(context);
-        final frequentScreens = navigationProvider.getFrequentScreensData();
+        final frequentScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -479,84 +468,75 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 Text(
                   'Quick Actions',
                   style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 18 : 20,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                Text(
-                  'Recently Used',
-                  style: GoogleFonts.inter(
-                    fontSize: isSmallScreen ? 12 : 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
+                if (frequentScreens.isNotEmpty)
+                  Text(
+                    'Recently Used',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
                   ),
-                ),
               ],
             ),
-            SizedBox(height: isSmallScreen ? 12 : 16),
-            isSmallScreen
-                ? Column(
-                    children: [
-                      Row(
-                        children: frequentScreens.take(2).map((screen) {
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _buildActionCard(
-                                screen['name'],
-                                screen['icon'],
-                                screen['color'],
-                                isSmallScreen,
-                                onTap: () => navigationProvider
-                                    .navigateToScreen(context, screen['key']),
-                                visitCount: screen['visitCount'],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: frequentScreens.skip(2).map((screen) {
-                          return Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: _buildActionCard(
-                                screen['name'],
-                                screen['icon'],
-                                screen['color'],
-                                isSmallScreen,
-                                onTap: () => navigationProvider
-                                    .navigateToScreen(context, screen['key']),
-                                visitCount: screen['visitCount'],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  )
-                : Row(
-                    children: frequentScreens.map((screen) {
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: _buildActionCard(
-                            screen['name'],
-                            screen['icon'],
-                            screen['color'],
-                            isSmallScreen,
-                            onTap: () => navigationProvider.navigateToScreen(
-                                context, screen['key']),
-                            visitCount: screen['visitCount'],
-                          ),
-                        ),
-                      );
-                    }).toList(),
+            const SizedBox(height: 12),
+            if (frequentScreens.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outline,
                   ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.touch_app,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      size: 32,
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        'Start exploring! Your recently visited screens will appear here.',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: frequentScreens.map((screen) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: _buildActionCard(
+                        screen['name'],
+                        screen['icon'],
+                        screen['color'],
+                        false,
+                        onTap: () => navigationProvider.navigateToScreen(
+                            context, screen['key']),
+                        visitCount: screen['visitCount'],
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
           ],
         );
       },
@@ -582,7 +562,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         splashColor: color.withValues(alpha: 0.1),
         highlightColor: color.withValues(alpha: 0.05),
         child: Container(
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 16 : 20,
+            vertical: isSmallScreen ? 12 : 16,
+          ),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(16),
@@ -590,9 +573,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color: Theme.of(context).colorScheme.outline,
             ),
           ),
-          child: Column(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Container(
                     width: isSmallScreen ? 32 : 40,
@@ -609,8 +594,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   if (visitCount > 0)
                     Positioned(
-                      top: -2,
-                      right: -2,
+                      top: -4,
+                      right: -4,
                       child: Container(
                         padding: const EdgeInsets.all(2),
                         decoration: BoxDecoration(
@@ -634,17 +619,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                 ],
               ),
-              SizedBox(height: isSmallScreen ? 6 : 8),
+              SizedBox(width: isSmallScreen ? 10 : 12),
               Text(
                 title,
                 style: GoogleFonts.inter(
-                  fontSize: isSmallScreen ? 10 : 12,
+                  fontSize: isSmallScreen ? 12 : 14,
                   fontWeight: FontWeight.w600,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -865,12 +847,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                        ],
-                      ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
   }
 
   Widget _buildWeb3Section() {

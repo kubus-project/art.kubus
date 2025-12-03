@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
@@ -7,6 +8,7 @@ import 'screens/map_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/community/community_screen.dart';
 import 'screens/community/profile_screen.dart';
+import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 
 class MainApp extends StatefulWidget {
@@ -37,6 +39,14 @@ class _MainAppState extends State<MainApp> {
   Widget build(BuildContext context) {
     final walletProvider = Provider.of<WalletProvider>(context);
     final animationTheme = context.animationTheme;
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    // Use desktop shell for web and large screens (>= 900px)
+    final useDesktopLayout = kIsWeb || screenWidth >= 900;
+
+    if (useDesktopLayout) {
+      return const DesktopShell();
+    }
 
     return Stack(
       children: [

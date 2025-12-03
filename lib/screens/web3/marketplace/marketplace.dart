@@ -9,6 +9,7 @@ import '../../../providers/artwork_provider.dart';
 import '../../../providers/collectibles_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../providers/navigation_provider.dart';
 import '../../../models/artwork.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -34,6 +35,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       _buildMyListings(),
     ]);
     _checkOnboarding();
+    
+    // Track this screen visit for quick actions
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('marketplace');
+    });
   }
 
   Future<void> _checkOnboarding() async {

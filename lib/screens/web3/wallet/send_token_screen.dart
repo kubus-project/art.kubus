@@ -736,6 +736,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     });
   }
 
+  // ignore: unused_element
   String _getNetworkCurrency() {
     final currencies = {
       'KUB8': 'SOL',

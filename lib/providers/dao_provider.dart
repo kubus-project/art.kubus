@@ -63,7 +63,15 @@ class DAOProvider extends ChangeNotifier {
 
       try {
         final reviewsJson = await api.getDAOReviews();
-        _reviews = reviewsJson.map((e) => DAOReview.fromJson(e)).toList();
+        final parsedReviews = <DAOReview>[];
+        for (final reviewJson in reviewsJson) {
+          try {
+            parsedReviews.add(DAOReview.fromJson(reviewJson));
+          } catch (e) {
+            debugPrint('DAOProvider: skipping malformed review payload: $e');
+          }
+        }
+        _reviews = parsedReviews;
       } catch (e) {
         debugPrint('DAOProvider: unable to load reviews (soft-fail): $e');
       }
@@ -157,13 +165,52 @@ class DAOProvider extends ChangeNotifier {
             WalletUtils.equals(r.walletAddress, walletAddress) ||
             r.id == review.id);
         _reviews.insert(0, review);
+        // Pull a fresh copy from backend to ensure persisted state (and any reviewer updates)
+        final refreshed = await loadReviewForWallet(walletAddress, forceRefresh: true);
         notifyListeners();
-        return review;
+        return refreshed ?? review;
       }
     } catch (e) {
       debugPrint('DAOProvider submitReview error: $e');
     }
     return null;
+  }
+
+  DAOReview? findReviewForWallet(String walletAddress) {
+    if (walletAddress.isEmpty) return null;
+    final normalized = walletAddress.trim().toLowerCase();
+    try {
+      return _reviews.firstWhere(
+        (r) => r.walletAddress.trim().toLowerCase() == normalized,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<DAOReview?> loadReviewForWallet(String walletAddress, {bool forceRefresh = false}) async {
+    final normalized = walletAddress.trim();
+    if (normalized.isEmpty) return null;
+    if (!forceRefresh) {
+      final existing = findReviewForWallet(normalized);
+      if (existing != null) return existing;
+    }
+    try {
+      final api = BackendApiService();
+      final payload = await api.getDAOReview(idOrWallet: normalized);
+      if (payload != null) {
+        final review = DAOReview.fromJson(payload);
+        _reviews.removeWhere((r) =>
+            r.id == review.id ||
+            r.walletAddress.trim().toLowerCase() == review.walletAddress.trim().toLowerCase());
+        _reviews.insert(0, review);
+        notifyListeners();
+        return review;
+      }
+    } catch (e) {
+      debugPrint('DAOProvider.loadReviewForWallet error: $e');
+    }
+    return findReviewForWallet(normalized);
   }
 
   Future<void> castVote({

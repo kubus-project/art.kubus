@@ -581,6 +581,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildPostDetailCard(CommunityPost post) {
     final scheme = Theme.of(context).colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final textColor = scheme.onSurface;
     final isRepost = (post.postType ?? '').toLowerCase() == 'repost';
 
@@ -597,6 +598,36 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         children: [
           _buildAuthorHeader(post),
           const SizedBox(height: 16),
+          // Category badge
+          if (post.category.isNotEmpty && post.category.toLowerCase() != 'post') ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _getCategoryIcon(post.category),
+                    size: 14,
+                    color: themeProvider.accentColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _formatCategoryLabel(post.category),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (isRepost && post.content.isNotEmpty) ...[
             Text(
               post.content,
@@ -629,9 +660,261 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               _buildPostImage(post.imageUrl!),
             ],
           ],
+          // Metadata section
+          if (!isRepost) _buildPostMetadataSection(post, scheme, themeProvider),
         ],
       ),
     );
+  }
+
+  Widget _buildPostMetadataSection(CommunityPost post, ColorScheme scheme, ThemeProvider themeProvider) {
+    final hasMetadata = post.tags.isNotEmpty ||
+        post.mentions.isNotEmpty ||
+        post.location != null ||
+        post.artwork != null ||
+        post.group != null;
+
+    if (!hasMetadata) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        Divider(color: scheme.outline.withValues(alpha: 0.3)),
+        const SizedBox(height: 12),
+        // Tags
+        if (post.tags.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: post.tags.map((tag) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '#$tag',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: themeProvider.accentColor,
+                ),
+              ),
+            )).toList(),
+          ),
+          const SizedBox(height: 12),
+        ],
+        // Mentions
+        if (post.mentions.isNotEmpty) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: post.mentions.map((mention) => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: scheme.secondaryContainer.withValues(alpha: 0.6),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                '@$mention',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: scheme.onSecondaryContainer,
+                ),
+              ),
+            )).toList(),
+          ),
+          const SizedBox(height: 12),
+        ],
+        // Location
+        if (post.location != null && (post.location!.name?.isNotEmpty == true || post.location!.lat != null)) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: scheme.tertiaryContainer.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.location_on,
+                  size: 18,
+                  color: scheme.tertiary,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    post.location!.name ?? '${post.location!.lat!.toStringAsFixed(4)}, ${post.location!.lng!.toStringAsFixed(4)}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: scheme.onTertiaryContainer,
+                    ),
+                  ),
+                ),
+                if (post.distanceKm != null) ...[
+                  const SizedBox(width: 8),
+                  Text(
+                    '• ${post.distanceKm!.toStringAsFixed(1)} km',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: scheme.onTertiaryContainer.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        // Artwork reference
+        if (post.artwork != null) ...[
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: scheme.outline.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: themeProvider.accentColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: post.artwork!.imageUrl != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            post.artwork!.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.view_in_ar,
+                              color: themeProvider.accentColor,
+                              size: 24,
+                            ),
+                          ),
+                        )
+                      : Icon(
+                          Icons.view_in_ar,
+                          color: themeProvider.accentColor,
+                          size: 24,
+                        ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        post.artwork!.title,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Linked artwork',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: scheme.onSurface.withValues(alpha: 0.4),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        // Group reference
+        if (post.group != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.groups_2,
+                  size: 18,
+                  color: scheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Posted in ${post.group!.name}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'ar_drop':
+      case 'art_drop':
+        return Icons.place_outlined;
+      case 'event':
+        return Icons.event_outlined;
+      case 'poll':
+        return Icons.poll_outlined;
+      case 'question':
+        return Icons.help_outline;
+      case 'announcement':
+        return Icons.campaign_outlined;
+      case 'review':
+        return Icons.rate_review_outlined;
+      default:
+        return Icons.article_outlined;
+    }
+  }
+
+  String _formatCategoryLabel(String category) {
+    switch (category.toLowerCase()) {
+      case 'ar_drop':
+      case 'art_drop':
+        return 'AR Drop';
+      case 'event':
+        return 'Event';
+      case 'poll':
+        return 'Poll';
+      case 'question':
+        return 'Question';
+      case 'announcement':
+        return 'Announcement';
+      case 'review':
+        return 'Review';
+      default:
+        return category.replaceAll('_', ' ').split(' ').map((w) =>
+            w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w).join(' ');
+    }
   }
 
   Widget _buildAuthorHeader(CommunityPost post) {

@@ -445,6 +445,168 @@ backend/src/
 
 ---
 
+## Desktop & Mobile Parity (December 2025)
+
+### Architecture Overview
+The app supports **responsive layouts** with dedicated desktop screens under `lib/screens/desktop/`:
+
+```
+lib/screens/desktop/
+├── desktop_shell.dart              # Main navigation shell with sidebar
+├── desktop_home_screen.dart        # Home feed + quick actions + Web3 hub
+├── desktop_map_screen.dart         # Full-screen map with side panels
+├── desktop_community_screen.dart   # Social feed + messages panel
+├── desktop_marketplace_screen.dart # NFT grid with filters
+├── desktop_wallet_screen.dart      # Portfolio dashboard
+├── desktop_profile_screen.dart     # Profile + settings (10 sections)
+└── components/
+    ├── desktop_widgets.dart        # Shared UI components
+    └── desktop_navigation.dart     # Sidebar navigation
+```
+
+### Responsive Breakpoints (`DesktopBreakpoints`)
+```dart
+static const double compact = 600;   // Phone
+static const double medium = 900;    // Tablet portrait
+static const double expanded = 1200; // Tablet landscape / small desktop
+static const double large = 1600;    // Full desktop
+
+// Usage
+if (DesktopBreakpoints.isDesktop(context)) {
+  return DesktopShell();
+} else {
+  return MainApp();  // Mobile layout
+}
+```
+
+### ⚠️ CRITICAL: Keep Desktop & Mobile In Sync
+
+When adding or modifying features, **ALWAYS update both versions simultaneously**:
+
+| Feature Area | Mobile Location | Desktop Location |
+|--------------|-----------------|------------------|
+| Home/Feed | `lib/screens/home_screen.dart` | `lib/screens/desktop/desktop_home_screen.dart` |
+| Map/Explore | `lib/screens/map_screen.dart` | `lib/screens/desktop/desktop_map_screen.dart` |
+| Community | `lib/screens/community/` | `lib/screens/desktop/desktop_community_screen.dart` |
+| Marketplace | `lib/screens/web3/marketplace/` | `lib/screens/desktop/desktop_marketplace_screen.dart` |
+| Wallet | `lib/screens/web3/wallet/` | `lib/screens/desktop/desktop_wallet_screen.dart` |
+| Profile/Settings | `lib/screens/settings/settings_screen.dart` | `lib/screens/desktop/desktop_profile_screen.dart` |
+| Messages/Chat | `lib/screens/community/messages_screen.dart` | Desktop: Sidebar panel in `desktop_community_screen.dart` |
+| Notifications | `lib/screens/notifications/` | Desktop: Panel in `desktop_shell.dart` |
+
+### Feature Parity Checklist
+
+When implementing a new feature:
+
+1. **[ ] Mobile implementation** - Standard Flutter widgets, bottom sheets, navigation
+2. **[ ] Desktop implementation** - Side panels, hover states, larger touch targets
+3. **[ ] Shared providers** - Same provider instance serves both layouts
+4. **[ ] Shared services** - Same API calls, same business logic
+5. **[ ] Shared models** - Same data structures
+6. **[ ] Navigation consistency** - Same screens reachable via both layouts
+
+### Desktop-Specific Patterns
+
+#### Side Panels (Google Maps style)
+```dart
+AnimatedPositioned(
+  duration: animationTheme.medium,
+  left: _showPanel ? 0 : -400,
+  child: Container(
+    width: 380,
+    child: _buildPanelContent(),
+  ),
+)
+```
+
+#### Sidebar Tabs (Feed/Messages toggle)
+```dart
+Widget _buildSidebarTab(String label, IconData icon, bool isSelected, VoidCallback onTap) {
+  return Material(
+    child: InkWell(
+      onTap: onTap,
+      child: Container(
+        color: isSelected ? accentColor.withValues(alpha: 0.1) : Colors.transparent,
+        // ...
+      ),
+    ),
+  );
+}
+```
+
+#### Dialog Overlays (vs Bottom Sheets)
+```dart
+// Mobile: showModalBottomSheet
+showModalBottomSheet(context: context, builder: (_) => SendDialog());
+
+// Desktop: showDialog with centered/right-aligned container
+showDialog(
+  context: context,
+  builder: (_) => Center(
+    child: Container(
+      width: 500,
+      child: SendDialogContent(),
+    ),
+  ),
+);
+```
+
+### Desktop Settings Sections (10 total)
+The `desktop_profile_screen.dart` includes these settings sections that mirror mobile:
+
+1. **Profile** - Edit profile, avatar, bio
+2. **Account** - Email, password, 2FA
+3. **Appearance** - Theme, accent color, display density
+4. **Notifications** - Push, email, in-app preferences
+5. **Privacy** - Visibility, blocking, data controls
+6. **Security** - Biometrics, session management
+7. **Wallet** - Tokens, send/receive, backup phrase, network
+8. **Achievements** - Progress, stats, unlocked rewards
+9. **Help** - FAQ, contact, legal
+10. **About** - App version, features, social links
+
+### Navigation Wiring
+
+Desktop quick actions and cards must navigate to the same underlying screens:
+
+```dart
+// Desktop home quick actions → Navigate to tabs
+case 'Map': 
+  // Find DesktopShell ancestor and switch to index 1 (Explore)
+  shellState?._onNavItemSelected(1);
+  
+// Desktop Web3 cards → Navigate to dedicated screens
+onTap: () => Navigator.push(context, MaterialPageRoute(
+  builder: (_) => const GovernanceHub(),  // Same screen as mobile
+));
+```
+
+### Shared Widgets
+
+Always prefer shared widgets from `lib/widgets/`:
+- `AvatarWidget` - User/conversation avatars with IPFS resolution
+- `EmptyStateCard` - Consistent empty state messaging
+- `AppLogo` - Brand logo with dark/light variants
+- `InlineLoading` - Loading spinners
+
+### Testing Desktop
+
+```powershell
+# Run on Chrome (desktop mode)
+flutter run -d chrome --web-renderer html
+
+# Run on Windows
+flutter run -d windows
+
+# Run on macOS
+flutter run -d macos
+
+# Check responsive behavior
+# Resize browser window to test breakpoint transitions
+```
+
+---
+
 ## Common Pitfalls & Pain Points
 
 ### Critical Development Rules
@@ -456,6 +618,7 @@ backend/src/
 6. **Mock data** - Check `MockupDataProvider.isMockDataEnabled` in ALL data-fetching methods
 7. **OrbitDB sync** - Any Postgres mutation that should surface in Web3/AR (artworks, AR markers, profiles, collections, community posts) must call the relevant `publicSyncService` helper so OrbitDB stays up to date. Respect `ORBITDB_SYNC_MODE`.
 8. **Storage fallback** - Always go through the storage/AR helpers so remote IPFS retries, gateway rotation, and HTTP/S3 fallback (`DEFAULT_STORAGE_PROVIDER=hybrid`) keep working.
+9. **Desktop/Mobile parity** - When adding or modifying ANY feature, update BOTH mobile screens (in `lib/screens/`) AND desktop screens (in `lib/screens/desktop/`). Use shared providers, services, and models.
 
 ### Known Issues & Solutions
 
@@ -828,6 +991,7 @@ When reviewing changes or before deployment:
 - [ ] IPFS URLs converted to HTTP gateways
 - [ ] AR tested on physical device
 - [ ] Mock data toggle works
+- [ ] Desktop/Mobile parity maintained (both versions updated)
 - [ ] Compilation errors: 0
 - [ ] `flutter analyze` warnings addressed
 

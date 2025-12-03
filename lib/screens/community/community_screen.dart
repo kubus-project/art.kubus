@@ -37,6 +37,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/chat_provider.dart';
 import 'messages_screen.dart';
 import '../../providers/saved_items_provider.dart';
+import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
 
 enum CommunityFeedType {
@@ -77,6 +78,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   late Animation<double> _messageScale;
   int _messageUnreadCount = 0;
   int _bellUnreadCount = 0;
+  bool _animationsInitialized = false;
 
   late TabController _tabController;
 
@@ -141,6 +143,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   // New post state
   final TextEditingController _newPostController = TextEditingController();
+  TextEditingController? _composerTagController;
+  TextEditingController? _composerMentionController;
   bool _isPostingNew = false;
   XFile? _selectedPostImage;
   Uint8List? _selectedPostImageBytes; // Store bytes for preview
@@ -154,6 +158,9 @@ class _CommunityScreenState extends State<CommunityScreen>
   int _lastCommunityRefreshVersion = 0;
   int _lastGlobalRefreshVersion = 0;
   bool _communityReloadInFlight = false;
+  
+  // Expandable FAB state
+  bool _isFabExpanded = false;
 
   void _onGroupSearchChanged(String value) {
     _groupSearchDebounce?.cancel();
@@ -526,6 +533,12 @@ class _CommunityScreenState extends State<CommunityScreen>
           Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
     } catch (_) {}
     _loadCommunityData(followingOnly: true);
+    
+    // Track this screen visit for quick actions
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('community');
+    });
+    
     // Listen for tab changes to load appropriate content
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) return;
@@ -546,31 +559,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       _bookmarkedPosts[i] = false;
     }
 
-    final animationTheme = context.animationTheme;
-
-    _animationController = AnimationController(
-      duration: animationTheme.long,
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: animationTheme.fadeCurve,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: animationTheme.defaultCurve,
-    ));
-
-    _animationController.forward();
-
     // Feed scroll controller to detect whether user is at top
     _feedScrollController = ScrollController();
     _feedScrollController.addListener(() {
@@ -583,24 +571,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         }
       } catch (_) {}
     });
-
-    _bellController = AnimationController(
-      duration: animationTheme.short,
-      vsync: this,
-    );
-
-    _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(CurvedAnimation(
-      parent: _bellController,
-      curve: animationTheme.emphasisCurve,
-    ));
-
-    _messagePulseController = AnimationController(
-      duration: animationTheme.short,
-      vsync: this,
-    );
-    _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(
-        CurvedAnimation(
-            parent: _messagePulseController, curve: animationTheme.defaultCurve));
 
     // Listen for socket notifications to animate bell
     try {
@@ -673,6 +643,56 @@ class _CommunityScreenState extends State<CommunityScreen>
     });
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_animationsInitialized) {
+      _animationsInitialized = true;
+      final animationTheme = context.animationTheme;
+
+      _animationController = AnimationController(
+        duration: animationTheme.long,
+        vsync: this,
+      );
+
+      _fadeAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.fadeCurve,
+      ));
+
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 0.3),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.defaultCurve,
+      ));
+
+      _bellController = AnimationController(
+        duration: animationTheme.short,
+        vsync: this,
+      );
+
+      _bellScale = Tween<double>(begin: 1.0, end: 1.18).animate(CurvedAnimation(
+        parent: _bellController,
+        curve: animationTheme.emphasisCurve,
+      ));
+
+      _messagePulseController = AnimationController(
+        duration: animationTheme.short,
+        vsync: this,
+      );
+      _messageScale = Tween<double>(begin: 1.0, end: 1.12).animate(
+          CurvedAnimation(
+              parent: _messagePulseController, curve: animationTheme.defaultCurve));
+
+      _animationController.forward();
+    }
+  }
+
   DateTime? _lastConfigChange;
 
   void _onConfigChanged() {
@@ -730,6 +750,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     } catch (_) {}
     _groupSearchDebounce?.cancel();
     _groupSearchController.dispose();
+    _composerTagController?.dispose();
+    _composerMentionController?.dispose();
     _tabController.dispose();
     super.dispose();
   }
@@ -1954,6 +1976,36 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     .withValues(alpha: 0.5)),
                             const SizedBox(height: 12),
                           ],
+                          // Category badge and post type indicator
+                          if (post.category.isNotEmpty && post.category != 'post') ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: themeProvider.accentColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    _getCategoryIcon(post.category),
+                                    size: 14,
+                                    color: themeProvider.accentColor,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _formatCategoryLabel(post.category),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: themeProvider.accentColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                           // If this is a repost - show original post in its own inner card
                           if (post.postType == 'repost' &&
                               post.originalPost != null) ...[
@@ -2053,6 +2105,220 @@ class _CommunityScreenState extends State<CommunityScreen>
                                 ),
                               ),
                             ),
+                          ],
+                          // Post metadata section: tags, mentions, location, artwork, group
+                          if (post.postType != 'repost') ...[
+                            // Tags
+                            if (post.tags.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: post.tags.map((tag) => GestureDetector(
+                                  onTap: () => _filterByTag(tag),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: themeProvider.accentColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      '#$tag',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: themeProvider.accentColor,
+                                      ),
+                                    ),
+                                  ),
+                                )).toList(),
+                              ),
+                            ],
+                            // Mentions
+                            if (post.mentions.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 6,
+                                children: post.mentions.map((mention) => GestureDetector(
+                                  onTap: () => _searchMention(mention),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: Text(
+                                      '@$mention',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Theme.of(context).colorScheme.onSecondaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                )).toList(),
+                              ),
+                            ],
+                            // Location
+                            if (post.location != null && (post.location!.name?.isNotEmpty == true || post.location!.lat != null)) ...[
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: post.location!.lat != null && post.location!.lng != null
+                                    ? () => _openLocationOnMap(post.location!)
+                                    : null,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.tertiaryContainer.withValues(alpha: 0.4),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.location_on,
+                                        size: 16,
+                                        color: Theme.of(context).colorScheme.tertiary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          post.location!.name ?? '${post.location!.lat!.toStringAsFixed(4)}, ${post.location!.lng!.toStringAsFixed(4)}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: Theme.of(context).colorScheme.onTertiaryContainer,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (post.distanceKm != null) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '• ${post.distanceKm!.toStringAsFixed(1)} km',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 11,
+                                            color: Theme.of(context).colorScheme.onTertiaryContainer.withValues(alpha: 0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            // Artwork reference
+                            if (post.artwork != null) ...[
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: () => _openArtworkDetail(post.artwork!),
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.primaryContainer,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 44,
+                                        height: 44,
+                                        decoration: BoxDecoration(
+                                          color: themeProvider.accentColor.withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: post.artwork!.imageUrl != null
+                                            ? ClipRRect(
+                                                borderRadius: BorderRadius.circular(10),
+                                                child: Image.network(
+                                                  post.artwork!.imageUrl!,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) => Icon(
+                                                    Icons.view_in_ar,
+                                                    color: themeProvider.accentColor,
+                                                    size: 22,
+                                                  ),
+                                                ),
+                                              )
+                                            : Icon(
+                                                Icons.view_in_ar,
+                                                color: themeProvider.accentColor,
+                                                size: 22,
+                                              ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              post.artwork!.title,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Theme.of(context).colorScheme.onSurface,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            Text(
+                                              'Linked artwork',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 11,
+                                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.chevron_right,
+                                        size: 20,
+                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            // Group reference
+                            if (post.group != null) ...[
+                              const SizedBox(height: 12),
+                              GestureDetector(
+                                onTap: () => _openGroupFromPost(post.group!),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.groups_2,
+                                        size: 16,
+                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          post.group!.name,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                           const SizedBox(height: 16),
                           Row(
@@ -2263,34 +2529,63 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildFloatingActionButton() {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
+    final animationTheme = context.animationTheme;
     final int tabIndex = _tabController.index;
 
-    IconData icon;
-    String label;
-    VoidCallback onPressed;
-
+    // Groups tab (index 2) and Art tab (index 3) get expandable FABs
     if (tabIndex == 2) {
-      icon = Icons.groups_2_outlined;
-      label = 'Group post';
-      onPressed = _handleGroupFabPressed;
+      return _buildExpandableFab(
+        themeProvider: themeProvider,
+        scheme: scheme,
+        animationTheme: animationTheme,
+        mainIcon: Icons.add,
+        mainLabel: 'Create',
+        options: [
+          _ExpandableFabOption(
+            icon: Icons.group_add_outlined,
+            label: 'Create group',
+            onTap: () => _showCreateGroupSheet(),
+          ),
+          _ExpandableFabOption(
+            icon: Icons.post_add_outlined,
+            label: 'Group post',
+            onTap: () {
+              _handleGroupFabPressed();
+            },
+          ),
+        ],
+      );
     } else if (tabIndex == 3) {
-      icon = Icons.place_outlined;
-      label = 'Art drop';
-      onPressed = _handleArtFabPressed;
-    } else {
-      icon = Icons.edit_outlined;
-      label = 'New post';
-      onPressed = _handleFeedFabPressed;
+      return _buildExpandableFab(
+        themeProvider: themeProvider,
+        scheme: scheme,
+        animationTheme: animationTheme,
+        mainIcon: Icons.add,
+        mainLabel: 'Create',
+        options: [
+          _ExpandableFabOption(
+            icon: Icons.place_outlined,
+            label: 'Art drop',
+            onTap: () => _handleArtFabPressed(),
+          ),
+          _ExpandableFabOption(
+            icon: Icons.rate_review_outlined,
+            label: 'Post review',
+            onTap: () => _createNewPost(presetCategory: 'review', artContext: true),
+          ),
+        ],
+      );
     }
 
+    // Following/Discover tabs get simple FAB
     final fab = FloatingActionButton.extended(
       key: ValueKey('fab_$tabIndex'),
       heroTag: 'community_fab_$tabIndex',
-      onPressed: onPressed,
+      onPressed: _handleFeedFabPressed,
       backgroundColor: themeProvider.accentColor,
-      icon: Icon(icon, color: scheme.onPrimary),
+      icon: Icon(Icons.edit_outlined, color: scheme.onPrimary),
       label: Text(
-        label,
+        'New post',
         style: GoogleFonts.inter(
           fontWeight: FontWeight.w600,
           color: scheme.onPrimary,
@@ -2298,7 +2593,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
     );
 
-    final animationTheme = context.animationTheme;
     return AnimatedSwitcher(
       duration: animationTheme.medium,
       reverseDuration: animationTheme.short,
@@ -2321,6 +2615,285 @@ class _CommunityScreenState extends State<CommunityScreen>
         );
       },
       child: fab,
+    );
+  }
+
+  Widget _buildExpandableFab({
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required AppAnimationTheme animationTheme,
+    required IconData mainIcon,
+    required String mainLabel,
+    required List<_ExpandableFabOption> options,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Expanded options
+        AnimatedSize(
+          duration: animationTheme.medium,
+          curve: animationTheme.emphasisCurve,
+          child: _isFabExpanded
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    ...options.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final option = entry.value;
+                      return TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: 1.0),
+                        duration: Duration(
+                          milliseconds: animationTheme.medium.inMilliseconds + (index * 50),
+                        ),
+                        curve: animationTheme.emphasisCurve,
+                        builder: (context, value, child) {
+                          return Transform.translate(
+                            offset: Offset(0, 20 * (1 - value)),
+                            child: Opacity(
+                              opacity: value,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: scheme.surface,
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Text(
+                                  option.label,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: scheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              FloatingActionButton.small(
+                                heroTag: 'fab_option_${option.label}',
+                                onPressed: () {
+                                  setState(() => _isFabExpanded = false);
+                                  option.onTap();
+                                },
+                                backgroundColor: scheme.primaryContainer,
+                                foregroundColor: scheme.onSurface,
+                                child: Icon(option.icon, size: 20),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                  ],
+                )
+              : const SizedBox.shrink(),
+        ),
+        // Main FAB
+        FloatingActionButton.extended(
+          heroTag: 'community_fab_expandable',
+          onPressed: () {
+            setState(() => _isFabExpanded = !_isFabExpanded);
+          },
+          backgroundColor: _isFabExpanded
+              ? scheme.surfaceContainerHighest
+              : themeProvider.accentColor,
+          foregroundColor: _isFabExpanded
+              ? scheme.onSurface
+              : scheme.onPrimary,
+          icon: AnimatedRotation(
+            turns: _isFabExpanded ? 0.125 : 0,
+            duration: animationTheme.short,
+            child: Icon(_isFabExpanded ? Icons.close : mainIcon),
+          ),
+          label: AnimatedSwitcher(
+            duration: animationTheme.short,
+            child: Text(
+              _isFabExpanded ? 'Close' : mainLabel,
+              key: ValueKey(_isFabExpanded),
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCreateGroupSheet() {
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+    bool isPublic = true;
+    bool isCreating = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final scheme = Theme.of(context).colorScheme;
+          final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.65,
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: scheme.outline.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Create Group',
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          TextField(
+                            controller: nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Group Name',
+                              hintText: 'e.g. AR Artists Ljubljana',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: descriptionController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: 'Description',
+                              hintText: 'What is this group about?',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(
+                              'Public Group',
+                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              isPublic
+                                  ? 'Anyone can join and view posts'
+                                  : 'Members must be approved',
+                              style: GoogleFonts.inter(fontSize: 13),
+                            ),
+                            value: isPublic,
+                            onChanged: (val) => setModalState(() => isPublic = val),
+                            activeThumbColor: themeProvider.accentColor,
+                          ),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: isCreating || nameController.text.trim().isEmpty
+                              ? null
+                              : () async {
+                                  setModalState(() => isCreating = true);
+                                  try {
+                                    final created = await hub.createGroup(
+                                      name: nameController.text.trim(),
+                                      description: descriptionController.text.trim().isEmpty
+                                          ? null
+                                          : descriptionController.text.trim(),
+                                      isPublic: isPublic,
+                                    );
+                                    if (!mounted) return;
+                                    Navigator.pop(sheetContext);
+                                    if (created != null) {
+                                      _showSnack('Group "${created.name}" created!');
+                                      _openGroupFeed(created);
+                                    }
+                                  } catch (e) {
+                                    setModalState(() => isCreating = false);
+                                    _showSnack('Failed to create group: $e');
+                                  }
+                                },
+                          child: isCreating
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: InlineLoading(
+                                    expand: true,
+                                    shape: BoxShape.circle,
+                                    tileSize: 3.5,
+                                  ),
+                                )
+                              : const Text('Create Group'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -2857,8 +3430,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     _selectedPostImageBytes = null;
     _selectedPostVideo = null;
 
-    final tagController = TextEditingController();
-    final mentionController = TextEditingController();
+    // Dispose old controllers if they exist and create fresh ones
+    _composerTagController?.dispose();
+    _composerMentionController?.dispose();
+    _composerTagController = TextEditingController();
+    _composerMentionController = TextEditingController();
+    final tagController = _composerTagController!;
+    final mentionController = _composerMentionController!;
 
     final sheetFuture = showModalBottomSheet(
       context: context,
@@ -3000,8 +3578,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
 
     sheetFuture.whenComplete(() {
-      tagController.dispose();
-      mentionController.dispose();
+      // Don't dispose controllers here - they're class-level and will be
+      // disposed when a new composer opens or in State.dispose()
       hub.resetDraft();
       if (mounted) {
         setState(() {
@@ -3652,16 +4230,52 @@ class _CommunityScreenState extends State<CommunityScreen>
     required void Function(String value) onRemove,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final animationTheme = context.animationTheme;
+    final isMentions = label.toLowerCase() == 'mentions';
+    final isTags = label.toLowerCase() == 'tags';
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            TextButton.icon(
+              onPressed: () => _showSearchPicker(
+                title: isMentions ? 'Search Users' : isTags ? 'Popular Tags' : 'Search',
+                searchType: isMentions ? 'profiles' : isTags ? 'tags' : 'all',
+                onSelect: (result) {
+                  if (isMentions) {
+                    final handle = result['username'] ?? result['wallet_address'] ?? result['id'] ?? '';
+                    if (handle.toString().isNotEmpty) {
+                      onAdd(handle.toString());
+                    }
+                  } else if (isTags) {
+                    final tag = result['tag'] ?? result['name'] ?? result['value'] ?? '';
+                    if (tag.toString().isNotEmpty) {
+                      onAdd(tag.toString());
+                    }
+                  }
+                },
+              ),
+              icon: Icon(Icons.search, size: 18, color: themeProvider.accentColor),
+              label: Text(
+                'Search',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: themeProvider.accentColor,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         AnimatedSwitcher(
@@ -3716,6 +4330,480 @@ class _CommunityScreenState extends State<CommunityScreen>
           },
         ),
       ],
+    );
+  }
+
+  void _showSearchPicker({
+    required String title,
+    required String searchType,
+    required void Function(Map<String, dynamic> result) onSelect,
+  }) {
+    final searchController = TextEditingController();
+    final backend = BackendApiService();
+    List<Map<String, dynamic>> results = [];
+    List<Map<String, dynamic>> suggestions = [];
+    bool isLoading = false;
+    bool showSuggestions = true;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          final scheme = Theme.of(context).colorScheme;
+          final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+          // Load suggestions on first build
+          if (showSuggestions && suggestions.isEmpty && !isLoading) {
+            Future.microtask(() async {
+              setModalState(() => isLoading = true);
+              try {
+                if (searchType == 'tags') {
+                  // Get trending tags
+                  final trending = await backend.getTrendingSearches(limit: 15);
+                  if (mounted) {
+                    setModalState(() {
+                      suggestions = trending.map((t) => {
+                        'tag': t['term'] ?? t['tag'] ?? t['query'] ?? '',
+                        'count': t['count'] ?? t['search_count'] ?? 0,
+                      }).where((t) => t['tag'].toString().isNotEmpty).toList();
+                      isLoading = false;
+                    });
+                  }
+                } else if (searchType == 'profiles') {
+                  // Could load suggested users or leave empty for search-only
+                  setModalState(() => isLoading = false);
+                } else if (searchType == 'artworks') {
+                  // Could load featured artworks
+                  setModalState(() => isLoading = false);
+                } else {
+                  setModalState(() => isLoading = false);
+                }
+              } catch (e) {
+                debugPrint('Failed to load suggestions: $e');
+                if (mounted) setModalState(() => isLoading = false);
+              }
+            });
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.7,
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 5,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: scheme.outline.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Row(
+                      children: [
+                        Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: TextField(
+                      controller: searchController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: searchType == 'tags'
+                            ? 'Search tags...'
+                            : searchType == 'profiles'
+                                ? 'Search users by name or @handle...'
+                                : searchType == 'artworks'
+                                    ? 'Search artworks...'
+                                    : 'Search...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  searchController.clear();
+                                  setModalState(() {
+                                    results.clear();
+                                    showSuggestions = true;
+                                  });
+                                },
+                              )
+                            : null,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        filled: true,
+                        fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
+                      ),
+                      onChanged: (query) async {
+                        final q = query.trim();
+                        if (q.isEmpty) {
+                          setModalState(() {
+                            results.clear();
+                            showSuggestions = true;
+                          });
+                          return;
+                        }
+                        setModalState(() {
+                          isLoading = true;
+                          showSuggestions = false;
+                        });
+                        try {
+                          final response = await backend.search(
+                            query: q,
+                            type: searchType == 'tags' ? 'all' : searchType,
+                            limit: 20,
+                          );
+                          final list = <Map<String, dynamic>>[];
+                          if (response['success'] == true) {
+                            if (searchType == 'profiles') {
+                              final profiles = _extractSearchResults(response, 'profiles');
+                              list.addAll(profiles);
+                            } else if (searchType == 'artworks') {
+                              final artworks = _extractSearchResults(response, 'artworks');
+                              list.addAll(artworks);
+                            } else if (searchType == 'tags') {
+                              // For tags, generate suggestions from query
+                              list.add({'tag': q, 'count': 0, 'isCustom': true});
+                              // Also check for tag matches in results
+                              final tags = _extractSearchResults(response, 'tags');
+                              list.addAll(tags);
+                            } else {
+                              final all = _extractSearchResults(response, 'all');
+                              list.addAll(all);
+                            }
+                          }
+                          if (mounted) {
+                            setModalState(() {
+                              results = list;
+                              isLoading = false;
+                            });
+                          }
+                        } catch (e) {
+                          debugPrint('Search error: $e');
+                          if (mounted) setModalState(() => isLoading = false);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: isLoading
+                        ? Center(
+                            child: InlineLoading(
+                              expand: false,
+                              shape: BoxShape.circle,
+                              tileSize: 4,
+                            ),
+                          )
+                        : showSuggestions && suggestions.isNotEmpty
+                            ? _buildSearchSuggestionsList(
+                                suggestions: suggestions,
+                                searchType: searchType,
+                                themeProvider: themeProvider,
+                                scheme: scheme,
+                                onSelect: (result) {
+                                  Navigator.pop(sheetContext);
+                                  onSelect(result);
+                                },
+                              )
+                            : results.isEmpty
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          searchType == 'tags'
+                                              ? Icons.tag
+                                              : searchType == 'profiles'
+                                                  ? Icons.person_search
+                                                  : Icons.search,
+                                          size: 48,
+                                          color: scheme.onSurface.withValues(alpha: 0.3),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          searchController.text.isEmpty
+                                              ? 'Start typing to search'
+                                              : 'No results found',
+                                          style: GoogleFonts.inter(
+                                            color: scheme.onSurface.withValues(alpha: 0.5),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : _buildSearchResultsList(
+                                    results: results,
+                                    searchType: searchType,
+                                    themeProvider: themeProvider,
+                                    scheme: scheme,
+                                    onSelect: (result) {
+                                      Navigator.pop(sheetContext);
+                                      onSelect(result);
+                                    },
+                                  ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _extractSearchResults(Map<String, dynamic> response, String type) {
+    final list = <Map<String, dynamic>>[];
+    try {
+      if (response['results'] is Map<String, dynamic>) {
+        final data = response['results'] as Map<String, dynamic>;
+        final items = data[type] ?? data['results'] ?? [];
+        if (items is List) {
+          for (final item in items) {
+            if (item is Map<String, dynamic>) {
+              list.add(item);
+            }
+          }
+        }
+      } else if (response['data'] is List) {
+        for (final item in response['data']) {
+          if (item is Map<String, dynamic>) {
+            list.add(item);
+          }
+        }
+      } else if (response['data'] is Map<String, dynamic>) {
+        final data = response['data'] as Map<String, dynamic>;
+        final items = data[type] ?? [];
+        if (items is List) {
+          for (final item in items) {
+            if (item is Map<String, dynamic>) {
+              list.add(item);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error extracting search results: $e');
+    }
+    return list;
+  }
+
+  Widget _buildSearchSuggestionsList({
+    required List<Map<String, dynamic>> suggestions,
+    required String searchType,
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required void Function(Map<String, dynamic>) onSelect,
+  }) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: suggestions.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text(
+              searchType == 'tags' ? 'Popular Tags' : 'Suggestions',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          );
+        }
+        final suggestion = suggestions[index - 1];
+        return _buildSearchResultTile(
+          result: suggestion,
+          searchType: searchType,
+          themeProvider: themeProvider,
+          scheme: scheme,
+          onTap: () => onSelect(suggestion),
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchResultsList({
+    required List<Map<String, dynamic>> results,
+    required String searchType,
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required void Function(Map<String, dynamic>) onSelect,
+  }) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final result = results[index];
+        return _buildSearchResultTile(
+          result: result,
+          searchType: searchType,
+          themeProvider: themeProvider,
+          scheme: scheme,
+          onTap: () => onSelect(result),
+        );
+      },
+    );
+  }
+
+  Widget _buildSearchResultTile({
+    required Map<String, dynamic> result,
+    required String searchType,
+    required ThemeProvider themeProvider,
+    required ColorScheme scheme,
+    required VoidCallback onTap,
+  }) {
+    if (searchType == 'tags') {
+      final tag = result['tag'] ?? result['name'] ?? '';
+      final count = result['count'] ?? result['search_count'] ?? 0;
+      final isCustom = result['isCustom'] == true;
+      
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.tag,
+            color: themeProvider.accentColor,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          '#$tag',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
+        subtitle: isCustom
+            ? Text(
+                'Add as new tag',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
+              )
+            : count > 0
+                ? Text(
+                    '$count uses',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  )
+                : null,
+        trailing: const Icon(Icons.add_circle_outline, size: 20),
+        onTap: onTap,
+      );
+    } else if (searchType == 'profiles') {
+      final name = result['display_name'] ?? result['displayName'] ?? result['username'] ?? 'User';
+      final handle = result['username'] ?? result['wallet_address'] ?? '';
+      final avatar = result['avatar'] ?? result['avatar_url'] ?? result['profileImage'];
+
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        leading: AvatarWidget(
+          wallet: handle,
+          avatarUrl: avatar,
+          radius: 20,
+          allowFabricatedFallback: true,
+        ),
+        title: Text(
+          name,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+        ),
+        subtitle: handle.isNotEmpty
+            ? Text(
+                '@$handle',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: scheme.onSurface.withValues(alpha: 0.6),
+                ),
+              )
+            : null,
+        trailing: const Icon(Icons.add_circle_outline, size: 20),
+        onTap: onTap,
+      );
+    } else if (searchType == 'artworks') {
+      final title = result['title'] ?? 'Untitled';
+      final artist = result['artist_name'] ?? result['artistName'] ?? 'Unknown';
+      final image = result['image_url'] ?? result['imageUrl'] ?? result['thumbnailUrl'];
+
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: image != null
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    image,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.image,
+                      color: themeProvider.accentColor,
+                    ),
+                  ),
+                )
+              : Icon(
+                  Icons.view_in_ar,
+                  color: themeProvider.accentColor,
+                ),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          'by $artist',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        trailing: const Icon(Icons.add_circle_outline, size: 20),
+        onTap: onTap,
+      );
+    }
+
+    // Default tile
+    return ListTile(
+      title: Text(result.toString()),
+      onTap: onTap,
     );
   }
 
@@ -5900,6 +6988,108 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
+  // ==================== Post metadata helpers ====================
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'ar_drop':
+      case 'art_drop':
+        return Icons.place_outlined;
+      case 'event':
+        return Icons.event_outlined;
+      case 'poll':
+        return Icons.poll_outlined;
+      case 'question':
+        return Icons.help_outline;
+      case 'announcement':
+        return Icons.campaign_outlined;
+      case 'review':
+        return Icons.rate_review_outlined;
+      default:
+        return Icons.article_outlined;
+    }
+  }
+
+  String _formatCategoryLabel(String category) {
+    switch (category.toLowerCase()) {
+      case 'ar_drop':
+      case 'art_drop':
+        return 'AR Drop';
+      case 'event':
+        return 'Event';
+      case 'poll':
+        return 'Poll';
+      case 'question':
+        return 'Question';
+      case 'announcement':
+        return 'Announcement';
+      case 'review':
+        return 'Review';
+      default:
+        return category.replaceAll('_', ' ').split(' ').map((w) =>
+            w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w).join(' ');
+    }
+  }
+
+  void _filterByTag(String tag) {
+    // TODO: Implement tag filtering - for now show a snackbar
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Search posts with #$tag'),
+        action: SnackBarAction(
+          label: 'Search',
+          onPressed: () {
+            // Could open search with pre-filled tag
+            _showSearchBottomSheet();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _searchMention(String mention) {
+    // Navigate to user profile search
+    _viewUserProfile(mention);
+  }
+
+  void _openLocationOnMap(CommunityLocation location) {
+    // TODO: Navigate to map screen centered on location
+    if (location.lat != null && location.lng != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Location: ${location.name ?? 'Map view'}'),
+          action: SnackBarAction(
+            label: 'View',
+            onPressed: () {
+              // Could navigate to map screen
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  void _openArtworkDetail(CommunityArtworkReference artwork) {
+    // Navigate to artwork detail screen
+    Navigator.pushNamed(context, '/artwork', arguments: {'artworkId': artwork.id});
+  }
+
+  void _openGroupFromPost(CommunityGroupReference group) {
+    // Navigate to group feed
+    _openGroupFeed(CommunityGroupSummary(
+      id: group.id,
+      name: group.name,
+      slug: group.slug,
+      coverImage: group.coverImage,
+      description: group.description,
+      isPublic: true,
+      ownerWallet: '',
+      memberCount: 0,
+      isMember: false,
+      isOwner: false,
+    ));
+  }
+
   String _getTimeAgo(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
@@ -5916,6 +7106,18 @@ class _CommunityScreenState extends State<CommunityScreen>
       return 'Just now';
     }
   }
+}
+
+class _ExpandableFabOption {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ExpandableFabOption({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
 }
 
 class _CommentAuthorContext {

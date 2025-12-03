@@ -15,6 +15,8 @@ import '../../widgets/gradient_icon_card.dart';
 import '../../widgets/google_sign_in_button.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'sign_in_screen.dart';
+import '../desktop/auth/desktop_auth_shell.dart';
+import '../desktop/desktop_shell.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -197,6 +199,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wallet connection is disabled right now.')));
       return;
     }
+    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+    if (isDesktop) {
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
+      return;
+    }
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -256,6 +263,41 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
+    final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
+
+    final form = _buildRegisterForm(
+      colorScheme: colorScheme,
+      enableWallet: enableWallet,
+      enableEmail: enableEmail,
+      enableGoogle: enableGoogle,
+      isDesktop: isDesktop,
+    );
+
+    if (isDesktop) {
+      return DesktopAuthShell(
+        title: 'Create your account',
+        subtitle: 'Wallet, email, or Google sign-up with your keys in your control.',
+        highlights: const [
+          'Wallet or email onboarding',
+          'Keys stay on your device',
+          'Web3-ready from the start',
+        ],
+        form: form,
+        footer: Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen())),
+            child: Text(
+              'Have an account? Sign in',
+              style: GoogleFonts.inter(
+                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -275,81 +317,96 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       TextButton(
                         onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen())),
                         child: Text('Have an account? Sign in', style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(18),
-                    child: Column(
-                      children: [
-                        GradientIconCard(
-                          start: Color(0xFFF59E0B),
-                          end: Color(0xFFEF4444),
-                          icon: Icons.person_add_alt_rounded,
-                          iconSize: 48,
-                          width: 96,
-                          height: 96,
-                          radius: 18,
-                        ),
-                        const SizedBox(height: 12),
-                        Text('Create your account', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Choose wallet, email, or Google. Keys stay with you.',
-                          style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (enableWallet)
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        minimumSize: const Size.fromHeight(56),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 2,
-                      ),
-                      onPressed: _showConnectWalletModal,
-                      icon: Icon(Icons.account_balance_wallet_outlined, size: 24, color: colorScheme.onPrimary),
-                      label: Text('Connect wallet', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
-                    ),
-                  if (enableWallet) const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: colorScheme.outlineVariant),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text('Or use email', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
-                        const SizedBox(height: 12),
-                        if (enableEmail) _buildEmailForm(colorScheme),
-                        if (enableGoogle) ...[
-                          const SizedBox(height: 12),
-                          GoogleSignInButton(
-                            onPressed: _registerWithGoogle,
-                            isLoading: _isGoogleSubmitting,
-                            colorScheme: colorScheme,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                  form,
                 ],
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildRegisterForm({
+    required ColorScheme colorScheme,
+    required bool enableWallet,
+    required bool enableEmail,
+    required bool enableGoogle,
+    required bool isDesktop,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: EdgeInsets.all(isDesktop ? 12 : 18),
+          child: Column(
+            children: [
+              GradientIconCard(
+                start: const Color(0xFFF59E0B),
+                end: const Color(0xFFEF4444),
+                icon: Icons.person_add_alt_rounded,
+                iconSize: 48,
+                width: isDesktop ? 88 : 96,
+                height: isDesktop ? 88 : 96,
+                radius: 18,
+              ),
+              const SizedBox(height: 12),
+              Text('Create your account', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+              const SizedBox(height: 8),
+              Text(
+                'Choose wallet, email, or Google. Keys stay with you.',
+                style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        if (enableWallet)
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              minimumSize: const Size.fromHeight(56),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 2,
+            ),
+            onPressed: _showConnectWalletModal,
+            icon: Icon(Icons.account_balance_wallet_outlined, size: 24, color: colorScheme.onPrimary),
+            label: Text('Connect wallet', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
+          ),
+        if (enableWallet) const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: colorScheme.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text('Or use email', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+              const SizedBox(height: 12),
+              if (enableEmail) _buildEmailForm(colorScheme),
+              if (enableGoogle) ...[
+                const SizedBox(height: 12),
+                GoogleSignInButton(
+                  onPressed: _registerWithGoogle,
+                  isLoading: _isGoogleSubmitting,
+                  colorScheme: colorScheme,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

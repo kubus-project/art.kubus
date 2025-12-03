@@ -54,6 +54,7 @@ class InstitutionProvider extends ChangeNotifier {
 
   // Local mock institution/event loaders removed to ensure backend-driven data only
 
+  // ignore: unused_element
   Future<void> _loadFromIPFS() async {
     // TODO: Implement IPFS loading
     _institutions = [];

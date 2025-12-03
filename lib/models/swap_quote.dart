@@ -56,7 +56,7 @@ class SwapQuote {
     int? contextSlot,
     double? timeTakenMs,
   }) {
-    int _parseAmount(dynamic value) {
+    int parseAmount(dynamic value) {
       if (value is int) return value;
       if (value is num) return value.toInt();
       if (value is String) {
@@ -70,9 +70,9 @@ class SwapQuote {
       outputMint: outputMint,
       inputDecimals: inputDecimals,
       outputDecimals: outputDecimals,
-      inputAmountRaw: _parseAmount(route['inAmount']),
-      outputAmountRaw: _parseAmount(route['outAmount']),
-      minOutputAmountRaw: _parseAmount(route['otherAmountThreshold']),
+      inputAmountRaw: parseAmount(route['inAmount']),
+      outputAmountRaw: parseAmount(route['outAmount']),
+      minOutputAmountRaw: parseAmount(route['otherAmountThreshold']),
       priceImpactPct: (route['priceImpactPct'] as num?)?.toDouble() ?? 0,
       slippageBps: slippageBps,
       marketInfos: List<dynamic>.from(route['marketInfos'] as List? ?? const []),

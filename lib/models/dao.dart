@@ -37,6 +37,15 @@ class DAOReview {
       if (value is String) return DateTime.tryParse(value);
       return null;
     }
+    bool parseBool(dynamic value) {
+      if (value is bool) return value;
+      if (value is String) {
+        final normalized = value.toLowerCase();
+        return normalized == 'true' || normalized == '1' || normalized == 'yes';
+      }
+      if (value is num) return value != 0;
+      return false;
+    }
 
     return DAOReview(
       id: json['id']?.toString() ?? '',
@@ -54,7 +63,7 @@ class DAOReview {
       applicantProfile: json['applicantProfile'] is Map<String, dynamic>
           ? Map<String, dynamic>.from(json['applicantProfile'] as Map<String, dynamic>)
           : null,
-      canVote: json['canVote'] as bool? ?? false,
+      canVote: parseBool(json['canVote'] ?? json['can_vote']),
     );
   }
 

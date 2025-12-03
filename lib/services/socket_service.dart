@@ -291,7 +291,7 @@ class SocketService {
     // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
     debugPrint('SocketService: emitted subscribe:user for $_currentSubscribedWallet');
-    bool awaitingAck = true;
+    bool awaitingAck = true; // ignore: unused_local_variable
 
     // Register handlers only once
     void onSubscribeOk(dynamic payload) {

@@ -9,6 +9,7 @@ import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/navigation_provider.dart';
 import '../models/wallet.dart';
 import '../widgets/platform_aware_widgets.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
@@ -737,6 +738,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                           builder: (context) => const OnboardingResetScreen(),
                         ),
                       );
+                    },
+                  ),
+                  _buildSettingsTile(
+                    'Clear Quick Actions',
+                    'Reset recently visited screens',
+                    Icons.clear_all,
+                    onTap: () async {
+                      final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+                      await navigationProvider.clearVisitData();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Quick actions cleared')),
+                        );
+                      }
                     },
                   ),
                 ],

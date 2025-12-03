@@ -84,19 +84,34 @@ class BackendApiService {
     return 'Rate limit exceeded. Please retry in ~$human.';
   }
 
-  /// Ensure auth token is loaded once. If token missing and wallet provided,
-  /// attempt a single token issuance for that wallet and persist it.
+  /// Ensure auth token is loaded. If token missing and wallet provided,
+  /// attempt a token issuance for that wallet and persist it.
   Future<void> ensureAuthLoaded({String? walletAddress}) async {
-    if (_authInitialized) return;
-    if (_authInitFuture != null) return _authInitFuture!;
-    _authInitFuture = _doAuthInit(walletAddress);
+    // Fast path when token already present
+    if ((_authToken ?? '').isNotEmpty) {
+      _authInitialized = true;
+      return;
+    }
+    // Await any inflight initialization first
+    if (_authInitFuture != null) {
+      await _authInitFuture!;
+      if ((_authToken ?? '').isNotEmpty) {
+        _authInitialized = true;
+        return;
+      }
+    }
+    // Run initialization (allowed to retry when token still missing)
+    _authInitFuture = _doAuthInit(walletAddress, forceWalletIssuance: true);
     await _authInitFuture;
   }
 
-  Future<void> _doAuthInit(String? walletAddress) async {
+  Future<void> _doAuthInit(String? walletAddress, {bool forceWalletIssuance = false}) async {
     try {
       await loadAuthToken();
-      if ((_authToken == null || _authToken!.isEmpty) && walletAddress != null && walletAddress.isNotEmpty) {
+      final hasToken = (_authToken ?? '').isNotEmpty;
+      final shouldIssueForWallet = (!hasToken) &&
+          (forceWalletIssuance || (walletAddress != null && walletAddress.isNotEmpty));
+      if (shouldIssueForWallet && walletAddress != null && walletAddress.isNotEmpty) {
         // Try to issue a token once for the provided wallet
         try {
           final issued = await issueTokenForWallet(walletAddress);
@@ -111,6 +126,7 @@ class BackendApiService {
       }
     } finally {
       _authInitialized = true;
+      _authInitFuture = null;
     }
   }
 
@@ -2928,17 +2944,22 @@ class BackendApiService {
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/dao/reviews'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'portfolioUrl': portfolioUrl,
-          'medium': medium,
-          'statement': statement,
-          if (title != null && title.isNotEmpty) 'title': title,
-          if (metadata != null) 'metadata': metadata,
-        }),
-      );
+      final uri = Uri.parse('$baseUrl/api/dao/reviews');
+      final body = jsonEncode({
+        'portfolioUrl': portfolioUrl,
+        'medium': medium,
+        'statement': statement,
+        if (title != null && title.isNotEmpty) 'title': title,
+        if (metadata != null) 'metadata': metadata,
+      });
+
+      http.Response response = await http.post(uri, headers: _getHeaders(), body: body);
+      if (response.statusCode == 401 && walletAddress.isNotEmpty) {
+        // Token likely expired or missing; clear and retry once
+        await clearAuth();
+        await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+        response = await http.post(uri, headers: _getHeaders(), body: body);
+      }
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (response.body.isEmpty) return null;
@@ -2979,6 +3000,26 @@ class BackendApiService {
     } catch (e) {
       debugPrint('Error getting DAO reviews: $e');
       return [];
+    }
+  }
+
+  /// Get a single DAO review by id or wallet address
+  /// GET /api/dao/reviews/:id
+  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet');
+      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return (data['data'] ?? data['review'] ?? data) as Map<String, dynamic>;
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        throw Exception('Failed to get DAO review: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error getting DAO review: $e');
+      return null;
     }
   }
 

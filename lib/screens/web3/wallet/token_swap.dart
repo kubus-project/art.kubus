@@ -49,7 +49,6 @@ class _TokenSwapState extends State<TokenSwap> {
     super.dispose();
   }
 
-  @override
   List<Token> _availableTokens(WalletProvider provider) {
     final list = provider.tokens
         .where((token) => token.type != TokenType.nft)
