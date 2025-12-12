@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../services/backend_api_service.dart';
 import '../services/user_service.dart';
 import '../screens/community/user_profile_screen.dart' as mobile;
 import '../screens/desktop/community/desktop_user_profile_screen.dart' as desktop;
 import '../utils/wallet_utils.dart';
+import '../utils/media_url_resolver.dart';
 
 class AvatarWidget extends StatefulWidget {
   final String? avatarUrl;
@@ -38,7 +38,6 @@ class AvatarWidget extends StatefulWidget {
 class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderStateMixin {
   String? _effectiveUrl;
   bool _loading = false;
-  final BackendApiService _api = BackendApiService();
   late AnimationController _shimmerController;
   String? _currentHeroTag;
 
@@ -141,7 +140,8 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     // Boxy shape: Rounded Rectangle with corner radius ~25% of width
     final borderRadius = BorderRadius.circular(radius * 0.15); 
 
-    final backgroundColor = Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white;
+    final colorScheme = Theme.of(context).colorScheme;
+    final backgroundColor = colorScheme.surface;
     Widget content;
     if (useNetwork) {
       content = SizedBox(
@@ -161,7 +161,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
                 final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
                 return Container(
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: colorScheme.surfaceContainerHighest,
                     borderRadius: borderRadius,
                   ),
                   alignment: Alignment.center,
@@ -179,7 +179,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: Colors.grey[300],
+          color: colorScheme.surfaceContainerHighest,
           borderRadius: borderRadius,
         ),
         alignment: Alignment.center,
@@ -197,7 +197,11 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
               blendMode: BlendMode.srcATop,
               shaderCallback: (rect) {
                 return LinearGradient(
-                  colors: [Colors.grey[300]!, Colors.grey[100]!, Colors.grey[300]!],
+                  colors: [
+                    colorScheme.surfaceContainerHighest,
+                    colorScheme.surfaceContainerLow,
+                    colorScheme.surfaceContainerHighest,
+                  ],
                   stops: const [0.1, 0.5, 0.9],
                   begin: Alignment(-1.0 - 2.0 * _shimmerController.value, 0),
                   end: Alignment(1.0 + 2.0 * _shimmerController.value, 0),
@@ -214,7 +218,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     Widget base = content;
     if (widget.showStatusIndicator) {
       final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();
-      final indicatorColor = widget.statusColor ?? (widget.isOnline ? Colors.greenAccent : Colors.grey.shade400);
+      final indicatorColor = widget.statusColor ?? (widget.isOnline ? colorScheme.tertiary : colorScheme.outlineVariant);
       base = Stack(
         clipBehavior: Clip.none,
         children: [
@@ -282,23 +286,21 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     if (candidate.isEmpty) return null;
 
     try {
-      if (candidate.startsWith('ipfs://')) {
-        final cid = candidate.replaceFirst('ipfs://', '');
-        return 'https://ipfs.io/ipfs/$cid';
+      if (UserService.isPlaceholderAvatarUrl(candidate)) return null;
+
+      final lower = candidate.toLowerCase();
+      if (lower.contains('dicebear') &&
+          (lower.contains('/svg') || lower.endsWith('.svg') || lower.contains('format=svg'))) {
+        candidate = candidate.replaceAll('/svg', '/png').replaceAll('.svg', '.png');
       }
+
       if (candidate.startsWith('//')) {
-        return 'https:$candidate';
-      }
-      if (candidate.startsWith('/')) {
-        final base = _api.baseUrl.replaceAll(RegExp(r'/$'), '');
-        return '$base$candidate';
-      }
-      if (candidate.contains('api.dicebear.com') && candidate.contains('/svg')) {
-        return candidate.replaceAll('/svg', '/png');
+        candidate = 'https:$candidate';
       }
     } catch (_) {
       return candidate;
     }
-    return candidate;
+
+    return MediaUrlResolver.resolve(candidate) ?? candidate;
   }
 }

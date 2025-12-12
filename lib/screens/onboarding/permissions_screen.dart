@@ -10,6 +10,7 @@ import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_permissions_screen.dart';
 import '../../main_app.dart';
+import '../../utils/app_color_utils.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -101,7 +102,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     });
   }
 
-  List<PermissionPage> get _allPages => [
+  List<PermissionPage> get _allPages {
+    final scheme = Theme.of(context).colorScheme;
+    final base = scheme.primary;
+
+    return [
     PermissionPage(
       title: 'Location Access',
       subtitle: 'Discover Art Near You',
@@ -114,7 +119,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.location_on_outlined,
       gradient: LinearGradient(
-        colors: [Color(0xFF00D4AA), Color(0xFF4ECDC4)],
+        colors: [base, AppColorUtils.shiftLightness(base, 0.10)],
       ),
       permissionType: PermissionType.location,
     ),
@@ -130,7 +135,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.camera_alt_outlined,
       gradient: LinearGradient(
-        colors: [Color(0xFF9C27B0), Color(0xFFE91E63)],
+        colors: [AppColorUtils.shiftLightness(base, -0.10), base],
       ),
       permissionType: PermissionType.camera,
     ),
@@ -146,7 +151,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.notifications_outlined,
       gradient: LinearGradient(
-        colors: [Color(0xFFFFD93D), Color(0xFFFFBE0B)],
+        colors: [base, AppColorUtils.shiftLightness(base, 0.18)],
       ),
       permissionType: PermissionType.notifications,
     ),
@@ -162,11 +167,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       ],
       iconData: Icons.photo_library_outlined,
       gradient: LinearGradient(
-        colors: [Color(0xFFFF6B6B), Color(0xFFFF8E53)],
+        colors: [base, AppColorUtils.shiftLightness(base, -0.14)],
       ),
       permissionType: PermissionType.storage,
     ),
-  ];
+    ];
+  }
 
   // Filter pages for the current platform. Do not request storage/photos on web.
   List<PermissionPage> get _pages => kIsWeb

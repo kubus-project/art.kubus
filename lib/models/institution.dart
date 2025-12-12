@@ -65,6 +65,38 @@ class Institution {
       'createdAt': createdAt.toIso8601String(),
     };
   }
+
+  Institution copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? type,
+    String? address,
+    double? latitude,
+    double? longitude,
+    String? contactEmail,
+    String? website,
+    List<String>? imageUrls,
+    InstitutionStats? stats,
+    bool? isVerified,
+    DateTime? createdAt,
+  }) {
+    return Institution(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      address: address ?? this.address,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      contactEmail: contactEmail ?? this.contactEmail,
+      website: website ?? this.website,
+      imageUrls: imageUrls ?? this.imageUrls,
+      stats: stats ?? this.stats,
+      isVerified: isVerified ?? this.isVerified,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }
 
 class InstitutionStats {
@@ -104,6 +136,24 @@ class InstitutionStats {
       'visitorGrowth': visitorGrowth,
       'revenueGrowth': revenueGrowth,
     };
+  }
+
+  InstitutionStats copyWith({
+    int? totalVisitors,
+    int? activeEvents,
+    int? artworkViews,
+    double? revenue,
+    double? visitorGrowth,
+    double? revenueGrowth,
+  }) {
+    return InstitutionStats(
+      totalVisitors: totalVisitors ?? this.totalVisitors,
+      activeEvents: activeEvents ?? this.activeEvents,
+      artworkViews: artworkViews ?? this.artworkViews,
+      revenue: revenue ?? this.revenue,
+      visitorGrowth: visitorGrowth ?? this.visitorGrowth,
+      revenueGrowth: revenueGrowth ?? this.revenueGrowth,
+    );
   }
 }
 
@@ -223,5 +273,55 @@ class Event {
       'createdAt': createdAt.toIso8601String(),
       'createdBy': createdBy,
     };
+  }
+
+  Event copyWith({
+    String? id,
+    String? title,
+    String? description,
+    EventType? type,
+    EventCategory? category,
+    String? institutionId,
+    Institution? institution,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? location,
+    double? latitude,
+    double? longitude,
+    double? price,
+    int? capacity,
+    int? currentAttendees,
+    bool? isPublic,
+    bool? allowRegistration,
+    List<String>? imageUrls,
+    List<String>? featuredArtworkIds,
+    List<String>? artistIds,
+    DateTime? createdAt,
+    String? createdBy,
+  }) {
+    return Event(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      type: type ?? this.type,
+      category: category ?? this.category,
+      institutionId: institutionId ?? this.institutionId,
+      institution: institution ?? this.institution,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      location: location ?? this.location,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      price: price ?? this.price,
+      capacity: capacity ?? this.capacity,
+      currentAttendees: currentAttendees ?? this.currentAttendees,
+      isPublic: isPublic ?? this.isPublic,
+      allowRegistration: allowRegistration ?? this.allowRegistration,
+      imageUrls: imageUrls ?? this.imageUrls,
+      featuredArtworkIds: featuredArtworkIds ?? this.featuredArtworkIds,
+      artistIds: artistIds ?? this.artistIds,
+      createdAt: createdAt ?? this.createdAt,
+      createdBy: createdBy ?? this.createdBy,
+    );
   }
 }

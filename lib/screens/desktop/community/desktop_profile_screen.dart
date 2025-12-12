@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../utils/category_accent_color.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../providers/themeprovider.dart';
@@ -12,6 +13,7 @@ import '../../../providers/task_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
 import '../../web3/achievements/achievements_page.dart';
 import '../desktop_settings_screen.dart';
@@ -665,6 +667,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final requiredProgress = achievement.requiredProgress > 0 ? achievement.requiredProgress : 1;
     final ratio = (progress.currentProgress / requiredProgress).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
+    final accent = CategoryAccentColor.resolve(context, achievement.category);
 
     return DesktopCard(
       child: Column(
@@ -675,16 +678,16 @@ class _ProfileScreenState extends State<ProfileScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: achievement.color.withValues(alpha: 0.15),
+                  color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(achievement.icon, color: achievement.color, size: 24),
+                child: Icon(achievement.icon, color: accent, size: 24),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -692,7 +695,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber[900],
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
                   ),
                 ),
               ),
@@ -728,7 +731,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               minHeight: 6,
               backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(
-                isCompleted ? themeProvider.accentColor : achievement.color,
+                isCompleted ? themeProvider.accentColor : accent,
               ),
             ),
           ),
@@ -1065,23 +1068,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null) return null;
-    final candidate = url.trim();
-    if (candidate.isEmpty) return null;
-    if (candidate.startsWith('data:')) return candidate;
-    if (candidate.startsWith('ipfs://')) {
-      final cid = candidate.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    }
-    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-    if (candidate.startsWith('//')) return 'https:$candidate';
-    if (candidate.startsWith('/')) return '$base$candidate';
-    if (candidate.startsWith('api/')) return '$base/$candidate';
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
-    if (!hasScheme) {
-      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
-    }
-    return candidate;
+    return MediaUrlResolver.resolve(url);
   }
 
   String _formatRelativeTime(DateTime timestamp) {

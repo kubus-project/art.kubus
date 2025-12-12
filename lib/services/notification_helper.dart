@@ -4,6 +4,6 @@
 import 'dart:async';
 
 import 'notification_helper_stub.dart'
-  if (dart.library.html) 'notification_helper_web.dart' as impl;
+  if (dart.library.js_interop) 'notification_helper_web.dart' as impl;
 
 Future<bool> requestWebNotificationPermission() async => impl.requestWebNotificationPermission();

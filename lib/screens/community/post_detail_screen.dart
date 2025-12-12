@@ -398,12 +398,22 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ListTile(
                       leading: Icon(Icons.link, color: theme.colorScheme.primary),
                       title: Text('Copy Link', style: GoogleFonts.inter()),
-                    onTap: () async {
-                      await Clipboard.setData(ClipboardData(text: 'https://app.kubus.site/post/${_post!.id}'));
-                      Navigator.pop(sheetContext);
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied to clipboard')));
-                    },
-                  ),
+                      onTap: () async {
+                        final sheetNavigator = Navigator.of(sheetContext);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final postId = _post!.id;
+
+                        await Clipboard.setData(
+                          ClipboardData(text: 'https://app.kubus.site/post/$postId'),
+                        );
+
+                        if (!mounted) return;
+                        sheetNavigator.pop();
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('Link copied to clipboard')),
+                        );
+                      },
+                    ),
                     ListTile(
                       leading: Icon(Icons.share, color: theme.colorScheme.primary),
                       title: Text('Share via...', style: GoogleFonts.inter()),
@@ -446,27 +456,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                   title: Text(display ?? 'Unnamed', style: GoogleFonts.inter()),
                                   subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
                                   onTap: () async {
-                        Navigator.pop(sheetContext);
-                        
-                        try {
-                          await BackendApiService().sharePostViaDM(
-                            postId: _post!.id,
-                            recipientWallet: walletAddr ?? username,
-                            message: 'Check out this post!',
-                          );
-                          
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Shared post with @$username')),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to share: $e')),
-                          );
-                        }
-                      },
-                    );
+                                    Navigator.pop(sheetContext);
+                                    final messenger = ScaffoldMessenger.of(context);
+
+                                    try {
+                                      await BackendApiService().sharePostViaDM(
+                                        postId: _post!.id,
+                                        recipientWallet: (walletAddr ?? username).toString(),
+                                        message: 'Check out this post!',
+                                      );
+
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
+                                        SnackBar(content: Text('Shared post with @$username')),
+                                      );
+                                    } catch (e) {
+                                      if (!mounted) return;
+                                      messenger.showSnackBar(
+                                        SnackBar(content: Text('Failed to share: $e')),
+                                      );
+                                    }
+                                  },
+                                );
                               },
                             ),
                 ),
@@ -1307,8 +1318,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                           IconButton(
                                             padding: EdgeInsets.zero,
                                             constraints: const BoxConstraints(),
-                                            icon: Icon(c.isLiked ? Icons.favorite : Icons.favorite_border, size: 18, color: c.isLiked ? Colors.red : Theme.of(context).iconTheme.color),
+                                            icon: Icon(
+                                              c.isLiked ? Icons.favorite : Icons.favorite_border,
+                                              size: 18,
+                                              color: c.isLiked ? Theme.of(context).colorScheme.error : Theme.of(context).iconTheme.color,
+                                            ),
                                             onPressed: () async {
+                                              final messenger = ScaffoldMessenger.of(context);
                                               // optimistic toggle
                                               final prevLiked = c.isLiked;
                                               final prevCount = c.likeCount;
@@ -1320,11 +1336,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 await CommunityService.toggleCommentLike(c, _post!.id);
                                               } catch (e) {
                                                 // rollback
+                                                if (!mounted) return;
                                                 setState(() {
                                                   c.isLiked = prevLiked;
                                                   c.likeCount = prevCount;
                                                 });
-                                                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+                                                messenger.showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
                                               }
                                             },
                                           ),
@@ -1381,8 +1398,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                         IconButton(
                                                           padding: EdgeInsets.zero,
                                                           constraints: const BoxConstraints(),
-                                                          icon: Icon(r.isLiked ? Icons.favorite : Icons.favorite_border, size: 14, color: r.isLiked ? Colors.red : Theme.of(context).iconTheme.color),
+                                                          icon: Icon(
+                                                            r.isLiked ? Icons.favorite : Icons.favorite_border,
+                                                            size: 14,
+                                                            color: r.isLiked ? Theme.of(context).colorScheme.error : Theme.of(context).iconTheme.color,
+                                                          ),
                                                           onPressed: () async {
+                                                            final messenger = ScaffoldMessenger.of(context);
                                                             final prevLiked = r.isLiked;
                                                             final prevCount = r.likeCount;
                                                             setState(() {
@@ -1392,11 +1414,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                             try {
                                                               await CommunityService.toggleCommentLike(r, _post!.id);
                                                             } catch (e) {
+                                                              if (!mounted) return;
                                                               setState(() {
                                                                 r.isLiked = prevLiked;
                                                                 r.likeCount = prevCount;
                                                               });
-                                                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+                                                              messenger.showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
                                                             }
                                                           },
                                                         ),

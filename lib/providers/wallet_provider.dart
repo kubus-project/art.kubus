@@ -946,7 +946,7 @@ class WalletProvider extends ChangeNotifier {
     }
 
     try {
-      // Simple SOL -> SPL swap using wallet service (Jupiter integration placeholder inside service)
+      // Simple SOL -> SPL swap via Jupiter (SolanaWalletService).
       String? signature;
       if (fromToken.toUpperCase() == 'SOL') {
         signature = await _solanaWalletService.swapSolToSpl(

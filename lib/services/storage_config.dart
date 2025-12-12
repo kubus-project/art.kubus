@@ -40,6 +40,11 @@ class StorageConfig {
     final url = raw.trim();
     if (url.isEmpty) return null;
 
+    // Bare CID (v0 "Qm..." or v1 "bafy..."): treat as IPFS.
+    if (isLikelyCid(url)) {
+      return _ipfsGatewayFor(url);
+    }
+
     // IPFS: handle ipfs://CID, ipfs/CID, or /ipfs/CID variants
     if (url.startsWith('ipfs://')) {
       final cid = url.replaceFirst('ipfs://', '').replaceFirst(RegExp(r'^ipfs/'), '');
@@ -73,9 +78,11 @@ class StorageConfig {
   }
 
   static String _ipfsGatewayFor(String cid) {
-    final gateway = ipfsGateway.isNotEmpty
-        ? ipfsGateway
-        : (ipfsGateways.isNotEmpty ? ipfsGateways.first : 'https://ipfs.io/ipfs/');
+    final gateway = _selectGateway(
+      ipfsGateway.isNotEmpty
+          ? ipfsGateway
+          : (ipfsGateways.isNotEmpty ? ipfsGateways.first : 'https://ipfs.io/ipfs/'),
+    );
     final normalizedGateway = _normalizeGateway(gateway);
     return '$normalizedGateway$cid';
   }
@@ -91,5 +98,22 @@ class StorageConfig {
     if (!g.endsWith('/')) g = '$g/';
     if (!g.contains('/ipfs/')) g = '${g}ipfs/';
     return g;
+  }
+
+  static String _selectGateway(String rawGateway) {
+    final trimmed = rawGateway.trim();
+    if (!trimmed.contains(',')) return trimmed;
+    final parts = trimmed.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    return parts.isNotEmpty ? parts.first : trimmed;
+  }
+
+  static bool isLikelyCid(String value) {
+    final candidate = value.trim();
+    if (candidate.isEmpty) return false;
+    // CIDv0: base58btc, starts with "Qm", length 46
+    if (RegExp(r'^Qm[1-9A-HJ-NP-Za-km-z]{44}$').hasMatch(candidate)) return true;
+    // CIDv1: base32, commonly starts with "bafy"
+    if (RegExp(r'^bafy[a-z2-7]{20,}$').hasMatch(candidate.toLowerCase())) return true;
+    return false;
   }
 }

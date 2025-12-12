@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
+import '../../../config/config.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import '../../../providers/artwork_provider.dart';
@@ -14,6 +15,7 @@ import '../../../models/artwork.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/artwork_media_resolver.dart';
+import '../../../utils/rarity_ui.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -24,7 +26,9 @@ class Marketplace extends StatefulWidget {
 
 class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin {
   int _selectedIndex = 0;
-  
+  bool _showArOnly = false;
+  bool _didRequestCollectiblesInit = false;
+
   final List<Widget> _pages = [];
 
   @override
@@ -38,8 +42,17 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     _checkOnboarding();
     
     // Track this screen visit for quick actions
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit('marketplace');
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      context.read<NavigationProvider>().trackScreenVisit('marketplace');
+
+      if (_didRequestCollectiblesInit) return;
+      _didRequestCollectiblesInit = true;
+
+      final collectiblesProvider = context.read<CollectiblesProvider>();
+      if (!collectiblesProvider.isLoading && collectiblesProvider.allSeries.isEmpty) {
+        await collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment);
+      }
     });
   }
 
@@ -112,9 +125,96 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   void _showSettings() {
-    // Placeholder for settings functionality
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Settings coming soon!')),
+    final themeProvider = context.read<ThemeProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Marketplace Settings',
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        content: StatefulBuilder(
+          builder: (context, setDialogState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SwitchListTile(
+                value: _showArOnly,
+                onChanged: (value) {
+                  setState(() => _showArOnly = value);
+                  setDialogState(() {});
+                },
+                activeThumbColor: themeProvider.accentColor,
+                title: Text(
+                  'Show AR-only collections',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                subtitle: Text(
+                  'Filter collections that require AR interaction.',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.public, size: 16, color: colorScheme.onSurface.withValues(alpha: 0.7)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Network: ${web3Provider.currentNetwork}',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: colorScheme.onSurface.withValues(alpha: 0.8),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              if (web3Provider.walletAddress.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.account_balance_wallet, size: 16, color: colorScheme.onSurface.withValues(alpha: 0.7)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Wallet: ${web3Provider.walletAddress}',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: colorScheme.onSurface.withValues(alpha: 0.8),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Close', style: GoogleFonts.inter(color: themeProvider.accentColor)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -234,41 +334,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     );
   }
 
-  // Helper method to load collectibles data from backend
-  Future<void> _loadCollectiblesData(CollectiblesProvider provider) async {
-    try {
-      // TODO: Load NFT series from backend when ready
-      // For now, we'll use mock data since backend series endpoints
-      // need to be populated. In production, you would:
-      // 1. Fetch all series: GET /api/nfts/series
-      // 2. Fetch user's NFTs: GET /api/nfts/user/:userId
-      // 3. Parse and populate the provider
-      
-      if (provider.allSeries.isEmpty) {
-        await provider.initializeMockData();
-        debugPrint('Marketplace: Loaded ${provider.allSeries.length} series from mock data');
-      }
-    } catch (e) {
-      debugPrint('Error loading collectibles: $e');
-      // Fallback to mock data on error
-      if (provider.allSeries.isEmpty) {
-        await provider.initializeMockData();
-      }
-    }
-  }
-
   Widget _buildFeaturedNFTs() {
     return Consumer4<CollectiblesProvider, ArtworkProvider, Web3Provider, ThemeProvider>(
       builder: (context, collectiblesProvider, artworkProvider, web3Provider, themeProvider, child) {
-        // Initialize collectibles from backend/blockchain if connected
-        if (collectiblesProvider.allSeries.isEmpty && web3Provider.isConnected) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _loadCollectiblesData(collectiblesProvider);
-          });
+        var featuredSeries = collectiblesProvider.getFeaturedSeries();
+        if (_showArOnly) {
+          featuredSeries = featuredSeries.where((series) => series.requiresARInteraction).toList();
         }
-
-        // Show data if we have series loaded (from backend or blockchain)
-        final featuredSeries = collectiblesProvider.getFeaturedSeries();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -366,7 +438,10 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     return Consumer3<CollectiblesProvider, ArtworkProvider, ThemeProvider>(
       builder: (context, collectiblesProvider, artworkProvider, themeProvider, child) {
         // Show trending series from provider (loaded from backend/blockchain)
-        final trendingSeries = collectiblesProvider.getTrendingSeries();
+        var trendingSeries = collectiblesProvider.getTrendingSeries();
+        if (_showArOnly) {
+          trendingSeries = trendingSeries.where((series) => series.requiresARInteraction).toList();
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -1253,7 +1328,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: Color(_getSeriesRarityColor(series.rarity)),
+                            color: RarityUi.collectibleColor(context, series.rarity),
                           ),
                         ),
                       ),
@@ -1415,55 +1490,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   List<Color> _getSeriesGradientColors(CollectibleRarity rarity) {
-    switch (rarity) {
-      case CollectibleRarity.common:
-        return [
-          Colors.grey.withValues(alpha: 0.3),
-          Colors.grey.withValues(alpha: 0.6),
-        ];
-      case CollectibleRarity.uncommon:
-        return [
-          Colors.green.withValues(alpha: 0.3),
-          Colors.green.withValues(alpha: 0.6),
-        ];
-      case CollectibleRarity.rare:
-        return [
-          Colors.blue.withValues(alpha: 0.3),
-          Colors.blue.withValues(alpha: 0.6),
-        ];
-      case CollectibleRarity.epic:
-        return [
-          Colors.purple.withValues(alpha: 0.3),
-          Colors.purple.withValues(alpha: 0.6),
-        ];
-      case CollectibleRarity.legendary:
-        return [
-          Colors.orange.withValues(alpha: 0.3),
-          Colors.orange.withValues(alpha: 0.6),
-        ];
-      case CollectibleRarity.mythic:
-        return [
-          const Color(0xFFFF1744).withValues(alpha: 0.3),
-          const Color(0xFFFF1744).withValues(alpha: 0.6),
-        ];
-    }
-  }
-
-  int _getSeriesRarityColor(CollectibleRarity rarity) {
-    switch (rarity) {
-      case CollectibleRarity.common:
-        return 0xFF9E9E9E;
-      case CollectibleRarity.uncommon:
-        return 0xFF4CAF50;
-      case CollectibleRarity.rare:
-        return 0xFF2196F3;
-      case CollectibleRarity.epic:
-        return 0xFF9C27B0;
-      case CollectibleRarity.legendary:
-        return 0xFFFF9800;
-      case CollectibleRarity.mythic:
-        return 0xFFFF1744;
-    }
+    final base = RarityUi.collectibleColor(context, rarity);
+    return [
+      base.withValues(alpha: 0.22),
+      base.withValues(alpha: 0.5),
+    ];
   }
 
   void _showNFTSeriesDetails(CollectibleSeries series, Artwork? artwork) {
@@ -1503,7 +1534,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'NFT Collection ${series.requiresARInteraction ? '• AR Enabled' : ''}',
+                    'NFT Collection${series.requiresARInteraction ? ' • AR Enabled' : ''}',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 14,
@@ -1657,6 +1688,51 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
   void _mintNFT(CollectibleSeries series) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final web3Provider = context.read<Web3Provider>();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    if (!web3Provider.isConnected || web3Provider.walletAddress.isEmpty) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: colorScheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Connect Wallet',
+            style: GoogleFonts.inter(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Connect a Solana wallet to mint NFTs.',
+            style: GoogleFonts.inter(
+              color: colorScheme.onSurface.withValues(alpha: 0.8),
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel', style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).pushNamed('/connect-wallet');
+              },
+              icon: const Icon(Icons.link),
+              label: const Text('Connect Wallet'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.accentColor,
+                foregroundColor: colorScheme.onPrimary,
+              ),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
     
     if (series.requiresARInteraction) {
       showDialog(
@@ -1685,7 +1761,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           content: Text(
             'This NFT requires AR interaction with the physical artwork. Please visit the artwork location and use the AR scanner to mint your NFT.',
             style: GoogleFonts.inter(
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),
@@ -1814,9 +1890,15 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
   Future<void> _processMint(CollectibleSeries series) async {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    var loadingShown = false;
     
     try {
       final collectiblesProvider = context.read<CollectiblesProvider>();
+      final web3Provider = context.read<Web3Provider>();
+      final walletAddress = web3Provider.walletAddress.trim();
+      if (!web3Provider.isConnected || walletAddress.isEmpty) {
+        throw Exception('Connect wallet to mint');
+      }
       
       // Show loading
       showDialog(
@@ -1826,17 +1908,15 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           child: SizedBox(width: 72, height: 72, child: InlineLoading(shape: BoxShape.circle, color: themeProvider.accentColor, tileSize: 8.0)),
         ),
       );
+      loadingShown = true;
 
-      // Simulate minting process
-      await Future.delayed(const Duration(seconds: 2));
-      
       await collectiblesProvider.mintCollectible(
         seriesId: series.id,
-        ownerAddress: '0xuser...wallet', // In real app, get from wallet
-        transactionHash: '0x${DateTime.now().millisecondsSinceEpoch}',
+        ownerAddress: walletAddress,
+        transactionHash: 'local_mint_${DateTime.now().millisecondsSinceEpoch}',
         properties: {
           'mint_timestamp': DateTime.now().toIso8601String(),
-          'minted_by': 'current_user',
+          'minted_by': walletAddress,
         },
       );
 
@@ -1848,7 +1928,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1856,7 +1936,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             children: [
               Icon(
                 Icons.check_circle,
-                color: Colors.green,
+                color: themeProvider.accentColor,
               ),
               const SizedBox(width: 8),
               Text(
@@ -1871,14 +1951,17 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           content: Text(
             'Your NFT has been successfully minted! You can view it in your wallet.',
             style: GoogleFonts.inter(
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),
           actions: [
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, _) => ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  context.read<NavigationProvider>().navigateToScreen(context, 'wallet');
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -1896,13 +1979,15 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading
+      if (loadingShown && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loading
+      }
       
       if (!mounted) return;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1910,7 +1995,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             children: [
               Icon(
                 Icons.error,
-                color: Colors.red,
+                color: Theme.of(context).colorScheme.error,
               ),
               const SizedBox(width: 8),
               Text(
@@ -1925,7 +2010,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           content: Text(
             'Failed to mint NFT: $e',
             style: GoogleFonts.inter(
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
             ),
           ),
@@ -1985,8 +2070,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.3),
-                      Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.6),
+                      RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.3),
+                      RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.6),
                     ],
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
@@ -2057,7 +2142,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         child: Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF9C27B0).withValues(alpha: 0.8),
+                            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(
@@ -2124,13 +2209,13 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
-                            color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.2),
+                            color: RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
                             artwork.rarity.name.toUpperCase(),
                             style: GoogleFonts.inter(
-                              color: Color(Artwork.getRarityColor(artwork.rarity)),
+                              color: RarityUi.artworkColor(context, artwork.rarity),
                               fontSize: 7,
                               fontWeight: FontWeight.bold,
                             ),
@@ -2151,11 +2236,3 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
 
 }
-
-
-
-
-
-
-
-

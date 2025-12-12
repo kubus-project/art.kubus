@@ -108,14 +108,15 @@ class TaskProvider extends ChangeNotifier {
 
   /// Increment achievement progress
   void incrementAchievementProgress(String achievementId, {int increment = 1}) {
-    debugPrint('DEBUG: Incrementing $achievementId by $increment');
+    if (kDebugMode) {
+      debugPrint('TaskProvider: incrementAchievementProgress($achievementId, +$increment)');
+    }
     _isLoading = true;
     
     try {
       // Update achievement progress
       _incrementAchievementProgress(achievementId, increment);
       
-      debugPrint('DEBUG: Achievement progress updated, recalculating tasks...');
       // Recalculate task progress
       _recalculateTaskProgress();
       
@@ -123,9 +124,10 @@ class TaskProvider extends ChangeNotifier {
       _checkForUnlockedTasks();
       
       _error = null;
-    debugPrint('DEBUG: Task progress recalculated and listeners notified');
     } catch (e) {
-    debugPrint('DEBUG: Error incrementing achievement progress: $e');
+      if (kDebugMode) {
+        debugPrint('TaskProvider: incrementAchievementProgress failed: $e');
+      }
       _error = 'Failed to increment achievement progress: $e';
     } finally {
       _isLoading = false;
@@ -144,14 +146,12 @@ class TaskProvider extends ChangeNotifier {
 
   /// Track artwork like/favorite
   void trackArtworkLike(String artworkId) {
-    debugPrint('DEBUG: Tracking artwork like for $artworkId');
     incrementAchievementProgress('art_critic', increment: 1);
     incrementAchievementProgress('social_butterfly', increment: 1);
   }
 
   /// Track artwork favorite action
   void trackArtworkFavorite(String artworkId) {
-    debugPrint('DEBUG: Tracking artwork favorite for $artworkId');
     incrementAchievementProgress('first_favorite', increment: 1);
     incrementAchievementProgress('curator', increment: 1);
     incrementAchievementProgress('mega_collector', increment: 1);
@@ -159,7 +159,6 @@ class TaskProvider extends ChangeNotifier {
 
   /// Track comment on artwork
   void trackArtworkComment(String artworkId) {
-    debugPrint('DEBUG: Tracking artwork comment for $artworkId');
     incrementAchievementProgress('art_critic', increment: 2);
     incrementAchievementProgress('social_butterfly', increment: 1);
   }
@@ -174,12 +173,6 @@ class TaskProvider extends ChangeNotifier {
     incrementAchievementProgress('first_ar_visit', increment: 1);
     incrementAchievementProgress('ar_collector', increment: 1);
     incrementAchievementProgress('ar_enthusiast', increment: 1);
-  }
-
-  /// Track NFT minting
-  void trackNFTMint(String seriesId) {
-    incrementAchievementProgress('nft_collector', increment: 1);
-    incrementAchievementProgress('digital_artist', increment: 1);
   }
 
   /// Get overall discovery progress (0.0 to 1.0)
@@ -276,18 +269,22 @@ class TaskProvider extends ChangeNotifier {
 
   /// Helper method to update achievement progress
   void _updateAchievementProgress(String achievementId, int newProgress) {
+    final achievement = getAchievementById(achievementId);
+    if (achievement == null) return;
+
+    final isCompleted = newProgress >= achievement.requiredProgress;
+    final updatedProgress = AchievementProgress(
+      achievementId: achievementId,
+      currentProgress: newProgress,
+      isCompleted: isCompleted,
+      completedDate: isCompleted ? DateTime.now() : null,
+    );
+
     final index = _achievementProgress.indexWhere((p) => p.achievementId == achievementId);
     if (index != -1) {
-      final achievement = getAchievementById(achievementId);
-      if (achievement != null) {
-        final isCompleted = newProgress >= achievement.requiredProgress;
-        _achievementProgress[index] = AchievementProgress(
-          achievementId: achievementId,
-          currentProgress: newProgress,
-          isCompleted: isCompleted,
-          completedDate: isCompleted ? DateTime.now() : null,
-        );
-      }
+      _achievementProgress[index] = updatedProgress;
+    } else {
+      _achievementProgress.add(updatedProgress);
     }
   }
 
@@ -298,12 +295,7 @@ class TaskProvider extends ChangeNotifier {
       final currentProgress = _achievementProgress[index].currentProgress + increment;
       _updateAchievementProgress(achievementId, currentProgress);
     } else {
-      // Create new progress if it doesn't exist
-      _achievementProgress.add(AchievementProgress(
-        achievementId: achievementId,
-        currentProgress: increment,
-        isCompleted: false,
-      ));
+      _updateAchievementProgress(achievementId, increment);
     }
   }
 

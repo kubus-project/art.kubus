@@ -8,6 +8,7 @@ import 'package:solana/solana.dart';
 import 'package:solana/encoder.dart';
 import 'package:solana/metaplex.dart';
 import '../config/api_keys.dart';
+import 'storage_config.dart';
 import '../models/swap_quote.dart';
 import '../utils/wallet_utils.dart';
 
@@ -599,7 +600,7 @@ class SolanaWalletService {
     }
   }
 
-  // Transfer SPL token (KUB8 or others) - placeholder wiring
+  // Transfer SPL token (KUB8 or others)
   Future<String> transferSplToken({
     required String mint,
     required String toAddress,
@@ -1033,19 +1034,29 @@ class SolanaWalletService {
     if (candidate == null) return null;
     final trimmed = candidate.trim();
     if (trimmed.isEmpty) return null;
-    if (trimmed.startsWith('ipfs://')) {
-      final cid = _normalizeIpfsPath(trimmed.substring(7));
-      return '$_ipfsGatewayBase$cid';
-    }
-    if (trimmed.startsWith('ipfs/')) {
-      final cid = _normalizeIpfsPath(trimmed.substring(5));
-      return '$_ipfsGatewayBase$cid';
-    }
     if (trimmed.startsWith('https://') || trimmed.startsWith('http://')) {
       return trimmed;
     }
     if (trimmed.startsWith('//')) {
       return 'https:$trimmed';
+    }
+    if (trimmed.startsWith('ipfs://')) {
+      final cid = _normalizeIpfsPath(trimmed.substring(7));
+      return StorageConfig.resolveUrl('ipfs://$cid');
+    }
+    if (trimmed.startsWith('ipfs/')) {
+      final cid = _normalizeIpfsPath(trimmed.substring(5));
+      return StorageConfig.resolveUrl('ipfs://$cid');
+    }
+    if (trimmed.startsWith('/ipfs/')) {
+      final cid = _normalizeIpfsPath(trimmed.substring(6));
+      return StorageConfig.resolveUrl('ipfs://$cid');
+    }
+    if (trimmed.contains('/ipfs/') && !trimmed.startsWith('http')) {
+      return StorageConfig.resolveUrl(trimmed);
+    }
+    if (StorageConfig.isLikelyCid(trimmed)) {
+      return StorageConfig.resolveUrl(trimmed);
     }
     return trimmed;
   }
@@ -1059,14 +1070,6 @@ class SolanaWalletService {
       normalized = normalized.substring(1);
     }
     return normalized;
-  }
-
-  String get _ipfsGatewayBase {
-    final base = ApiKeys.ipfsGateway.trim();
-    if (base.isEmpty) {
-      return 'https://ipfs.io/ipfs/';
-    }
-    return base.endsWith('/') ? base : '$base/';
   }
 
   Future<Map<String, dynamic>> _getTokenInfo(String mint, {int? decimalsHint}) async {

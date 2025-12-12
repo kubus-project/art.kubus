@@ -12,6 +12,8 @@ import '../models/community_group.dart';
 import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/search_suggestions.dart';
+import '../utils/media_url_resolver.dart';
+import 'storage_config.dart';
 import 'user_action_logger.dart';
 
 /// Backend API Service
@@ -2134,7 +2136,7 @@ class BackendApiService {
                     final profileDisplayName = profile['displayName'] as String? ?? profile['display_name'] as String?;
                     final profileUsername = profile['username'] as String? ?? profile['walletAddress'] as String? ?? profile['wallet'] as String?;
                     final avatarCandidate = profile['avatar'] as String? ?? profile['profileImage'] as String? ?? profile['profile_image'] as String? ?? profile['avatarUrl'] as String? ?? profile['avatar_url'] as String?;
-                    final normalizedAvatar = _normalizeBackendAvatarUrl(avatarCandidate);
+                    final normalizedAvatar = MediaUrlResolver.resolve(avatarCandidate);
                     
                     // Determine best display name: prioritize displayName, then username, then fallback to existing
                     final bestDisplayName = (profileDisplayName != null && profileDisplayName.trim().isNotEmpty)
@@ -3861,7 +3863,7 @@ class BackendApiService {
       final headers = _getHeaders(includeAuth: true);
       dynamic data;
 
-      Future<dynamic> _tryFetch(Uri target) async {
+      Future<dynamic> tryFetch(Uri target) async {
         final response = await http.get(target, headers: headers);
         if (_isSuccessStatus(response.statusCode)) {
           return jsonDecode(response.body);
@@ -3874,12 +3876,12 @@ class BackendApiService {
       }
 
       // Primary request (may return List or Map)
-      data = await _tryFetch(uri);
+      data = await tryFetch(uri);
 
       // Orbit fallback when primary fails or returns empty
       if (data == null) {
         final fallbackUri = _withOrbitSource(uri);
-        data = await _tryFetch(fallbackUri);
+        data = await tryFetch(fallbackUri);
       }
 
       if (data is List) {
@@ -4190,7 +4192,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     arAsset?['url'],
     arAsset?['modelUrl'],
   ]);
-  final modelUrl = _normalizeBackendMediaUrl(rawModelUrl);
+  final modelUrl = MediaUrlResolver.resolve(rawModelUrl);
   final modelCid = pickString([
     json['model3DCID'],
     json['model3dCID'],
@@ -4263,7 +4265,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     metadata['image_cid'],
     json['cid'],
   ]);
-  final normalizedImageUrl = _normalizeBackendMediaUrl(rawImage) ?? _resolveCidToUrl(imageCid);
+  final normalizedImageUrl = MediaUrlResolver.resolve(rawImage) ?? StorageConfig.resolveUrl(imageCid);
   final arScale = doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
   final arRotation = normalizeRotation(
     json['arRotation'] ??
@@ -4325,64 +4327,7 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   );
 }
 
-String _ipfsGatewayBase() {
-  try {
-    final candidates = ApiKeys.ipfsGateway
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-    final base = candidates.isNotEmpty ? candidates.first : ApiKeys.ipfsGateway;
-    if (base.endsWith('/')) return base;
-    return '$base/';
-  } catch (_) {
-    return 'https://ipfs.io/ipfs/';
-  }
-}
 
-String? _resolveCidToUrl(String? cid) {
-  if (cid == null) return null;
-  final trimmed = cid.trim();
-  if (trimmed.isEmpty) return null;
-  if (trimmed.startsWith('http')) return trimmed;
-  var normalized = trimmed.replaceFirst('ipfs://', '').replaceFirst(RegExp(r'^ipfs/'), '');
-  if (normalized.startsWith('/')) {
-    normalized = normalized.substring(1);
-  }
-  final gateway = _ipfsGatewayBase();
-  return '$gateway$normalized';
-}
-
-String? _normalizeBackendMediaUrl(String? raw) {
-  if (raw == null) return null;
-  var candidate = raw.trim();
-  if (candidate.isEmpty) return null;
-  try {
-    if (candidate.startsWith('ipfs://')) {
-      final cid = candidate.replaceFirst('ipfs://', '');
-      return '${_ipfsGatewayBase()}$cid';
-    }
-    if (candidate.startsWith('ipfs/')) {
-      return _resolveCidToUrl(candidate);
-    }
-    if (candidate.startsWith('//')) {
-      return 'https:$candidate';
-    }
-    if (candidate.startsWith('/')) {
-      final base = ApiKeys.backendUrl.replaceAll(RegExp(r'/$'), '');
-      return '$base$candidate';
-    }
-    if (candidate.startsWith('api/')) {
-      final base = ApiKeys.backendUrl.replaceAll(RegExp(r'/$'), '');
-      return '$base/$candidate';
-    }
-    if (!candidate.startsWith('http')) {
-      final cidUrl = _resolveCidToUrl(candidate);
-      if (cidUrl != null) return cidUrl;
-    }
-  } catch (_) {}
-  return candidate;
-}
 
 CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
   final wallet = json['walletAddress'] as String? ?? json['wallet_address'] as String?;
@@ -4407,13 +4352,11 @@ CommunityLikeUser _communityLikeUserFromBackendJson(Map<String, dynamic> json) {
     walletAddress: wallet,
     displayName: displayName,
     username: username,
-    avatarUrl: _normalizeBackendAvatarUrl(avatarCandidate),
+    avatarUrl: MediaUrlResolver.resolve(avatarCandidate),
     likedAt: likedAt,
   );
 }
 
-
-String? _normalizeBackendAvatarUrl(String? raw) => _normalizeBackendMediaUrl(raw);
 
 Map<String, dynamic> _buildCommunityPostPayload({
   required String content,
@@ -4637,7 +4580,7 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
       authorId: origJson['walletAddress'] as String? ?? 'unknown',
       authorWallet: origJson['walletAddress'] as String?,
       authorName: origAuthor?['displayName'] as String? ?? origAuthor?['username'] as String? ?? 'Anonymous',
-      authorAvatar: _normalizeBackendAvatarUrl(origAuthor?['avatar'] as String?),
+      authorAvatar: MediaUrlResolver.resolve(origAuthor?['avatar'] as String?),
       authorUsername: origAuthor?['username'] as String?,
       content: origJson['content'] as String,
       imageUrl: origJson['mediaUrls'] != null && (origJson['mediaUrls'] as List).isNotEmpty 
@@ -4656,7 +4599,7 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     authorId: json['authorId'] as String? ?? json['walletAddress'] as String? ?? json['userId'] as String? ?? 'unknown',
     authorWallet: authorWalletCandidate,
     authorName: resolvedAuthorName,
-    authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
+    authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
     authorUsername: rawUsername,
     content: json['content'] as String,
     imageUrl: json['imageUrl'] as String? ?? (mediaUrls.isNotEmpty ? mediaUrls.first : null),
@@ -4732,7 +4675,7 @@ CommunityGroupSummary _communityGroupSummaryFromJson(Map<String, dynamic> json) 
     name: (json['name'] ?? 'Community Group').toString(),
     slug: json['slug']?.toString(),
     description: json['description']?.toString(),
-    coverImage: _normalizeBackendMediaUrl(
+    coverImage: MediaUrlResolver.resolve(
       json['coverImage']?.toString() ?? json['cover_image']?.toString(),
     ),
     isPublic: json['isPublic'] as bool? ?? json['is_public'] as bool? ?? true,
@@ -4813,7 +4756,7 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
   id: (json['id'] ?? '').toString(),
   authorId: authorId,
   authorName: resolvedAuthorName,
-  authorAvatar: _normalizeBackendAvatarUrl(avatarCandidate),
+  authorAvatar: MediaUrlResolver.resolve(avatarCandidate),
   authorUsername: authorUsername,
   authorWallet: resolvedAuthorWallet ?? authorId,
   parentCommentId: json['parentCommentId'] as String? ?? json['parent_comment_id']?.toString(),
@@ -4852,4 +4795,3 @@ List<Comment> _nestComments(List<Comment> comments) {
 
   return roots;
 }
-

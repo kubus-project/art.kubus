@@ -14,6 +14,7 @@ import '../../services/nft_minting_service.dart';
 import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/rarity_ui.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -219,10 +220,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         _artworkError = 'Failed to load artwork details. Please try again.';
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _artworkLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _artworkLoading = false;
+        });
+      }
     }
   }
 
@@ -256,7 +258,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 ),
                 child: Icon(
                   artwork.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: artwork.isFavorite ? Colors.red : null,
+                  color: artwork.isFavorite ? Theme.of(context).colorScheme.error : null,
                 ),
               ),
             );
@@ -270,8 +272,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.3),
-                Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.1),
+                RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.3),
+                RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.1),
               ],
             ),
           ),
@@ -280,11 +282,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               width: 120,
               height: 120,
               decoration: BoxDecoration(
-                color: Color(Artwork.getRarityColor(artwork.rarity)),
+                color: RarityUi.artworkColor(context, artwork.rarity),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.3),
+                    color: RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -303,7 +305,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildArtPreview(Artwork artwork) {
-    final rarityColor = Color(Artwork.getRarityColor(artwork.rarity));
+    final rarityColor = RarityUi.artworkColor(context, artwork.rarity);
     final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
 
     return Container(
@@ -1376,7 +1378,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                             width: 16,
                             height: 16,
                             decoration: BoxDecoration(
-                              color: _getRarityColor(rarity),
+                              color: RarityUi.collectibleColor(context, rarity),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1563,20 +1565,4 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     }
   }
 
-  Color _getRarityColor(CollectibleRarity rarity) {
-    switch (rarity) {
-      case CollectibleRarity.common:
-        return Colors.grey;
-      case CollectibleRarity.uncommon:
-        return Colors.green;
-      case CollectibleRarity.rare:
-        return Colors.blue;
-      case CollectibleRarity.epic:
-        return Colors.purple;
-      case CollectibleRarity.legendary:
-        return Colors.orange;
-      case CollectibleRarity.mythic:
-        return Colors.red;
-    }
-  }
 }

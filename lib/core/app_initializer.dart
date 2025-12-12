@@ -1,6 +1,7 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -135,16 +136,17 @@ class _AppInitializerState extends State<AppInitializer> {
       AppConfig.enableMultiAuthEntry &&
       (AppConfig.enableEmailAuth || AppConfig.enableGoogleAuth || AppConfig.enableWalletConnect);
     
-    // DEBUG: Print all flags
-    debugPrint('🔍 AppInitializer DEBUG:');
-    debugPrint('  isFirstTime: $isFirstTime');
-    debugPrint('  hasSeenWelcome: $hasSeenWelcome');
-    debugPrint('  isFirstLaunch: $isFirstLaunch');
-    debugPrint('  userSkipOnboarding: $userSkipOnboarding');
-    debugPrint('  hasWallet: $hasWallet');
-    debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
-    debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
-    debugPrint('  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
+    if (kDebugMode) {
+      debugPrint('AppInitializer: flags');
+      debugPrint('  isFirstTime: $isFirstTime');
+      debugPrint('  hasSeenWelcome: $hasSeenWelcome');
+      debugPrint('  isFirstLaunch: $isFirstLaunch');
+      debugPrint('  userSkipOnboarding: $userSkipOnboarding');
+      debugPrint('  hasWallet: $hasWallet');
+      debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
+      debugPrint('  showWelcomeScreen: ${AppConfig.showWelcomeScreen}');
+      debugPrint('  enforceWalletOnboarding: ${AppConfig.enforceWalletOnboarding}');
+    }
     
     if (!mounted) return;
     
@@ -153,11 +155,15 @@ class _AppInitializerState extends State<AppInitializer> {
       hasCompletedOnboarding &&
       (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
     
-    debugPrint('  shouldSkipOnboarding: $shouldSkipOnboarding');
+    if (kDebugMode) {
+      debugPrint('AppInitializer: shouldSkipOnboarding=$shouldSkipOnboarding');
+    }
 
     // Detect desktop layout for responsive onboarding
     final isDesktop = DesktopBreakpoints.isDesktop(context);
-    debugPrint('  isDesktop: $isDesktop');
+    if (kDebugMode) {
+      debugPrint('AppInitializer: isDesktop=$isDesktop');
+    }
 
     // Prime all data providers before the main UI renders so users see fresh
     // content without needing manual refreshes on first interaction.
@@ -169,7 +175,9 @@ class _AppInitializerState extends State<AppInitializer> {
     
     if (shouldSkipOnboarding) {
       // Returning user - skip onboarding and go directly to main app
-      debugPrint('Route: Skipping onboarding -> MainApp');
+      if (kDebugMode) {
+        debugPrint('AppInitializer: route -> MainApp (skip onboarding)');
+      }
       // Mark as no longer first time if not already set
       if (isFirstTime) {
         await prefs.setBool('first_time', false);
@@ -327,7 +335,9 @@ class ExploreOnlyApp extends StatelessWidget {
   }
 
   void _showWalletPrompt(BuildContext context) {
-    debugPrint('DEBUG: Wallet prompt triggered'); // Debug print
+    if (kDebugMode) {
+      debugPrint('AppInitializer: wallet prompt triggered');
+    }
     showDialog(
       context: context,
       builder: (context) => const WalletPromptScreen(),
@@ -421,7 +431,9 @@ class WalletPromptScreen extends StatelessWidget {
         ),
         ElevatedButton.icon(
           onPressed: () {
-            debugPrint('DEBUG: Set Up Wallet button pressed'); // Debug print
+            if (kDebugMode) {
+              debugPrint('WalletPromptScreen: Set Up Wallet pressed');
+            }
             Navigator.of(context).pop();
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(builder: (context) => const OnboardingScreen()),
@@ -481,4 +493,3 @@ class OnboardingManager {
     return (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
   }
 }
-

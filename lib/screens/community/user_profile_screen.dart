@@ -8,6 +8,9 @@ import '../../models/user.dart';
 import '../../services/user_service.dart';
 import '../../models/achievements.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/block_list_service.dart';
+import '../../utils/category_accent_color.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
@@ -935,6 +938,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     final requiredProgress = achievement.requiredProgress > 0 ? achievement.requiredProgress : 1;
     final ratio = (progress.currentProgress / requiredProgress).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
+    final accent = CategoryAccentColor.resolve(context, achievement.category);
 
     return Container(
       width: 180,
@@ -950,7 +954,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Theme.of(context).shadowColor.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -965,12 +969,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: achievement.color.withValues(alpha: 0.15),
+                  color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   achievement.icon,
-                  color: achievement.color,
+                  color: accent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1015,7 +1019,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1023,7 +1027,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber[900],
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
                   ),
                 ),
               ),
@@ -1037,7 +1041,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               minHeight: 6,
               backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(
-                isCompleted ? themeProvider.accentColor : achievement.color,
+                isCompleted ? themeProvider.accentColor : accent,
               ),
             ),
           ),
@@ -1510,23 +1514,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null) return null;
-    final candidate = url.trim();
-    if (candidate.isEmpty) return null;
-    if (candidate.startsWith('data:')) return candidate;
-    if (candidate.startsWith('ipfs://')) {
-      final cid = candidate.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    }
-    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-    if (candidate.startsWith('//')) return 'https:$candidate';
-    if (candidate.startsWith('/')) return '$base$candidate';
-    if (candidate.startsWith('api/')) return '$base/$candidate';
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
-    if (!hasScheme) {
-      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
-    }
-    return candidate;
+    return MediaUrlResolver.resolve(url);
   }
 
   String _formatDateLabel(dynamic value) {
@@ -1684,7 +1672,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   void _showBlockConfirmation() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: Text(
           'Block ${user!.name}?',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
@@ -1695,13 +1683,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              // Perform block action (placeholder)
+            onPressed: () async {
+              final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
+              if (targetWallet.isEmpty) {
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Unable to block user')),
+                );
+                return;
+              }
+
+              try {
+                await BlockListService().blockWallet(targetWallet);
+              } catch (e) {
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to block user: $e')),
+                );
+                return;
+              }
+
+              if (!mounted) return;
               Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Blocked ${user?.name ?? targetWallet}')),
+              );
             },
             child: const Text('Block'),
           ),

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' hide Wallet; // Hide solana Wallet to avoid name clash with app model
@@ -255,9 +257,6 @@ class Web3Provider extends ChangeNotifier {
       await _reloadWallet();
       notifyListeners();
       return signature;
-    } on UnimplementedError catch (e) {
-      debugPrint('KUB8 transfer pending implementation: $e');
-      rethrow;
     } catch (e, st) {
       debugPrint('KUB8 transfer failed: $e\n$st');
       rethrow;
@@ -273,9 +272,6 @@ class Web3Provider extends ChangeNotifier {
       await _reloadWallet();
       notifyListeners();
       return signature;
-    } on UnimplementedError catch (e) {
-      debugPrint('Swap not yet implemented: $e');
-      rethrow;
     } catch (e, st) {
       debugPrint('Swap failed: $e\n$st');
       rethrow;
@@ -284,8 +280,47 @@ class Web3Provider extends ChangeNotifier {
 
   // Governance functions
   Future<String> voteOnProposal(String proposalId, bool support) async {
-    // Placeholder: integrate governance program or backend endpoint
-    throw UnimplementedError('Governance voting integration pending');
+    if (!_isConnected || walletAddress.isEmpty) {
+      throw Exception('Wallet not connected');
+    }
+    final normalizedProposal = proposalId.trim();
+    if (normalizedProposal.isEmpty) {
+      throw ArgumentError('proposalId cannot be empty');
+    }
+
+    // Store a local vote so UI can remain functional offline or when on-chain
+    // governance wiring is disabled. DAOProvider can still be used for backend
+    // voting flows; this method is a direct Web3Provider helper.
+    final prefs = await SharedPreferences.getInstance();
+    const key = 'governance_votes_v1';
+    final raw = prefs.getString(key);
+    final List<dynamic> existing;
+    if (raw == null || raw.trim().isEmpty) {
+      existing = <dynamic>[];
+    } else {
+      final decoded = jsonDecode(raw);
+      existing = decoded is List ? decoded : <dynamic>[];
+    }
+
+    final voter = walletAddress;
+    final filtered = existing.where((e) {
+      if (e is! Map) return false;
+      final map = Map<String, dynamic>.from(e);
+      return map['proposalId'] != normalizedProposal || map['voter'] != voter;
+    }).toList();
+
+    final prefixLen = voter.length >= 8 ? 8 : voter.length;
+    final signature = 'local_vote_${DateTime.now().millisecondsSinceEpoch}_${voter.substring(0, prefixLen)}';
+    filtered.add({
+      'proposalId': normalizedProposal,
+      'voter': voter,
+      'support': support,
+      'signature': signature,
+      'createdAt': DateTime.now().toIso8601String(),
+    });
+
+    await prefs.setString(key, jsonEncode(filtered));
+    return signature;
   }
 
   // NFT functions

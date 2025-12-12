@@ -22,6 +22,7 @@ import '../../services/push_notification_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/media_url_resolver.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -581,18 +582,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     /// Normalize avatar URLs returned by backend to absolute URLs or gateways.
     String? _normalizeAvatar(String? a) {
-      if (a == null || a.isEmpty) return null;
-      try {
-        if (a.startsWith('/')) {
-          final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-          return base + a;
-        }
-        if (a.startsWith('ipfs://')) {
-          final cid = a.replaceFirst('ipfs://', '');
-          return 'https://ipfs.io/ipfs/$cid';
-        }
-      } catch (_) {}
-      return a;
+      return MediaUrlResolver.resolve(a);
     }
 
 
@@ -2139,6 +2129,7 @@ class MembersDialog extends StatelessWidget {
                           ),
                         );
 
+                        if (!context.mounted) return;
                         if (action == null) return;
                         if (action == 'remove') {
                           // Return wallet to caller so it can perform removal

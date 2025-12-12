@@ -1,6 +1,7 @@
 import 'package:latlong2/latlong.dart';
 
 import '../providers/storage_provider.dart';
+import '../utils/media_url_resolver.dart';
 
 /// High-level category for an art marker shown on the map
 enum ArtMarkerType {
@@ -113,28 +114,27 @@ class ArtMarker {
   }
 
   /// Get the appropriate content URL based on storage provider
-  String? getContentURL({String ipfsGateway = 'https://ipfs.io/ipfs/'}) {
-    if (storageProvider == StorageProvider.ipfs) {
-      return modelCID != null ? '$ipfsGateway$modelCID' : null;
-    }
+  String? getContentURL() {
     if (storageProvider == StorageProvider.http) {
-      return modelURL;
+      return MediaUrlResolver.resolve(modelURL);
     }
-    // Hybrid: Prefer IPFS with HTTP fallback
-    if (modelCID != null) {
-      return '$ipfsGateway$modelCID';
+
+    if (modelCID != null && modelCID!.isNotEmpty) {
+      return MediaUrlResolver.resolve('ipfs://${modelCID!}');
     }
-    return modelURL;
+
+    return MediaUrlResolver.resolve(modelURL);
   }
 
   /// Get fallback URL if primary fails
-  String? getFallbackURL({String ipfsGateway = 'https://ipfs.io/ipfs/'}) {
-    if (storageProvider == StorageProvider.hybrid) {
-      // If we tried IPFS first, fallback to HTTP
-      if (modelCID != null && modelURL != null) {
-        return modelURL;
-      }
+  String? getFallbackURL() {
+    if (storageProvider == StorageProvider.hybrid &&
+        modelCID != null &&
+        modelURL != null &&
+        modelURL!.isNotEmpty) {
+      return MediaUrlResolver.resolve(modelURL);
     }
+
     return null;
   }
 
@@ -229,7 +229,7 @@ class ArtMarker {
       animationName: map['animationName']?.toString(),
       enablePhysics: _parseBool(map['enablePhysics'], false),
       enableInteraction: _parseBool(map['enableInteraction'], true),
-        metadata: metadata,
+      metadata: metadata,
       tags: List<String>.from(map['tags'] ?? const []),
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? 'system',

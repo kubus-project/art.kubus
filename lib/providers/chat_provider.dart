@@ -406,6 +406,7 @@ class ChatProvider extends ChangeNotifier {
   // VoidCallback? _userServiceListener;
 
   bool _initialized = false;
+  dynamic _boundRefreshProvider;
   int _lastChatVersion = 0;
   int _lastGlobalVersion = 0;
   // Throttle for notifyListeners to avoid update storms
@@ -731,6 +732,8 @@ class ChatProvider extends ChangeNotifier {
   void bindToRefresh(dynamic appRefresh) {
     try {
       if (appRefresh == null) return;
+      if (identical(_boundRefreshProvider, appRefresh)) return;
+      _boundRefreshProvider = appRefresh;
       _lastChatVersion = appRefresh.chatVersion ?? 0;
       _lastGlobalVersion = appRefresh.globalVersion ?? 0;
       appRefresh.addListener(() {

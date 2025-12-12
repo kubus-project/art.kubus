@@ -750,11 +750,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     onTap: () async {
                       final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
                       await navigationProvider.clearVisitData();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Quick actions cleared')),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Quick actions cleared')),
+                      );
                     },
                   ),
                 ],

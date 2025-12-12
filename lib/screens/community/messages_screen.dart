@@ -18,6 +18,7 @@ import '../../widgets/empty_state_card.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/event_bus.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/media_url_resolver.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -33,7 +34,6 @@ class _MessagesScreenState extends State<MessagesScreen> {
   final Map<String, String?> _conversationNames = {};
   final Map<String, List<String>> _convToWalletList = {};
   final Set<String> _pendingMemberLoads = {};
-  final BackendApiService _backendApi = BackendApiService();
 
   @override
   void initState() {
@@ -46,10 +46,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
     // Persisted user cache initialization moved to profile/wallet flows; MessagesScreen reads cache if available.
     // However, to avoid flicker we ensure that the persisted cache is initialized here as soon as we detect a persisted wallet
     // and the in-memory cache is empty for that wallet (defensive initialization only).
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     Future(() async {
       try {
-        final profile = Provider.of<ProfileProvider>(context, listen: false);
-        final wallet = profile.currentUser?.walletAddress ?? (await SharedPreferences.getInstance()).getString('wallet_address');
+        final wallet = profileProvider.currentUser?.walletAddress ??
+            (await SharedPreferences.getInstance()).getString('wallet_address');
         if (wallet != null && wallet.isNotEmpty) {
           // If we don't have a cached entry for any displayed participant, initialize persisted cache
           final cached = UserService.getCachedUser(wallet);
@@ -278,26 +279,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   String? _normalizeAvatarUrl(String? raw) {
-    if (raw == null || raw.isEmpty) return null;
-    try {
-      var candidate = raw.trim();
-      if (candidate.isEmpty) return null;
-      if (candidate.startsWith('ipfs://')) {
-        final cid = candidate.replaceFirst('ipfs://', '');
-        candidate = 'https://ipfs.io/ipfs/$cid';
-      } else if (candidate.startsWith('//')) {
-        candidate = 'https:$candidate';
-      } else if (candidate.startsWith('/')) {
-        final base = _backendApi.baseUrl.replaceAll(RegExp(r'/$'), '');
-        candidate = '$base$candidate';
-      } else if (candidate.startsWith('api/')) {
-        final base = _backendApi.baseUrl.replaceAll(RegExp(r'/$'), '');
-        candidate = '$base/$candidate';
-      }
-      return candidate;
-    } catch (_) {
-      return raw;
-    }
+    return MediaUrlResolver.resolve(raw);
   }
 
   bool _storeConversationAvatar(String conversationId, String? avatarUrl, {String? walletHint}) {
@@ -678,9 +660,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   }
 
                   if (!mounted) return;
-                  final currentContext = context;
-                  await ConversationNavigator.openConversationWithPreload(
-                    currentContext,
+                  ConversationNavigator.openConversationWithPreload(
+                    context,
                     c,
                     preloadedMembers: finalMembers,
                     preloadedAvatars: preAvatars.isNotEmpty ? preAvatars : null,

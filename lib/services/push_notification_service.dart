@@ -148,7 +148,6 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF9C27B0),
       enableVibration: true,
       playSound: true,
     );
@@ -198,7 +197,6 @@ class PushNotificationService {
       priority: Priority.defaultPriority,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF4ECDC4),
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -270,7 +268,6 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFFFFBE0B),
       enableVibration: true,
       playSound: true,
     );
@@ -326,7 +323,6 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFFFFD93D),
       enableVibration: true,
       playSound: true,
     );
@@ -414,7 +410,6 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF9C27B0),
       enableVibration: true,
       playSound: true,
     );
@@ -509,7 +504,6 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF4CAF50),
       enableVibration: true,
       playSound: true,
     );
@@ -587,7 +581,6 @@ class PushNotificationService {
       priority: Priority.high,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFFFFD93D),
       enableVibration: true,
       playSound: true,
     );
@@ -635,7 +628,6 @@ class PushNotificationService {
       priority: Priority.defaultPriority,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF4ECDC4),
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -724,7 +716,6 @@ class PushNotificationService {
       priority: Priority.defaultPriority,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF9C27B0),
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -791,7 +782,6 @@ class PushNotificationService {
       priority: Priority.defaultPriority,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFFFF6B6B),
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -859,7 +849,6 @@ class PushNotificationService {
       priority: Priority.max,
       showWhen: true,
       icon: '@mipmap/ic_launcher',
-      color: Color(0xFF2196F3),
       enableVibration: true,
       playSound: true,
     );
@@ -889,10 +878,10 @@ class PushNotificationService {
     );
   }
 
-  // ============ PLACEHOLDER METHODS FOR FUTURE IMPLEMENTATIONS ============
+  // ============ Extended notification types ============
 
-  /// TODO: Implement push notification for auction events
-  /// Will notify users about auction start, bid updates, and auction end
+  /// Push notification for auction events
+  /// Notifies users about auction start, bid updates, and auction end.
   Future<void> showAuctionNotification({
     required String auctionId,
     required String type, // 'started', 'bid_placed', 'outbid', 'won', 'ended'
@@ -900,111 +889,240 @@ class PushNotificationService {
     double? currentBid,
     String? bidderName,
   }) async {
-    // Placeholder for auction notifications
+    if (!_permissionGranted) return;
+
+    String titleText = 'Auction Update';
+    String bodyText = '';
+    switch (type) {
+      case 'started':
+        bodyText = 'Auction started for "$artworkTitle"';
+        break;
+      case 'bid_placed':
+        bodyText = '${bidderName ?? 'Someone'} placed a bid of ${currentBid ?? 0}';
+        break;
+      case 'outbid':
+        bodyText = 'You were outbid for "$artworkTitle"';
+        break;
+      case 'won':
+        bodyText = 'You won the auction for "$artworkTitle"';
+        break;
+      case 'ended':
+        bodyText = 'Auction ended for "$artworkTitle"';
+        break;
+    }
+
     if (kIsWeb) {
       try {
         final mapData = {'type': 'auction', 'auctionId': auctionId, 'eventType': type, 'artworkTitle': artworkTitle, 'currentBid': currentBid, 'bidderName': bidderName, 'actionUrl': 'app://auction/$auctionId'};
-        String titleText = 'Auction Update';
-        String bodyText = '';
-        switch (type) {
-          case 'started':
-            bodyText = 'Auction started for "$artworkTitle"';
-            break;
-          case 'bid_placed':
-            bodyText = '${bidderName ?? 'Someone'} placed a bid of $currentBid';
-            break;
-          case 'outbid':
-            bodyText = 'You were outbid for "$artworkTitle"';
-            break;
-          case 'won':
-            bodyText = 'You won the auction for "$artworkTitle"';
-            break;
-          case 'ended':
-            bodyText = 'Auction ended for "$artworkTitle"';
-            break;
-        }
         await webshow.showNotification(titleText, bodyText, mapData);
+        await _storeInAppNotification('auction', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showAuctionNotification failed: $e');
       }
     }
-    debugPrint('TODO: Implement auction notification - type: $type, artwork: $artworkTitle');
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'auction',
+      'Auctions',
+      channelDescription: 'Notifications for auction activity',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+      enableVibration: true,
+      playSound: true,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final payloadData = {
+      'type': 'auction',
+      'auctionId': auctionId,
+      'eventType': type,
+      'artworkTitle': artworkTitle,
+      if (currentBid != null) 'currentBid': currentBid,
+      if (bidderName != null) 'bidderName': bidderName,
+      'actionUrl': 'app://auction/$auctionId',
+    };
+
+    await _flutterLocalNotificationsPlugin.show(
+      auctionId.hashCode,
+      titleText,
+      bodyText,
+      details,
+      payload: jsonEncode(payloadData),
+    );
+
+    await _storeInAppNotification('auction', titleText, bodyText, payloadData);
   }
 
-  /// TODO: Implement push notification for collaborative art projects
-  /// Will notify users about invitations, contributions, and project updates
+  /// Push notification for collaborative art projects
+  /// Notifies users about invitations, contributions, and project updates.
   Future<void> showCollaborationNotification({
     required String projectId,
     required String type, // 'invited', 'contribution', 'completed'
     required String projectTitle,
     String? collaboratorName,
   }) async {
-    // Placeholder for collaboration notifications
+    if (!_permissionGranted) return;
+
+    String titleText = 'Collaboration';
+    String bodyText = '';
+    switch (type) {
+      case 'invited':
+        bodyText = '${collaboratorName ?? 'Someone'} invited you to collaborate on "$projectTitle"';
+        break;
+      case 'contribution':
+        bodyText = '${collaboratorName ?? 'Someone'} contributed to "$projectTitle"';
+        break;
+      case 'completed':
+        bodyText = 'Your project "$projectTitle" was completed';
+        break;
+    }
+
     if (kIsWeb) {
       try {
         final mapData = {'type': 'collaboration', 'projectId': projectId, 'eventType': type, 'projectTitle': projectTitle, 'collaboratorName': collaboratorName, 'actionUrl': 'app://project/$projectId'};
-        String titleText = 'Collaboration';
-        String bodyText = '';
-        switch (type) {
-          case 'invited':
-            bodyText = '${collaboratorName ?? 'Someone'} invited you to collaborate on "$projectTitle"';
-            break;
-          case 'contribution':
-            bodyText = '${collaboratorName ?? 'Someone'} contributed to "$projectTitle"';
-            break;
-          case 'completed':
-            bodyText = 'Your project "$projectTitle" was completed';
-            break;
-        }
         await webshow.showNotification(titleText, bodyText, mapData);
+        await _storeInAppNotification('collaboration', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showCollaborationNotification failed: $e');
       }
     }
-    debugPrint('TODO: Implement collaboration notification - type: $type, project: $projectTitle');
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'collaboration',
+      'Collaborations',
+      channelDescription: 'Notifications for collaborative projects',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final payloadData = {
+      'type': 'collaboration',
+      'projectId': projectId,
+      'eventType': type,
+      'projectTitle': projectTitle,
+      if (collaboratorName != null) 'collaboratorName': collaboratorName,
+      'actionUrl': 'app://project/$projectId',
+    };
+
+    await _flutterLocalNotificationsPlugin.show(
+      projectId.hashCode,
+      titleText,
+      bodyText,
+      details,
+      payload: jsonEncode(payloadData),
+    );
+
+    await _storeInAppNotification('collaboration', titleText, bodyText, payloadData);
   }
 
-  /// TODO: Implement push notification for AR events
-  /// Will notify users about AR exhibitions, virtual galleries, and live AR events
+  /// Push notification for AR events
+  /// Notifies users about AR exhibitions, virtual galleries, and live AR events.
   Future<void> showAREventNotification({
     required String eventId,
     required String eventTitle,
     required String type, // 'starting_soon', 'live', 'reminder', 'ended'
     DateTime? startTime,
   }) async {
-    // Placeholder for AR event notifications
+    if (!_permissionGranted) return;
+
+    String titleText = 'AR Event';
+    String bodyText = '';
+    switch (type) {
+      case 'starting_soon':
+        bodyText = 'AR event starting soon: $eventTitle';
+        break;
+      case 'live':
+        bodyText = 'AR event live: $eventTitle';
+        break;
+      case 'reminder':
+        bodyText = 'Reminder: $eventTitle';
+        break;
+      case 'ended':
+        bodyText = 'AR event ended: $eventTitle';
+        break;
+    }
+
     if (kIsWeb) {
       try {
         final mapData = {'type': 'ar_event', 'eventId': eventId, 'eventTitle': eventTitle, 'eventType': type, 'startTime': startTime?.toIso8601String(), 'actionUrl': 'app://ar_event/$eventId'};
-        String titleText = 'AR Event';
-        String bodyText = '';
-        switch (type) {
-          case 'starting_soon':
-            bodyText = 'AR Event starting soon: $eventTitle';
-            break;
-          case 'live':
-            bodyText = 'AR Event live: $eventTitle';
-            break;
-          case 'reminder':
-            bodyText = 'Reminder: $eventTitle';
-            break;
-          case 'ended':
-            bodyText = 'AR Event ended: $eventTitle';
-            break;
-        }
         await webshow.showNotification(titleText, bodyText, mapData);
+        await _storeInAppNotification('ar_event', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showAREventNotification failed: $e');
       }
     }
-    debugPrint('TODO: Implement AR event notification - type: $type, event: $eventTitle');
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'ar_events',
+      'AR Events',
+      channelDescription: 'Notifications for AR events',
+      importance: Importance.high,
+      priority: Priority.high,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final payloadData = {
+      'type': 'ar_event',
+      'eventId': eventId,
+      'eventTitle': eventTitle,
+      'eventType': type,
+      if (startTime != null) 'startTime': startTime.toIso8601String(),
+      'actionUrl': 'app://ar_event/$eventId',
+    };
+
+    await _flutterLocalNotificationsPlugin.show(
+      eventId.hashCode,
+      titleText,
+      bodyText,
+      details,
+      payload: jsonEncode(payloadData),
+    );
+
+    await _storeInAppNotification('ar_event', titleText, bodyText, payloadData);
   }
 
-  /// TODO: Implement push notification for challenge completion
-  /// Will notify users about daily/weekly challenges and rewards
+  /// Push notification for challenges
+  /// Notifies users about new challenges, progress, and completion.
   Future<void> showChallengeNotification({
     required String challengeId,
     required String challengeTitle,
@@ -1012,63 +1130,147 @@ class PushNotificationService {
     int? progress,
     int? total,
   }) async {
-    // Placeholder for challenge notifications
+    if (!_permissionGranted) return;
+
+    String titleText = 'Challenge';
+    String bodyText = '';
+    switch (type) {
+      case 'available':
+        bodyText = 'New challenge available: $challengeTitle';
+        break;
+      case 'progress':
+        bodyText = 'Challenge progress: ${progress ?? 0}/${total ?? 0}';
+        break;
+      case 'completed':
+        bodyText = 'Challenge completed: $challengeTitle';
+        break;
+    }
+
     if (kIsWeb) {
       try {
         final mapData = {'type': 'challenge', 'challengeId': challengeId, 'eventType': type, 'challengeTitle': challengeTitle, 'progress': progress, 'total': total, 'actionUrl': 'app://challenge/$challengeId'};
-        String titleText = 'Challenge';
-        String bodyText = '';
-        switch (type) {
-          case 'available':
-            bodyText = 'New challenge available: $challengeTitle';
-            break;
-          case 'progress':
-            bodyText = 'Challenge progress: $progress/$total';
-            break;
-          case 'completed':
-            bodyText = 'Challenge completed: $challengeTitle';
-            break;
-        }
         await webshow.showNotification(titleText, bodyText, mapData);
+        await _storeInAppNotification('challenge', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showChallengeNotification failed: $e');
       }
     }
-    debugPrint('TODO: Implement challenge notification - type: $type, challenge: $challengeTitle');
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'challenges',
+      'Challenges',
+      channelDescription: 'Notifications for challenges',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final payloadData = {
+      'type': 'challenge',
+      'challengeId': challengeId,
+      'eventType': type,
+      'challengeTitle': challengeTitle,
+      if (progress != null) 'progress': progress,
+      if (total != null) 'total': total,
+      'actionUrl': 'app://challenge/$challengeId',
+    };
+
+    await _flutterLocalNotificationsPlugin.show(
+      challengeId.hashCode,
+      titleText,
+      bodyText,
+      details,
+      payload: jsonEncode(payloadData),
+    );
+
+    await _storeInAppNotification('challenge', titleText, bodyText, payloadData);
   }
 
-  /// TODO: Implement push notification for token staking
-  /// Will notify users about staking rewards, unstaking, and pool updates
+  /// Push notification for token staking updates
+  /// Notifies users about rewards, unstaking, and pool updates.
   Future<void> showStakingNotification({
     required String type, // 'reward', 'unstake_ready', 'pool_update'
     double? rewardAmount,
     String? poolName,
   }) async {
-    // Placeholder for staking notifications
+    if (!_permissionGranted) return;
+
+    String titleText = 'Staking Update';
+    String bodyText = '';
+    switch (type) {
+      case 'reward':
+        bodyText = 'You earned ${rewardAmount ?? 0} from staking in ${poolName ?? 'the pool'}';
+        break;
+      case 'unstake_ready':
+        bodyText = 'Your staked tokens are ready to withdraw from ${poolName ?? 'the pool'}';
+        break;
+      case 'pool_update':
+        bodyText = 'Pool update: ${poolName ?? ''}';
+        break;
+    }
+
     if (kIsWeb) {
       try {
         final mapData = {'type': 'staking', 'eventType': type, 'rewardAmount': rewardAmount, 'poolName': poolName, 'actionUrl': 'app://staking'};
-        String titleText = 'Staking Update';
-        String bodyText = '';
-        switch (type) {
-          case 'reward':
-            bodyText = 'You earned $rewardAmount from staking in $poolName';
-            break;
-          case 'unstake_ready':
-            bodyText = 'Your staked tokens are ready to withdraw from $poolName';
-            break;
-          case 'pool_update':
-            bodyText = 'Pool update: $poolName';
-            break;
-        }
         await webshow.showNotification(titleText, bodyText, mapData);
+        await _storeInAppNotification('staking', titleText, bodyText, mapData);
         return;
       } catch (e) {
         debugPrint('PushNotificationService (web) showStakingNotification failed: $e');
       }
     }
-    debugPrint('TODO: Implement staking notification - type: $type');
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'staking',
+      'Staking',
+      channelDescription: 'Notifications for staking activity',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    final payloadData = {
+      'type': 'staking',
+      'eventType': type,
+      if (rewardAmount != null) 'rewardAmount': rewardAmount,
+      if (poolName != null) 'poolName': poolName,
+      'actionUrl': 'app://staking',
+    };
+
+    await _flutterLocalNotificationsPlugin.show(
+      DateTime.now().millisecondsSinceEpoch,
+      titleText,
+      bodyText,
+      details,
+      payload: jsonEncode(payloadData),
+    );
+
+    await _storeInAppNotification('staking', titleText, bodyText, payloadData);
   }
 
   /// Dispose service
@@ -1077,8 +1279,34 @@ class PushNotificationService {
     onNotificationReceived = null;
   }
 
-  /// Return in-app notifications stored locally (simple stub)
-  /// Stored as a JSON-encoded list of notification objects under key 'in_app_notifications'
+  Future<void> _storeInAppNotification(
+    String type,
+    String title,
+    String body,
+    Map<String, dynamic> payload,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final existing = prefs.getStringList('in_app_notifications') ?? <String>[];
+      final entry = <String, dynamic>{
+        'type': type,
+        'title': title,
+        'body': body,
+        'payload': payload,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      existing.insert(0, jsonEncode(entry));
+      if (existing.length > 100) {
+        existing.removeRange(100, existing.length);
+      }
+      await prefs.setStringList('in_app_notifications', existing);
+    } catch (e) {
+      debugPrint('PushNotificationService: failed to store in-app notification: $e');
+    }
+  }
+
+  /// Return in-app notifications stored locally.
+  /// Stored as a JSON-encoded list of notification objects under key 'in_app_notifications'.
   Future<List<Map<String, dynamic>>> getInAppNotifications() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList('in_app_notifications') ?? [];
@@ -1094,4 +1322,3 @@ class PushNotificationService {
     return out;
   }
 }
-

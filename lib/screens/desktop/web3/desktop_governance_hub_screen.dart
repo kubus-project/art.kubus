@@ -80,7 +80,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
                 // Right: Quick actions, DAO stats, and voting info
                 if (isLarge)
-                  Container(
+                  SizedBox(
                     width: 400,
                     child: _buildRightPanel(themeProvider),
                   ),
@@ -471,6 +471,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
 
         return Column(
           children: recentProposals.map((proposal) {
+            final scheme = Theme.of(context).colorScheme;
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
@@ -484,9 +485,9 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: proposal.status == 'Active' 
-                          ? Colors.green 
-                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: proposal.status == ProposalStatus.active
+                          ? scheme.tertiary
+                          : scheme.onSurface.withValues(alpha: 0.4),
                       shape: BoxShape.circle,
                     ),
                   ),

@@ -14,6 +14,7 @@ import 'token_swap.dart';
 import 'send_token_screen.dart';
 import 'receive_token_screen.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../utils/app_color_utils.dart';
 
 class WalletHome extends StatefulWidget {
   const WalletHome({super.key});
@@ -607,19 +608,21 @@ class _WalletHomeState extends State<WalletHome> {
   }
 
   Color _getTokenColor(String symbol) {
+    final scheme = Theme.of(context).colorScheme;
+    final base = scheme.primary;
     switch (symbol.toUpperCase()) {
       case 'KUB8':
-        return const Color(0xFF8B5CF6);
+        return base;
       case 'ETH':
-        return const Color(0xFF627EEA);
+        return AppColorUtils.shiftLightness(base, 0.12);
       case 'BTC':
-        return const Color(0xFFF7931A);
+        return AppColorUtils.shiftLightness(base, 0.20);
       case 'SOL':
-        return const Color(0xFF00D4AA);
+        return base;
       case 'MATIC':
-        return const Color(0xFF8247E5);
+        return AppColorUtils.shiftLightness(base, -0.10);
       default:
-        return const Color(0xFF6B7280);
+        return scheme.onSurface.withValues(alpha: 0.6);
     }
   }
 
@@ -725,9 +728,7 @@ class _WalletHomeState extends State<WalletHome> {
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: transaction.type == TransactionType.receive 
-                            ? Colors.green 
-                            : Theme.of(context).colorScheme.onSurface,
+                        color: _getTransactionColor(transaction.type),
                       ),
                     ),
                     Text(
@@ -747,19 +748,20 @@ class _WalletHomeState extends State<WalletHome> {
   }
 
   Color _getTransactionColor(TransactionType type) {
+    final scheme = Theme.of(context).colorScheme;
     switch (type) {
       case TransactionType.send:
-        return Colors.red;
+        return scheme.error;
       case TransactionType.receive:
-        return Colors.green;
+        return scheme.primary;
       case TransactionType.swap:
-        return Colors.blue;
+        return scheme.secondary;
       case TransactionType.stake:
-        return Colors.purple;
+        return AppColorUtils.shiftLightness(scheme.primary, -0.08);
       case TransactionType.unstake:
-        return Colors.orange;
+        return AppColorUtils.shiftLightness(scheme.primary, 0.10);
       case TransactionType.governanceVote:
-        return const Color(0xFF8B5CF6);
+        return scheme.primary;
     }
   }
 
@@ -850,5 +852,3 @@ class _WalletHomeState extends State<WalletHome> {
     );
   }
 }
-
-

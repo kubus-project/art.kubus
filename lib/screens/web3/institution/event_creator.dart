@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../models/institution.dart';
+import '../../../providers/institution_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../providers/web3provider.dart';
+import '../../../utils/wallet_utils.dart';
 
 class EventCreator extends StatefulWidget {
-  const EventCreator({super.key});
+  final Event? initialEvent;
+
+  const EventCreator({super.key, this.initialEvent});
 
   @override
   State<EventCreator> createState() => _EventCreatorState();
@@ -22,6 +29,8 @@ class _EventCreatorState extends State<EventCreator>
   final _locationController = TextEditingController();
   final _priceController = TextEditingController();
   final _capacityController = TextEditingController();
+
+  String? _institutionId;
   
   DateTime? _startDate;
   DateTime? _endDate;
@@ -32,6 +41,8 @@ class _EventCreatorState extends State<EventCreator>
   bool _isPublic = true;
   bool _allowRegistration = true;
   int _currentStep = 0;
+
+  bool get _isEditing => widget.initialEvent != null;
 
   @override
   void initState() {
@@ -58,6 +69,39 @@ class _EventCreatorState extends State<EventCreator>
     ));
     
     _animationController.forward();
+
+    final initial = widget.initialEvent;
+    if (initial != null) {
+      _institutionId = initial.institutionId;
+      _titleController.text = initial.title;
+      _descriptionController.text = initial.description;
+      _locationController.text = initial.location;
+      _priceController.text = initial.price?.toString() ?? '';
+      _capacityController.text = initial.capacity?.toString() ?? '';
+      _startDate = DateTime(initial.startDate.year, initial.startDate.month, initial.startDate.day);
+      _endDate = DateTime(initial.endDate.year, initial.endDate.month, initial.endDate.day);
+      _startTime = TimeOfDay.fromDateTime(initial.startDate);
+      _endTime = TimeOfDay.fromDateTime(initial.endDate);
+      _eventType = _eventTypeLabel(initial.type);
+      _category = _categoryLabel(initial.category);
+      _isPublic = initial.isPublic;
+      _allowRegistration = initial.allowRegistration;
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_institutionId != null && _institutionId!.isNotEmpty) return;
+    final provider = context.read<InstitutionProvider>();
+    final selected = provider.selectedInstitution?.id;
+    if (selected != null && selected.isNotEmpty) {
+      _institutionId = selected;
+      return;
+    }
+    if (provider.institutions.isNotEmpty) {
+      _institutionId = provider.institutions.first.id;
+    }
   }
 
   @override
@@ -101,7 +145,7 @@ class _EventCreatorState extends State<EventCreator>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Create New Event',
+                _isEditing ? 'Edit Event' : 'Create New Event',
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -176,6 +220,8 @@ class _EventCreatorState extends State<EventCreator>
           children: [
             _buildSectionTitle('Basic Information'),
             const SizedBox(height: 24),
+            _buildInstitutionSelector(),
+            const SizedBox(height: 16),
             _buildTextField(
               controller: _titleController,
               label: 'Event Title',
@@ -512,6 +558,89 @@ class _EventCreatorState extends State<EventCreator>
     );
   }
 
+  Widget _buildInstitutionSelector() {
+    return Consumer<InstitutionProvider>(
+      builder: (context, provider, _) {
+        final institutions = provider.institutions;
+        if (institutions.isEmpty) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.location_city, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'No institutions available. Load or create an institution first.',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final selectedId = (_institutionId != null && _institutionId!.isNotEmpty)
+            ? _institutionId!
+            : institutions.first.id;
+        if (_institutionId != selectedId) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            setState(() => _institutionId = selectedId);
+          });
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Institution',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+              ),
+              child: DropdownButton<String>(
+                value: selectedId,
+                isExpanded: true,
+                underline: const SizedBox(),
+                dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                items: institutions.map((institution) {
+                  return DropdownMenuItem<String>(
+                    value: institution.id,
+                    child: Text(institution.name, overflow: TextOverflow.ellipsis),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() => _institutionId = value);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildDropdown({
     required String label,
     required String value,
@@ -688,7 +817,7 @@ class _EventCreatorState extends State<EventCreator>
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ],
       ),
@@ -780,28 +909,132 @@ class _EventCreatorState extends State<EventCreator>
     }
   }
 
-  void _createEvent() {
-    // Simulate event creation
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Success!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-        content: Text(
-          'Your event has been created successfully and is pending approval.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _resetForm();
-            },
-            child: Text('Create Another'),
-          ),
-        ],
-      ),
+  void _createEvent() async {
+    if (!_validateCurrentStep()) return;
+
+    final provider = context.read<InstitutionProvider>();
+    final institutions = provider.institutions;
+    final institutionId = (_institutionId != null && _institutionId!.isNotEmpty)
+        ? _institutionId!
+        : provider.selectedInstitution?.id ?? (institutions.isNotEmpty ? institutions.first.id : null);
+
+    if (institutionId == null || institutionId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No institution available for this event')),
+      );
+      return;
+    }
+
+    final institution = provider.getInstitutionById(institutionId);
+    if (institution == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selected institution not found')),
+      );
+      return;
+    }
+
+    final startDate = _startDate;
+    final endDate = _endDate;
+    if (startDate == null || endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select start and end dates')),
+      );
+      return;
+    }
+
+    final startTime = _startTime ?? const TimeOfDay(hour: 10, minute: 0);
+    final endTime = _endTime ?? const TimeOfDay(hour: 12, minute: 0);
+
+    final startAt = DateTime(startDate.year, startDate.month, startDate.day, startTime.hour, startTime.minute);
+    final endAt = DateTime(endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
+    if (!endAt.isAfter(startAt)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('End time must be after start time')),
+      );
+      return;
+    }
+
+    final priceText = _priceController.text.trim();
+    final capacityText = _capacityController.text.trim();
+    final price = priceText.isEmpty ? null : double.tryParse(priceText);
+    final capacity = capacityText.isEmpty ? null : int.tryParse(capacityText);
+
+    final profileProvider = context.read<ProfileProvider>();
+    final web3Provider = context.read<Web3Provider>();
+    final createdBy = WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
     );
+
+    final initial = widget.initialEvent;
+    final event = Event(
+      id: initial?.id ?? 'evt_${DateTime.now().millisecondsSinceEpoch}',
+      title: _titleController.text.trim(),
+      description: _descriptionController.text.trim(),
+      type: _parseEventType(_eventType),
+      category: _parseEventCategory(_category),
+      institutionId: institutionId,
+      institution: institution,
+      startDate: startAt,
+      endDate: endAt,
+      location: _locationController.text.trim(),
+      latitude: institution.latitude,
+      longitude: institution.longitude,
+      price: price,
+      capacity: capacity,
+      currentAttendees: initial?.currentAttendees ?? 0,
+      isPublic: _isPublic,
+      allowRegistration: _allowRegistration,
+      imageUrls: initial?.imageUrls ?? const [],
+      featuredArtworkIds: initial?.featuredArtworkIds ?? const [],
+      artistIds: initial?.artistIds ?? const [],
+      createdAt: initial?.createdAt ?? DateTime.now(),
+      createdBy: (initial?.createdBy.isNotEmpty == true) ? initial!.createdBy : (createdBy.isNotEmpty ? createdBy : 'local_user'),
+    );
+
+    try {
+      if (_isEditing) {
+        await provider.updateEvent(event);
+      } else {
+        await provider.createEvent(event);
+      }
+
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          title: Text(
+            _isEditing ? 'Event updated' : 'Event created',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          ),
+          content: Text(
+            _isEditing
+                ? 'Your event has been updated successfully.'
+                : 'Your event has been created successfully.',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                if (_isEditing) {
+                  Navigator.pop(context);
+                } else {
+                  _resetForm();
+                }
+              },
+              child: Text(_isEditing ? 'Done' : 'Create Another'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save event: $e')),
+      );
+    }
   }
 
   void _resetForm() {
@@ -870,6 +1103,75 @@ class _EventCreatorState extends State<EventCreator>
     return '${_startTime!.format(context)} - ${_endTime!.format(context)}';
   }
 
+  EventType _parseEventType(String label) {
+    switch (label.toLowerCase()) {
+      case 'exhibition':
+        return EventType.exhibition;
+      case 'workshop':
+        return EventType.workshop;
+      case 'performance':
+        return EventType.performance;
+      case 'talk':
+      case 'conference':
+        return EventType.conference;
+      default:
+        return EventType.exhibition;
+    }
+  }
+
+  EventCategory _parseEventCategory(String label) {
+    switch (label.toLowerCase()) {
+      case 'art':
+        return EventCategory.art;
+      case 'digital art':
+      case 'digital':
+        return EventCategory.digital;
+      case 'photography':
+        return EventCategory.photography;
+      case 'sculpture':
+        return EventCategory.sculpture;
+      case 'mixed media':
+      case 'mixedmedia':
+        return EventCategory.mixedMedia;
+      default:
+        return EventCategory.art;
+    }
+  }
+
+  String _eventTypeLabel(EventType type) {
+    switch (type) {
+      case EventType.exhibition:
+        return 'Exhibition';
+      case EventType.workshop:
+        return 'Workshop';
+      case EventType.conference:
+        return 'Conference';
+      case EventType.performance:
+        return 'Performance';
+      case EventType.galleryOpening:
+        return 'Gallery Opening';
+      case EventType.auction:
+        return 'Auction';
+    }
+  }
+
+  String _categoryLabel(EventCategory category) {
+    switch (category) {
+      case EventCategory.art:
+        return 'Art';
+      case EventCategory.photography:
+        return 'Photography';
+      case EventCategory.sculpture:
+        return 'Sculpture';
+      case EventCategory.digital:
+        return 'Digital Art';
+      case EventCategory.mixedMedia:
+        return 'Mixed Media';
+      case EventCategory.installation:
+        return 'Installation';
+    }
+  }
+
   void _showHelp() {
     showDialog(
       context: context,
@@ -894,10 +1196,3 @@ class _EventCreatorState extends State<EventCreator>
     );
   }
 }
-
-
-
-
-
-
-

@@ -16,11 +16,9 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      try {
-        context.read<ArtworkProvider>().ensureHistoryLoaded();
-      } catch (_) {}
-    });
+    try {
+      context.read<ArtworkProvider>().ensureHistoryLoaded();
+    } catch (_) {}
   }
 
   @override

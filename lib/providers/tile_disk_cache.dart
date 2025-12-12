@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
 import 'tile_disk_cache_io.dart'
-    if (dart.library.html) 'tile_disk_cache_web.dart';
+    if (dart.library.js_interop) 'tile_disk_cache_web.dart';
 
 /// Platform-aware tile cache used by tile providers.
 abstract class TileDiskCache {

@@ -142,7 +142,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
                 // Right: Quick actions, stats, and analytics
                 if (isLarge)
-                  Container(
+                  SizedBox(
                     width: 400,
                     child: _buildRightPanel(themeProvider),
                   ),

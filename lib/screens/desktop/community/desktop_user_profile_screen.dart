@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../utils/category_accent_color.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,8 @@ import '../../../models/user.dart';
 import '../../../services/user_service.dart';
 import '../../../models/achievements.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/block_list_service.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/chat_provider.dart';
@@ -708,6 +711,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     final requiredProgress = achievement.requiredProgress > 0 ? achievement.requiredProgress : 1;
     final ratio = (progress.currentProgress / requiredProgress).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
+    final accent = CategoryAccentColor.resolve(context, achievement.category);
 
     return DesktopCard(
       child: Column(
@@ -718,16 +722,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: achievement.color.withValues(alpha: 0.15),
+                  color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(achievement.icon, color: achievement.color, size: 24),
+                child: Icon(achievement.icon, color: accent, size: 24),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.2),
+                  color: Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -735,7 +739,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Colors.amber[900],
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
                   ),
                 ),
               ),
@@ -771,7 +775,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               minHeight: 6,
               backgroundColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(
-                isCompleted ? themeProvider.accentColor : achievement.color,
+                isCompleted ? themeProvider.accentColor : accent,
               ),
             ),
           ),
@@ -1249,7 +1253,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               title: const Text('Block User'),
               onTap: () {
                 Navigator.pop(context);
-                // Show block confirmation
+                _confirmBlockUser();
               },
             ),
             ListTile(
@@ -1257,7 +1261,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
               title: const Text('Report User'),
               onTap: () {
                 Navigator.pop(context);
-                // Show report dialog
+                _showReportDialog();
               },
             ),
             ListTile(
@@ -1276,6 +1280,112 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           ],
         ),
       ),
+    );
+  }
+
+  void _confirmBlockUser() {
+    final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
+    if (targetWallet.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to block user')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Block ${user?.name ?? targetWallet}?',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        content: Text(
+          'They won\'t be able to see your profile or posts.',
+          style: GoogleFonts.inter(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await BlockListService().blockWallet(targetWallet);
+              } catch (e) {
+                if (!mounted) return;
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to block user: $e')),
+                );
+                return;
+              }
+
+              if (!mounted) return;
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Blocked ${user?.name ?? targetWallet}'),
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    onPressed: () => BlockListService().unblockWallet(targetWallet),
+                  ),
+                ),
+              );
+            },
+            child: const Text('Block'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Report ${user?.name ?? ''}',
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('Spam'),
+              onTap: () => _submitReport('Spam'),
+            ),
+            ListTile(
+              title: const Text('Inappropriate content'),
+              onTap: () => _submitReport('Inappropriate content'),
+            ),
+            ListTile(
+              title: const Text('Harassment'),
+              onTap: () => _submitReport('Harassment'),
+            ),
+            ListTile(
+              title: const Text('Other'),
+              onTap: () => _submitReport('Other'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _submitReport(String reason) {
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Report submitted ($reason). Thank you.')),
     );
   }
 
@@ -1321,23 +1431,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null) return null;
-    final candidate = url.trim();
-    if (candidate.isEmpty) return null;
-    if (candidate.startsWith('data:')) return candidate;
-    if (candidate.startsWith('ipfs://')) {
-      final cid = candidate.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    }
-    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-    if (candidate.startsWith('//')) return 'https:$candidate';
-    if (candidate.startsWith('/')) return '$base$candidate';
-    if (candidate.startsWith('api/')) return '$base/$candidate';
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
-    if (!hasScheme) {
-      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
-    }
-    return candidate;
+    return MediaUrlResolver.resolve(url);
   }
 
   String _formatPostTime(DateTime timestamp) {

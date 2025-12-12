@@ -13,8 +13,9 @@ class NotificationHandler {
 
   final PushNotificationService _notificationService = PushNotificationService();
   
-  // Navigation callback - will be set by main app
-  Function(BuildContext, String, Map<String, dynamic>)? onNavigate;
+  // Navigation callback - set by the app shell to route taps.
+  // Signature avoids requiring a BuildContext so this handler stays platform-agnostic.
+  void Function(String route, Map<String, dynamic> params)? onNavigate;
 
   /// Initialize notification handler
   void initialize() {
@@ -219,12 +220,17 @@ class NotificationHandler {
 
   /// Navigate to route with parameters
   void _navigate(String route, Map<String, dynamic> params) {
-    // This will be called by the app's navigation system
-    // For now, just print debug info
+    final navigator = onNavigate;
+    if (navigator != null) {
+      try {
+        navigator(route, params);
+      } catch (e) {
+        debugPrint('NotificationHandler: onNavigate failed for $route: $e');
+      }
+      return;
+    }
+
     debugPrint('NotificationHandler: Navigate to $route with params: $params');
-    
-    // TODO: Implement actual navigation when onNavigate is set
-    // onNavigate?.call(context, route, params);
   }
 
   /// Dispose handler

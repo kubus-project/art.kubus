@@ -214,14 +214,18 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Widget _buildInstitutionHeader() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.deepPurple, Colors.blue],
+          colors: [
+            scheme.primary,
+            scheme.primary.withValues(alpha: 0.75),
+          ],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -231,12 +235,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: scheme.onPrimary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(25),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.location_city,
-              color: Colors.white,
+              color: scheme.onPrimary,
               size: 26,
             ),
           ),
@@ -250,7 +254,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                    color: scheme.onPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -258,7 +262,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   'Host events, exhibitions, and AR experiences for your visitors',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Colors.white.withValues(alpha: 0.9),
+                    color: scheme.onPrimary.withValues(alpha: 0.9),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -478,6 +482,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
   Widget _buildTabButton(String label, IconData icon, int index, bool enabled) {
     final isSelected = _selectedIndex == index;
+    final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: enabled
           ? () => setState(() => _selectedIndex = index)
@@ -488,7 +493,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         margin: const EdgeInsets.symmetric(horizontal: 2),
         decoration: BoxDecoration(
-          color: enabled && isSelected ? const Color(0xFF667EEA) : Colors.transparent,
+          color: enabled && isSelected ? scheme.primaryContainer : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -497,8 +502,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
             Icon(
               icon,
               color: enabled && isSelected
-                  ? Theme.of(context).colorScheme.onPrimary
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
+                  ? scheme.onPrimaryContainer
+                  : scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -508,8 +513,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: enabled && isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
+                    ? scheme.onPrimaryContainer
+                    : scheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.35),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,

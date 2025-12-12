@@ -704,18 +704,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         width: 48,
                         height: 48,
                         decoration: BoxDecoration(
-                          color: (web3Provider.isConnected 
-                              ? Colors.green 
-                              : Colors.orange).withValues(alpha: 0.1),
+                          color: (web3Provider.isConnected
+                                  ? Theme.of(context).colorScheme.tertiary
+                                  : Theme.of(context).colorScheme.secondary)
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
                           web3Provider.isConnected 
                               ? Icons.check_circle 
                               : Icons.warning,
-                          color: web3Provider.isConnected 
-                              ? Colors.green 
-                              : Colors.orange,
+                          color: web3Provider.isConnected
+                              ? Theme.of(context).colorScheme.tertiary
+                              : Theme.of(context).colorScheme.secondary,
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -1177,7 +1178,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
@@ -1215,7 +1219,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
+            ),
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
@@ -1299,21 +1306,34 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   void _showResetPermissionFlagsDialog() {
+    final messenger = ScaffoldMessenger.of(context);
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text('Reset Permissions', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-        content: Text('This will reset all permission prompts so you can grant them again.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          'Reset Permissions',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        content: Text(
+          'This will reset all permission prompts so you can grant them again.',
+          style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onSurface),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Provider.of<ThemeProvider>(dialogContext, listen: false).accentColor,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onPrimary,
+            ),
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               await _resetPermissionFlags();
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permission flags reset')));
+              messenger.showSnackBar(const SnackBar(content: Text('Permission flags reset')));
             },
             child: const Text('Reset'),
           ),
@@ -1365,7 +1385,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       children: [
                         Icon(
                           isAvailable ? Icons.check_circle : Icons.cancel,
-                          color: isAvailable ? Colors.green : Colors.red,
+                          color: isAvailable ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
                           size: 24,
                         ),
                         const SizedBox(width: 12),
@@ -1385,7 +1405,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                                 isAvailable ? 'Available' : 'Not available',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: isAvailable ? Colors.green : Colors.red,
+                                  color: isAvailable ? Theme.of(context).colorScheme.tertiary : Theme.of(context).colorScheme.error,
                                 ),
                               ),
                             ],
@@ -1557,7 +1577,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.red,
+                color: Theme.of(context).colorScheme.error,
               ),
             ),
             const SizedBox(height: 8),

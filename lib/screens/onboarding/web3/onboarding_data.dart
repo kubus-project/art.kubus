@@ -179,7 +179,7 @@ class InstitutionHubOnboardingData {
       title: 'Launch Your Events',
       description: 'Ready to connect with the art community! Start by creating your first event or exploring ongoing exhibitions.',
       icon: Icons.launch,
-      gradientColors: [Color(0xFFEC4899), Color(0xFF8B5CF6)],
+      gradientColors: [Color(0xFFEC4899), Color(0xFF06B6D4)],
       features: [
         'Create your first event',
         'Explore community events',
@@ -198,7 +198,7 @@ class MarketplaceOnboardingData {
       title: 'Welcome to NFT Marketplace',
       description: 'Discover, buy, and sell unique digital art NFTs in our vibrant marketplace. Connect with artists and collectors worldwide.',
       icon: Icons.store,
-      gradientColors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+      gradientColors: [Color(0xFF6366F1), Color(0xFF3B82F6)],
       features: [
         'Browse thousands of unique NFTs',
         'Buy and sell with secure transactions',

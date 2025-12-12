@@ -730,7 +730,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         ? 'Voting disabled for the applicant profile.'
         : votingDisabledOverride
             ? 'Voting is disabled for this submission.'
-            : 'Voting will be added with on-chain governance.'; // TODO(web3): wire vote on-chain
+            : 'Review decisions are managed by the DAO review process.';
     final isPending = review.status.toLowerCase() == 'pending';
     final canModerate = AppConfig.isFeatureEnabled('daoReviewDecisions') && !isOwnSubmission && isPending;
     final isActionInFlight = _reviewActionId == review.id;
@@ -1336,12 +1336,15 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 
-  void _submitProposal() {
+  Future<void> _submitProposal() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
     if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all required fields'),
-          backgroundColor: Colors.red,
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Please fill in all required fields'),
+          backgroundColor: scheme.error,
         ),
       );
       return;
@@ -1352,7 +1355,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     final wallet = web3Provider.walletAddress;
 
     if (wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Connect your wallet to submit proposals.'),
         ),
@@ -1380,33 +1383,35 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
     final votingDays = int.tryParse(_votingPeriodController.text.trim()) ?? 7;
 
-    daoProvider
-        .createProposal(
-          walletAddress: wallet,
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          type: selectedType,
-          votingPeriodDays: votingDays,
-        )
-        .then((proposal) {
-      if (proposal != null) {
-        _clearForm();
-        setState(() => _selectedIndex = 0);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Proposal submitted to DAO'),
-            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          ),
-        );
-      }
-    }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    try {
+      final proposal = await daoProvider.createProposal(
+        walletAddress: wallet,
+        title: _titleController.text.trim(),
+        description: _descriptionController.text.trim(),
+        type: selectedType,
+        votingPeriodDays: votingDays,
+      );
+
+      if (!mounted) return;
+      if (proposal == null) return;
+
+      _clearForm();
+      setState(() => _selectedIndex = 0);
+      messenger.showSnackBar(
         SnackBar(
-          content: Text('Unable to submit proposal: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          content: const Text('Proposal submitted to DAO'),
+          backgroundColor: scheme.surfaceContainerHighest,
         ),
       );
-    });
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Unable to submit proposal: $e'),
+          backgroundColor: scheme.error,
+        ),
+      );
+    }
   }
 
   void _clearForm() {
@@ -1587,7 +1592,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[800]!),
+                  border: Border.all(color: Theme.of(context).colorScheme.outline),
                 ),
                 child: Row(
                   children: [
@@ -1596,10 +1601,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                       height: 40,
                       decoration: BoxDecoration(
                         color: tx.type == 'allocation'
-                            ? Colors.blue.withValues(alpha: 0.2)
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
                             : tx.type == 'reward'
-                                ? Colors.green.withValues(alpha: 0.2)
-                                : Colors.purple.withValues(alpha: 0.2),
+                                ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2)
+                                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Icon(
@@ -1609,10 +1614,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                 ? Icons.emoji_events
                                 : Icons.card_giftcard,
                         color: tx.type == 'allocation'
-                            ? Colors.blue
+                            ? Theme.of(context).colorScheme.primary
                             : tx.type == 'reward'
-                                ? Colors.green
-                                : Colors.purple,
+                                ? Theme.of(context).colorScheme.secondary
+                                : Theme.of(context).colorScheme.primary,
                         size: 20,
                       ),
                     ),
@@ -1633,7 +1638,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                             tx.description,
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Colors.grey[400],
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -2368,19 +2373,21 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   void _revokeDelegation() {
+    final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Delegation revoked successfully'),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: const Text('Delegation revoked successfully'),
+        backgroundColor: scheme.tertiary,
       ),
     );
   }
 
   void _selfDelegate() {
+    final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Self-delegation enabled'),
-        backgroundColor: Colors.green,
+      SnackBar(
+        content: const Text('Self-delegation enabled'),
+        backgroundColor: scheme.tertiary,
       ),
     );
   }
@@ -2389,9 +2396,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     final daoProvider = context.read<DAOProvider>();
     final web3Provider = context.read<Web3Provider>();
     final wallet = web3Provider.walletAddress;
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
 
     if (wallet.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Connect your wallet before voting'),
         ),
@@ -2407,17 +2416,19 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         votingPower: votingPower > 0 ? votingPower : 1,
         walletAddress: wallet,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Vote ${isYes ? 'Yes' : 'No'} submitted'),
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor: scheme.surfaceContainerHighest,
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Unable to submit vote: $e'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: scheme.error,
         ),
       );
     }
@@ -2459,9 +2470,6 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 }
-
-
-
 
 
 

@@ -6,7 +6,6 @@ class Achievement {
   final String title;
   final String description;
   final IconData icon;
-  final Color color;
   final int requiredProgress;
   final String category;
   final int points;
@@ -17,7 +16,6 @@ class Achievement {
     required this.title,
     required this.description,
     required this.icon,
-    required this.color,
     this.requiredProgress = 1,
     required this.category,
     this.points = 10,
@@ -68,7 +66,6 @@ const List<Achievement> allAchievements = [
       title: 'First AR Explorer',
       description: 'Visited your first AR artwork',
       icon: Icons.visibility,
-      color: Color.fromARGB(255, 255, 255, 255),
       category: 'AR Exploration',
       points: 10,
       rewardDescription: 'Unlock AR viewing tips',
@@ -78,7 +75,6 @@ const List<Achievement> allAchievements = [
       title: 'AR Art Collector',
       description: 'Viewed 10 different AR artworks',
       icon: Icons.collections,
-      color: Color(0xFF9C27B0),
       requiredProgress: 10,
       category: 'AR Exploration',
       points: 25,
@@ -89,7 +85,6 @@ const List<Achievement> allAchievements = [
       title: 'AR Enthusiast',
       description: 'Spent 1 hour total viewing AR art',
       icon: Icons.timer,
-      color: Color(0xFF00D4AA),
       requiredProgress: 60, // 60 minutes
       category: 'AR Exploration',
       points: 30,
@@ -99,7 +94,6 @@ const List<Achievement> allAchievements = [
       title: 'AR Master',
       description: 'Viewed 50 different AR artworks',
       icon: Icons.auto_awesome,
-      color: Color(0xFFFFD700),
       requiredProgress: 50,
       category: 'AR Exploration',
       points: 100,
@@ -112,7 +106,6 @@ const List<Achievement> allAchievements = [
       title: 'Gallery Explorer',
       description: 'Visited 5 different galleries',
       icon: Icons.explore,
-      color: Color(0xFF4CAF50),
       requiredProgress: 5,
       category: 'Exploration',
       points: 20,
@@ -122,7 +115,6 @@ const List<Achievement> allAchievements = [
       title: 'Art World Traveler',
       description: 'Visited galleries in 10 different cities',
       icon: Icons.public,
-      color: Color(0xFF2196F3),
       requiredProgress: 10,
       category: 'Exploration',
       points: 75,
@@ -132,7 +124,6 @@ const List<Achievement> allAchievements = [
       title: 'Local Art Guide',
       description: 'Discovered 25 artworks in your city',
       icon: Icons.location_on,
-      color: Color(0xFFFF5722),
       requiredProgress: 25,
       category: 'Exploration',
       points: 40,
@@ -144,7 +135,6 @@ const List<Achievement> allAchievements = [
       title: 'Community Member',
       description: 'Participated in DAO voting',
       icon: Icons.how_to_vote,
-      color: Color(0xFF8BC34A),
       category: 'Community',
       points: 15,
     ),
@@ -153,7 +143,6 @@ const List<Achievement> allAchievements = [
       title: 'Art Critic',
       description: 'Left 10 reviews on artworks',
       icon: Icons.rate_review,
-      color: Color(0xFFFF9800),
       requiredProgress: 10,
       category: 'Community',
       points: 25,
@@ -163,7 +152,6 @@ const List<Achievement> allAchievements = [
       title: 'Social Butterfly',
       description: 'Shared 20 artworks with friends',
       icon: Icons.share,
-      color: Color(0xFFE91E63),
       requiredProgress: 20,
       category: 'Community',
       points: 30,
@@ -173,7 +161,6 @@ const List<Achievement> allAchievements = [
       title: 'Art Influencer',
       description: 'Get 100 likes on your shared content',
       icon: Icons.trending_up,
-      color: Color(0xFF673AB7),
       requiredProgress: 100,
       category: 'Community',
       points: 50,
@@ -185,7 +172,6 @@ const List<Achievement> allAchievements = [
       title: 'First Love',
       description: 'Added your first artwork to favorites',
       icon: Icons.favorite,
-      color: Color(0xFFE91E63),
       category: 'Collection',
       points: 5,
     ),
@@ -194,7 +180,6 @@ const List<Achievement> allAchievements = [
       title: 'Art Curator',
       description: 'Created 5 custom collections',
       icon: Icons.folder_special,
-      color: Color(0xFF795548),
       requiredProgress: 5,
       category: 'Collection',
       points: 35,
@@ -204,7 +189,6 @@ const List<Achievement> allAchievements = [
       title: 'Mega Collector',
       description: 'Have 100 artworks in your favorites',
       icon: Icons.collections_bookmark,
-      color: Color(0xFFFFD700),
       requiredProgress: 100,
       category: 'Collection',
       points: 75,
@@ -216,7 +200,6 @@ const List<Achievement> allAchievements = [
       title: 'Early Adopter',
       description: 'One of the first 1000 users',
       icon: Icons.stars,
-      color: Color(0xFFFFD700),
       category: 'Special',
       points: 100,
       rewardDescription: 'Exclusive early adopter badge',
@@ -226,7 +209,6 @@ const List<Achievement> allAchievements = [
       title: 'Beta Tester',
       description: 'Tested new features before release',
       icon: Icons.bug_report,
-      color: Color(0xFF9C27B0),
       category: 'Special',
       points: 50,
     ),
@@ -235,7 +217,6 @@ const List<Achievement> allAchievements = [
       title: 'Daily Art Lover',
       description: 'Used the app for 30 consecutive days',
       icon: Icons.calendar_today,
-      color: Color(0xFF4CAF50),
       requiredProgress: 30,
       category: 'Special',
       points: 60,
@@ -245,7 +226,6 @@ const List<Achievement> allAchievements = [
       title: 'Art Supporter',
       description: 'Made your first NFT purchase',
       icon: Icons.shopping_cart,
-      color: Color(0xFF00BCD4),
       category: 'Web3',
       points: 40,
     ),
@@ -254,7 +234,6 @@ const List<Achievement> allAchievements = [
       title: 'Art Patron',
       description: 'Supported 10 different artists',
       icon: Icons.volunteer_activism,
-      color: Color(0xFFFF6B6B),
       requiredProgress: 10,
       category: 'Web3',
       points: 80,
@@ -270,5 +249,4 @@ Achievement? getAchievementById(String id) {
     return null;
   }
 }
-
 

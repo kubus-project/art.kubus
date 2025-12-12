@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../config/config.dart';
+import '../../../models/collectible.dart';
+import '../../../providers/collectibles_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../components/desktop_widgets.dart';
-import '../../../services/backend_api_service.dart';
 import '../../../widgets/empty_state_card.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../web3/wallet/token_swap.dart';
 
 /// Desktop wallet screen with professional dashboard layout
@@ -759,13 +761,49 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       _nftError = null;
     });
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id');
-      if (userId == null || userId.isEmpty) {
+      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+      final walletAddress = web3Provider.walletAddress.trim();
+      if (walletAddress.isEmpty) {
         throw Exception('Connect your wallet to fetch collectibles.');
       }
-      final backend = BackendApiService();
-      final items = await backend.getUserNFTs(userId: userId);
+
+      final collectiblesProvider = Provider.of<CollectiblesProvider>(context, listen: false);
+      if (!collectiblesProvider.isLoading &&
+          collectiblesProvider.allSeries.isEmpty &&
+          collectiblesProvider.allCollectibles.isEmpty) {
+        await collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment);
+      }
+
+      final seriesById = <String, CollectibleSeries>{
+        for (final series in collectiblesProvider.allSeries) series.id: series,
+      };
+
+      final owned = collectiblesProvider.getCollectiblesByOwner(walletAddress).where((collectible) {
+        final series = seriesById[collectible.seriesId];
+        return series?.type == CollectibleType.nft;
+      }).toList();
+
+      final items = owned.map((collectible) {
+        final series = seriesById[collectible.seriesId];
+        final rawImage = series?.imageUrl ?? series?.animationUrl;
+        final resolvedImage = rawImage == null ? null : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+        return <String, dynamic>{
+          'id': collectible.id,
+          'tokenId': collectible.tokenId,
+          'token_id': collectible.tokenId,
+          'status': collectible.status.name,
+          'transactionHash': collectible.transactionHash,
+          'transaction_hash': collectible.transactionHash,
+          'name': series?.name ?? 'Collectible',
+          'title': series?.name ?? 'Collectible',
+          'imageUrl': resolvedImage,
+          'image': resolvedImage,
+          'creator': series?.creatorAddress,
+          'artist': series?.creatorAddress,
+          'rarity': series?.rarity.name,
+        };
+      }).toList();
+
       if (mounted) {
         setState(() {
           _nfts = items;

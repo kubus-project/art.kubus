@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../models/institution.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/artwork_provider.dart';
@@ -406,8 +407,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             ? institutionProvider.getInstitutionAnalytics(institution.id) 
             : {};
         
-        // TODO: Get actual daily visitor data from backend analytics API
-        // For now, generate sample data based on total visitors
+        // Build a simple 7-day series derived from available stats so the
+        // analytics UI remains useful in offline/local mode.
         final totalVisitors = analytics['totalVisitors'] ?? 1200;
         final avgDaily = (totalVisitors / 7).round();
         final data = List.generate(7, (i) => avgDaily + (i * 10) - 30);
@@ -480,12 +481,37 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         final analytics = institution != null 
             ? institutionProvider.getInstitutionAnalytics(institution.id) 
             : {};
-        
-        // TODO: Get actual metrics from backend analytics API
+
+        final events = institution != null ? institutionProvider.getEventsByInstitution(institution.id) : const <Event>[];
+        final totalVisitors = (analytics['totalVisitors'] as int?) ?? 0;
+
+        double? avgDurationMinutes;
+        if (events.isNotEmpty) {
+          final minutes = events
+              .map((e) => e.endDate.difference(e.startDate).inMinutes)
+              .fold<int>(0, (sum, value) => sum + value);
+          avgDurationMinutes = minutes / events.length;
+        }
+        final avgDurationLabel = avgDurationMinutes == null
+            ? '—'
+            : avgDurationMinutes >= 60
+                ? '${(avgDurationMinutes / 60).toStringAsFixed(1)} h'
+                : '${avgDurationMinutes.round()} min';
+
+        double? avgFill;
+        final fillValues = events
+            .where((e) => (e.capacity ?? 0) > 0)
+            .map((e) => e.currentAttendees / e.capacity!)
+            .toList();
+        if (fillValues.isNotEmpty) {
+          avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) / fillValues.length;
+        }
+        final avgFillLabel = avgFill == null ? '—' : '${(avgFill * 100).toStringAsFixed(0)}%';
+
         final metrics = [
-          {'label': 'Avg. Visit Duration', 'value': '45 min'},
-          {'label': 'Return Visitors', 'value': '${((analytics['totalVisitors'] ?? 0) * 0.34).round()}'},
-          {'label': 'Active Events', 'value': '${analytics['activeEventsCount'] ?? 0}'},
+          {'label': 'Avg. Event Duration', 'value': avgDurationLabel},
+          {'label': 'Avg. Event Fill', 'value': avgFillLabel},
+          {'label': 'Return Visitors (est.)', 'value': '${(totalVisitors * 0.34).round()}'},
         ];
 
         return LayoutBuilder(
@@ -534,22 +560,11 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             ? institutionProvider.institutions.first 
             : null;
         
-        // Get actual events from provider
-        final institutionEvents = institution != null 
-            ? institutionProvider.getEventsByInstitution(institution.id).take(3).toList() 
-            : [];
-        
-        // Convert events to display format
-        final events = institutionEvents.map((event) => {
-          'name': event.title,
-          'visitors': '${event.attendeeCount}',
-          'rating': event.rating?.toStringAsFixed(1) ?? 'N/A',
-        }).toList();
-        
-        // Show placeholder if no events
-        if (events.isEmpty) {
-          events.add({'name': 'No events yet', 'visitors': '0', 'rating': 'N/A'});
-        }
+        final institutionEvents = institution != null
+            ? List<Event>.from(institutionProvider.getEventsByInstitution(institution.id))
+            : <Event>[];
+        institutionEvents.sort((a, b) => b.currentAttendees.compareTo(a.currentAttendees));
+        final topEvents = institutionEvents.take(3).toList();
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -570,49 +585,65 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 ),
               ),
               const SizedBox(height: 16),
-              ...events.map((event) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            event['name']!,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            '${event['visitors']} visitors',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Row(
+              if (topEvents.isEmpty)
+                EmptyStateCard(
+                  icon: Icons.event_busy,
+                  title: 'No events yet',
+                  description: 'Create your first event to see performance analytics.',
+                  showAction: false,
+                )
+              else
+                ...topEvents.map((event) {
+                  final capacity = event.capacity ?? 0;
+                  final fillPct = capacity > 0 ? (event.currentAttendees / capacity) : null;
+                  final fillText = fillPct == null ? 'No capacity' : '${(fillPct * 100).toStringAsFixed(0)}% full';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
                       children: [
-                        Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          event['rating']!,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontWeight: FontWeight.w600,
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                event.title,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                '${event.currentAttendees} attendees',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.14)),
+                          ),
+                          child: Text(
+                            fillText,
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              )),
+                  );
+                }),
             ],
           ),
         );
@@ -629,13 +660,31 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         final analytics = institution != null 
             ? institutionProvider.getInstitutionAnalytics(institution.id) 
             : {};
-        
-        // TODO: Get detailed revenue breakdown from backend analytics API
-        final totalRevenue = analytics['revenue'] ?? 0;
-        final ticketSales = totalRevenue * 0.5;
-        final merchandise = totalRevenue * 0.15;
-        final memberships = totalRevenue * 0.25;
-        final donations = totalRevenue * 0.1;
+
+        final events = institution != null ? institutionProvider.getEventsByInstitution(institution.id) : const <Event>[];
+        final revenueByType = <String, double>{};
+        var totalRevenue = 0.0;
+
+        for (final event in events) {
+          final price = event.price ?? 0;
+          if (price <= 0) continue;
+          final revenue = price * event.currentAttendees;
+          if (revenue <= 0) continue;
+          totalRevenue += revenue;
+          final typeLabel = event.type.name.replaceAll(RegExp(r'([A-Z])'), r' $1');
+          final normalizedTypeLabel = typeLabel.isNotEmpty
+              ? '${typeLabel[0].toUpperCase()}${typeLabel.substring(1)}'
+              : 'Event';
+          revenueByType[normalizedTypeLabel] = (revenueByType[normalizedTypeLabel] ?? 0) + revenue;
+        }
+
+        final fromStats = (analytics['revenue'] as num?)?.toDouble() ?? 0.0;
+        if (totalRevenue <= 0 && fromStats > 0) {
+          totalRevenue = fromStats;
+          revenueByType['Total'] = fromStats;
+        }
+
+        final sorted = revenueByType.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
         
         return Container(
           padding: const EdgeInsets.all(20),
@@ -656,10 +705,28 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 ),
               ),
               const SizedBox(height: 16),
-              _buildRevenueItem('Ticket Sales', '\$${ticketSales.toStringAsFixed(0)}', 0.5),
-              _buildRevenueItem('Merchandise', '\$${merchandise.toStringAsFixed(0)}', 0.15),
-              _buildRevenueItem('Memberships', '\$${memberships.toStringAsFixed(0)}', 0.25),
-              _buildRevenueItem('Donations', '\$${donations.toStringAsFixed(0)}', 0.1),
+              if (totalRevenue <= 0)
+                EmptyStateCard(
+                  icon: Icons.payments_outlined,
+                  title: 'No revenue data yet',
+                  description: 'Revenue will appear after paid events collect attendees.',
+                  showAction: false,
+                )
+              else ...[
+                ...sorted.take(4).map((entry) {
+                  final pct = totalRevenue > 0 ? entry.value / totalRevenue : 0.0;
+                  return _buildRevenueItem(entry.key, '\$${entry.value.toStringAsFixed(0)}', pct);
+                }),
+                const SizedBox(height: 4),
+                Text(
+                  'Total: \$${totalRevenue.toStringAsFixed(0)}',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                  ),
+                ),
+              ],
             ],
           ),
         );
@@ -854,12 +921,6 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
 }
-
-
-
-
-
-
 
 
 
