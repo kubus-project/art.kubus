@@ -51,6 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
+  bool _profilePrefsListenerAttached = false;
   
   // Privacy settings state
   bool _showActivityStatus = true;
@@ -93,6 +94,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    if (!_profilePrefsListenerAttached) {
+      profileProvider.addListener(_handleProfilePreferencesChanged);
+      _profilePrefsListenerAttached = true;
+    }
     if (!_didScheduleDataFetch) {
       _didScheduleDataFetch = true;
       _postsFuture = _loadUserPosts();
@@ -113,6 +118,11 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   @override
   void dispose() {
+    if (_profilePrefsListenerAttached) {
+      Provider.of<ProfileProvider>(context, listen: false)
+          .removeListener(_handleProfilePreferencesChanged);
+      _profilePrefsListenerAttached = false;
+    }
     _animationController.dispose();
     super.dispose();
   }
@@ -757,6 +767,15 @@ class _ProfileScreenState extends State<ProfileScreen>
       } catch (e) {
         debugPrint('ProfileScreen: profile reload failed: $e');
       }
+    }
+  }
+
+  void _handleProfilePreferencesChanged() {
+    if (!mounted) return;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final nextShowStatus = profileProvider.preferences.showActivityStatus;
+    if (nextShowStatus != _showActivityStatus) {
+      setState(() => _showActivityStatus = nextShowStatus);
     }
   }
 
