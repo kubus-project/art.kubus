@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:js_util' as js_util;
+import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
@@ -8,9 +8,10 @@ Future<bool> requestWebNotificationPermission() async {
     // If already allowed, return true
     if (web.Notification.permission == 'granted') return true;
 
-    final status = await js_util.promiseToFuture<String>(
-      web.Notification.requestPermission(),
-    );
+    // requestPermission() returns a JS Promise on web. Avoid dart:js_util here so
+    // the analyzer doesn't choke on non-web platforms.
+    final statusAny = await (web.Notification.requestPermission() as JSPromise<JSAny?>).toDart;
+    final status = (statusAny as JSString?)?.toDart;
     return status == 'granted';
   } catch (_) {
     return false;
