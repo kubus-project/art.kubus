@@ -975,10 +975,19 @@ class _CommunityScreenState extends State<CommunityScreen>
       final sameAuthor = existing.authorId == candidate.authorId;
       final sameContent = existing.content == candidate.content;
       final timestampDiff = existing.timestamp.difference(candidate.timestamp).abs();
+      final existingPostType = (existing.postType ?? '').toLowerCase();
+      final candidatePostType = (candidate.postType ?? '').toLowerCase();
+      final isRepost = candidatePostType == 'repost' || existingPostType == 'repost';
+      final sameRepostSource =
+          candidatePostType == 'repost' &&
+              existingPostType == 'repost' &&
+              candidate.originalPostId != null &&
+              candidate.originalPostId == existing.originalPostId &&
+              sameAuthor;
 
       if (existing.id == candidate.id) return true;
-      if (existing.originalPostId != null && existing.originalPostId == candidate.id) return true;
-      if (candidate.originalPostId != null && candidate.originalPostId == existing.id) return true;
+      if (sameRepostSource) return true;
+      if (isRepost) return false;
       return sameAuthor && sameContent && timestampDiff < proximity;
     }
 
