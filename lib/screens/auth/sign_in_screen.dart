@@ -319,12 +319,23 @@ class _SignInScreenState extends State<SignInScreen> {
     if (isDesktop) {
       return DesktopAuthShell(
         title: 'Sign in to art.kubus',
-        subtitle: 'Choose wallet, email, or Google. You keep ownership of your assets.',
+        subtitle: 'and start exploring, creating, and connecting with other artists.',
         highlights: const [
           'Wallet, email, or Google sign-in',
           'No gas needed to authenticate',
           'Ownership stays with you',
         ],
+        icon: GradientIconCard(
+          start: const Color(0xFF0EA5E9),
+          end: const Color(0xFF10B981),
+          icon: Icons.login_rounded,
+          iconSize: 52,
+          width: 100,
+          height: 100,
+          radius: 20,
+        ),
+        gradientStart: const Color(0xFF0EA5E9),
+        gradientEnd: const Color(0xFF10B981),
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,
@@ -346,7 +357,7 @@ class _SignInScreenState extends State<SignInScreen> {
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -363,7 +374,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   form,
                 ],
               ),
@@ -384,32 +395,33 @@ class _SignInScreenState extends State<SignInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(isDesktop ? 12 : 18),
-          child: Column(
-            children: [
-              GradientIconCard(
-                start: const Color(0xFF0EA5E9),
-                end: const Color(0xFF10B981),
-                icon: Icons.login_rounded,
-                iconSize: 52,
-                width: isDesktop ? 88 : 100,
-                height: isDesktop ? 88 : 100,
-                radius: 20,
-              ),
-              const SizedBox(height: 12),
-              Text('Sign in to art.kubus', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
-              const SizedBox(height: 8),
-              Text(
-                'Choose wallet, email, or Google. You keep ownership of your assets.',
-                style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
-                textAlign: TextAlign.center,
-              ),
-            ],
+        if (!isDesktop)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                GradientIconCard(
+                  start: const Color(0xFF0EA5E9),
+                  end: const Color(0xFF10B981),
+                  icon: Icons.login_rounded,
+                  iconSize: 52,
+                  width: 100,
+                  height: 100,
+                  radius: 20,
+                ),
+                const SizedBox(height: 12),
+                Text('Sign in to art.kubus', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+                const SizedBox(height: 8),
+                Text(
+                  'and start exploring, creating, and connecting with other artists.',
+                  style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
+        if (!isDesktop) const SizedBox(height: 20),
         if (enableWallet)
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(
@@ -435,7 +447,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Or use a simple login', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+              Text('Or log in with your email or username', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
               const SizedBox(height: 12),
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[

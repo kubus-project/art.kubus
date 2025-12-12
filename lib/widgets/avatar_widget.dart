@@ -139,7 +139,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     final radius = widget.radius;
     final double size = radius * 2;
     // Boxy shape: Rounded Rectangle with corner radius ~25% of width
-    final borderRadius = BorderRadius.circular(radius * 0.5); 
+    final borderRadius = BorderRadius.circular(radius * 0.15); 
 
     final backgroundColor = Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.white;
     Widget content;

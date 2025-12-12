@@ -33,13 +33,16 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _tagsController = TextEditingController();
+  final TextEditingController _locationNameController = TextEditingController();
+  final TextEditingController _latitudeController = TextEditingController();
+  final TextEditingController _longitudeController = TextEditingController();
   
   Uint8List? _selectedImageBytes;
   String? _selectedImageName;
   Uint8List? _selectedModelBytes;
   String? _selectedModelName;
   String _selectedCategory = 'Digital Art';
-  String _selectedLocation = 'Gallery A';
+  bool _setLocationCoordinates = false;
   bool _isPublic = true;
   bool _enableAR = AppConfig.enableARViewer;
   bool _enableNFT = AppConfig.enableNFTMinting;
@@ -83,6 +86,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
     _descriptionController.dispose();
     _priceController.dispose();
     _tagsController.dispose();
+    _locationNameController.dispose();
+    _latitudeController.dispose();
+    _longitudeController.dispose();
     super.dispose();
   }
 
@@ -198,7 +204,6 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       ),
     );
   }
-
   Widget _buildArtworkDetailsStep() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -270,13 +275,70 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         children: [
           _buildSectionTitle('Location & Settings'),
           const SizedBox(height: 24),
-          _buildDropdown(
-            'Display Location',
-            _selectedLocation,
-            ['Gallery A', 'Gallery B', 'Main Hall', 'Outdoor Space', 'Virtual Gallery'],
-            (value) => setState(() => _selectedLocation = value!),
+          _buildSwitchTile(
+            'Set coordinates now (optional)',
+            'Pin latitude/longitude for this artwork. Turn off to place it later on the map.',
+            _setLocationCoordinates,
+            (value) {
+              setState(() {
+                _setLocationCoordinates = value;
+                if (!value) {
+                  _locationNameController.clear();
+                  _latitudeController.clear();
+                  _longitudeController.clear();
+                }
+              });
+            },
           ),
-          const SizedBox(height: 24),
+          if (_setLocationCoordinates) ...[
+            const SizedBox(height: 16),
+            _buildTextField(
+              'Location name (optional)',
+              _locationNameController,
+              hint: 'e.g., Museum Plaza entrance',
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTextField(
+                    'Latitude',
+                    _latitudeController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                    hint: 'e.g., 46.0569',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildTextField(
+                    'Longitude',
+                    _longitudeController,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
+                    hint: 'e.g., 14.5058',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Leave these empty to add an AR marker later. Coordinates must be valid lat/long values when provided.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ] else ...[
+            const SizedBox(height: 12),
+            Text(
+              'Coordinates are optional. Keep this off if you plan to place the artwork via Create Marker on the map.',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+          ],
           _buildSwitchTile(
             'Public Artwork',
             'Allow public discovery and viewing',
@@ -558,7 +620,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
           ),
           const SizedBox(height: 16),
           _buildReviewItem('Category', _selectedCategory),
-          _buildReviewItem('Location', _selectedLocation),
+          _buildReviewItem('Location', _resolveLocationSummary()),
           _buildReviewItem('Price', _priceController.text.isNotEmpty ? '${_priceController.text} KUB8' : '0 KUB8'),
           _buildReviewItem('Tags', _tagsController.text.isNotEmpty ? _tagsController.text : 'No tags'),
           _buildReviewItem('Public', _isPublic ? 'Yes' : 'No'),
@@ -574,26 +636,50 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
-          SizedBox(
-            width: 80,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Text(
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
               ),
             ),
           ),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _resolveLocationSummary() {
+    if (!_setLocationCoordinates) {
+      return 'Not set (place via map marker)';
+    }
+
+    final latText = _latitudeController.text.trim();
+    final lngText = _longitudeController.text.trim();
+    final name = _locationNameController.text.trim();
+
+    if (latText.isEmpty || lngText.isEmpty) {
+      return 'Coordinates pending';
+    }
+
+    final coords = '$latText, $lngText';
+    return name.isNotEmpty ? '$coords ($name)' : coords;
   }
 
   Widget _buildSectionTitle(String title) {
@@ -632,7 +718,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
           maxLines: maxLines,
           keyboardType: keyboardType,
           validator: validator,
-          style:  TextStyle(color: Theme.of(context).colorScheme.onSurface),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
@@ -1031,6 +1117,40 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       return;
     }
 
+    double? latitude;
+    double? longitude;
+    String? locationName;
+
+    if (_setLocationCoordinates) {
+      final latText = _latitudeController.text.trim();
+      final lngText = _longitudeController.text.trim();
+
+      if (latText.isEmpty || lngText.isEmpty) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Enter both latitude and longitude or disable coordinates.')),
+        );
+        return;
+      }
+
+      latitude = double.tryParse(latText);
+      longitude = double.tryParse(lngText);
+
+      final withinLatRange = latitude != null && latitude >= -90 && latitude <= 90;
+      final withinLngRange = longitude != null && longitude >= -180 && longitude <= 180;
+
+      if (latitude == null || longitude == null || !withinLatRange || !withinLngRange) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Coordinates must be valid latitude/longitude values.')),
+        );
+        return;
+      }
+
+      final nameText = _locationNameController.text.trim();
+      if (nameText.isNotEmpty) {
+        locationName = nameText;
+      }
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -1079,6 +1199,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
       if (_enableNFT && AppConfig.useRealBlockchain) {
         try {
+          if (!mounted) return;
           final web3 = context.read<Web3Provider>();
           final metadata = <String, dynamic>{
             'name': _titleController.text.trim(),
@@ -1114,7 +1235,13 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
       final metadata = <String, dynamic>{
         'source': 'artist_studio',
-        'locationName': _selectedLocation,
+        if (locationName != null) 'locationName': locationName,
+        if (latitude != null && longitude != null)
+          'location': {
+            'lat': latitude,
+            'lng': longitude,
+            if (locationName != null) 'name': locationName,
+          },
         if (_enableNFT) 'royaltyPercent': _royaltyPercentage,
         if (_enableNFT && mintSignature != null) 'nftMintTx': mintSignature,
         if (price != null) 'listPriceKub8': price,
@@ -1136,7 +1263,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         arScale: 1,
         mintAsNFT: _enableNFT,
         price: price,
-        locationName: _selectedLocation,
+        locationName: locationName,
+        latitude: latitude,
+        longitude: longitude,
         metadata: metadata,
       );
 
@@ -1213,7 +1342,10 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       _priceController.clear();
       _tagsController.clear();
       _selectedCategory = 'Digital Art';
-      _selectedLocation = 'Gallery A';
+      _setLocationCoordinates = false;
+      _locationNameController.clear();
+      _latitudeController.clear();
+      _longitudeController.clear();
       _isPublic = true;
       _enableAR = AppConfig.enableARViewer;
       _enableNFT = AppConfig.enableNFTMinting;

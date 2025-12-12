@@ -7,6 +7,8 @@ import '../providers/storage_provider.dart';
 import '../community/community_interactions.dart';
 import './ar_manager.dart';
 import './ar_content_service.dart';
+import './art_content_service.dart';
+import './art_marker_service.dart';
 
 /// Integration service orchestrating AR experiences and physical marker flows
 class ARIntegrationService {
@@ -16,6 +18,7 @@ class ARIntegrationService {
   ARIntegrationService._internal();
 
   final ARManager _arManager = ARManager();
+  final ArtMarkerService _artMarkerService = ArtMarkerService();
   final List<ArtMarker> _nearbyMarkers = [];
   LatLng? _currentLocation;
   DateTime? _lastMarkerRefresh;
@@ -73,7 +76,7 @@ class ARIntegrationService {
       _lastMarkerRefresh = DateTime.now();
       _lastMarkerLocation = location;
       // Fetch markers from backend
-      final markers = await ARContentService.fetchARMarkers(
+      final markers = await _artMarkerService.fetchMarkers(
         latitude: location.latitude,
         longitude: location.longitude,
         radiusKm: 1.0, // 1km radius
@@ -187,7 +190,7 @@ class ARIntegrationService {
       );
 
       // Save to backend
-      await ARContentService.saveARMarker(updatedMarker);
+      await _artMarkerService.saveMarker(updatedMarker);
 
       // Notify callbacks
       onARInteractionComplete?.call(artwork.id);
@@ -297,7 +300,7 @@ class ARIntegrationService {
   Future<Map<String, dynamic>> getStorageInfo() async {
     final provider = await ARContentService.getPreferredStorageProvider();
     final gateway = await ARContentService.getPreferredIPFSGateway();
-    final stats = await ARContentService.getStorageStats();
+    final stats = await ArtContentService.getStorageStats();
 
     return {
       'provider': provider.name,

@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
@@ -11,29 +14,33 @@ import '../../providers/recent_activity_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/config_provider.dart';
+import '../../config/config.dart';
 import '../../models/artwork.dart';
 import '../../models/recent_activity.dart';
 import '../../models/wallet.dart';
+import '../../community/community_interactions.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../../widgets/inline_loading.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
+import '../../utils/artwork_media_resolver.dart';
 import 'components/desktop_widgets.dart';
-import '../web3/dao/governance_hub.dart';
-import '../web3/artist/artist_studio.dart';
-import '../web3/institution/institution_hub.dart';
-import '../web3/marketplace/marketplace.dart';
 import '../web3/wallet/connectwallet_screen.dart';
-import '../web3/onboarding/web3_onboarding.dart' as web3;
+import 'web3/desktop_wallet_screen.dart';
+import '../onboarding/web3/web3_onboarding.dart' as web3;
+import '../onboarding/web3/onboarding_data.dart';
 import '../art/art_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import 'desktop_settings_screen.dart';
 import 'desktop_shell.dart';
 import '../activity/advanced_analytics_screen.dart';
+import '../../services/search_service.dart';
 import '../home_screen.dart' show ActivityScreen;
+import '../../services/backend_api_service.dart';
 
 /// Desktop home screen with spacious layout and proper grid systems
 /// Inspired by Twitter/X feed presentation and Google Maps panels
@@ -46,9 +53,25 @@ class DesktopHomeScreen extends StatefulWidget {
 
 class _DesktopHomeScreenState extends State<DesktopHomeScreen> 
     with TickerProviderStateMixin {
+  static const double _searchBarWidth = 280;
   late AnimationController _animationController;
   late ScrollController _scrollController;
   bool _showFloatingHeader = false;
+  final BackendApiService _backendApi = BackendApiService();
+  final LayerLink _searchFieldLink = LayerLink();
+  late TextEditingController _searchController;
+  late FocusNode _searchFocusNode;
+  Timer? _searchDebounce;
+  String _searchQuery = '';
+  bool _isFetchingSuggestions = false;
+  List<_SearchSuggestion> _searchSuggestions = const [];
+  OverlayEntry? _searchOverlayEntry;
+  final SearchService _searchService = SearchService();
+  bool _isResolvingLocation = false;
+  List<CommunityPost> _popularCommunityPosts = const [];
+  bool _popularCommunityLoading = false;
+  String? _popularCommunityError;
+  bool _artFeedLoadQueued = false;
 
   @override
   void initState() {
@@ -60,6 +83,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);
     _animationController.forward();
+    _searchController = TextEditingController();
+    _searchFocusNode = FocusNode();
+    _searchFocusNode.addListener(_handleSearchFocusChange);
 
     // Initialize providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -69,6 +95,27 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       }
       final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
+      _loadInitialData();
+    });
+  }
+
+  void _queueArtFeedLoad({
+    double? lat,
+    double? lng,
+    double? radiusKm,
+    int? limit,
+  }) {
+    if (_artFeedLoadQueued) return;
+    _artFeedLoadQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _artFeedLoadQueued = false;
+      final provider = context.read<CommunityHubProvider>();
+      unawaited(provider.loadArtFeed(
+        latitude: lat ?? provider.artFeedCenter?.lat ?? 46.05,
+        longitude: lng ?? provider.artFeedCenter?.lng ?? 14.50,
+        radiusKm: radiusKm ?? provider.artFeedRadiusKm,
+        limit: limit ?? 20,
+      ));
     });
   }
 
@@ -77,6 +124,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     _animationController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchDebounce?.cancel();
+    _searchOverlayEntry?.remove();
+    _searchController.dispose();
+    _searchFocusNode
+      ..removeListener(_handleSearchFocusChange)
+      ..dispose();
     super.dispose();
   }
 
@@ -84,6 +137,110 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final shouldShowHeader = _scrollController.offset > 100;
     if (shouldShowHeader != _showFloatingHeader) {
       setState(() => _showFloatingHeader = shouldShowHeader);
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    final artworkProvider = context.read<ArtworkProvider>();
+    final communityProvider = context.read<CommunityHubProvider>();
+    final configProvider = context.read<ConfigProvider>();
+
+    if (artworkProvider.artworks.isEmpty &&
+        !artworkProvider.isLoading('load_artworks')) {
+      await artworkProvider.loadArtworks();
+    }
+
+    if (!communityProvider.groupsInitialized && !communityProvider.groupsLoading) {
+      await communityProvider.loadGroups();
+    }
+
+    if (communityProvider.artFeedPosts.isEmpty && !communityProvider.artFeedLoading) {
+      final center = await _resolveArtFeedLocation(configProvider);
+      await communityProvider.loadArtFeed(
+        latitude: center.lat ?? 46.05,
+        longitude: center.lng ?? 14.50,
+        radiusKm: configProvider.useMockData ? 200 : 50,
+        limit: 50,
+      );
+    }
+
+    await _loadPopularCommunityPosts();
+  }
+
+  Future<void> _loadPopularCommunityPosts({bool force = false}) async {
+    if (_popularCommunityLoading) return;
+    if (!force && _popularCommunityPosts.isNotEmpty) return;
+
+    final communityProvider = context.read<CommunityHubProvider>();
+    final configProvider = context.read<ConfigProvider>();
+
+    if (configProvider.useMockData) {
+      if (!mounted) return;
+      setState(() {
+        _popularCommunityPosts = communityProvider.artFeedPosts;
+        _popularCommunityError = null;
+      });
+      return;
+    }
+
+    setState(() {
+      _popularCommunityLoading = true;
+      _popularCommunityError = null;
+    });
+
+    try {
+      final posts = await _backendApi.getCommunityPosts(limit: 50, sort: 'popularity');
+      if (!mounted) return;
+      setState(() {
+        _popularCommunityPosts = posts;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _popularCommunityError = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _popularCommunityLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<CommunityLocation> _resolveArtFeedLocation(ConfigProvider configProvider) async {
+    if (_isResolvingLocation) return CommunityLocation(lat: 46.05, lng: 14.50);
+    _isResolvingLocation = true;
+    try {
+      if (!AppConfig.enableLocationServices || configProvider.useMockData) {
+        return CommunityLocation(lat: 46.05, lng: 14.50);
+      }
+
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        return CommunityLocation(lat: 46.05, lng: 14.50);
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        return CommunityLocation(lat: 46.05, lng: 14.50);
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.lowest,
+        timeLimit: const Duration(seconds: 4),
+      );
+
+      return CommunityLocation(lat: position.latitude, lng: position.longitude);
+    } catch (_) {
+      return CommunityLocation(lat: 46.05, lng: 14.50);
+    } finally {
+      _isResolvingLocation = false;
     }
   }
 
@@ -276,13 +433,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           // Right side - search and actions
           Row(
             children: [
-              SizedBox(
-                width: 280,
-                child: DesktopSearchBar(
-                  hintText: 'Search artworks, artists...',
-                  onSubmitted: (value) {
-                    // Handle search
-                  },
+              CompositedTransformTarget(
+                link: _searchFieldLink,
+                child: SizedBox(
+                  width: _searchBarWidth,
+                  child: DesktopSearchBar(
+                    hintText: 'Search artworks, artists...',
+                    controller: _searchController,
+                    focusNode: _searchFocusNode,
+                    onChanged: _handleSearchChange,
+                    onSubmitted: _handleSearchSubmit,
+                    autofocus: false,
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -503,10 +665,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final artworkProvider = Provider.of<ArtworkProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final walletProvider = Provider.of<WalletProvider>(context);
+    final profileProvider = Provider.of<ProfileProvider>(context);
     final activityProvider = Provider.of<RecentActivityProvider>(context);
+    final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
+    final isLoadingActivity =
+        activityProvider.isLoading && activityProvider.activities.isEmpty;
 
-    final discoveredCount =
-        artworkProvider.artworks.where((a) => a.isDiscovered).length;
+    final discoveredCount = profileProvider.artworksCount > 0
+      ? profileProvider.artworksCount
+      : artworkProvider.artworks.where((a) => a.isDiscovered).length;
     final arSessions = activityProvider.activities
         .where((a) => a.category == ActivityCategory.ar)
         .length;
@@ -530,6 +697,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           icon: Icons.analytics_outlined,
         ),
         const SizedBox(height: 16),
+        if (isLoadingArtworks || isLoadingActivity)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: InlineLoading(),
+            ),
+          ),
         LayoutBuilder(
           builder: (context, constraints) {
             final cardWidth = (constraints.maxWidth - 48) / 4;
@@ -669,31 +843,34 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     switch (screenKey) {
       case 'map':
-        _openShellTab(1);
+        _openShellTab(1); // Explore
         return;
       case 'community':
-        _openShellTab(2);
+        _openShellTab(2); // Connect
+        return;
+      case 'studio':
+        _openShellTab(3); // Create (Artist Studio)
+        return;
+      case 'institution_hub':
+        _openShellTab(4); // Organize (Institution)
+        return;
+      case 'dao_hub':
+        _openShellTab(5); // Govern (DAO)
         return;
       case 'marketplace':
-        _openShellTab(3);
+        _openShellTab(6); // Trade
         return;
       case 'wallet':
-        _openShellTab(4);
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => const DesktopWalletScreen(),
+        ));
+        navigationProvider.trackScreenVisit('wallet');
         return;
       case 'profile':
         _pushScreen(const DesktopSettingsScreen(), screenKey);
         return;
       case 'analytics':
         _pushScreen(const AdvancedAnalyticsScreen(statType: ''), screenKey);
-        return;
-      case 'dao_hub':
-        _pushScreen(const GovernanceHub(), screenKey);
-        return;
-      case 'studio':
-        _pushScreen(const ArtistStudio(), screenKey);
-        return;
-      case 'institution_hub':
-        _pushScreen(const InstitutionHub(), screenKey);
         return;
       case 'achievements':
         // Reuse onboarding to surface achievements context
@@ -728,13 +905,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   String _indexToKey(int index) {
     switch (index) {
       case 1:
-        return 'map';
+        return 'map'; // Explore
       case 2:
-        return 'community';
+        return 'community'; // Connect
       case 3:
-        return 'marketplace';
+        return 'studio'; // Create
       case 4:
-        return 'wallet';
+        return 'institution_hub'; // Organize
+      case 5:
+        return 'dao_hub'; // Govern
+      case 6:
+        return 'marketplace'; // Trade
       default:
         return 'home';
     }
@@ -745,11 +926,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       case 2:
         _handleQuickAction('community');
         break;
-      case 3:
+      case 6:
         _handleQuickAction('marketplace');
         break;
       default:
-        _handleQuickAction('map');
+        _openShellTab(tabIndex);
+        break;
     }
   }
 
@@ -895,7 +1077,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               subtitle: 'Discover trending AR art',
               icon: Icons.auto_awesome,
               action: TextButton.icon(
-                onPressed: () => _openShellTab(3),
+                onPressed: () => _openShellTab(1), // Explore tab
                 icon: const Icon(Icons.arrow_forward, size: 18),
                 label: const Text('View All'),
               ),
@@ -942,53 +1124,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Image
-          Container(
+          SizedBox(
             height: 140,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  themeProvider.accentColor.withValues(alpha: 0.3),
-                  themeProvider.accentColor.withValues(alpha: 0.1),
-                ],
-              ),
+            child: ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            ),
-            child: Stack(
-              children: [
-                const Center(
-                  child: Icon(
-                    Icons.view_in_ar,
-                    size: 48,
-                    color: Colors.white,
-                  ),
-                ),
-                if (artwork.arEnabled)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: themeProvider.accentColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.view_in_ar, size: 12, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text('AR', style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          )),
-                        ],
-                      ),
-                    ),
-                  ),
-              ],
+              child: _buildDesktopCardCover(artwork, themeProvider),
             ),
           ),
           
@@ -1058,6 +1198,105 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
+  Widget _buildDesktopCardCover(Artwork artwork, ThemeProvider themeProvider) {
+    final imageUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
+    final placeholder = _desktopCoverPlaceholder(themeProvider);
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return placeholder;
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => placeholder,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Center(
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: InlineLoading(
+                    shape: BoxShape.circle,
+                    color: themeProvider.accentColor,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.08),
+                  Colors.black.withValues(alpha: 0.22),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (artwork.arEnabled)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.view_in_ar, size: 12, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'AR',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _desktopCoverPlaceholder(ThemeProvider themeProvider) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            themeProvider.accentColor.withValues(alpha: 0.25),
+            themeProvider.accentColor.withValues(alpha: 0.1),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.image,
+          color: Colors.white70,
+          size: 36,
+        ),
+      ),
+    );
+  }
+
   Widget _buildWeb3Section() {
     final web3Provider = Provider.of<Web3Provider>(context);
     final isConnected = web3Provider.isConnected;
@@ -1092,7 +1331,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     Icons.how_to_vote,
                     const Color(0xFF4ECDC4),
                     isConnected,
-                    () => _navigateToWeb3Screen(const GovernanceHub(), isConnected),
+                    () => _navigateToWeb3Tab(5, isConnected), // Govern tab
                   ),
                 ),
                 SizedBox(
@@ -1103,7 +1342,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     Icons.palette,
                     const Color(0xFFFF9A8B),
                     isConnected,
-                    () => _navigateToWeb3Screen(const ArtistStudio(), isConnected),
+                    () => _navigateToWeb3Tab(3, isConnected), // Create tab
                   ),
                 ),
                 SizedBox(
@@ -1114,7 +1353,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     Icons.museum,
                     const Color(0xFF667eea),
                     isConnected,
-                    () => _navigateToWeb3Screen(const InstitutionHub(), isConnected),
+                    () => _navigateToWeb3Tab(4, isConnected), // Organize tab
                   ),
                 ),
                 SizedBox(
@@ -1125,7 +1364,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     Icons.store,
                     const Color(0xFFFF6B6B),
                     isConnected,
-                    () => _navigateToWeb3Screen(const Marketplace(), isConnected),
+                    () => _navigateToWeb3Tab(6, isConnected), // Trade tab
                   ),
                 ),
               ],
@@ -1136,26 +1375,27 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  void _navigateToWeb3Screen(Widget screen, bool isConnected) {
+  void _navigateToWeb3Tab(int tabIndex, bool isConnected) {
     if (isConnected) {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (context) => screen),
-      );
+      _openShellTab(tabIndex);
     } else {
       _showWalletOnboarding();
     }
   }
 
   void _showWalletOnboarding() {
-    Navigator.of(context).push(
+    final navigator = Navigator.of(context);
+    navigator.push(
       MaterialPageRoute(
-        builder: (context) => web3.Web3OnboardingScreen(
-          featureName: 'Web3 Features',
+        builder: (_) => web3.Web3OnboardingScreen(
+          featureName: Web3FeaturesOnboardingData.featureName,
           pages: _getWeb3OnboardingPages(),
           onComplete: () {
-            Navigator.of(context).pop();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const ConnectWallet()),
+            if (navigator.canPop()) {
+              navigator.pop();
+            }
+            navigator.push(
+              MaterialPageRoute(builder: (_) => const ConnectWallet()),
             );
           },
         ),
@@ -1164,109 +1404,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   List<web3.OnboardingPage> _getWeb3OnboardingPages() {
-    return [
-      const web3.OnboardingPage(
-        title: 'Welcome to Web3',
-        description:
-            'Connect your wallet to unlock decentralized features powered by blockchain technology.',
-        icon: Icons.account_balance_wallet,
-        gradientColors: [
-          Colors.white,
-          Color(0xFF3F51B5),
-        ],
-        features: [
-          'Secure wallet-based authentication',
-          'True ownership of digital assets',
-          'Decentralized transactions',
-          'Cross-platform compatibility',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'NFT Marketplace',
-        description:
-            'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
-        icon: Icons.store,
-        gradientColors: [
-          Color(0xFFFF6B6B),
-          Color(0xFFE91E63),
-        ],
-        features: [
-          'Browse trending digital artworks',
-          'Purchase NFTs with SOL tokens',
-          'List your own creations for sale',
-          'Track marketplace analytics',
-          'Discover featured collections',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'Artist Studio',
-        description:
-            'Create, mint, and manage your digital artworks with professional tools.',
-        icon: Icons.palette,
-        gradientColors: [
-          Color(0xFFFF9A8B),
-          Color(0xFFFF7043),
-        ],
-        features: [
-          'Upload and mint AR artworks as NFTs',
-          'Set pricing and royalties',
-          'Track creation analytics',
-          'Manage your digital portfolio',
-          'Collaborate with other artists',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'DAO Governance',
-        description:
-            'Participate in community decisions and help shape the future of the platform.',
-        icon: Icons.how_to_vote,
-        gradientColors: [
-          Color(0xFF4ECDC4),
-          Color(0xFF26A69A),
-        ],
-        features: [
-          'Vote on platform proposals',
-          'Submit improvement suggestions',
-          'Earn governance tokens',
-          'Access exclusive DAO benefits',
-          'Shape community guidelines',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'Institution Hub',
-        description:
-            'Connect with galleries, museums, and cultural institutions in the Web3 space.',
-        icon: Icons.museum,
-        gradientColors: [
-          Color(0xFF667eea),
-          Color(0xFF764ba2),
-        ],
-        features: [
-          'Partner with verified institutions',
-          'Access exclusive exhibitions',
-          'Institutional-grade security',
-          'Professional networking tools',
-          'Curated collection management',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'KUB8 Token Economy',
-        description:
-            'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
-        icon: Icons.monetization_on,
-        gradientColors: [
-          Color(0xFFFFD700),
-          Color(0xFFFF8C00),
-        ],
-        features: [
-          'Earn tokens for discoveries',
-          'Reward system for creators',
-          'Stake tokens for benefits',
-          'Pay for premium features',
-          'Trade on decentralized exchanges',
-        ],
-      ),
-    ];
+    return Web3FeaturesOnboardingData.pages;
   }
 
   Widget _buildWeb3Card(
@@ -1375,12 +1513,30 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildTrendingArtSection(ThemeProvider themeProvider) {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, _) {
-        final trendingArtworks = artworkProvider.artworks
-            .where((a) => a.arEnabled)
-            .take(4)
-            .toList();
+    return Consumer2<ArtworkProvider, CommunityHubProvider>(
+      builder: (context, artworkProvider, communityProvider, _) {
+        final communityPosts = _popularCommunityPosts.isNotEmpty
+            ? _popularCommunityPosts
+            : communityProvider.artFeedPosts;
+
+        if (communityPosts.isEmpty && !communityProvider.artFeedLoading && !_popularCommunityLoading) {
+          // Ensure we have some data to show
+          _queueArtFeedLoad(
+            lat: communityProvider.artFeedCenter?.lat,
+            lng: communityProvider.artFeedCenter?.lng,
+            radiusKm: communityProvider.artFeedRadiusKm,
+            limit: 50,
+          );
+          unawaited(_loadPopularCommunityPosts());
+        }
+
+        final trendingEntries = _getTrendingEntries(artworkProvider, communityPosts);
+        final isLoading =
+            (artworkProvider.isLoading('load_artworks') ||
+                    (_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
+                    (communityProvider.artFeedLoading && communityPosts.isEmpty)) &&
+                trendingEntries.isEmpty;
+        final error = _popularCommunityError ?? communityProvider.artFeedError;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1419,7 +1575,51 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ],
             ),
             const SizedBox(height: 12),
-            if (trendingArtworks.isEmpty)
+            if (isLoading)
+              const InlineLoading()
+            else if (error != null && trendingEntries.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Unable to load trending art: $error',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                        onPressed: () => error == _popularCommunityError
+                            ? _loadPopularCommunityPosts(force: true)
+                            : _queueArtFeedLoad(
+                                lat: communityProvider.artFeedCenter?.lat,
+                                lng: communityProvider.artFeedCenter?.lng,
+                                radiusKm: communityProvider.artFeedRadiusKm,
+                                limit: 50,
+                              ),
+                      child: Text(
+                        'Retry',
+                        style: GoogleFonts.inter(
+                          color: themeProvider.accentColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (trendingEntries.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1444,23 +1644,25 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ),
               )
             else
-              ...trendingArtworks.map((artwork) => _buildTrendingArtItem(artwork, themeProvider)),
+              ...trendingEntries.map((entry) => _buildTrendingArtItem(entry, themeProvider)),
           ],
         );
       },
     );
   }
 
-  Widget _buildTrendingArtItem(Artwork artwork, ThemeProvider themeProvider) {
+  Widget _buildTrendingArtItem(_TrendingArtEntry entry, ThemeProvider themeProvider) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-            ),
-          );
+          if (entry.artworkId != null && entry.artworkId!.isNotEmpty) {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => ArtDetailScreen(artworkId: entry.artworkId!),
+              ),
+            );
+          }
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
@@ -1497,7 +1699,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      artwork.title,
+                      entry.title,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -1507,7 +1709,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      'by ${artwork.artist}',
+                      entry.subtitle ?? '—',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1526,7 +1728,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       Icon(Icons.favorite, size: 14, color: Colors.red.withValues(alpha: 0.7)),
                       const SizedBox(width: 4),
                       Text(
-                        artwork.likesCount.toString(),
+                          entry.likes.toString(),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1535,7 +1737,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       ),
                     ],
                   ),
-                  if (artwork.arEnabled)
+                    if (entry.hasAR)
                     Container(
                       margin: const EdgeInsets.only(top: 4),
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -1564,29 +1766,25 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget _buildTopCreatorsSection(ThemeProvider themeProvider) {
     return Consumer<CommunityHubProvider>(
       builder: (context, communityProvider, _) {
-        // Get unique creators from recent posts
-        final posts = communityProvider.artFeedPosts.take(20).toList();
-        final creatorsMap = <String, Map<String, dynamic>>{};
-        
-        for (final post in posts) {
-          if (post.category == 'artist' || post.artwork != null) {
-            final key = post.authorWallet ?? post.authorId;
-            if (!creatorsMap.containsKey(key)) {
-              creatorsMap[key] = {
-                'id': post.authorId,
-                'wallet': post.authorWallet,
-                'name': post.authorName,
-                'avatar': post.authorAvatar,
-                'username': post.authorUsername,
-                'postCount': 1,
-              };
-            } else {
-              creatorsMap[key]!['postCount'] = (creatorsMap[key]!['postCount'] as int) + 1;
-            }
-          }
+        final communityPosts = _popularCommunityPosts.isNotEmpty
+            ? _popularCommunityPosts
+            : communityProvider.artFeedPosts;
+        if (communityPosts.isEmpty && !communityProvider.artFeedLoading && !_popularCommunityLoading) {
+          _queueArtFeedLoad(
+            lat: communityProvider.artFeedCenter?.lat,
+            lng: communityProvider.artFeedCenter?.lng,
+            radiusKm: communityProvider.artFeedRadiusKm,
+            limit: 50,
+          );
+          unawaited(_loadPopularCommunityPosts());
         }
 
-        final creators = creatorsMap.values.take(5).toList();
+        final creators = _buildTopCreatorSummaries(communityPosts);
+        final isLoading =
+            ((communityProvider.artFeedLoading && communityPosts.isEmpty) ||
+                    (_popularCommunityLoading && _popularCommunityPosts.isEmpty)) &&
+                creators.isEmpty;
+        final error = _popularCommunityError ?? communityProvider.artFeedError;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1625,7 +1823,51 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ],
             ),
             const SizedBox(height: 12),
-            if (creators.isEmpty)
+            if (isLoading)
+              const InlineLoading()
+            else if (error != null && creators.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Unable to load creators: $error',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => error == _popularCommunityError
+                          ? _loadPopularCommunityPosts(force: true)
+                          : _queueArtFeedLoad(
+                              lat: communityProvider.artFeedCenter?.lat,
+                              lng: communityProvider.artFeedCenter?.lng,
+                              radiusKm: communityProvider.artFeedRadiusKm,
+                              limit: 50,
+                            ),
+                      child: Text(
+                        'Retry',
+                        style: GoogleFonts.inter(
+                          color: themeProvider.accentColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (creators.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -1658,15 +1900,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildCreatorItem(Map<String, dynamic> creator, ThemeProvider themeProvider) {
+    final userId = (creator['id'] ?? creator['wallet'] ?? '').toString();
+    final wallet = (creator['wallet'] ?? '').toString().isNotEmpty
+        ? creator['wallet'].toString()
+        : userId;
+    final avatarUrl = creator['avatar'] ?? creator['avatarUrl'];
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          final walletOrId = creator['wallet'] ?? creator['id'];
-          if (walletOrId != null) {
+          if (userId.isNotEmpty) {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => UserProfileScreen(userId: walletOrId),
+                builder: (context) => UserProfileScreen(userId: userId),
               ),
             );
           }
@@ -1685,8 +1931,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           child: Row(
             children: [
               AvatarWidget(
-                avatarUrl: creator['avatar'],
-                wallet: creator['wallet'] ?? creator['id'],
+                avatarUrl: avatarUrl,
+                wallet: wallet,
                 radius: 20,
                 allowFabricatedFallback: true,
               ),
@@ -1743,6 +1989,24 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget _buildPlatformStatsSection(ThemeProvider themeProvider) {
     final artworkProvider = Provider.of<ArtworkProvider>(context);
     final communityProvider = Provider.of<CommunityHubProvider>(context);
+    final communityPostsCount = _popularCommunityPosts.isNotEmpty
+        ? _popularCommunityPosts.length
+        : communityProvider.artFeedPosts.length;
+    final isLoading = (artworkProvider.isLoading('load_artworks') ||
+      ((_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
+        (communityProvider.artFeedLoading && communityPostsCount == 0)));
+
+    // Ensure feed data is requested if missing
+    if (communityPostsCount == 0 && !communityProvider.artFeedLoading && !_popularCommunityLoading) {
+      // Fire and forget with a safe fallback location
+      _queueArtFeedLoad(
+        lat: communityProvider.artFeedCenter?.lat,
+        lng: communityProvider.artFeedCenter?.lng,
+        radiusKm: communityProvider.artFeedRadiusKm,
+        limit: 50,
+      );
+      unawaited(_loadPopularCommunityPosts());
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1766,44 +2030,82 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+        if (isLoading)
+          const InlineLoading()
+        else if ((_popularCommunityError != null && _popularCommunityPosts.isEmpty) ||
+            (communityProvider.artFeedError != null && communityPostsCount == 0))
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Unable to load community stats: ${_popularCommunityError ?? communityProvider.artFeedError}',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => _popularCommunityError != null
+                      ? _loadPopularCommunityPosts(force: true)
+                      : _queueArtFeedLoad(
+                          lat: communityProvider.artFeedCenter?.lat,
+                          lng: communityProvider.artFeedCenter?.lng,
+                          radiusKm: communityProvider.artFeedRadiusKm,
+                          limit: 50,
+                        ),
+                  child: Text('Retry', style: GoogleFonts.inter(color: themeProvider.accentColor)),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                _buildPlatformStatRow(
+                  'Total Artworks',
+                  artworkProvider.artworks.length.toString(),
+                  Icons.view_in_ar,
+                  themeProvider.accentColor,
+                ),
+                const Divider(height: 24),
+                _buildPlatformStatRow(
+                  'AR Enabled',
+                  artworkProvider.artworks.where((a) => a.arEnabled).length.toString(),
+                  Icons.visibility,
+                  const Color(0xFF4ECDC4),
+                ),
+                const Divider(height: 24),
+                _buildPlatformStatRow(
+                  'Community Posts',
+                  communityPostsCount.toString(),
+                  Icons.forum,
+                  const Color(0xFFFF9A8B),
+                ),
+                const Divider(height: 24),
+                _buildPlatformStatRow(
+                  'Active Groups',
+                  communityProvider.groups.length.toString(),
+                  Icons.groups,
+                  themeProvider.accentColor,
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              _buildPlatformStatRow(
-                'Total Artworks',
-                artworkProvider.artworks.length.toString(),
-                Icons.view_in_ar,
-                themeProvider.accentColor,
-              ),
-              const Divider(height: 24),
-              _buildPlatformStatRow(
-                'AR Enabled',
-                artworkProvider.artworks.where((a) => a.arEnabled).length.toString(),
-                Icons.visibility,
-                const Color(0xFF4ECDC4),
-              ),
-              const Divider(height: 24),
-              _buildPlatformStatRow(
-                'Community Posts',
-                communityProvider.artFeedPosts.length.toString(),
-                Icons.forum,
-                const Color(0xFFFF9A8B),
-              ),
-              const Divider(height: 24),
-              _buildPlatformStatRow(
-                'Active Groups',
-                communityProvider.groups.length.toString(),
-                Icons.groups,
-                const Color(0xFF667eea),
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -2531,5 +2833,481 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ],
       ),
     );
+  }
+
+  void _handleSearchFocusChange() {
+    if (!_searchFocusNode.hasFocus) {
+      _hideSearchOverlay();
+    } else {
+      _showSearchOverlay();
+    }
+  }
+
+  void _handleSearchChange(String value) {
+    setState(() {
+      _searchQuery = value;
+    });
+
+    _searchDebounce?.cancel();
+    if (value.trim().length < 2) {
+      setState(() {
+        _searchSuggestions = const [];
+        _isFetchingSuggestions = false;
+      });
+      _showSearchOverlay();
+      return;
+    }
+
+    _searchDebounce = Timer(const Duration(milliseconds: 275), () async {
+      setState(() {
+        _isFetchingSuggestions = true;
+      });
+      _showSearchOverlay();
+
+      try {
+        List<_SearchSuggestion> suggestions;
+        final remote = await _searchService.fetchSuggestions(
+          context: context,
+          query: value,
+          scope: SearchScope.home,
+          limit: 8,
+        );
+        suggestions = remote
+            .map((s) => _SearchSuggestion(
+                  label: s.label,
+                  type: s.type,
+                  subtitle: s.subtitle,
+                  id: s.id,
+                  position: s.position,
+                ))
+            .toList(growable: false);
+        if (suggestions.isEmpty) {
+          suggestions = _buildLocalSearchSuggestions(value);
+        }
+
+        if (!mounted) return;
+        setState(() {
+          _searchSuggestions = suggestions;
+          _isFetchingSuggestions = false;
+        });
+        _showSearchOverlay();
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _searchSuggestions = _buildLocalSearchSuggestions(value);
+          _isFetchingSuggestions = false;
+        });
+      }
+    });
+  }
+
+  List<_SearchSuggestion> _buildLocalSearchSuggestions(String query) {
+    final normalized = query.toLowerCase();
+    final artworkProvider = context.read<ArtworkProvider>();
+    return artworkProvider.artworks
+        .where((artwork) =>
+            artwork.title.toLowerCase().contains(normalized) ||
+            artwork.artist.toLowerCase().contains(normalized) ||
+            artwork.category.toLowerCase().contains(normalized))
+        .map((art) => _SearchSuggestion(
+              label: art.title,
+              type: 'artwork',
+              subtitle: art.artist,
+              id: art.id,
+            ))
+        .take(8)
+        .toList(growable: false);
+  }
+
+  Future<void> _handleSearchSubmit(String value) async {
+    if (value.trim().isEmpty) return;
+    if (_searchSuggestions.isNotEmpty) {
+      await _handleSuggestionTap(_searchSuggestions.first);
+    } else {
+      _handleSearchChange(value);
+    }
+  }
+
+  Future<void> _handleSuggestionTap(_SearchSuggestion suggestion) async {
+    setState(() {
+      _searchQuery = suggestion.label;
+      _searchController.text = suggestion.label;
+      _searchSuggestions = const [];
+    });
+    _hideSearchOverlay();
+
+    // If the suggestion has a location, refresh the community feed around it
+    if (suggestion.position != null) {
+      final communityProvider = context.read<CommunityHubProvider>();
+      _queueArtFeedLoad(
+        lat: suggestion.position!.latitude,
+        lng: suggestion.position!.longitude,
+        radiusKm: communityProvider.artFeedRadiusKm,
+        limit: 50,
+      );
+    }
+
+    if (suggestion.type == 'artwork' && suggestion.id != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ArtDetailScreen(artworkId: suggestion.id!),
+        ),
+      );
+      return;
+    }
+
+    if (suggestion.type == 'profile' && suggestion.id != null) {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => UserProfileScreen(userId: suggestion.id!),
+        ),
+      );
+      return;
+    }
+
+    _openShellTab(1);
+  }
+
+  void _showSearchOverlay() {
+    if (!_searchFocusNode.hasFocus) return;
+    if (_searchOverlayEntry != null) {
+      _searchOverlayEntry!.markNeedsBuild();
+      return;
+    }
+
+    _searchOverlayEntry = OverlayEntry(
+      builder: (context) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: _hideSearchOverlay,
+        child: Stack(
+          children: [
+            Positioned.fill(child: Container(color: Colors.transparent)),
+            CompositedTransformFollower(
+              link: _searchFieldLink,
+              showWhenUnlinked: false,
+              offset: const Offset(0, 48),
+              child: Material(
+                color: Theme.of(context).colorScheme.surface,
+                elevation: 10,
+                borderRadius: BorderRadius.circular(12),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxHeight: 320,
+                  ),
+                  child: SizedBox(
+                    width: _searchBarWidth,
+                    child: _buildSearchSuggestionContent(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Overlay.of(context).insert(_searchOverlayEntry!);
+  }
+
+  void _hideSearchOverlay() {
+    _searchOverlayEntry?.remove();
+    _searchOverlayEntry = null;
+  }
+
+  Widget _buildSearchSuggestionContent() {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (_searchQuery.trim().length < 2) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'Type at least 2 characters to search',
+          style: GoogleFonts.inter(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      );
+    }
+
+    if (_isFetchingSuggestions) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_searchSuggestions.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'No suggestions',
+          style: GoogleFonts.inter(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      itemCount: _searchSuggestions.length,
+      separatorBuilder: (_, __) => Divider(
+        height: 1,
+        color: scheme.outlineVariant,
+      ),
+      itemBuilder: (context, index) {
+        final suggestion = _searchSuggestions[index];
+        return ListTile(
+          leading: CircleAvatar(
+            backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            child: Icon(
+              suggestion.icon,
+              color: scheme.primary,
+            ),
+          ),
+          title: Text(
+            suggestion.label,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          subtitle: suggestion.subtitle == null
+              ? null
+              : Text(
+                  suggestion.subtitle!,
+                  style: GoogleFonts.inter(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 12,
+                  ),
+                ),
+          onTap: () => _handleSuggestionTap(suggestion),
+        );
+      },
+    );
+  }
+
+  List<_TrendingArtEntry> _getTrendingEntries(
+    ArtworkProvider artworkProvider,
+    List<CommunityPost> communityPosts,
+  ) {
+    final entries = <_TrendingArtEntry>[];
+    final artworkMap = {for (final art in artworkProvider.artworks) art.id: art};
+
+    for (final art in artworkProvider.artworks) {
+      entries.add(_TrendingArtEntry(
+        id: art.id,
+        artworkId: art.id,
+        title: art.title,
+        subtitle: 'by ${art.artist}',
+        likes: art.likesCount,
+        hasAR: art.arEnabled,
+        score: _trendingScore(art),
+      ));
+    }
+
+    for (final post in communityPosts) {
+      final ref = post.artwork;
+      if (ref?.id == null) continue;
+      final artId = ref!.id;
+      final boost = _communityEngagementScore(post);
+      final idx = entries.indexWhere((e) => e.id == artId);
+      if (idx != -1) {
+        final existing = entries[idx];
+        entries[idx] = existing.copyWith(
+          score: existing.score + boost,
+          likes: post.likeCount > 0 ? post.likeCount : existing.likes,
+          subtitle: existing.subtitle?.isNotEmpty == true
+              ? existing.subtitle
+              : (post.authorUsername != null && post.authorUsername!.isNotEmpty
+                  ? '@${post.authorUsername}'
+                  : post.authorName),
+        );
+      } else {
+        entries.add(
+          _TrendingArtEntry(
+            id: artId,
+            artworkId: artId,
+            title: ref.title,
+            subtitle: post.authorUsername != null && post.authorUsername!.isNotEmpty
+                ? '@${post.authorUsername}'
+                : post.authorName,
+            likes: post.likeCount,
+            hasAR: artworkMap[artId]?.arEnabled ?? true,
+            score: boost,
+          ),
+        );
+      }
+    }
+
+    entries.sort((a, b) => b.score.compareTo(a.score));
+    return entries.take(5).toList();
+  }
+
+  double _trendingScore(Artwork artwork) {
+    final recencyDays = DateTime.now().difference(artwork.createdAt).inDays.clamp(0, 30);
+    final recencyBoost = 1 + (30 - recencyDays) / 30;
+    return (artwork.likesCount * 2 +
+            artwork.viewsCount +
+            artwork.discoveryCount * 1.5 +
+            (artwork.averageRating ?? 0) * 10) *
+        recencyBoost;
+  }
+
+  double _communityEngagementScore(CommunityPost post) {
+    final recencyDays = DateTime.now().difference(post.timestamp).inDays.clamp(0, 30);
+    final recencyBoost = 1 + (30 - recencyDays) / 30;
+    return (post.likeCount * 2 +
+            post.shareCount * 3 +
+            post.commentCount * 1.5 +
+            post.viewCount * 0.5) *
+        recencyBoost;
+  }
+
+  List<Map<String, dynamic>> _buildTopCreatorSummaries(List<CommunityPost> communityPosts) {
+    final creatorsMap = <String, _CreatorStats>{};
+    final posts = communityPosts.take(50);
+
+    for (final post in posts) {
+      final key = post.authorWallet ?? post.authorId;
+      if (key.isEmpty) continue;
+      final stats = creatorsMap.putIfAbsent(
+        key,
+        () => _CreatorStats(
+          id: post.authorId,
+          wallet: post.authorWallet,
+          name: post.authorName,
+          avatar: post.authorAvatar,
+          username: post.authorUsername,
+        ),
+      );
+      stats.postCount += 1;
+      stats.likeCount += post.likeCount;
+      stats.shareCount += post.shareCount;
+    }
+
+    // Fallback when no community posts: derive creators from artworks
+    if (creatorsMap.isEmpty) {
+      final artworkProvider = context.read<ArtworkProvider>();
+      for (final art in artworkProvider.artworks) {
+        final key = art.artist;
+        final stats = creatorsMap.putIfAbsent(
+          key,
+          () => _CreatorStats(
+            id: key,
+            name: art.artist,
+            username: art.artist.toLowerCase().replaceAll(' ', '_'),
+          ),
+        );
+        stats.postCount += 1;
+        stats.likeCount += art.likesCount;
+        stats.shareCount += art.viewsCount;
+      }
+    }
+
+    final creators = creatorsMap.values.toList()
+      ..sort((a, b) => b.score.compareTo(a.score));
+    return creators.take(5).map((c) => c.toMap()).toList();
+  }
+}
+
+class _TrendingArtEntry {
+  final String id;
+  final String? artworkId;
+  final String title;
+  final String? subtitle;
+  final int likes;
+  final bool hasAR;
+  final double score;
+
+  const _TrendingArtEntry({
+    required this.id,
+    this.artworkId,
+    required this.title,
+    this.subtitle,
+    required this.likes,
+    this.hasAR = false,
+    required this.score,
+  });
+
+  _TrendingArtEntry copyWith({
+    String? title,
+    String? subtitle,
+    int? likes,
+    bool? hasAR,
+    double? score,
+  }) {
+    return _TrendingArtEntry(
+      id: id,
+      artworkId: artworkId,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      likes: likes ?? this.likes,
+      hasAR: hasAR ?? this.hasAR,
+      score: score ?? this.score,
+    );
+  }
+}
+
+class _SearchSuggestion {
+  final String label;
+  final String type;
+  final String? subtitle;
+  final String? id;
+  final LatLng? position;
+
+  const _SearchSuggestion({
+    required this.label,
+    required this.type,
+    this.subtitle,
+    this.id,
+    this.position,
+  });
+
+  IconData get icon {
+    switch (type) {
+      case 'profile':
+        return Icons.account_circle_outlined;
+      case 'institution':
+        return Icons.museum_outlined;
+      case 'event':
+        return Icons.event_available;
+      case 'marker':
+        return Icons.location_on_outlined;
+      case 'artwork':
+      default:
+        return Icons.auto_awesome;
+    }
+  }
+}
+
+class _CreatorStats {
+  final String id;
+  final String? wallet;
+  final String name;
+  final String? avatar;
+  final String? username;
+  int postCount;
+  int likeCount;
+  int shareCount;
+
+  _CreatorStats({
+    required this.id,
+    this.wallet,
+    required this.name,
+    this.avatar,
+    this.username,
+  })  : postCount = 0,
+        likeCount = 0,
+        shareCount = 0;
+
+  int get score => postCount * 2 + likeCount + shareCount;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'wallet': wallet,
+      'name': name,
+      'avatar': avatar,
+      'username': username,
+      'postCount': postCount,
+    };
   }
 }

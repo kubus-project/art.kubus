@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/wallet_provider.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../utils/app_animations.dart';
@@ -36,6 +37,7 @@ class DesktopNavigation extends StatefulWidget {
   final VoidCallback onProfileTap;
   final VoidCallback onSettingsTap;
   final VoidCallback onNotificationsTap;
+  final VoidCallback onWalletTap;
 
   const DesktopNavigation({
     super.key,
@@ -48,6 +50,7 @@ class DesktopNavigation extends StatefulWidget {
     required this.onProfileTap,
     required this.onSettingsTap,
     required this.onNotificationsTap,
+    required this.onWalletTap,
   });
 
   @override
@@ -303,6 +306,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           
           const SizedBox(height: 16),
           
+          // Wallet balance section
+          _buildWalletBalanceSection(themeProvider, animationTheme),
+          
+          const SizedBox(height: 12),
+          
           // Profile section
           _buildProfileSection(themeProvider),
         ],
@@ -385,6 +393,142 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWalletBalanceSection(
+    ThemeProvider themeProvider,
+    AppAnimationTheme animationTheme,
+  ) {
+    return Consumer2<WalletProvider, ProfileProvider>(
+      builder: (context, walletProvider, profileProvider, _) {
+        final tokens = walletProvider.tokens;
+        final kub8Balance = tokens
+            .where((t) => t.symbol.toUpperCase() == 'KUB8')
+            .fold<double>(0.0, (prev, t) => t.balance);
+        final solBalance = tokens
+            .where((t) => t.symbol.toUpperCase() == 'SOL')
+            .fold<double>(0.0, (prev, t) => t.balance);
+        final showFullWallet = profileProvider.isSignedIn;
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onWalletTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: EdgeInsets.all(widget.isExpanded ? 12 : 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeProvider.accentColor,
+                    themeProvider.accentColor.withValues(alpha: 0.8),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: themeProvider.accentColor.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: widget.isExpanded
+                  ? (showFullWallet
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.account_balance_wallet,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'My Wallet',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white.withValues(alpha: 0.9),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            AnimatedOpacity(
+                              opacity: widget.expandAnimation.value,
+                              duration: const Duration(milliseconds: 150),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'KUB8',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: Colors.white.withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                      Text(
+                                        kub8Balance.toStringAsFixed(2),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'SOL',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: Colors.white.withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                      Text(
+                                        solBalance.toStringAsFixed(3),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Center(
+                          child: Icon(
+                            Icons.account_balance_wallet,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ))
+                  : Center(
+                      child: Icon(
+                        Icons.account_balance_wallet,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+            ),
+          ),
+        );
+      },
     );
   }
 

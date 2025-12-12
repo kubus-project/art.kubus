@@ -18,6 +18,7 @@ import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
+import '../art/art_detail_screen.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
@@ -534,9 +535,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             // Cover image or gradient background
             Container(
               width: double.infinity,
-              height: hasCoverImage ? 140 : 80,
+              height: hasCoverImage ? 160 : 100,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
                 gradient: !hasCoverImage ? LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -576,13 +584,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: Theme.of(context).scaffoldBackgroundColor,
-                      width: 4,
+                      width: 5,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: AvatarWidget(
                     wallet: user!.id,
                     avatarUrl: user!.profileImageUrl,
-                    radius: 40,
+                    radius: 45,
                     enableProfileNavigation: false,
                     heroTag: widget.heroTag,
                   ),
@@ -666,12 +681,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildStatsRow() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
     child: Row(
         children: [
@@ -742,7 +764,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildActionButtons(ThemeProvider themeProvider) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
       child: Row(
         children: [
           Expanded(
@@ -760,11 +782,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   side: user!.isFollowing 
                       ? BorderSide(
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                          width: 1.5,
                         )
                       : null,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  elevation: user!.isFollowing ? 0 : 2,
+                  shadowColor: Colors.black.withValues(alpha: 0.1),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: Text(
@@ -827,10 +852,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                width: 1.5,
               ),
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: const Icon(Icons.message),
@@ -911,15 +938,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
     return Container(
       width: 180,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isCompleted
               ? themeProvider.accentColor.withValues(alpha: 0.4)
               : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          width: 1.5,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1059,11 +1094,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                     );
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1325,11 +1367,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
     final medium = (data['medium'] ?? data['category'] ?? 'Digital').toString();
     final likes = data['likesCount'] ?? data['likes'] ?? 0;
-    return _buildShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: medium,
-      footer: '$likes likes',
+    final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+    
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: artworkId != null ? () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArtDetailScreen(artworkId: artworkId),
+          ),
+        );
+      } : null,
+      child: _buildShowcaseCard(
+        imageUrl: imageUrl,
+        title: title,
+        subtitle: medium,
+        footer: '$likes likes',
+      ),
     );
   }
 

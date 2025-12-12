@@ -304,6 +304,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
           'Keys stay on your device',
           'Web3-ready from the start',
         ],
+        icon: GradientIconCard(
+          start: const Color(0xFFF59E0B),
+          end: const Color(0xFFEF4444),
+          icon: Icons.person_add_alt_rounded,
+          iconSize: 48,
+          width: 96,
+          height: 96,
+          radius: 18,
+        ),
+        gradientStart: const Color(0xFFF59E0B),
+        gradientEnd: const Color(0xFFEF4444),
         form: form,
         footer: Align(
           alignment: Alignment.centerLeft,
@@ -325,7 +336,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       backgroundColor: colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 520),
@@ -342,7 +353,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
                   form,
                 ],
               ),
@@ -363,32 +374,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Container(
-          width: double.infinity,
-          padding: EdgeInsets.all(isDesktop ? 12 : 18),
-          child: Column(
-            children: [
-              GradientIconCard(
-                start: const Color(0xFFF59E0B),
-                end: const Color(0xFFEF4444),
-                icon: Icons.person_add_alt_rounded,
-                iconSize: 48,
-                width: isDesktop ? 88 : 96,
-                height: isDesktop ? 88 : 96,
-                radius: 18,
-              ),
-              const SizedBox(height: 12),
-              Text('Create your account', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
-              const SizedBox(height: 8),
-              Text(
-                'Choose wallet, email, or Google. Keys stay with you.',
-                style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
-                textAlign: TextAlign.center,
-              ),
-            ],
+        if (!isDesktop)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              children: [
+                GradientIconCard(
+                  start: const Color(0xFFF59E0B),
+                  end: const Color(0xFFEF4444),
+                  icon: Icons.person_add_alt_rounded,
+                  iconSize: 48,
+                  width: 96,
+                  height: 96,
+                  radius: 18,
+                ),
+                const SizedBox(height: 12),
+                Text('Create your account', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+                const SizedBox(height: 8),
+                Text(
+                  'and start exploring, creating, and connecting with other artists.',
+                  style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
+        if (!isDesktop) const SizedBox(height: 20),
         if (enableWallet)
           ElevatedButton.icon(
             style: ElevatedButton.styleFrom(

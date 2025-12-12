@@ -4,7 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import '../providers/storage_provider.dart';
-import 'ar_content_service.dart';
+import 'art_marker_service.dart';
 import 'backend_api_service.dart';
 import 'socket_service.dart';
 
@@ -15,6 +15,7 @@ class MapMarkerService {
   factory MapMarkerService() => _instance;
 
   final BackendApiService _backendApi = BackendApiService();
+  final ArtMarkerService _artMarkerService = ArtMarkerService();
   final List<ArtMarker> _cachedMarkers = [];
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
@@ -61,18 +62,18 @@ class MapMarkerService {
     // Prevent concurrent fetches
     if (_isFetching) {
       debugPrint('MapMarkerService: Already fetching, returning cached markers');
-      return List<ArtMarker>.from(_cachedMarkers);
+      return _filterValidMarkers(_cachedMarkers);
     }
 
     if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
       debugPrint(
           'MapMarkerService: using cache during rate-limit cooldown (until $_rateLimitUntil)');
-      return List<ArtMarker>.from(_cachedMarkers);
+      return _filterValidMarkers(_cachedMarkers);
     }
 
     if (!forceRefresh && _canReuseCache(center, radiusKm)) {
       debugPrint('MapMarkerService: using cached markers (${_cachedMarkers.length} items)');
-      return List<ArtMarker>.from(_cachedMarkers);
+      return _filterValidMarkers(_cachedMarkers);
     }
 
     try {
@@ -88,7 +89,7 @@ class MapMarkerService {
       _rateLimitUntil = null; // successful fetch resets any prior backoff
       _cachedMarkers
         ..clear()
-        ..addAll(markers);
+        ..addAll(_filterValidMarkers(markers));
       _lastQueryCenter = center;
       _lastQueryRadiusKm = radiusKm;
       _lastFetchTime = DateTime.now();
@@ -106,7 +107,7 @@ class MapMarkerService {
       _isFetching = false;
     }
 
-    return List<ArtMarker>.from(_cachedMarkers);
+    return _filterValidMarkers(_cachedMarkers);
   }
 
   double get lastQueryRadiusKm => _lastQueryRadiusKm;
@@ -167,7 +168,7 @@ class MapMarkerService {
         isPublic: isPublic,
       );
 
-      final persistedMarker = await ARContentService.saveARMarker(marker);
+      final persistedMarker = await _artMarkerService.saveMarker(marker);
       if (persistedMarker != null) {
         _cachedMarkers.add(persistedMarker);
         return persistedMarker;
@@ -193,7 +194,7 @@ class MapMarkerService {
   void _handleSocketMarker(Map<String, dynamic> payload) {
     try {
       final marker = _markerFromSocketPayload(payload);
-      if (marker == null) return;
+      if (marker == null || !_isValidPosition(marker.position)) return;
       // If we have an active cache window and the marker is nearby, merge it in-place.
       if (_lastQueryCenter != null &&
           _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
@@ -222,6 +223,14 @@ class MapMarkerService {
       if (parsed != null) return parsed;
     }
     return fallback;
+  }
+
+  List<ArtMarker> _filterValidMarkers(List<ArtMarker> markers) {
+    return markers.where((m) => _isValidPosition(m.position)).toList();
+  }
+
+  bool _isValidPosition(LatLng position) {
+    return position.latitude.abs() > 0.0001 || position.longitude.abs() > 0.0001;
   }
 
   ArtMarker? _markerFromSocketPayload(Map<String, dynamic> json) {

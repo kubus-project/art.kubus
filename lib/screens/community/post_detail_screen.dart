@@ -15,8 +15,9 @@ import '../../widgets/institution_badge.dart';
 class PostDetailScreen extends StatefulWidget {
   final CommunityPost? post;
   final String? postId;
+  final VoidCallback? onClose;
 
-  const PostDetailScreen({super.key, this.post, this.postId}) : assert(post != null || postId != null);
+  const PostDetailScreen({super.key, this.post, this.postId, this.onClose}) : assert(post != null || postId != null);
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -924,6 +925,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       case 'ar_drop':
       case 'art_drop':
         return Icons.place_outlined;
+      case 'art_review':
+        return Icons.rate_review_outlined;
       case 'event':
         return Icons.event_outlined;
       case 'poll':
@@ -944,6 +947,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       case 'ar_drop':
       case 'art_drop':
         return 'AR Drop';
+      case 'art_review':
+        return 'Art Review';
       case 'event':
         return 'Event';
       case 'poll':
@@ -1222,6 +1227,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
+        ),
         title: Text('Post', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
       ),
       body: _loading

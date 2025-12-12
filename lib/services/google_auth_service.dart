@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -49,8 +51,50 @@ class GoogleAuthService {
     try {
       GoogleSignInAccount? account;
 
-      // Web: try lightweight (FedCM/One Tap) flow first.
+      StreamSubscription<GoogleSignInAuthenticationEvent>? authEventsSub;
+      Completer<GoogleSignInAccount?>? webAuthCompleter;
+
+      // Web: GIS requires using its own UI and delivers results via authenticationEvents.
       if (kIsWeb) {
+        webAuthCompleter = Completer<GoogleSignInAccount?>();
+        authEventsSub = GoogleSignIn.instance.authenticationEvents.listen(
+          (event) {
+            if (event is GoogleSignInAuthenticationEventSignIn &&
+                !webAuthCompleter!.isCompleted) {
+              webAuthCompleter.complete(event.user);
+            }
+          },
+          onError: (error, stackTrace) {
+            if (webAuthCompleter == null || webAuthCompleter.isCompleted) return;
+            if (error is GoogleSignInException &&
+                (error.code == GoogleSignInExceptionCode.canceled ||
+                    error.code == GoogleSignInExceptionCode.interrupted ||
+                    error.code == GoogleSignInExceptionCode.uiUnavailable)) {
+              webAuthCompleter.complete(null);
+              return;
+            }
+            webAuthCompleter.completeError(error, stackTrace);
+          },
+        );
+
+        try {
+          final Future<GoogleSignInAccount?>? maybeFuture =
+              GoogleSignIn.instance.attemptLightweightAuthentication(reportAllExceptions: true);
+          // The web plugin returns null to signal that the result will arrive via authenticationEvents.
+          if (maybeFuture != null) {
+            account = await maybeFuture;
+          }
+          account ??= await webAuthCompleter.future.timeout(
+              const Duration(seconds: 15),
+              onTimeout: () => throw Exception(
+                'Google sign-in timed out. Check popup blockers or allow third-party cookies.',
+              ),
+            );
+        } finally {
+          await authEventsSub.cancel();
+        }
+      } else {
+        // Mobile/desktop: try lightweight auth (restores prior sessions) then interactive auth.
         try {
           final Future<GoogleSignInAccount?>? maybeFuture =
               GoogleSignIn.instance.attemptLightweightAuthentication();
@@ -58,28 +102,32 @@ class GoogleAuthService {
             account = await maybeFuture;
           }
         } catch (e) {
-          debugPrint('GoogleAuthService: attemptLightweightAuthentication failed on web: $e');
+          debugPrint('GoogleAuthService: attemptLightweightAuthentication failed: $e');
+        }
+
+        if (account == null) {
+          if (!GoogleSignIn.instance.supportsAuthenticate()) {
+            throw Exception('Google Sign-In authenticate() not supported on this platform.');
+          }
+          try {
+            account = await GoogleSignIn.instance.authenticate();
+          } on GoogleSignInException catch (e) {
+            // User canceled or UI not available: surface a benign null so UI can retry.
+            if (e.code == GoogleSignInExceptionCode.canceled ||
+                e.code == GoogleSignInExceptionCode.interrupted ||
+                e.code == GoogleSignInExceptionCode.uiUnavailable) {
+              debugPrint('GoogleAuthService: authenticate canceled/interrupted (${e.code}), returning null');
+              return null;
+            }
+            rethrow;
+          }
         }
       }
 
-      // Interactive auth (popup/button) as fallback.
       if (account == null) {
-        if (!GoogleSignIn.instance.supportsAuthenticate()) {
-          throw Exception('Google Sign-In authenticate() not supported on this platform.');
-        }
-        try {
-          account = await GoogleSignIn.instance.authenticate();
-        } on GoogleSignInException catch (e) {
-          // User canceled or UI not available: surface a benign null so UI can retry.
-          if (e.code == GoogleSignInExceptionCode.canceled ||
-              e.code == GoogleSignInExceptionCode.interrupted ||
-              e.code == GoogleSignInExceptionCode.uiUnavailable) {
-            debugPrint('GoogleAuthService: authenticate canceled/interrupted (${e.code}), returning null');
-            return null;
-          }
-          rethrow;
-        }
+        return null;
       }
+
       final auth = account.authentication;
       final idToken = auth.idToken;
       if (idToken == null || idToken.isEmpty) {

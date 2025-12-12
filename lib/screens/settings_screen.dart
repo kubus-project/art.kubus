@@ -3,15 +3,19 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../config/config.dart';
 import '../providers/themeprovider.dart';
+import '../providers/notification_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/platform_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../models/wallet.dart';
+import '../services/backend_api_service.dart';
+import '../services/push_notification_service.dart';
+import '../services/settings_service.dart';
 import '../widgets/platform_aware_widgets.dart';
+import 'onboarding/onboarding_screen.dart';
 import 'web3/wallet/wallet_home.dart' as web3_wallet;
 import 'web3/wallet/connectwallet_screen.dart';
 import 'onboarding_reset_screen.dart';
@@ -20,6 +24,7 @@ import '../widgets/avatar_widget.dart';
 import '../widgets/empty_state_card.dart';
 import 'web3/wallet/mnemonic_reveal_screen.dart';
 import '../utils/app_animations.dart';
+import '../../config/config.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -80,12 +85,10 @@ class _SettingsScreenState extends State<SettingsScreen>
   // App settings state
   bool _analytics = true;
   bool _crashReporting = true;
-  bool _enableAnalytics = true;
-  bool _enableCrashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
   
   // Wallet settings state
-  String _networkSelection = 'Solana';
+  String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
   
   // Profile interaction settings
@@ -1183,6 +1186,13 @@ class _SettingsScreenState extends State<SettingsScreen>
       Icons.warning,
       [
         _buildSettingsTile(
+          'Log Out',
+          'Disconnect wallet and clear session',
+          Icons.logout,
+          onTap: _handleLogout,
+          isDestructive: true,
+        ),
+        _buildSettingsTile(
           'Reset App',
           'Clear all data and settings',
           Icons.refresh,
@@ -1319,8 +1329,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {
                   _networkSelection = 'Mainnet';
                 });
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('networkSelection', 'Mainnet');
+                await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showSnackBar(
                   const SnackBar(content: Text('Switched to Mainnet')),
@@ -1341,8 +1350,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {
                   _networkSelection = 'Devnet';
                 });
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('networkSelection', 'Devnet');
+                await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showSnackBar(
                   const SnackBar(content: Text('Switched to Devnet')),
@@ -1363,8 +1371,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 setState(() {
                   _networkSelection = 'Testnet';
                 });
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('networkSelection', 'Testnet');
+                await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showSnackBar(
                   const SnackBar(content: Text('Switched to Testnet')),
@@ -1890,18 +1897,9 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              
-              // Clear SharedPreferences cache (except critical data)
-              final prefs = await SharedPreferences.getInstance();
-              final keysToKeep = ['has_wallet', 'wallet_address', 'private_key', 'mnemonic'];
-              final allKeys = prefs.getKeys();
-              
-              for (var key in allKeys) {
-                if (!keysToKeep.contains(key)) {
-                  await prefs.remove(key);
-                }
-              }
-              
+
+              await SettingsService.clearNonCriticalCaches();
+
               if (!mounted) return;
               navigator.pop();
               messenger.showSnackBar(
@@ -1959,20 +1957,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Future<void> _resetPermissionFlags() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys();
-      // Keep a small whitelist of critical keys
-      const keepKeys = {'has_wallet', 'wallet_address', 'private_key', 'mnemonic'};
-
-      for (final key in keys) {
-        if (keepKeys.contains(key)) continue;
-        final k = key.toLowerCase();
-        if (k.contains('permission') || k.contains('service') || k.contains('location') || k.contains('camera') || k.contains('_requested') || k.contains('gps')) {
-          try {
-            await prefs.remove(key);
-          } catch (_) {}
-        }
-      }
+      await SettingsService.resetPermissionFlags();
     } catch (e) {
       debugPrint('Failed to reset persisted permission flags: $e');
     }
@@ -2080,16 +2065,16 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-
-              // Clear all SharedPreferences
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
-
-              // Disconnect wallet if connected
-              if (web3Provider.isConnected) {
-                web3Provider.disconnectWallet();
-              }
+              final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+              final notificationProvider =
+                  Provider.of<NotificationProvider>(context, listen: false);
+              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              await SettingsService.resetApp(
+                walletProvider: walletProvider,
+                backendApi: BackendApiService(),
+                notificationProvider: notificationProvider,
+                profileProvider: profileProvider,
+              );
 
               if (!mounted) return;
               navigator.pop();
@@ -2099,6 +2084,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   duration: Duration(seconds: 3),
                 ),
               );
+              _restartToOnboarding();
             },
             child: const Text('Reset'),
           ),
@@ -2120,7 +2106,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         content: Text(
-          'This action cannot be undone. All your data will be permanently deleted.',
+          'We will remove your profile and community data from our servers. Your wallet stays yours and will remain functional.',
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
@@ -2157,7 +2143,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                   ),
                   content: Text(
-                    'Type "DELETE" to confirm permanent account deletion.',
+                    'Are you absolutely sure you want to delete your account? This action cannot be undone.',
                     style: GoogleFonts.inter(
                       color: Theme.of(confirmContext).colorScheme.onSurface,
                     ),
@@ -2180,16 +2166,28 @@ class _SettingsScreenState extends State<SettingsScreen>
               
               if (!mounted) return;
               if (confirmed == true) {
-                // Clear all data
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.clear();
+                final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+                final notificationProvider =
+                    Provider.of<NotificationProvider>(context, listen: false);
+                final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
 
-                // Disconnect wallet
-                if (!mounted) return;
-                final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-                if (web3Provider.isConnected) {
-                  web3Provider.disconnectWallet();
+                // Delete server-side profile/community data (wallet remains functional)
+                try {
+                  final wallet = walletProvider.currentWalletAddress ??
+                      profileProvider.currentUser?.walletAddress;
+                  await BackendApiService().deleteMyAccountData(walletAddress: wallet);
+                } catch (e) {
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Backend deletion failed: $e')),
+                  );
                 }
+
+                await SettingsService.resetApp(
+                  walletProvider: walletProvider,
+                  backendApi: BackendApiService(),
+                  notificationProvider: notificationProvider,
+                  profileProvider: profileProvider,
+                );
 
                 if (!mounted) return;
                 dialogNavigator.pop();
@@ -2199,6 +2197,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     duration: Duration(seconds: 3),
                   ),
                 );
+                _restartToOnboarding();
               } else {
                 if (!mounted) return;
                 dialogNavigator.pop();
@@ -2213,65 +2212,203 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Save all settings
   Future<void> _saveAllSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Security settings
-    await prefs.setBool('biometricAuth', _biometricAuth);
-    await prefs.setBool('privacyMode', _privacyMode);
-    
-    // Privacy settings  
-    await prefs.setBool('enableAnalytics', _enableAnalytics);
-    await prefs.setBool('enableCrashReporting', _enableCrashReporting);
-    
-    // App behavior settings
-    await prefs.setBool('skipOnboardingForReturningUsers', _skipOnboardingForReturningUsers);
-    
-    // Wallet settings
-    await prefs.setString('networkSelection', _networkSelection);
-    await prefs.setBool('autoBackup', _autoBackup);
-    
-    // Profile settings
-    await prefs.setString('profileVisibility', _profileVisibility);
-    await prefs.setBool('showAchievements', _showAchievements);
-    await prefs.setBool('showFriends', _showFriends);
-    await prefs.setBool('allowMessages', _allowMessages);
+    await SettingsService.saveSettings(_buildSettingsState());
+  }
+
+  SettingsState _buildSettingsState() {
+    return SettingsState(
+      pushNotifications: _pushNotifications,
+      emailNotifications: _emailNotifications,
+      marketingEmails: _marketingEmails,
+      loginNotifications: _loginNotifications,
+      dataCollection: _dataCollection,
+      personalizedAds: _personalizedAds,
+      locationTracking: _locationTracking,
+      dataRetention: _dataRetention,
+      twoFactorAuth: _twoFactorAuth,
+      sessionTimeout: _sessionTimeout,
+      autoLockTime: _autoLockTime,
+      autoLockSeconds: _autoLockSecondsFromLabel(_autoLockTime),
+      biometricAuth: _biometricAuth,
+      privacyMode: _privacyMode,
+      analytics: _analytics,
+      crashReporting: _crashReporting,
+      skipOnboarding: _skipOnboardingForReturningUsers,
+      networkSelection: _networkSelection,
+      autoBackup: _autoBackup,
+      profileVisibility: _profileVisibility,
+      showAchievements: _showAchievements,
+      showFriends: _showFriends,
+      allowMessages: _allowMessages,
+      accountType: _accountType,
+      publicProfile: _publicProfile,
+    );
+  }
+
+  int _autoLockSecondsFromLabel(String label) {
+    switch (label.toLowerCase()) {
+      case '10 seconds':
+        return 10;
+      case '30 seconds':
+        return 30;
+      case '1 minute':
+        return 60;
+      case '5 minutes':
+        return 5 * 60;
+      case '15 minutes':
+        return 15 * 60;
+      case '30 minutes':
+        return 30 * 60;
+      case '1 hour':
+        return 60 * 60;
+      case '3 hours':
+        return 3 * 60 * 60;
+      case '6 hours':
+        return 6 * 60 * 60;
+      case '12 hours':
+        return 12 * 60 * 60;
+      case '1 day':
+        return 24 * 60 * 60;
+      case 'never':
+        return 0;
+      default:
+        return 5 * 60;
+    }
+  }
+
+  Future<void> _togglePushNotifications(bool value) async {
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    if (value) {
+      final granted = await PushNotificationService().requestPermission();
+      if (!granted) {
+        if (mounted) {
+          setState(() => _pushNotifications = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Enable notifications in system settings to receive alerts.'),
+            ),
+          );
+        }
+        await _saveAllSettings();
+        return;
+      }
+      await notificationProvider.initialize(force: true);
+    } else {
+      await PushNotificationService().cancelAllNotifications();
+      notificationProvider.reset();
+    }
+    if (!mounted) return;
+    setState(() => _pushNotifications = value);
+    await _saveAllSettings();
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          'Log Out',
+          style: GoogleFonts.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Disconnect your wallet and clear your session on this device?',
+          style: GoogleFonts.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(
+                color: Theme.of(dialogContext).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    await SettingsService.logout(
+      walletProvider: walletProvider,
+      backendApi: BackendApiService(),
+      notificationProvider: notificationProvider,
+      profileProvider: profileProvider,
+    );
+
+    if (!mounted) return;
+    _restartToOnboarding();
+  }
+
+  void _restartToOnboarding() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (route) => false,
+    );
   }
 
   // Load all settings
   Future<void> _loadAllSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    
+    final settings = await SettingsService.loadSettings(
+      fallbackNetwork:
+          web3Provider.currentNetwork.isNotEmpty ? web3Provider.currentNetwork : null,
+    );
+    if (!mounted) return;
+
     setState(() {
-      // Security settings
-      _biometricAuth = prefs.getBool('biometricAuth') ?? false;
-      _privacyMode = prefs.getBool('privacyMode') ?? false;
-      
-      // Privacy settings
-      _enableAnalytics = prefs.getBool('enableAnalytics') ?? true;
-      _enableCrashReporting = prefs.getBool('enableCrashReporting') ?? true;
-      
-      // App behavior settings
-      _skipOnboardingForReturningUsers = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
-      
-      // Wallet settings - sync with web3Provider
-      _networkSelection = web3Provider.currentNetwork.isNotEmpty 
-          ? web3Provider.currentNetwork 
-          : (prefs.getString('networkSelection') ?? 'Mainnet');
-      _autoBackup = prefs.getBool('autoBackup') ?? true;
-      
-      // Profile settings
-      _profileVisibility = prefs.getString('profileVisibility') ?? 'Public';
-      _showAchievements = prefs.getBool('showAchievements') ?? true;
-      _showFriends = prefs.getBool('showFriends') ?? true;
-      _allowMessages = prefs.getBool('allowMessages') ?? true;
+      _pushNotifications = settings.pushNotifications;
+      _emailNotifications = settings.emailNotifications;
+      _marketingEmails = settings.marketingEmails;
+      _loginNotifications = settings.loginNotifications;
+
+      _dataCollection = settings.dataCollection;
+      _personalizedAds = settings.personalizedAds;
+      _locationTracking = settings.locationTracking;
+      _dataRetention = settings.dataRetention;
+
+      _twoFactorAuth = settings.twoFactorAuth;
+      _sessionTimeout = settings.sessionTimeout;
+      _autoLockTime = settings.autoLockTime;
+      _biometricAuth = settings.biometricAuth;
+      _privacyMode = settings.privacyMode;
+
+      _analytics = settings.analytics;
+      _crashReporting = settings.crashReporting;
+      _skipOnboardingForReturningUsers = settings.skipOnboarding;
+
+      _networkSelection = settings.networkSelection;
+      _autoBackup = settings.autoBackup;
+
+      _profileVisibility = settings.profileVisibility;
+      _showAchievements = settings.showAchievements;
+      _showFriends = settings.showFriends;
+      _allowMessages = settings.allowMessages;
+      _accountType = settings.accountType;
+      _publicProfile = settings.publicProfile;
     });
   }
 
   Future<void> _saveProfileVisibility(String visibility) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_visibility', visibility);
+    await SettingsService.saveProfileVisibility(visibility);
   }
 
   // Wallet dialog methods
@@ -3204,7 +3341,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                     'Push Notifications',
                     'Get notifications on your device',
                     _pushNotifications,
-                    (value) => setDialogState(() => _pushNotifications = value),
+                    (value) async {
+                      setDialogState(() => _pushNotifications = value);
+                      await _togglePushNotifications(value);
+                    },
                   ),
                   _buildSwitchTile(
                     'Marketing Emails',

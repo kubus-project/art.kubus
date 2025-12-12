@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
+import 'providers/profile_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/map_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/community/community_screen.dart';
 import 'screens/community/profile_screen.dart';
+import 'screens/auth/sign_in_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
 
@@ -20,29 +21,15 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   int _currentIndex = 0; // Start with map (index 0)
-  
-  late final List<Widget> _screens;
-  
-  @override
-  void initState() {
-    super.initState();
-    _screens = [
-      const MapScreen(),
-      const ARScreen(),
-      const CommunityScreen(),
-      const HomeScreen(),
-      const ProfileScreen(),
-    ];
-  }
 
   @override
   Widget build(BuildContext context) {
     final walletProvider = Provider.of<WalletProvider>(context);
     final animationTheme = context.animationTheme;
-    final screenWidth = MediaQuery.of(context).size.width;
     
-    // Use desktop shell for web and large screens (>= 900px)
-    final useDesktopLayout = kIsWeb || screenWidth >= 900;
+    // Use screen-based breakpoints (not platform) so large tablets get desktop
+    // UI and mobile browsers on web stay on the phone layout.
+    final useDesktopLayout = DesktopBreakpoints.isDesktop(context);
 
     if (useDesktopLayout) {
       return const DesktopShell();
@@ -54,7 +41,8 @@ class _MainAppState extends State<MainApp> {
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: IndexedStack(
             index: _currentIndex,
-            children: _screens,
+            // Keep heavy AR resources out of the tree unless the AR tab is active.
+            children: _buildScreens(),
           ),
           bottomNavigationBar: _buildBottomNavigationBar(),
         ),
@@ -82,6 +70,23 @@ class _MainAppState extends State<MainApp> {
         ),
       ],
     );
+  }
+
+  List<Widget> _buildScreens() {
+    return const [
+      MapScreen(),
+      // Only build AR when selected so the camera is released when not in use.
+      ARScreen(),
+      CommunityScreen(),
+      HomeScreen(),
+      ProfileScreenWrapper(),
+    ].asMap().entries.map((entry) {
+      if (entry.key == 1 && _currentIndex != 1) {
+        return const SizedBox
+            .shrink(key: ValueKey('ar-placeholder')); // frees camera resources
+      }
+      return entry.value;
+    }).toList();
   }
 
   Widget _buildBottomNavigationBar() {
@@ -254,5 +259,31 @@ class _LockOverlay extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Wrapper widget that checks authentication before showing profile screen
+class ProfileScreenWrapper extends StatelessWidget {
+  const ProfileScreenWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    
+    if (!profileProvider.isSignedIn) {
+      return const SignInScreenWrapper();
+    }
+    
+    return const ProfileScreen();
+  }
+}
+
+/// Wrapper widget for sign-in screen with proper theming
+class SignInScreenWrapper extends StatelessWidget {
+  const SignInScreenWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SignInScreen();
   }
 }

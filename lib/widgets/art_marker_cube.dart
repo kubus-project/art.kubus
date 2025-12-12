@@ -24,12 +24,12 @@ class ArtMarkerCube extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _CubePalette palette = _CubePalette.fromBase(baseColor);
-    final double cubeHeight = size * 1.18;
+    final double cubeHeight = size * 1.1;
     final double iconExtent = size * 0.44;
 
     return SizedBox(
       width: size,
-      height: size * 1.35,
+      height: size * 1.3,
       child: Stack(
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
@@ -329,7 +329,7 @@ class _SignalPip extends StatelessWidget {
       alignment: Alignment.center,
       child: tier == ArtMarkerSignal.legendary
           ? Icon(
-              Icons.auto_awesome,
+              Icons.image,
               size: size * 0.6,
               color: Colors.black.withValues(alpha: 0.78),
             )
@@ -360,15 +360,17 @@ class _CubePalette {
   final Color edge;
 
   factory _CubePalette.fromBase(Color color) {
+    final normalized = _normalizeBase(color);
+    final contrastBoost = _contrastFor(normalized);
     return _CubePalette(
-      top: _lighten(color, 0.24),
-      topAccent: _lighten(color, 0.36),
-      left: _darken(color, 0.12),
-      right: _darken(color, 0.2),
-      frontLeft: _darken(color, 0.24),
-      frontRight: _darken(color, 0.28),
-      base: color.withValues(alpha: 0.45),
-      edge: Colors.black.withValues(alpha: 0.35),
+      top: _lighten(normalized, 0.16 + contrastBoost),
+      topAccent: _lighten(normalized, 0.28 + contrastBoost),
+      left: _darken(normalized, 0.08 + contrastBoost / 2),
+      right: _darken(normalized, 0.14 + contrastBoost / 2),
+      frontLeft: _darken(normalized, 0.18 + contrastBoost / 2),
+      frontRight: _darken(normalized, 0.22 + contrastBoost / 2),
+      base: normalized.withValues(alpha: 0.52),
+      edge: Colors.black.withValues(alpha: 0.45),
     );
   }
 
@@ -551,4 +553,18 @@ Color _darken(Color color, double amount) {
   final HSLColor hsl = HSLColor.fromColor(color);
   final double lightness = (hsl.lightness - amount).clamp(0.0, 1.0);
   return hsl.withLightness(lightness).toColor();
+}
+
+Color _normalizeBase(Color color) {
+  final hsl = HSLColor.fromColor(color);
+  final lightness = hsl.lightness.clamp(0.22, 0.68);
+  return hsl.withLightness(lightness.toDouble()).toColor();
+}
+
+double _contrastFor(Color color) {
+  // Higher contrast for very light/dark colors
+  final brightness = color.computeLuminance();
+  if (brightness < 0.25) return 0.07;
+  if (brightness > 0.75) return 0.05;
+  return 0.02;
 }

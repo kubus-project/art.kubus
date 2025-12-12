@@ -1,4 +1,3 @@
-
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -6,6 +5,7 @@ import '../models/art_marker.dart';
 import '../models/artwork.dart';
 import '../providers/storage_provider.dart';
 import 'ar_content_service.dart';
+import 'art_marker_service.dart';
 
 /// Dedicated service responsible for crafting AR-ready markers
 /// for existing artworks. Handles model uploads and ensures the
@@ -107,6 +107,6 @@ class ARMarkerService {
       isPublic: isPublic,
     );
 
-    return ARContentService.saveARMarker(payloadMarker);
+    return ArtMarkerService().saveMarker(payloadMarker);
   }
 }

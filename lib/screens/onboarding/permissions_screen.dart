@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../widgets/inline_loading.dart';
-import '../services/push_notification_service.dart';
+import '../../widgets/inline_loading.dart';
+import '../../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../widgets/app_logo.dart';
-import '../widgets/gradient_icon_card.dart';
-import '../main_app.dart';
+import '../../widgets/app_logo.dart';
+import '../../widgets/gradient_icon_card.dart';
+import '../../screens/desktop/desktop_shell.dart';
+import '../desktop/onboarding/desktop_permissions_screen.dart';
+import '../../main_app.dart';
 
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -179,6 +181,17 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Redirect to desktop permissions if on desktop
+    if (DesktopBreakpoints.isDesktop(context)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const DesktopPermissionsScreen()),
+          );
+        }
+      });
+    }
+
     final mediaQuery = MediaQuery.of(context);
     final screenHeight = mediaQuery.size.height;
     final screenWidth = mediaQuery.size.width;

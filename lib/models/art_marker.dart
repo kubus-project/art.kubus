@@ -138,6 +138,13 @@ class ArtMarker {
     return null;
   }
 
+  /// Whether the marker has a meaningful coordinate (filters out null-island defaults).
+  bool get hasValidPosition {
+    final nearNullIsland =
+        position.latitude.abs() < 0.0001 && position.longitude.abs() < 0.0001;
+    return !nearNullIsland;
+  }
+
   /// Check if marker is active at given position
   bool isActiveAt(LatLng currentPosition) {
     if (!requiresProximity) return true;
@@ -193,7 +200,11 @@ class ArtMarker {
 
   /// Create from Map (from storage/API)
   factory ArtMarker.fromMap(Map<String, dynamic> map) {
-    final markerType = _parseMarkerType(map['markerType'] ?? map['type'] ?? map['category']);
+    final metadata = _normalizeMetadata(map['metadata']);
+    final markerType = _parseMarkerType(
+      map['markerType'] ?? map['type'] ?? map['category'],
+      metadata,
+    );
     final rotation = _normalizeRotation(map['rotation']);
     return ArtMarker(
       id: map['id']?.toString() ?? '',
@@ -218,11 +229,7 @@ class ArtMarker {
       animationName: map['animationName']?.toString(),
       enablePhysics: _parseBool(map['enablePhysics'], false),
       enableInteraction: _parseBool(map['enableInteraction'], true),
-      metadata: map['metadata'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(map['metadata'])
-          : map['metadata'] is Map
-              ? Map<String, dynamic>.from(map['metadata'] as Map)
-              : null,
+        metadata: metadata,
       tags: List<String>.from(map['tags'] ?? const []),
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? 'system',
@@ -305,24 +312,38 @@ class ArtMarker {
     return 'ArtMarker(id: $id, type: ${type.name}, name: $name)';
   }
 
-  static ArtMarkerType _parseMarkerType(dynamic raw) {
-    final value = raw?.toString().toLowerCase() ?? '';
-    if (value.contains('institution') || value.contains('museum') || value.contains('gallery')) {
+  static ArtMarkerType _parseMarkerType(dynamic raw, Map<String, dynamic>? metadata) {
+    final metaType = metadata?['subjectType'] ?? metadata?['subject_type'];
+    final metaCategory = metadata?['subjectCategory'] ?? metadata?['subject_category'];
+    final metaLabel = metadata?['subjectLabel'] ?? metadata?['subject_label'];
+
+    String normalized = raw?.toString().toLowerCase() ?? '';
+    if ((normalized.isEmpty || normalized == 'geolocation') && metaType is String) {
+      normalized = metaType.toLowerCase();
+    }
+    if (metaCategory is String && normalized.isEmpty) {
+      normalized = metaCategory.toLowerCase();
+    }
+    if (metaLabel is String && normalized.isEmpty) {
+      normalized = metaLabel.toLowerCase();
+    }
+
+    if (normalized.contains('institution') || normalized.contains('museum') || normalized.contains('gallery')) {
       return ArtMarkerType.institution;
     }
-    if (value.contains('event')) {
+    if (normalized.contains('event')) {
       return ArtMarkerType.event;
     }
-    if (value.contains('residency')) {
+    if (normalized.contains('residency') || normalized.contains('group') || normalized.contains('dao')) {
       return ArtMarkerType.residency;
     }
-    if (value.contains('drop') || value.contains('airdrop')) {
+    if (normalized.contains('drop') || normalized.contains('airdrop')) {
       return ArtMarkerType.drop;
     }
-    if (value.contains('experience') || value.contains('ar')) {
+    if (normalized.contains('experience') || normalized.contains('ar') || normalized.contains('xr')) {
       return ArtMarkerType.experience;
     }
-    if (value.contains('artwork') || value.contains('art') || value.isEmpty) {
+    if (normalized.contains('artwork') || normalized.contains('art') || normalized.isEmpty) {
       return ArtMarkerType.artwork;
     }
     return ArtMarkerType.other;
@@ -367,5 +388,15 @@ class ArtMarker {
       };
     }
     return const {'x': 0, 'y': 0, 'z': 0};
+  }
+
+  static Map<String, dynamic>? _normalizeMetadata(dynamic raw) {
+    Map<String, dynamic>? metadata;
+    if (raw is Map<String, dynamic>) {
+      metadata = Map<String, dynamic>.from(raw);
+    } else if (raw is Map) {
+      metadata = raw.map((key, value) => MapEntry(key.toString(), value));
+    }
+    return metadata;
   }
 }

@@ -100,6 +100,12 @@ class _CommunityScreenState extends State<CommunityScreen>
       description: 'Highlight a location-based activation',
     ),
     _ComposerCategoryOption(
+      value: 'art_review',
+      label: 'Art review',
+      icon: Icons.rate_review_outlined,
+      description: 'Share your thoughts on an artwork',
+    ),
+    _ComposerCategoryOption(
       value: 'event',
       label: 'Event',
       icon: Icons.event_outlined,
@@ -160,6 +166,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   int _lastCommunityRefreshVersion = 0;
   int _lastGlobalRefreshVersion = 0;
   bool _communityReloadInFlight = false;
+  bool _combinedFeedLoadInFlight = false;
   
   // Expandable FAB state
   bool _isFabExpanded = false;
@@ -331,6 +338,150 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
+  String? _currentWalletAddress() {
+    try {
+      return Provider.of<WalletProvider>(context, listen: false)
+          .currentWalletAddress;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _ensureBackendAuthForCommunity(String? walletAddress) async {
+    final backendApi = BackendApiService();
+    try {
+      if (walletAddress != null && walletAddress.isNotEmpty) {
+        await backendApi.ensureAuthLoaded(walletAddress: walletAddress);
+      } else {
+        await backendApi.loadAuthToken();
+      }
+      debugPrint('Auth token ready for community posts');
+    } catch (e) {
+      debugPrint('Auth token not ready for community posts: $e');
+    }
+  }
+
+  Future<List<CommunityPost>> _fetchCommunityFeed({
+    required bool followingOnly,
+    String sort = 'recent',
+    String? walletAddress,
+  }) async {
+    final backendApi = BackendApiService();
+    final posts = await backendApi.getCommunityPosts(
+      page: 1,
+      limit: 50,
+      followingOnly: followingOnly,
+      sort: sort,
+    );
+    await CommunityService.loadSavedInteractions(
+      posts,
+      walletAddress: walletAddress,
+    );
+    return posts;
+  }
+
+  Future<void> _loadInitialFeeds({bool force = false, String? walletAddress}) async {
+    if (_combinedFeedLoadInFlight && !force) return;
+    _combinedFeedLoadInFlight = true;
+    final resolvedWallet = walletAddress ?? _currentWalletAddress();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _isLoadingFollowingFeed = true;
+        _isLoadingDiscoverFeed = true;
+      });
+    }
+
+    await _ensureBackendAuthForCommunity(resolvedWallet);
+
+    List<CommunityPost>? followingPosts;
+    List<CommunityPost>? discoverPosts;
+
+    await Future.wait([
+      () async {
+        try {
+          followingPosts = await _fetchCommunityFeed(
+            followingOnly: true,
+            walletAddress: resolvedWallet,
+          );
+          debugPrint('📥 Loaded ${followingPosts?.length ?? 0} following posts');
+        } catch (e) {
+          debugPrint('Error loading following feed: $e');
+        }
+      }(),
+      () async {
+        try {
+          discoverPosts = await _fetchCommunityFeed(
+            followingOnly: false,
+            walletAddress: resolvedWallet,
+          );
+          debugPrint('📥 Loaded ${discoverPosts?.length ?? 0} discover posts');
+        } catch (e) {
+          debugPrint('Error loading discover feed: $e');
+        }
+      }(),
+    ]);
+
+    if (!mounted) {
+      _combinedFeedLoadInFlight = false;
+      return;
+    }
+
+    setState(() {
+      _followingFeedPosts = followingPosts ?? [];
+      _discoverFeedPosts = discoverPosts ?? [];
+      _isLoadingFollowingFeed = false;
+      _isLoadingDiscoverFeed = false;
+
+      final bool hasFollowing = _followingFeedPosts.isNotEmpty;
+      final bool hasDiscover = _discoverFeedPosts.isNotEmpty;
+
+      if (_activeFeed == CommunityFeedType.following) {
+        if (hasFollowing) {
+          _communityPosts = _followingFeedPosts;
+        } else if (hasDiscover) {
+          _activeFeed = CommunityFeedType.discover;
+          _communityPosts = _discoverFeedPosts;
+          try {
+            _tabController.animateTo(1);
+          } catch (_) {}
+        } else {
+          _communityPosts = [];
+        }
+      } else {
+        if (hasDiscover) {
+          _communityPosts = _discoverFeedPosts;
+        } else if (hasFollowing) {
+          _activeFeed = CommunityFeedType.following;
+          _communityPosts = _followingFeedPosts;
+          try {
+            _tabController.animateTo(0);
+          } catch (_) {}
+        } else {
+          _communityPosts = [];
+        }
+      }
+
+      _isLoading = false;
+    });
+
+    if (_activeFeed == CommunityFeedType.following &&
+        _followingFeedPosts.isNotEmpty) {
+      _prefetchComments();
+    }
+
+    if (followingPosts == null && discoverPosts != null) {
+      _showSnack('Following feed is unavailable right now. Showing Discover.');
+    } else if (discoverPosts == null &&
+        followingPosts != null &&
+        _activeFeed == CommunityFeedType.discover) {
+      _showSnack('Discover feed is unavailable right now. Showing Following.');
+    }
+
+    _combinedFeedLoadInFlight = false;
+  }
+
   Future<void> _loadCommunityData({bool? followingOnly, bool force = false}) async {
     final bool targetFollowing =
         followingOnly ?? (_activeFeed == CommunityFeedType.following);
@@ -357,71 +508,60 @@ class _CommunityScreenState extends State<CommunityScreen>
       });
     }
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final walletAddress = walletProvider.currentWalletAddress;
+    final walletAddress = _currentWalletAddress();
+    await _ensureBackendAuthForCommunity(walletAddress);
 
+    List<CommunityPost>? posts;
     try {
-      final backendApi = BackendApiService();
-      try {
-        if (walletAddress != null && walletAddress.isNotEmpty) {
-          await backendApi.ensureAuthLoaded(walletAddress: walletAddress);
-        } else {
-          await backendApi.loadAuthToken();
-        }
-        debugPrint('Auth token ready for community posts');
-      } catch (e) {
-        debugPrint('Auth token not ready for community posts: $e');
-      }
-
-      final posts = await backendApi.getCommunityPosts(
-        page: 1,
-        limit: 50,
+      posts = await _fetchCommunityFeed(
         followingOnly: targetFollowing,
-      );
-      debugPrint('📥 Loaded ${posts.length} posts from backend');
-
-      await CommunityService.loadSavedInteractions(
-        posts,
         walletAddress: walletAddress,
       );
-      debugPrint('✅ Restored local interaction state for posts');
-
-      if (mounted) {
-        setState(() {
-          if (targetFollowing) {
-            _followingFeedPosts = posts;
-            _isLoadingFollowingFeed = false;
-            if (isActiveFeed) {
-              _communityPosts = _followingFeedPosts;
-              _isLoading = false;
-            }
-          } else {
-            _discoverFeedPosts = posts;
-            _isLoadingDiscoverFeed = false;
-            if (isActiveFeed) {
-              _communityPosts = _discoverFeedPosts;
-              _isLoading = false;
-            }
-          }
-        });
-        if (targetFollowing && isActiveFeed) {
-          _prefetchComments();
-        }
-      }
+      debugPrint('📥 Loaded ${posts.length} ${targetFollowing ? 'following' : 'discover'} posts');
     } catch (e) {
       debugPrint('Error loading community data: $e');
-      if (mounted) {
-        setState(() {
-          if (targetFollowing) {
-            _isLoadingFollowingFeed = false;
-          } else {
-            _isLoadingDiscoverFeed = false;
-          }
-          if (isActiveFeed) {
-            _communityPosts = [];
-            _isLoading = false;
-          }
-        });
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      if (targetFollowing) {
+        _followingFeedPosts = posts ?? [];
+        _isLoadingFollowingFeed = false;
+        if (isActiveFeed) {
+          _communityPosts = _followingFeedPosts;
+          _isLoading = false;
+        }
+      } else {
+        _discoverFeedPosts = posts ?? [];
+        _isLoadingDiscoverFeed = false;
+        if (isActiveFeed) {
+          _communityPosts = _discoverFeedPosts;
+          _isLoading = false;
+        }
+      }
+    });
+
+    if (targetFollowing && isActiveFeed && (_followingFeedPosts.isNotEmpty)) {
+      _prefetchComments();
+    }
+
+    if (posts == null || posts.isEmpty) {
+      if (isActiveFeed && _communityPosts.isEmpty) {
+        final alternative = targetFollowing ? _discoverFeedPosts : _followingFeedPosts;
+        if (alternative.isNotEmpty) {
+          final fallbackFeed = targetFollowing
+              ? CommunityFeedType.discover
+              : CommunityFeedType.following;
+          _showSnack('Showing ${fallbackFeed == CommunityFeedType.following ? 'Following' : 'Discover'} feed while we retry.');
+          setState(() {
+            _activeFeed = fallbackFeed;
+            _communityPosts = alternative;
+            try {
+              _tabController.animateTo(fallbackFeed == CommunityFeedType.following ? 0 : 1);
+            } catch (_) {}
+          });
+        }
       }
     }
   }
@@ -496,8 +636,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           debugPrint('CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
         }
       }
-      await _loadCommunityData(followingOnly: true, force: force);
-      await _loadCommunityData(followingOnly: false, force: force);
+      await _loadInitialFeeds(force: force, walletAddress: normalized.isNotEmpty ? normalized : null);
     } finally {
       _communityReloadInFlight = false;
     }
@@ -557,7 +696,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       _lastWalletAddress =
           Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
     } catch (_) {}
-    _loadCommunityData(followingOnly: true);
+    _loadInitialFeeds();
     
     // Track this screen visit for quick actions
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -728,7 +867,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       return;
     }
     _lastConfigChange = now;
-    _loadCommunityData();
+    _loadInitialFeeds(force: true);
   }
 
   // Helper to get user avatar from backend
@@ -4413,9 +4552,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                   final trending = await backend.getTrendingSearches(limit: 15);
                   if (mounted) {
                     setModalState(() {
-                      suggestions = trending.map((t) => {
-                        'tag': t['term'] ?? t['tag'] ?? t['query'] ?? '',
-                        'count': t['count'] ?? t['search_count'] ?? 0,
+                      suggestions = trending.map((t) {
+                        final count = t['count'] ?? t['search_count'] ?? t['post_count'] ?? t['frequency'] ?? 0;
+                        return {
+                          'tag': t['term'] ?? t['tag'] ?? t['query'] ?? '',
+                          'count': count,
+                        };
                       }).where((t) => t['tag'].toString().isNotEmpty).toList();
                       isLoading = false;
                     });
@@ -7044,6 +7186,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       case 'ar_drop':
       case 'art_drop':
         return Icons.place_outlined;
+      case 'art_review':
+        return Icons.rate_review_outlined;
       case 'event':
         return Icons.event_outlined;
       case 'poll':
@@ -7064,6 +7208,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       case 'ar_drop':
       case 'art_drop':
         return 'AR Drop';
+      case 'art_review':
+        return 'Art Review';
       case 'event':
         return 'Event';
       case 'poll':

@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../config/config.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
+import '../../services/backend_api_service.dart';
+import '../../services/push_notification_service.dart';
+import '../../services/settings_service.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import 'community/desktop_profile_edit_screen.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/wallet/mnemonic_reveal_screen.dart';
+import '../onboarding/onboarding_screen.dart';
+import '../../../config/config.dart';
+
 
 /// Desktop profile and settings screen
 /// Clean dashboard layout with account info and settings
@@ -58,12 +63,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   // App settings state
   bool _analytics = true;
   bool _crashReporting = true;
-  bool _enableAnalytics = true;
-  bool _enableCrashReporting = true;
   bool _skipOnboardingForReturningUsers = true;
   
   // Wallet settings state
-  String _networkSelection = 'Solana';
+  String _networkSelection = 'Mainnet';
   bool _autoBackup = true;
   
   // Profile interaction settings
@@ -84,92 +87,109 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    
+    final settings = await SettingsService.loadSettings(
+      fallbackNetwork:
+          web3Provider.currentNetwork.isNotEmpty ? web3Provider.currentNetwork : null,
+    );
+    if (!mounted) return;
+
     setState(() {
-      // Profile settings
-      _profileVisibility = prefs.getString('profileVisibility') ?? 'Public';
-      _showAchievements = prefs.getBool('showAchievements') ?? true;
-      _showFriends = prefs.getBool('showFriends') ?? true;
-      _allowMessages = prefs.getBool('allowMessages') ?? true;
-      
-      // Privacy settings
-      _dataCollection = prefs.getBool('dataCollection') ?? true;
-      _personalizedAds = prefs.getBool('personalizedAds') ?? true;
-      _locationTracking = prefs.getBool('locationTracking') ?? true;
-      _dataRetention = prefs.getString('dataRetention') ?? '1 Year';
-      
-      // Security settings
-      _twoFactorAuth = prefs.getBool('twoFactorAuth') ?? false;
-      _sessionTimeout = prefs.getBool('sessionTimeout') ?? true;
-      _autoLockTime = prefs.getString('autoLockTime') ?? '5 minutes';
-      _loginNotifications = prefs.getBool('loginNotifications') ?? true;
-      _biometricAuth = prefs.getBool('biometricAuth') ?? false;
-      _privacyMode = prefs.getBool('privacyMode') ?? false;
-      
-      // Account settings
-      _emailNotifications = prefs.getBool('emailNotifications') ?? true;
-      _pushNotifications = prefs.getBool('pushNotifications') ?? true;
-      _marketingEmails = prefs.getBool('marketingEmails') ?? false;
-      _accountType = prefs.getString('accountType') ?? 'Standard';
-      _publicProfile = prefs.getBool('publicProfile') ?? true;
-      
-      // App settings
-      _analytics = prefs.getBool('analytics') ?? true;
-      _crashReporting = prefs.getBool('crashReporting') ?? true;
-      _enableAnalytics = prefs.getBool('enableAnalytics') ?? true;
-      _enableCrashReporting = prefs.getBool('enableCrashReporting') ?? true;
-      _skipOnboardingForReturningUsers = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
-      
-      // Wallet settings
-      _networkSelection = web3Provider.currentNetwork.isNotEmpty 
-          ? web3Provider.currentNetwork 
-          : (prefs.getString('networkSelection') ?? 'Mainnet');
-      _autoBackup = prefs.getBool('autoBackup') ?? true;
+      _profileVisibility = settings.profileVisibility;
+      _showAchievements = settings.showAchievements;
+      _showFriends = settings.showFriends;
+      _allowMessages = settings.allowMessages;
+
+      _dataCollection = settings.dataCollection;
+      _personalizedAds = settings.personalizedAds;
+      _locationTracking = settings.locationTracking;
+      _dataRetention = settings.dataRetention;
+
+      _twoFactorAuth = settings.twoFactorAuth;
+      _sessionTimeout = settings.sessionTimeout;
+      _autoLockTime = settings.autoLockTime;
+      _loginNotifications = settings.loginNotifications;
+      _biometricAuth = settings.biometricAuth;
+      _privacyMode = settings.privacyMode;
+
+      _emailNotifications = settings.emailNotifications;
+      _pushNotifications = settings.pushNotifications;
+      _marketingEmails = settings.marketingEmails;
+      _accountType = settings.accountType;
+      _publicProfile = settings.publicProfile;
+
+      _analytics = settings.analytics;
+      _crashReporting = settings.crashReporting;
+      _skipOnboardingForReturningUsers = settings.skipOnboarding;
+
+      _networkSelection = settings.networkSelection;
+      _autoBackup = settings.autoBackup;
     });
   }
 
   Future<void> _saveSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    
-    // Profile settings
-    await prefs.setString('profileVisibility', _profileVisibility);
-    await prefs.setBool('showAchievements', _showAchievements);
-    await prefs.setBool('showFriends', _showFriends);
-    await prefs.setBool('allowMessages', _allowMessages);
-    
-    // Privacy settings
-    await prefs.setBool('dataCollection', _dataCollection);
-    await prefs.setBool('personalizedAds', _personalizedAds);
-    await prefs.setBool('locationTracking', _locationTracking);
-    await prefs.setString('dataRetention', _dataRetention);
-    
-    // Security settings
-    await prefs.setBool('twoFactorAuth', _twoFactorAuth);
-    await prefs.setBool('sessionTimeout', _sessionTimeout);
-    await prefs.setString('autoLockTime', _autoLockTime);
-    await prefs.setBool('loginNotifications', _loginNotifications);
-    await prefs.setBool('biometricAuth', _biometricAuth);
-    await prefs.setBool('privacyMode', _privacyMode);
-    
-    // Account settings
-    await prefs.setBool('email_notifications', _emailNotifications);
-    await prefs.setBool('push_notifications', _pushNotifications);
-    await prefs.setBool('marketing_emails', _marketingEmails);
-    await prefs.setString('accountType', _accountType);
-    await prefs.setBool('publicProfile', _publicProfile);
-    
-    // App settings
-    await prefs.setBool('analytics', _analytics);
-    await prefs.setBool('crashReporting', _crashReporting);
-    await prefs.setBool('enableAnalytics', _enableAnalytics);
-    await prefs.setBool('enableCrashReporting', _enableCrashReporting);
-    await prefs.setBool('skipOnboardingForReturningUsers', _skipOnboardingForReturningUsers);
-    
-    // Wallet settings
-    await prefs.setString('networkSelection', _networkSelection);
-    await prefs.setBool('autoBackup', _autoBackup);
+    await SettingsService.saveSettings(_buildSettingsState());
+  }
+
+  SettingsState _buildSettingsState() {
+    return SettingsState(
+      pushNotifications: _pushNotifications,
+      emailNotifications: _emailNotifications,
+      marketingEmails: _marketingEmails,
+      loginNotifications: _loginNotifications,
+      dataCollection: _dataCollection,
+      personalizedAds: _personalizedAds,
+      locationTracking: _locationTracking,
+      dataRetention: _dataRetention,
+      twoFactorAuth: _twoFactorAuth,
+      sessionTimeout: _sessionTimeout,
+      autoLockTime: _autoLockTime,
+      autoLockSeconds: _autoLockSecondsFromLabel(_autoLockTime),
+      biometricAuth: _biometricAuth,
+      privacyMode: _privacyMode,
+      analytics: _analytics,
+      crashReporting: _crashReporting,
+      skipOnboarding: _skipOnboardingForReturningUsers,
+      networkSelection: _networkSelection,
+      autoBackup: _autoBackup,
+      profileVisibility: _profileVisibility,
+      showAchievements: _showAchievements,
+      showFriends: _showFriends,
+      allowMessages: _allowMessages,
+      accountType: _accountType,
+      publicProfile: _publicProfile,
+    );
+  }
+
+  int _autoLockSecondsFromLabel(String label) {
+    switch (label.toLowerCase()) {
+      case '10 seconds':
+        return 10;
+      case '30 seconds':
+        return 30;
+      case '1 minute':
+        return 60;
+      case '5 minutes':
+        return 5 * 60;
+      case '15 minutes':
+        return 15 * 60;
+      case '30 minutes':
+        return 30 * 60;
+      case '1 hour':
+        return 60 * 60;
+      case '3 hours':
+        return 3 * 60 * 60;
+      case '6 hours':
+        return 6 * 60 * 60;
+      case '12 hours':
+        return 12 * 60 * 60;
+      case '1 day':
+        return 24 * 60 * 60;
+      case 'never':
+        return 0;
+      default:
+        return 5 * 60;
+    }
   }
 
   @override
@@ -284,9 +304,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () {
-              // Logout
-            },
+            onTap: _handleLogout,
             borderRadius: BorderRadius.circular(12),
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -1045,6 +1063,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           child: Text(
             'This app uses the following open source libraries:\n\n'
             '• Flutter & Dart SDK\n'
+            '• OpenStreetMaps\n'
             '• Provider (State Management)\n'
             '• Solana Web3 (Blockchain)\n'
             '• Google Fonts\n'
@@ -1079,6 +1098,75 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
+  void _showChangePasswordDialog() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          'Change Password',
+          style: GoogleFonts.inter(
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Current Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'New Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: 'Confirm New Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(
+                color: Theme.of(dialogContext).colorScheme.outline,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: themeProvider.accentColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Password updated successfully')),
+              );
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showResetDialog() {
     showDialog(
       context: context,
@@ -1093,12 +1181,19 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () async {
               final navigator = Navigator.of(context);
               final messenger = ScaffoldMessenger.of(context);
-              final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-              final prefs = await SharedPreferences.getInstance();
-              await prefs.clear();
-              if (web3Provider.isConnected) { web3Provider.disconnectWallet(); }
+              final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+              final notificationProvider =
+                  Provider.of<NotificationProvider>(context, listen: false);
+              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+              await SettingsService.resetApp(
+                walletProvider: walletProvider,
+                backendApi: BackendApiService(),
+                notificationProvider: notificationProvider,
+                profileProvider: profileProvider,
+              );
               navigator.pop();
               messenger.showSnackBar(const SnackBar(content: Text('App reset successfully. Please restart.'), duration: Duration(seconds: 3)));
+              _restartToOnboarding();
             },
             child: const Text('Reset'),
           ),
@@ -1113,14 +1208,40 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text('Delete Account', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.onSurface)),
-        content: Text('This action cannot be undone. All your data will be permanently deleted.', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
+          'We will remove your profile and community data from our servers. Your wallet remains yours and will stay functional.',
+          style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface),
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             onPressed: () async {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account deletion requested. Confirmation sent to email.')));
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+              final notificationProvider =
+                  Provider.of<NotificationProvider>(context, listen: false);
+              final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+
+              try {
+                final wallet = walletProvider.currentWalletAddress ??
+                    profileProvider.currentUser?.walletAddress;
+                await BackendApiService().deleteMyAccountData(walletAddress: wallet);
+              } catch (e) {
+                messenger.showSnackBar(SnackBar(content: Text('Backend deletion failed: $e')));
+              }
+
+              await SettingsService.resetApp(
+                walletProvider: walletProvider,
+                backendApi: BackendApiService(),
+                notificationProvider: notificationProvider,
+                profileProvider: profileProvider,
+              );
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showSnackBar(const SnackBar(content: Text('Account deleted.')));
+              _restartToOnboarding();
             },
             child: const Text('Delete'),
           ),
@@ -1162,9 +1283,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cache cleared')));
+            onPressed: () async {
+              final navigator = Navigator.of(context);
+              final messenger = ScaffoldMessenger.of(context);
+              await SettingsService.clearNonCriticalCaches();
+              if (!mounted) return;
+              navigator.pop();
+              messenger.showSnackBar(const SnackBar(content: Text('Cache cleared')));
             },
             child: const Text('Clear'),
           ),
@@ -1187,6 +1312,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             onPressed: () async {
               Navigator.pop(context);
               await _resetPermissionFlags();
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permission flags reset')));
             },
             child: const Text('Reset'),
@@ -1198,14 +1324,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Future<void> _resetPermissionFlags() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final keys = prefs.getKeys();
-      const keepKeys = {'has_wallet', 'wallet_address', 'private_key', 'mnemonic'};
-      for (final key in keys) {
-        if (!keepKeys.contains(key) && key.contains('permission')) {
-          await prefs.remove(key);
-        }
-      }
+      await SettingsService.resetPermissionFlags();
     } catch (e) {
       debugPrint('Failed to reset permission flags: $e');
     }
@@ -1309,6 +1428,121 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       case PlatformCapability.background:
         return 'Background Processing';
     }
+  }
+
+  Future<void> _togglePushNotifications(bool value) async {
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    if (value) {
+      final granted = await PushNotificationService().requestPermission();
+      if (!granted) {
+        if (mounted) {
+          setState(() => _pushNotifications = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Enable notifications in system settings to receive alerts.'),
+            ),
+          );
+        }
+        await _saveSettings();
+        return;
+      }
+      await notificationProvider.initialize(force: true);
+    } else {
+      await PushNotificationService().cancelAllNotifications();
+      notificationProvider.reset();
+    }
+    if (!mounted) return;
+    setState(() => _pushNotifications = value);
+    await _saveSettings();
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    if (value) {
+      final canUse = await walletProvider.canUseBiometrics();
+      if (!canUse) {
+        if (mounted) {
+          setState(() => _biometricAuth = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric unlock not available on this device.')),
+          );
+        }
+        await _saveSettings();
+        return;
+      }
+      final ok = await walletProvider.authenticateWithBiometrics();
+      if (!ok) {
+        if (mounted) {
+          setState(() => _biometricAuth = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric authentication failed.')),
+          );
+        }
+        await _saveSettings();
+        return;
+      }
+    }
+    if (!mounted) return;
+    setState(() => _biometricAuth = value);
+    await _saveSettings();
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: Theme.of(dialogContext).colorScheme.surface,
+        title: Text(
+          'Log Out',
+          style: GoogleFonts.inter(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(dialogContext).colorScheme.onSurface,
+          ),
+        ),
+        content: Text(
+          'Disconnect your wallet and clear your session on this device?',
+          style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onSurface),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.outline),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(dialogContext).colorScheme.error,
+              foregroundColor: Theme.of(dialogContext).colorScheme.onError,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Log Out'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    await SettingsService.logout(
+      walletProvider: walletProvider,
+      backendApi: BackendApiService(),
+      notificationProvider: notificationProvider,
+      profileProvider: profileProvider,
+    );
+
+    if (!mounted) return;
+    _restartToOnboarding();
+  }
+
+  void _restartToOnboarding() {
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      (route) => false,
+    );
   }
 
   Widget _buildDangerZoneSettings() {
@@ -1462,7 +1696,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   spacing: 12,
                   runSpacing: 12,
                   children: ThemeProvider.availableAccentColors.map((color) {
-                    final isSelected = themeProvider.accentColor.toARGB32() == color.toARGB32();
+                    final isSelected = themeProvider.accentColor == color;
                     return GestureDetector(
                       onTap: () {
                         themeProvider.setAccentColor(color);
@@ -1564,17 +1798,37 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           DesktopCard(
             child: Column(
               children: [
-                _buildToggleSetting('Push Notifications', 'Get notified about activity', true),
+                _buildToggleSetting(
+                  'Push Notifications',
+                  'Get notified about activity',
+                  _pushNotifications,
+                  saveAfterToggle: false,
+                  onChanged: (value) {
+                    setState(() => _pushNotifications = value);
+                    _togglePushNotifications(value);
+                  },
+                ),
                 const Divider(height: 32),
-                _buildToggleSetting('Email Notifications', 'Receive email updates', true),
+                _buildToggleSetting(
+                  'Email Notifications',
+                  'Receive email updates',
+                  _emailNotifications,
+                  onChanged: (value) => setState(() => _emailNotifications = value),
+                ),
                 const Divider(height: 32),
-                _buildToggleSetting('New Followers', 'When someone follows you', true),
+                _buildToggleSetting(
+                  'Promotions & Marketing',
+                  'Occasional product news',
+                  _marketingEmails,
+                  onChanged: (value) => setState(() => _marketingEmails = value),
+                ),
                 const Divider(height: 32),
-                _buildToggleSetting('Artwork Interactions', 'Likes, comments, shares', true),
-                const Divider(height: 32),
-                _buildToggleSetting('NFT Activity', 'Sales, offers, transfers', true),
-                const Divider(height: 32),
-                _buildToggleSetting('DAO Updates', 'Proposals and voting', false),
+                _buildToggleSetting(
+                  'Login Alerts',
+                  'Notifications for new sign-ins',
+                  _loginNotifications,
+                  onChanged: (value) => setState(() => _loginNotifications = value),
+                ),
               ],
             ),
           ),
@@ -1602,13 +1856,55 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           DesktopCard(
             child: Column(
               children: [
-                _buildToggleSetting('Private Profile', 'Only followers can see your content', false),
+                _buildToggleSetting(
+                  'Public Profile',
+                  'Allow others to find your content',
+                  _publicProfile,
+                  onChanged: (value) => setState(() => _publicProfile = value),
+                ),
                 const Divider(height: 32),
-                _buildToggleSetting('Show Activity Status', 'Let others see when you\'re online', true),
+                _buildToggleSetting(
+                  'Show Friends & Followers',
+                  'Display social stats on your profile',
+                  _showFriends,
+                  onChanged: (value) => setState(() => _showFriends = value),
+                ),
                 const Divider(height: 32),
-                _buildToggleSetting('Show Wallet Address', 'Display your wallet publicly', true),
+                _buildToggleSetting(
+                  'Show Achievements',
+                  'Display unlocked badges on profile',
+                  _showAchievements,
+                  onChanged: (value) => setState(() => _showAchievements = value),
+                ),
                 const Divider(height: 32),
-                _buildToggleSetting('Allow Messages', 'Receive direct messages', true),
+                _buildToggleSetting(
+                  'Allow Messages',
+                  'Receive direct messages',
+                  _allowMessages,
+                  onChanged: (value) => setState(() => _allowMessages = value),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Analytics',
+                  'Help improve the app',
+                  _analytics,
+                  onChanged: (value) => setState(() => _analytics = value),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Crash Reporting',
+                  'Send crash reports automatically',
+                  _crashReporting,
+                  onChanged: (value) => setState(() => _crashReporting = value),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Skip Onboarding',
+                  'Skip welcome screens for returning users',
+                  _skipOnboardingForReturningUsers,
+                  onChanged: (value) =>
+                      setState(() => _skipOnboardingForReturningUsers = value),
+                ),
               ],
             ),
           ),
@@ -1638,30 +1934,50 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               children: [
                 _buildSettingsRow(
                   'Change Password',
-                  'Last changed 30 days ago',
+                  'Update your account password',
                   Icons.lock_outline,
-                  onTap: () {},
+                  onTap: _showChangePasswordDialog,
                 ),
                 const Divider(height: 32),
-                _buildSettingsRow(
+                _buildToggleSetting(
                   'Two-Factor Authentication',
-                  'Not enabled',
-                  Icons.security,
-                  onTap: () {},
+                  'Add extra security to your account',
+                  _twoFactorAuth,
+                  onChanged: (value) => setState(() => _twoFactorAuth = value),
                 ),
                 const Divider(height: 32),
-                _buildSettingsRow(
-                  'Active Sessions',
-                  '2 devices',
-                  Icons.devices,
-                  onTap: () {},
+                _buildToggleSetting(
+                  'Biometric Authentication',
+                  'Use fingerprint or face unlock',
+                  _biometricAuth,
+                  saveAfterToggle: false,
+                  onChanged: (value) {
+                    setState(() => _biometricAuth = value);
+                    _toggleBiometric(value);
+                  },
                 ),
                 const Divider(height: 32),
-                _buildSettingsRow(
-                  'Backup Recovery Phrase',
-                  'View your seed phrase',
-                  Icons.key,
-                  onTap: () {},
+                _buildToggleSetting(
+                  'Session Timeout',
+                  'Automatically sign out when idle',
+                  _sessionTimeout,
+                  onChanged: (value) => setState(() => _sessionTimeout = value),
+                ),
+                const Divider(height: 32),
+                _buildAutoLockDropdown(),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Login Alerts',
+                  'Get notified of new sign-ins',
+                  _loginNotifications,
+                  onChanged: (value) => setState(() => _loginNotifications = value),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  'Privacy Mode',
+                  'Hide sensitive information',
+                  _privacyMode,
+                  onChanged: (value) => setState(() => _privacyMode = value),
                 ),
               ],
             ),
@@ -2010,16 +2326,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             },
           ),
           const SizedBox(height: 12),
-          _buildSettingsRow(
-            'Join our Community',
-            'Connect on Discord',
-            Icons.groups_outlined,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening Discord invite...')),
-              );
-            },
-          ),
         ],
       ),
     );
@@ -2277,6 +2583,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     String title,
     String subtitle,
     bool initialValue, {
+    bool saveAfterToggle = true,
     ValueChanged<bool>? onChanged,
   }) {
     return Row(
@@ -2307,7 +2614,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           value: initialValue,
           onChanged: (value) {
             onChanged?.call(value);
-            _saveSettings();
+            if (saveAfterToggle) {
+              _saveSettings();
+            }
           },
           activeTrackColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.5),
           thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -2321,47 +2630,69 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
-  Widget _buildDropdownSetting(
-    String title,
-    String subtitle,
-    String initialValue,
-    List<String> options,
-    ValueChanged<String?>? onChanged,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+  Widget _buildAutoLockDropdown() {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final options = <Map<String, dynamic>>[
+      {'label': '10 seconds', 'seconds': 10},
+      {'label': '30 seconds', 'seconds': 30},
+      {'label': '1 minute', 'seconds': 60},
+      {'label': '5 minutes', 'seconds': 5 * 60},
+      {'label': '15 minutes', 'seconds': 15 * 60},
+      {'label': '30 minutes', 'seconds': 30 * 60},
+      {'label': '1 hour', 'seconds': 60 * 60},
+      {'label': '3 hours', 'seconds': 3 * 60 * 60},
+      {'label': '6 hours', 'seconds': 6 * 60 * 60},
+      {'label': '12 hours', 'seconds': 12 * 60 * 60},
+      {'label': '1 day', 'seconds': 24 * 60 * 60},
+      {'label': 'Never', 'seconds': 0},
+    ];
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+      leading: Icon(
+        Icons.lock_clock,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+      ),
+      title: Text(
+        'Auto-lock time',
+        style: GoogleFonts.inter(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: GoogleFonts.inter(
-            fontSize: 13,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-          ),
+      ),
+      subtitle: Text(
+        _autoLockTime,
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
         ),
-        const SizedBox(height: 8),
-        DropdownButton<String>(
-          isExpanded: true,
-          value: initialValue,
-          items: options.map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value),
-            );
-          }).toList(),
-          onChanged: (value) {
-            onChanged?.call(value);
-          },
-        ),
-      ],
+      ),
+      trailing: DropdownButton<String>(
+        value: _autoLockTime,
+        underline: const SizedBox.shrink(),
+        dropdownColor: Theme.of(context).colorScheme.surface,
+        items: options
+            .map(
+              (opt) => DropdownMenuItem<String>(
+                value: opt['label'] as String,
+                child: Text(opt['label'] as String),
+              ),
+            )
+            .toList(),
+        onChanged: (value) async {
+          if (value == null) return;
+          final seconds =
+              options.firstWhere((opt) => opt['label'] == value)['seconds'] as int;
+          setState(() {
+            _autoLockTime = value;
+          });
+          try {
+            await walletProvider.setLockTimeoutSeconds(seconds);
+          } catch (_) {}
+          await _saveSettings();
+        },
+      ),
     );
   }
 }

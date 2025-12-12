@@ -3,41 +3,9 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/art_marker.dart';
-import '../config/api_keys.dart';
-import '../config/config.dart';
 import '../providers/storage_provider.dart';
-import 'backend_api_service.dart';
-
-/// Configuration for storage providers
-class StorageConfig {
-  // IPFS Gateways (prioritized list)
-  static const List<String> ipfsGateways = [
-    'https://ipfs.io/ipfs/',
-    'https://gateway.pinata.cloud/ipfs/',
-    'https://cloudflare-ipfs.com/ipfs/',
-    'https://dweb.link/ipfs/',
-  ];
-
-  // Default HTTP backend
-  static const String defaultHttpBackend = AppConfig.baseApiUrl;
-
-  // Custom backend URL (can be overridden)
-  static String? customHttpBackend;
-
-  // IPFS pin service configuration - now using centralized ApiKeys
-  static String get pinataApiUrl => ApiKeys.ipfsApiUrl;
-  static String get pinataApiKey => ApiKeys.pinataApiKey;
-  static String get pinataSecretKey => ApiKeys.pinataSecretKey;
-  static String get ipfsGateway => ApiKeys.ipfsGateway;
-
-  /// Get active HTTP backend URL
-  static String get httpBackend => customHttpBackend ?? defaultHttpBackend;
-
-  /// Set custom HTTP backend
-  static void setHttpBackend(String url) {
-    customHttpBackend = url;
-  }
-}
+import 'art_content_service.dart';
+import 'storage_config.dart';
 
 /// Service for managing AR content with IPFS/HTTP support
 class ARContentService {
@@ -228,46 +196,6 @@ class ARContentService {
     }
   }
 
-  /// Upload content to HTTP backend
-  static Future<String?> uploadToHTTP(
-    Uint8List data,
-    String filename, {
-    Map<String, dynamic>? metadata,
-  }) async {
-    try {
-      final url = Uri.parse('${StorageConfig.httpBackend}/api/upload');
-      final request = http.MultipartRequest('POST', url);
-
-      // Add file
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        data,
-        filename: filename,
-      ));
-
-      // Add metadata
-      if (metadata != null) {
-        request.fields['metadata'] = jsonEncode(metadata);
-      }
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final jsonResponse = jsonDecode(response.body);
-        final fileUrl = jsonResponse['url'] as String;
-        debugPrint('ARContentService: Uploaded to HTTP - URL: $fileUrl');
-        return fileUrl;
-      }
-
-      debugPrint('ARContentService: Upload failed - ${response.statusCode}');
-      return null;
-    } catch (e) {
-      debugPrint('ARContentService: HTTP upload error: $e');
-      return null;
-    }
-  }
-
   /// Upload content using preferred storage provider
   static Future<Map<String, String?>> uploadContent(
     Uint8List data,
@@ -288,14 +216,22 @@ class ARContentService {
         break;
 
       case StorageProvider.http:
-        results['url'] = await uploadToHTTP(data, filename, metadata: metadata);
+        results['url'] = await ArtContentService.uploadMedia(
+          data,
+          filename,
+          metadata: metadata,
+        );
         break;
 
       case StorageProvider.hybrid:
         if (uploadToBoth) {
           // Upload to both for maximum availability
           final ipfsFuture = uploadToIPFS(data, filename, metadata: metadata);
-          final httpFuture = uploadToHTTP(data, filename, metadata: metadata);
+          final httpFuture = ArtContentService.uploadMedia(
+            data,
+            filename,
+            metadata: metadata,
+          );
 
           final uploadResults = await Future.wait([ipfsFuture, httpFuture]);
           results['cid'] = uploadResults[0];
@@ -305,8 +241,11 @@ class ARContentService {
           results['cid'] =
               await uploadToIPFS(data, filename, metadata: metadata);
           if (results['cid'] == null) {
-            results['url'] =
-                await uploadToHTTP(data, filename, metadata: metadata);
+            results['url'] = await ArtContentService.uploadMedia(
+              data,
+              filename,
+              metadata: metadata,
+            );
           }
         }
         break;
@@ -315,167 +254,9 @@ class ARContentService {
     return results;
   }
 
-  /// Fetch art markers from backend
-  static Future<List<ArtMarker>> fetchARMarkers({
-    double? latitude,
-    double? longitude,
-    double? radiusKm,
-  }) async {
-    try {
-      final queryParams = <String, String>{};
-      if (latitude != null) queryParams['lat'] = latitude.toString();
-      if (longitude != null) queryParams['lng'] = longitude.toString();
-      if (radiusKm != null) queryParams['radius'] = radiusKm.toString();
-
-      final uri = Uri.parse('${StorageConfig.httpBackend}/api/art-markers')
-          .replace(queryParameters: queryParams);
-
-      final response = await http.get(uri).timeout(
-            const Duration(seconds: 15),
-          );
-
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List<dynamic> payload;
-        if (body is List) {
-          payload = body;
-        } else if (body is Map<String, dynamic>) {
-          payload = (body['data'] ??
-              body['markers'] ??
-              body['artMarkers'] ??
-              body['results'] ??
-              []) as List<dynamic>;
-        } else {
-          payload = const [];
-        }
-
-        return payload
-            .map((json) => ArtMarker.fromMap(json as Map<String, dynamic>))
-            .toList();
-      }
-
-      debugPrint(
-          'ARContentService: Failed to fetch markers - ${response.statusCode}');
-      return [];
-    } catch (e) {
-      debugPrint('ARContentService: Error fetching markers: $e');
-      return [];
-    }
-  }
-
-  /// Save AR marker to backend
-  /// Save AR marker to backend
-  static Future<ArtMarker?> saveARMarker(ArtMarker marker) async {
-    try {
-      // Use BackendApiService's createArtMarker method for proper auth
-      final backendApi = BackendApiService();
-      await backendApi.ensureAuthLoaded();
-      // Build a payload that matches the backend's expected shape.
-      // The backend enforces marker_type to be one of ('geolocation','image','qr','nfc'),
-      // so always use 'geolocation' for spatial map markers. AR-specific config
-      // is sent alongside to be stored to the child `ar_markers` table.
-      final payload = <String, dynamic>{
-        'name': marker.name,
-        'description': marker.description,
-        'category': marker.category,
-        // Backend expects a `type` field which maps to `marker_type` CHECK
-        'type': 'geolocation',
-        'latitude': marker.position.latitude,
-        'longitude': marker.position.longitude,
-        'artworkId': marker.artworkId,
-        'modelCID': marker.modelCID,
-        'modelURL': marker.modelURL,
-        'storageProvider': marker.storageProvider.name,
-        'scale': marker.scale,
-        // Provide rotation as an object — backend will read rotation.x/y/z
-        'rotation': marker.rotation,
-        'enableAnimation': marker.enableAnimation,
-        'enableInteraction': marker.enableInteraction,
-        'metadata': marker.metadata ?? {},
-        'tags': marker.tags,
-        'activationRadius': marker.activationRadius,
-        'requiresProximity': marker.requiresProximity,
-        'isPublic': marker.isPublic,
-        'createdBy': marker.createdBy,
-      };
-
-      final response = await http
-          .post(
-            Uri.parse('${StorageConfig.httpBackend}/api/art-markers'),
-            headers: await _getAuthHeaders(),
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: 15));
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        debugPrint('ARContentService: Marker saved successfully');
-        try {
-          final body = jsonDecode(response.body);
-          final data = body is Map<String, dynamic>
-              ? (body['data'] ?? body['marker'] ?? body['artMarker'] ?? body)
-              : body;
-          if (data is Map<String, dynamic>) {
-            return ArtMarker.fromMap(data);
-          }
-        } catch (e) {
-          debugPrint('ARContentService: Failed to parse marker response: $e');
-        }
-        // Fallback to returning the marker we submitted when parsing fails
-        return marker;
-      }
-
-      debugPrint(
-          'ARContentService: Failed to save marker - ${response.statusCode}: ${response.body}');
-      return null;
-    } catch (e) {
-      debugPrint('ARContentService: Error saving marker: $e');
-      return null;
-    }
-  }
-
-  /// Get auth headers from backend API service
-  static Future<Map<String, String>> _getAuthHeaders() async {
-    final headers = <String, String>{
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-
-    try {
-      final backendApi = BackendApiService();
-      await backendApi.ensureAuthLoaded();
-      // Try to get the stored token
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('jwt_token');
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-        debugPrint('ARContentService: Added auth token to headers');
-      } else {
-        debugPrint('ARContentService: No auth token available');
-      }
-    } catch (e) {
-      debugPrint('ARContentService: Failed to get auth headers: $e');
-    }
-
-    return headers;
-  }
-
-  /// Get storage statistics
+  /// Get storage statistics (AR context convenience wrapper)
   static Future<Map<String, dynamic>> getStorageStats() async {
-    try {
-      final url = Uri.parse('${StorageConfig.httpBackend}/api/storage/stats');
-      final response = await http.get(url).timeout(
-            const Duration(seconds: 10),
-          );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body) as Map<String, dynamic>;
-      }
-
-      return {};
-    } catch (e) {
-      debugPrint('ARContentService: Error fetching stats: $e');
-      return {};
-    }
+    return ArtContentService.getStorageStats();
   }
 
   /// Clear cached content

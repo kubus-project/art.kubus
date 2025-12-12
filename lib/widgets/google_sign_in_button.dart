@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Google Sign-In button that works across platforms.
-/// On web, renderButton from google_sign_in_web is not available in our current
-/// dependency set, so we fall back to a styled button that triggers the
-/// provided handler (which should call signInSilently or GIS flow).
+/// The handler should trigger the platform-appropriate GIS/SDK flow.
 class GoogleSignInButton extends StatelessWidget {
   const GoogleSignInButton({
     super.key,

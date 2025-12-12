@@ -97,6 +97,13 @@ class Artwork {
     return getDistanceFrom(currentPosition) <= maxDistanceMeters;
   }
 
+  /// Whether the artwork has a meaningful location (filters out null-island defaults).
+  bool get hasValidLocation {
+    final nearNullIsland =
+        position.latitude.abs() < 0.0001 && position.longitude.abs() < 0.0001;
+    return !nearNullIsland;
+  }
+
   /// Check if artwork is discovered
   bool get isDiscovered => status != ArtworkStatus.undiscovered;
 

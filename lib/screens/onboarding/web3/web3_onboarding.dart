@@ -5,6 +5,8 @@ import '../../../config/config.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
+import '../../desktop/desktop_shell.dart';
+import '../../desktop/onboarding/desktop_web3_onboarding.dart' show DesktopWeb3OnboardingScreen, Web3OnboardingPage;
 
 class Web3OnboardingScreen extends StatefulWidget {
   final String featureName;
@@ -93,10 +95,41 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('${widget.featureName}_onboarding_completed', true);
     widget.onComplete();
+    if (mounted && Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Redirect to desktop Web3 onboarding if on desktop
+    if (DesktopBreakpoints.isDesktop(context)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          // Convert mobile OnboardingPage to desktop Web3OnboardingPage
+          final desktopPages = widget.pages.map((page) {
+            return Web3OnboardingPage(
+              title: page.title,
+              description: page.description,
+              icon: page.icon,
+              gradientColors: page.gradientColors,
+              features: page.features,
+            );
+          }).toList();
+
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => DesktopWeb3OnboardingScreen(
+                featureName: widget.featureName,
+                pages: desktopPages,
+                onComplete: widget.onComplete,
+              ),
+            ),
+          );
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(

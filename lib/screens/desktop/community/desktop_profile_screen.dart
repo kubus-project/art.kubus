@@ -14,7 +14,7 @@ import '../../../providers/artwork_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../community/community_interactions.dart';
 import '../../web3/achievements/achievements_page.dart';
-import '../../settings_screen.dart';
+import '../desktop_settings_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../../models/achievements.dart';
 import 'desktop_profile_edit_screen.dart';
@@ -26,6 +26,7 @@ import '../../../widgets/institution_badge.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
+import '../../art/art_detail_screen.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -221,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  MaterialPageRoute(builder: (_) => const DesktopSettingsScreen()),
                 );
               },
               isPrimary: false,
@@ -270,7 +271,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   child: hasCoverImage
                       ? Image.network(
-                          coverImageUrl!,
+                          coverImageUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
@@ -514,6 +515,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       imageUrl: _extractImageUrl(artwork, ['imageUrl', 'image']),
                       title: artwork['title'] ?? 'Untitled',
                       subtitle: artwork['category'] ?? 'Artwork',
+                      artworkId: (artwork['id'] ?? artwork['artwork_id'])?.toString(),
                     )),
                 ..._artistCollections.map((collection) => _buildShowcaseCard(
                       imageUrl: _extractImageUrl(collection, ['thumbnailUrl', 'coverImage']),
@@ -527,13 +529,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildShowcaseCard({String? imageUrl, required String title, required String subtitle}) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 16),
-      child: DesktopCard(
-        padding: EdgeInsets.zero,
-        child: Column(
+  Widget _buildShowcaseCard({String? imageUrl, required String title, required String subtitle, String? artworkId}) {
+    return GestureDetector(
+      onTap: artworkId != null ? () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ArtDetailScreen(artworkId: artworkId),
+          ),
+        );
+      } : null,
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        child: DesktopCard(
+          padding: EdgeInsets.zero,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (imageUrl != null)
@@ -588,6 +599,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

@@ -1306,6 +1306,8 @@ class BackendApiService {
     bool? arEnabled,
     int page = 1,
     int limit = 20,
+    String? walletAddress,
+    bool includePrivateForWallet = false,
   }) async {
     try {
       final queryParams = <String, String>{
@@ -1315,9 +1317,20 @@ class BackendApiService {
 
       if (category != null) queryParams['category'] = category;
       if (arEnabled != null) queryParams['arEnabled'] = arEnabled.toString();
+      final hasWalletFilter = walletAddress != null && walletAddress.isNotEmpty;
+      if (hasWalletFilter) {
+        queryParams['wallet'] = walletAddress;
+        if (includePrivateForWallet) {
+          queryParams['publicOnly'] = 'false';
+        }
+      }
 
       final uri = Uri.parse('$baseUrl/api/artworks').replace(queryParameters: queryParams);
-      final data = await _fetchJson(uri, includeAuth: false, allowOrbitFallback: true);
+      final data = await _fetchJson(
+        uri,
+        includeAuth: includePrivateForWallet && hasWalletFilter,
+        allowOrbitFallback: true,
+      );
       final dynamic listCandidate = data['artworks'] ?? data['data'] ?? data['items'];
       final List<dynamic> artworks = listCandidate is List ? listCandidate : <dynamic>[];
       return artworks.map((json) => _artworkFromBackendJson(json as Map<String, dynamic>)).toList();
@@ -1364,6 +1377,8 @@ class BackendApiService {
     double? royaltyPercent,
     Map<String, dynamic>? metadata,
     String? locationName,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
@@ -1386,6 +1401,8 @@ class BackendApiService {
         if (price != null) 'price': price,
         'currency': 'KUB8',
         if (locationName != null && locationName.isNotEmpty) 'locationName': locationName,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
         if (metadata != null) 'metadata': metadata,
       };
 
@@ -1437,6 +1454,8 @@ class BackendApiService {
     bool? arOnly,
     String? authorWallet,
     bool? followingOnly,
+    String? tag,
+    String? sort,
   }) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
@@ -1448,6 +1467,18 @@ class BackendApiService {
       if (arOnly != null) queryParams['arOnly'] = arOnly.toString();
       if (authorWallet != null) queryParams['authorWallet'] = authorWallet;
       if (followingOnly != null) queryParams['followingOnly'] = followingOnly.toString();
+      if (tag != null && tag.trim().isNotEmpty) {
+        final normalizedTag = tag.replaceFirst(RegExp(r'^#+'), '').trim();
+        if (normalizedTag.isNotEmpty) {
+          queryParams['tag'] = normalizedTag;
+        }
+      }
+      if (sort != null && sort.trim().isNotEmpty) {
+        final normalizedSort = sort.trim().toLowerCase();
+        if (normalizedSort == 'popularity' || normalizedSort == 'popular' || normalizedSort == 'recent') {
+          queryParams['sort'] = normalizedSort == 'popular' ? 'popularity' : normalizedSort;
+        }
+      }
 
       final uri = Uri.parse('$baseUrl/api/community/posts').replace(queryParameters: queryParams);
       final allowFallback = followingOnly != true;
@@ -3754,6 +3785,24 @@ class BackendApiService {
     }
   }
 
+  /// Delete the current user's off-chain account data (profile + community content).
+  /// DELETE /api/profiles/me
+  Future<void> deleteMyAccountData({String? walletAddress}) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/profiles/me'),
+        headers: _getHeaders(),
+      );
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception('Failed to delete account data: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Error deleting account data: $e');
+      rethrow;
+    }
+  }
+
   // ==================== Search Endpoints ====================
 
   /// Universal search
@@ -3804,18 +3853,49 @@ class BackendApiService {
       };
 
       final uri = Uri.parse('$baseUrl/api/search/suggestions').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
-
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
-        final suggestions = jsonData['suggestions'] as List<dynamic>;
-        return suggestions.map((e) => e as Map<String, dynamic>).toList();
-      } else {
-        return [];
+      final key = _rateLimitKey('GET', uri);
+      if (_isRateLimited(key)) {
+        throw Exception(_rateLimitMessage(key));
       }
+
+      final headers = _getHeaders(includeAuth: true);
+      dynamic data;
+
+      Future<dynamic> _tryFetch(Uri target) async {
+        final response = await http.get(target, headers: headers);
+        if (_isSuccessStatus(response.statusCode)) {
+          return jsonDecode(response.body);
+        }
+        if (response.statusCode == 429) {
+          _markRateLimited(key, response, defaultWindowMs: 900000);
+          throw Exception(_rateLimitMessage(key));
+        }
+        return null;
+      }
+
+      // Primary request (may return List or Map)
+      data = await _tryFetch(uri);
+
+      // Orbit fallback when primary fails or returns empty
+      if (data == null) {
+        final fallbackUri = _withOrbitSource(uri);
+        data = await _tryFetch(fallbackUri);
+      }
+
+      if (data is List) {
+        return data.whereType<Map<String, dynamic>>().toList();
+      }
+      if (data is Map<String, dynamic>) {
+        final dynamic suggestions = data['suggestions'] ?? data['data'] ?? data['results'];
+        if (suggestions is List) {
+          return suggestions.whereType<Map<String, dynamic>>().toList();
+        }
+      }
+      debugPrint('getSearchSuggestions: unexpected payload shape for query "$query": $data');
+      return const [];
     } catch (e) {
-      debugPrint('Error fetching search suggestions: $e');
-      return [];
+      debugPrint('Error fetching search suggestions for "$query": $e');
+      return const [];
     }
   }
 
@@ -3886,13 +3966,36 @@ class BackendApiService {
 
 // Helper functions for model conversions
 ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
+  String? stringVal(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  final mergedMeta = _mergeMarkerMetadata(json);
+
+  // Expand artwork ID resolution beyond bare `artworkId` to include common metadata fallbacks.
+  String? artworkId = stringVal(json['artworkId'] ?? json['artwork_id']);
+  if (artworkId == null || artworkId.isEmpty) {
+    final metaArtwork = mergedMeta ?? {};
+    artworkId = stringVal(metaArtwork['linkedArtworkId'] ??
+        metaArtwork['linked_artwork_id'] ??
+        metaArtwork['artworkId'] ??
+        metaArtwork['artwork_id'] ??
+        metaArtwork['subjectId'] ??
+        metaArtwork['subject_id']);
+  }
+  if ((artworkId == null || artworkId.isEmpty) && json['artwork'] is Map<String, dynamic>) {
+    artworkId = stringVal((json['artwork'] as Map<String, dynamic>)['id']);
+  }
+
   final normalized = <String, dynamic>{
     'id': json['id'] ?? json['_id'] ?? '',
     'name': json['name'] ?? json['title'] ?? json['label'] ?? '',
     'description': json['description'] ?? json['summary'] ?? '',
     'latitude': (json['latitude'] ?? json['lat'] ?? 0).toDouble(),
     'longitude': (json['longitude'] ?? json['lng'] ?? 0).toDouble(),
-    'artworkId': json['artworkId'] ?? json['artwork_id'],
+    'artworkId': artworkId,
     'modelCID': json['modelCID'] ?? json['model_cid'],
     'modelURL': json['modelURL'] ?? json['model_url'],
     'storageProvider': json['storageProvider'] ?? json['storage_provider'] ?? 'hybrid',
@@ -3902,7 +4005,7 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'animationName': json['animationName'] ?? json['animation_name'],
     'enablePhysics': json['enablePhysics'] ?? false,
     'enableInteraction': json['enableInteraction'] ?? true,
-    'metadata': json['metadata'] ?? json['meta'],
+    'metadata': mergedMeta,
     'tags': json['tags'],
     'category': json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
     'createdAt': json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
@@ -3918,57 +4021,336 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
   return ArtMarker.fromMap(normalized);
 }
 
+Map<String, dynamic>? _mergeMarkerMetadata(Map<String, dynamic> json) {
+  Map<String, dynamic>? metadata;
+
+  void merge(dynamic source) {
+    if (source is Map<String, dynamic>) {
+      metadata ??= <String, dynamic>{};
+      metadata!.addAll(source);
+    } else if (source is Map) {
+      metadata ??= <String, dynamic>{};
+      metadata!.addAll(Map<String, dynamic>.from(source));
+    }
+  }
+
+  merge(json['metadata']);
+  merge(json['meta']);
+  merge(json['marker_data'] ?? json['markerData']);
+
+  final artworkPreview = json['artwork'];
+  if (artworkPreview is Map) {
+    merge({'artwork': artworkPreview});
+  }
+
+  return metadata;
+}
+
 Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
   String stringVal(dynamic v, [String fallback = '']) {
     if (v == null) return fallback;
     return v.toString();
   }
 
+  String? nullableString(dynamic value) {
+    if (value == null) return null;
+    final str = value.toString().trim();
+    return str.isEmpty ? null : str;
+  }
+
+  double? doubleVal(dynamic value) {
+    if (value is num) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  int? intVal(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
+  }
+
+  bool? boolVal(dynamic value) {
+    if (value is bool) return value;
+    if (value is String) {
+      final normalized = value.trim().toLowerCase();
+      if (['true', '1', 'yes', 'y', 'on'].contains(normalized)) return true;
+      if (['false', '0', 'no', 'n', 'off'].contains(normalized)) return false;
+    }
+    return null;
+  }
+
+  DateTime? parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) {
+      return DateTime.tryParse(value);
+    }
+    if (value is int) {
+      // Assume milliseconds since epoch
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    return null;
+  }
+
+  Map<String, double>? normalizeRotation(dynamic raw) {
+    Map<String, double>? convert(Map source) {
+      final result = <String, double>{};
+      source.forEach((key, value) {
+        final parsed = doubleVal(value);
+        if (parsed != null) {
+          result[key.toString()] = parsed;
+        }
+      });
+      return result.isEmpty ? null : result;
+    }
+
+    if (raw is Map<String, dynamic>) {
+      return convert(raw);
+    }
+    if (raw is Map) {
+      return convert(raw.cast<dynamic, dynamic>().map((key, value) => MapEntry(key.toString(), value)));
+    }
+    return null;
+  }
+
+  Map<String, dynamic> extractMetadata() {
+    final metadata = <String, dynamic>{};
+    void addMeta(String key, dynamic value) {
+      if (value == null) return;
+      metadata[key] = value;
+    }
+
+    if (json['metadata'] is Map<String, dynamic>) {
+      metadata.addAll(json['metadata'] as Map<String, dynamic>);
+    }
+
+    addMeta('walletAddress', json['walletAddress'] ?? json['wallet_address']);
+    addMeta('creatorId', json['creatorId'] ?? json['creator_id']);
+    addMeta('locationName', json['locationName']);
+    addMeta('nft', json['nft']);
+    addMeta('price', json['price']);
+    addMeta('currency', json['currency']);
+    addMeta('isForSale', json['isForSale']);
+    addMeta('imageCID', json['imageCID'] ?? json['image_cid']);
+
+    return metadata;
+  }
+
+  String? pickString(List<dynamic> candidates) {
+    for (final candidate in candidates) {
+      final value = nullableString(candidate);
+      if (value != null) return value;
+    }
+    return null;
+  }
+
+  final stats = json['stats'] as Map<String, dynamic>?;
+  final locationJson = json['location'] as Map<String, dynamic>?;
+
   final id = stringVal(json['id'] ?? json['_id'] ?? '');
   final title = stringVal(json['title'] ?? json['name'] ?? '');
   final artist = stringVal(
     json['artist'] ??
     json['artistName'] ??
+    json['artist_name'] ??
     json['walletAddress'] ??
     json['wallet_address'] ??
     'Unknown Artist',
   );
 
-  // Prefer normalized, absolute image URLs so galleries and map markers render correctly.
-  final rawImage = json['imageUrl'] ?? json['image_url'] ?? json['coverUrl'] ?? json['cover_url'];
-  final normalizedImageUrl = _normalizeBackendMediaUrl(rawImage as String?);
+  final rawImage = pickString([
+    json['imageUrl'],
+    json['imageURL'],
+    json['image_url'],
+    json['coverUrl'],
+    json['coverURL'],
+    json['cover_url'],
+    json['coverImage'],
+    json['cover_image'],
+    json['coverImageUrl'],
+    json['cover_image_url'],
+    json['mediaUrl'],
+    json['media_url'],
+  ]);
+
+  final arAsset = (json['arAsset'] ?? json['ar_asset']) as Map<String, dynamic>?;
+  final rawModelUrl = pickString([
+    json['model3DURL'],
+    json['model3dURL'],
+    json['model3dUrl'],
+    json['model_url'],
+    json['modelURL'],
+    json['model_3d_url'],
+    arAsset?['url'],
+    arAsset?['modelUrl'],
+  ]);
+  final modelUrl = _normalizeBackendMediaUrl(rawModelUrl);
+  final modelCid = pickString([
+    json['model3DCID'],
+    json['model3dCID'],
+    json['model3dCid'],
+    json['model_cid'],
+    json['model_3d_cid'],
+    arAsset?['cid'],
+  ]);
+
+  final latCandidate = doubleVal(json['latitude'] ?? json['lat']);
+  final lngCandidate = doubleVal(json['longitude'] ?? json['lng']);
+  final locationLat = locationJson != null
+      ? doubleVal(locationJson['lat'] ?? locationJson['latitude'])
+      : null;
+  final locationLng = locationJson != null
+      ? doubleVal(locationJson['lng'] ?? locationJson['longitude'])
+      : null;
+  final hasLocation =
+      (latCandidate != null && lngCandidate != null) || (locationLat != null && locationLng != null);
+  double lat = latCandidate ?? locationLat ?? 0.0;
+  double lng = lngCandidate ?? locationLng ?? 0.0;
+
+  final likesCount = intVal(json['likesCount']) ??
+      intVal(json['likes']) ??
+      intVal(json['likes_count']) ??
+      intVal(stats?['likes']) ??
+      intVal(stats?['likesCount']) ??
+      0;
+
+  final commentsCount = intVal(json['commentsCount']) ??
+      intVal(json['comments']) ??
+      intVal(json['comments_count']) ??
+      intVal(stats?['comments']) ??
+      intVal(stats?['commentsCount']) ??
+      0;
+
+  final viewsCount = intVal(json['viewsCount']) ??
+      intVal(json['viewCount']) ??
+      intVal(json['views']) ??
+      intVal(stats?['views']) ??
+      intVal(stats?['viewCount']) ??
+      0;
+
+  final discoveryCount = intVal(json['discoveryCount']) ??
+      intVal(json['discoveries']) ??
+      intVal(stats?['discoveries']) ??
+      0;
+
+  final resolvedTags = () {
+    final rawTags = json['tags'];
+    if (rawTags is List) {
+      return rawTags.map((e) => e.toString()).toList();
+    }
+    if (rawTags is String && rawTags.isNotEmpty) {
+      return rawTags
+          .split(',')
+          .map((tag) => tag.trim())
+          .where((tag) => tag.isNotEmpty)
+          .toList();
+    }
+    return <String>[];
+  }();
+
+  final metadata = extractMetadata();
+  metadata['hasLocation'] = hasLocation;
+  final imageCid = pickString([
+    json['imageCID'],
+    json['image_cid'],
+    metadata['imageCID'],
+    metadata['image_cid'],
+    json['cid'],
+  ]);
+  final normalizedImageUrl = _normalizeBackendMediaUrl(rawImage) ?? _resolveCidToUrl(imageCid);
+  final arScale = doubleVal(json['arScale'] ?? json['ar_scale'] ?? arAsset?['scale']);
+  final arRotation = normalizeRotation(
+    json['arRotation'] ??
+        json['ar_rotation'] ??
+        json['rotation'] ??
+        arAsset?['rotation'],
+  );
+
+  final markerIdCandidate = nullableString(
+    json['arMarkerId'] ?? json['markerId'] ?? json['marker_id'],
+  );
 
   return Artwork(
     id: id,
     title: title,
     artist: artist,
-    description: stringVal(json['description'], ''),
+    description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
     imageUrl: normalizedImageUrl,
-    position: LatLng(
-      (json['latitude'] as num?)?.toDouble() ?? 0.0,
-      (json['longitude'] as num?)?.toDouble() ?? 0.0,
-    ),
+    position: LatLng(lat, lng),
     rarity: ArtworkRarity.values.firstWhere(
       (e) => e.name == json['rarity'],
       orElse: () => ArtworkRarity.common,
     ),
-    rewards: json['rewards'] as int? ?? 10,
-    category: stringVal(json['category'], 'General'),
-    model3DURL: json['model3DURL'] as String? ?? json['model_3d_url'] as String?,
-    model3DCID: json['model3DCID'] as String? ?? json['model_3d_cid'] as String?,
-    arEnabled: json['arEnabled'] as bool? ?? json['isAREnabled'] as bool? ?? false,
-    arMarkerId: json['arMarkerId'] as String?,
-    createdAt: json['createdAt'] != null 
-      ? DateTime.parse(json['createdAt'] as String)
-      : DateTime.now(),
-    tags: json['tags'] != null 
-      ? (json['tags'] as List<dynamic>).map((e) => e.toString()).toList()
-      : [],
-    likesCount: json['likesCount'] as int? ?? 0,
-    commentsCount: json['commentsCount'] as int? ?? 0,
-    viewsCount: json['viewsCount'] as int? ?? 0,
-    discoveryCount: json['discoveryCount'] as int? ?? 0,
+    rewards: json['rewards'] as int? ?? intVal(json['reward']) ?? 10,
+    category: stringVal(json['category'] ?? json['collection'], 'General'),
+    model3DURL: modelUrl,
+    model3DCID: modelCid,
+    arEnabled: boolVal(json['arEnabled']) ??
+        boolVal(json['isAREnabled']) ??
+        boolVal(json['isArEnabled']) ??
+        boolVal(json['is_ar_enabled']) ??
+        (arAsset != null),
+    arMarkerId: markerIdCandidate,
+    arScale: arScale,
+    arRotation: arRotation,
+    arEnableAnimation: boolVal(
+      json['arEnableAnimation'] ??
+          json['enableAnimation'] ??
+          json['animationEnabled'] ??
+          arAsset?['enableAnimation'],
+    ),
+    arAnimationName: nullableString(
+      json['arAnimationName'] ??
+          json['animationName'] ??
+          arAsset?['animation'],
+    ),
+    createdAt: parseDate(json['createdAt']) ?? DateTime.now(),
+    discoveredAt: parseDate(json['discoveredAt']),
+    discoveryUserId: nullableString(json['discoveryUserId']),
+    tags: resolvedTags,
+    likesCount: likesCount,
+    commentsCount: commentsCount,
+    viewsCount: viewsCount,
+    discoveryCount: discoveryCount,
+    isLikedByCurrentUser: boolVal(json['isLikedByCurrentUser'] ?? json['isLiked']) ?? false,
+    isFavoriteByCurrentUser:
+        boolVal(json['isFavoriteByCurrentUser'] ?? json['isFavorited']) ?? false,
+    metadata: metadata.isEmpty ? null : metadata,
   );
+}
+
+String _ipfsGatewayBase() {
+  try {
+    final candidates = ApiKeys.ipfsGateway
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final base = candidates.isNotEmpty ? candidates.first : ApiKeys.ipfsGateway;
+    if (base.endsWith('/')) return base;
+    return '$base/';
+  } catch (_) {
+    return 'https://ipfs.io/ipfs/';
+  }
+}
+
+String? _resolveCidToUrl(String? cid) {
+  if (cid == null) return null;
+  final trimmed = cid.trim();
+  if (trimmed.isEmpty) return null;
+  if (trimmed.startsWith('http')) return trimmed;
+  var normalized = trimmed.replaceFirst('ipfs://', '').replaceFirst(RegExp(r'^ipfs/'), '');
+  if (normalized.startsWith('/')) {
+    normalized = normalized.substring(1);
+  }
+  final gateway = _ipfsGatewayBase();
+  return '$gateway$normalized';
 }
 
 String? _normalizeBackendMediaUrl(String? raw) {
@@ -3978,7 +4360,10 @@ String? _normalizeBackendMediaUrl(String? raw) {
   try {
     if (candidate.startsWith('ipfs://')) {
       final cid = candidate.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
+      return '${_ipfsGatewayBase()}$cid';
+    }
+    if (candidate.startsWith('ipfs/')) {
+      return _resolveCidToUrl(candidate);
     }
     if (candidate.startsWith('//')) {
       return 'https:$candidate';
@@ -3990,6 +4375,10 @@ String? _normalizeBackendMediaUrl(String? raw) {
     if (candidate.startsWith('api/')) {
       final base = ApiKeys.backendUrl.replaceAll(RegExp(r'/$'), '');
       return '$base/$candidate';
+    }
+    if (!candidate.startsWith('http')) {
+      final cidUrl = _resolveCidToUrl(candidate);
+      if (cidUrl != null) return cidUrl;
     }
   } catch (_) {}
   return candidate;

@@ -446,6 +446,7 @@ class DesktopSearchBar extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmitted;
   final TextEditingController? controller;
+  final FocusNode? focusNode;
   final bool autofocus;
 
   const DesktopSearchBar({
@@ -454,6 +455,7 @@ class DesktopSearchBar extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.controller,
+    this.focusNode,
     this.autofocus = false,
   });
 
@@ -464,11 +466,16 @@ class DesktopSearchBar extends StatefulWidget {
 class _DesktopSearchBarState extends State<DesktopSearchBar> {
   bool _isFocused = false;
   late TextEditingController _controller;
+  late FocusNode _focusNode;
+  late bool _ownsFocusNode;
 
   @override
   void initState() {
     super.initState();
     _controller = widget.controller ?? TextEditingController();
+    _ownsFocusNode = widget.focusNode == null;
+    _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(() => setState(() => _isFocused = _focusNode.hasFocus));
     _controller.addListener(() {
       // Rebuild to refresh clear icon visibility when text changes.
       if (mounted) setState(() {});
@@ -479,6 +486,9 @@ class _DesktopSearchBarState extends State<DesktopSearchBar> {
   void dispose() {
     if (widget.controller == null) {
       _controller.dispose();
+    }
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
     }
     super.dispose();
   }
@@ -509,44 +519,42 @@ class _DesktopSearchBarState extends State<DesktopSearchBar> {
               ]
             : null,
       ),
-      child: Focus(
-        onFocusChange: (focused) => setState(() => _isFocused = focused),
-        child: TextField(
-          controller: _controller,
-          autofocus: widget.autofocus,
-          onChanged: widget.onChanged,
-          onSubmitted: widget.onSubmitted,
-          style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        autofocus: widget.autofocus,
+        onChanged: widget.onChanged,
+        onSubmitted: widget.onSubmitted,
+        style: GoogleFonts.inter(
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
+        decoration: InputDecoration(
+          hintText: widget.hintText,
+          hintStyle: GoogleFonts.inter(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           ),
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            hintStyle: GoogleFonts.inter(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-            prefixIcon: Icon(
-              Icons.search,
-              color: _isFocused
-                  ? themeProvider.accentColor
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-            ),
-            suffixIcon: _controller.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(
-                      Icons.clear,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    onPressed: () {
-                      _controller.clear();
-                      widget.onChanged?.call('');
-                    },
-                  )
-                : null,
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+          prefixIcon: Icon(
+            Icons.search,
+            color: _isFocused
+                ? themeProvider.accentColor
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+          suffixIcon: _controller.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(
+                    Icons.clear,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  onPressed: () {
+                    _controller.clear();
+                    widget.onChanged?.call('');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
           ),
         ),
       ),

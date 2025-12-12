@@ -26,6 +26,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
+import '../art/art_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../models/dao.dart';
@@ -160,8 +161,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       _buildProfileHeader(isArtist: isArtist, isInstitution: isInstitution),
-                      _buildStatsSection(),
                       SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      _buildStatsSection(),
+                      SliverToBoxAdapter(child: SizedBox(height: 28)),
                       if (isArtist) ...[
                         SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
                         SliverToBoxAdapter(child: SizedBox(height: 24)),
@@ -318,14 +320,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                     left: 0,
                     right: 0,
                     child: Center(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Theme.of(context).scaffoldBackgroundColor,
-                            width: 4,
-                          ),
-                        ),
                         child: AvatarWidget(
                           wallet: profileProvider.currentUser?.walletAddress ?? '',
                           avatarUrl: profileProvider.currentUser?.avatar,
@@ -335,7 +329,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           isOnline: Provider.of<Web3Provider>(context, listen: false).isConnected ||
                               !Provider.of<WalletProvider>(context, listen: false).isLocked,
                         ),
-                      ),
                     ),
                   ),
                 ],
@@ -395,7 +388,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                     decoration: BoxDecoration(
                       color: themeProvider.accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: themeProvider.accentColor.withValues(alpha: 0.3),
                       ),
@@ -457,6 +450,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                               backgroundColor: themeProvider.accentColor,
                               foregroundColor: Colors.white,
                               padding: EdgeInsets.symmetric(vertical: isVerySmallScreen ? 14 : 16),
+                              elevation: 2,
+                              shadowColor: themeProvider.accentColor.withValues(alpha: 0.3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -476,6 +471,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           decoration: BoxDecoration(
                             border: Border.all(
                               color: themeProvider.accentColor,
+                              width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -509,6 +505,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                               backgroundColor: themeProvider.accentColor,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 2,
+                              shadowColor: themeProvider.accentColor.withValues(alpha: 0.3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -527,6 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                           decoration: BoxDecoration(
                             border: Border.all(
                               color: themeProvider.accentColor,
+                              width: 1.5,
                             ),
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -562,13 +561,21 @@ class _ProfileScreenState extends State<ProfileScreen>
           
           return Container(
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline,
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                width: 1.5,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -635,13 +642,21 @@ class _ProfileScreenState extends State<ProfileScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: Theme.of(context).colorScheme.outline,
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+            width: 1.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -1284,11 +1299,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
     final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
     final medium = (data['category'] ?? data['medium'] ?? 'Digital art').toString();
-    return _buildShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: medium,
-      footer: '${data['likesCount'] ?? data['likes'] ?? 0} likes',
+    final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+    
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: artworkId != null ? () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ArtDetailScreen(artworkId: artworkId),
+          ),
+        );
+      } : null,
+      child: _buildShowcaseCard(
+        imageUrl: imageUrl,
+        title: title,
+        subtitle: medium,
+        footer: '${data['likesCount'] ?? data['likes'] ?? 0} likes',
+      ),
     );
   }
 
@@ -1329,7 +1357,17 @@ class _ProfileScreenState extends State<ProfileScreen>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

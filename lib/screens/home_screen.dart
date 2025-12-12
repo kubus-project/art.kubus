@@ -10,6 +10,7 @@ import '../providers/config_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
+import '../models/artwork.dart';
 import '../models/recent_activity.dart';
 import 'web3/dao/governance_hub.dart';
 import 'web3/artist/artist_studio.dart';
@@ -17,17 +18,20 @@ import 'web3/institution/institution_hub.dart';
 import 'web3/marketplace/marketplace.dart';
 import 'web3/wallet/wallet_home.dart';
 import 'web3/wallet/connectwallet_screen.dart';
-import 'web3/onboarding/web3_onboarding.dart' as web3;
+import 'onboarding/web3/web3_onboarding.dart' as web3;
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
 import '../widgets/artist_badge.dart';
 import '../widgets/institution_badge.dart';
+import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import 'activity/advanced_analytics_screen.dart';
 import '../utils/app_animations.dart';
+import '../utils/artwork_media_resolver.dart';
 import '../widgets/staggered_fade_slide.dart';
+import 'art/art_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1327,7 +1331,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildArtworkCard(dynamic artwork, int index) {
+  Widget _buildArtworkCard(Artwork artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return GestureDetector(
@@ -1347,25 +1351,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      themeProvider.accentColor.withValues(alpha: 0.3),
-                      themeProvider.accentColor.withValues(alpha: 0.1),
-                    ],
-                  ),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(16)),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.view_in_ar,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
+            SizedBox(
+              height: 110,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: _buildCardCover(artwork, themeProvider),
               ),
             ),
             Padding(
@@ -1374,7 +1364,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    artwork?.title ?? 'AR Art #${index + 1}',
+                    artwork.title,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -1385,7 +1375,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'by ${artwork?.artist ?? '@artist'}',
+                    'by ${artwork.artist}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Theme.of(context)
@@ -1400,6 +1390,105 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardCover(Artwork artwork, ThemeProvider themeProvider) {
+    final imageUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
+    final placeholder = _artworkCoverPlaceholder(themeProvider);
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return placeholder;
+    }
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => placeholder,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Container(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Center(
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: InlineLoading(
+                    shape: BoxShape.circle,
+                    color: themeProvider.accentColor,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.08),
+                  Colors.black.withValues(alpha: 0.22),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (artwork.arEnabled)
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: themeProvider.accentColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.view_in_ar, color: Colors.white, size: 12),
+                  SizedBox(width: 4),
+                  Text(
+                    'AR',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _artworkCoverPlaceholder(ThemeProvider themeProvider) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            themeProvider.accentColor.withValues(alpha: 0.25),
+            themeProvider.accentColor.withValues(alpha: 0.1),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Icon(
+          Icons.image,
+          color: Colors.white70,
+          size: 32,
         ),
       ),
     );
@@ -1804,228 +1893,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.pushReplacementNamed(context, '/main');
   }
 
-  void _showArtworkDetail(int index) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Artwork preview
-                    Container(
-                      height: 200,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Provider.of<ThemeProvider>(context)
-                                .accentColor
-                                .withValues(alpha: 0.3),
-                            Provider.of<ThemeProvider>(context)
-                                .accentColor
-                                .withValues(alpha: 0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.view_in_ar,
-                            color: Colors.white, size: 60),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Artwork info
-                    Text(
-                      'AR Art #${index + 1}',
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Provider.of<ThemeProvider>(context)
-                                    .accentColor
-                                    .withValues(alpha: 0.3),
-                                Provider.of<ThemeProvider>(context)
-                                    .accentColor
-                                    .withValues(alpha: 0.1),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.person,
-                              color: Colors.white, size: 16),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'by @artist_name',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Description
-                    Text(
-                      'Description',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'An immersive AR artwork that transforms your surroundings into a digital canvas. Experience the fusion of reality and imagination.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.7),
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Stats
-                    Row(
-                      children: [
-                        _buildStatChip(Icons.favorite, '234'),
-                        const SizedBox(width: 12),
-                        _buildStatChip(Icons.visibility, '1.2k'),
-                        const SizedBox(width: 12),
-                        _buildStatChip(Icons.share, '89'),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Action buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.pop(context);
-                              Navigator.pushNamed(context, '/ar');
-                            },
-                            icon: const Icon(Icons.view_in_ar),
-                            label: Text(
-                              'View in AR',
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Provider.of<ThemeProvider>(context)
-                                      .accentColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: () {
-                            // Add to favorites
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primaryContainer,
-                            foregroundColor:
-                                Theme.of(context).colorScheme.onSurface,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 16, horizontal: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Icon(Icons.favorite_border),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+  void _showArtworkDetail(Artwork artwork) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ArtDetailScreen(artworkId: artwork.id),
       ),
     );
   }
 
-  Widget _buildStatChip(IconData icon, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 16,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurface
-                  .withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showStatsDialog(String statType, IconData icon) {
     showDialog(

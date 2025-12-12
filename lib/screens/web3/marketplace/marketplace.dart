@@ -3,8 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
-import '../onboarding/web3_onboarding.dart';
-import '../onboarding/onboarding_data.dart';
+import '../../onboarding/web3/web3_onboarding.dart';
+import '../../onboarding/web3/onboarding_data.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/collectibles_provider.dart';
 import '../../../providers/web3provider.dart';
@@ -13,6 +13,7 @@ import '../../../providers/navigation_provider.dart';
 import '../../../models/artwork.dart';
 import '../../../models/collectible.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../utils/artwork_media_resolver.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -598,6 +599,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Widget _buildCollectibleCard(Collectible collectible, CollectibleSeries series, Artwork? artwork, {bool isForSale = false}) {
+    final coverUrl = ArtworkMediaResolver.resolveCover(
+      artwork: artwork,
+      metadata: series.metadata,
+      fallbackUrl: series.imageUrl,
+    );
     return GestureDetector(
       onTap: () => _showCollectibleDetails(collectible, series, artwork),
       child: Container(
@@ -629,11 +635,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 child: Stack(
                   children: [
                     // NFT image
-                    if (series.imageUrl != null)
+                    if (coverUrl != null)
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                         child: Image.network(
-                          series.imageUrl!,
+                          coverUrl,
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover,
@@ -1126,6 +1132,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
     final progressPercentage = (series.mintProgress * 100).toInt();
     final isNearSoldOut = series.mintProgress > 0.8;
     final hasARFeature = series.requiresARInteraction;
+    final coverUrl = ArtworkMediaResolver.resolveCover(
+      artwork: artwork,
+      metadata: series.metadata,
+      fallbackUrl: series.imageUrl,
+    );
 
     return GestureDetector(
       onTap: () => _showNFTSeriesDetails(series, artwork),
@@ -1158,11 +1169,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 child: Stack(
                   children: [
                     // Series image or artwork preview
-                    if (series.imageUrl != null)
+                    if (coverUrl != null)
                       ClipRRect(
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                         child: Image.network(
-                          series.imageUrl!,
+                          coverUrl,
                           width: double.infinity,
                           height: double.infinity,
                           fit: BoxFit.cover,

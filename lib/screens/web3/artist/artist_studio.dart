@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../onboarding/web3_onboarding.dart';
-import '../onboarding/onboarding_data.dart';
+import '../../onboarding/web3/web3_onboarding.dart';
+import '../../onboarding/web3/onboarding_data.dart';
 import 'artwork_creator.dart';
 import 'artwork_gallery.dart';
 import 'artist_analytics.dart';

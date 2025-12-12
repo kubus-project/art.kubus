@@ -23,6 +23,7 @@ import '../../../screens/community/profile_screen_methods.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
+import '../../art/art_detail_screen.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -568,6 +569,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                       imageUrl: _extractImageUrl(artwork, ['imageUrl', 'image']),
                       title: artwork['title'] ?? 'Untitled',
                       subtitle: artwork['category'] ?? 'Artwork',
+                      artworkId: (artwork['id'] ?? artwork['artwork_id'])?.toString(),
                     )),
                 ..._artistCollections.map((collection) => _buildShowcaseCard(
                       imageUrl: _extractImageUrl(collection, ['thumbnailUrl', 'coverImage']),
@@ -581,13 +583,22 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     );
   }
 
-  Widget _buildShowcaseCard({String? imageUrl, required String title, required String subtitle}) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 16),
-      child: DesktopCard(
-        padding: EdgeInsets.zero,
-        child: Column(
+  Widget _buildShowcaseCard({String? imageUrl, required String title, required String subtitle, String? artworkId}) {
+    return GestureDetector(
+      onTap: artworkId != null ? () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ArtDetailScreen(artworkId: artworkId),
+          ),
+        );
+      } : null,
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 16),
+        child: DesktopCard(
+          padding: EdgeInsets.zero,
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (imageUrl != null)
@@ -642,6 +653,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

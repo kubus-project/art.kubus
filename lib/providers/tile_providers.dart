@@ -97,10 +97,6 @@ class TileProviders with WidgetsBindingObserver {
   TileLayer _buildTileLayer({
     required bool retinaMode,
   }) {
-    final ThemeData activeTheme = themeProvider.isDarkMode
-        ? themeProvider.darkTheme
-        : themeProvider.lightTheme;
-    final Color bgColor = activeTheme.colorScheme.surface;
     final _TileBufferConfig buffers = _resolveBufferConfig(retinaMode);
 
     return TileLayer(

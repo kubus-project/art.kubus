@@ -30,7 +30,15 @@ class ConversationScreen extends StatefulWidget {
   final List<String>? preloadedMembers;
   final Map<String, String?>? preloadedAvatars;
   final Map<String, String?>? preloadedDisplayNames;
-  const ConversationScreen({super.key, required this.conversation, this.preloadedMembers, this.preloadedAvatars, this.preloadedDisplayNames});
+  final VoidCallback? onClose;
+  const ConversationScreen({
+    super.key,
+    required this.conversation,
+    this.preloadedMembers,
+    this.preloadedAvatars,
+    this.preloadedDisplayNames,
+    this.onClose,
+  });
 
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
@@ -1003,6 +1011,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
+        ),
         title: _buildHeaderTitle(),
         actions: _buildHeaderActions(),
       ),

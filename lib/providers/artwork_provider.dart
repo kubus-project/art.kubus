@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../models/artwork_comment.dart';
 import '../services/ar_content_service.dart';
+import '../services/art_content_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/user_action_logger.dart';
 import 'task_provider.dart';
@@ -15,6 +16,7 @@ class ArtworkProvider extends ChangeNotifier {
   final List<Artwork> _artworks = [];
   final Map<String, List<ArtworkComment>> _comments = {};
   final Map<String, bool> _loadingStates = {};
+  final Set<String> _walletsWithPrivateArtworks = <String>{};
   String? _error;
   TaskProvider? _taskProvider;
   SavedItemsProvider? _savedItemsProvider;
@@ -59,6 +61,21 @@ class ArtworkProvider extends ChangeNotifier {
       return _artworks.firstWhere((artwork) => artwork.id == id);
     } catch (e) {
       return null;
+    }
+  }
+
+  /// Ensure artwork exists locally by fetching from backend if needed
+  Future<Artwork?> fetchArtworkIfNeeded(String artworkId) async {
+    final existing = getArtworkById(artworkId);
+    if (existing != null) return existing;
+
+    try {
+      final fetched = await _backendApi.getArtwork(artworkId);
+      addOrUpdateArtwork(fetched);
+      return fetched;
+    } catch (e) {
+      debugPrint('ArtworkProvider.fetchArtworkIfNeeded error: $e');
+      rethrow;
     }
   }
 
@@ -134,7 +151,7 @@ class ArtworkProvider extends ChangeNotifier {
     const operation = 'create_artwork';
     _setLoading(operation, true);
     try {
-      final coverUrl = await ARContentService.uploadToHTTP(
+      final coverUrl = await ArtContentService.uploadMedia(
         coverImageBytes,
         coverImageFilename,
         metadata: {
@@ -437,11 +454,13 @@ class ArtworkProvider extends ChangeNotifier {
   }
 
   /// Load initial artworks
-  Future<void> loadArtworks() async {
-
+  Future<void> loadArtworks({bool refresh = false}) async {
     _setLoading('load_artworks', true);
-    
+
     try {
+      if (refresh) {
+        _walletsWithPrivateArtworks.clear();
+      }
       final artworks = await _backendApi.getArtworks(limit: 100);
       _artworks
         ..clear()
@@ -454,6 +473,42 @@ class ArtworkProvider extends ChangeNotifier {
       _setError('Failed to load artworks: $e');
     } finally {
       _setLoading('load_artworks', false);
+    }
+  }
+
+  Future<void> loadArtworksForWallet(String walletAddress, {bool force = false}) async {
+    if (walletAddress.isEmpty) return;
+    final cacheKey = walletAddress.toLowerCase();
+    if (!force && _walletsWithPrivateArtworks.contains(cacheKey)) {
+      return;
+    }
+
+    final operationKey = 'load_artworks_wallet_$cacheKey';
+    _setLoading(operationKey, true);
+    try {
+      final walletArtworks = await _backendApi.getArtworks(
+        walletAddress: walletAddress,
+        includePrivateForWallet: true,
+        limit: 100,
+      );
+      bool updated = false;
+      for (final artwork in walletArtworks) {
+        final index = _artworks.indexWhere((a) => a.id == artwork.id);
+        if (index >= 0) {
+          _artworks[index] = artwork;
+        } else {
+          _artworks.add(artwork);
+        }
+        updated = true;
+      }
+      _walletsWithPrivateArtworks.add(cacheKey);
+      if (updated) {
+        notifyListeners();
+      }
+    } catch (e) {
+      _setError('Failed to load wallet artworks: $e');
+    } finally {
+      _setLoading(operationKey, false);
     }
   }
 

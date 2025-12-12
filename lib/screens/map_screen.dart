@@ -16,17 +16,12 @@ import '../providers/artwork_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
-import '../providers/institution_provider.dart';
-import '../providers/dao_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
-import '../models/institution.dart';
-import '../models/dao.dart';
 import '../models/map_marker_subject.dart';
 import '../services/task_service.dart';
 import '../services/ar_integration_service.dart';
-import '../services/backend_api_service.dart';
 import '../services/map_marker_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/achievement_service.dart';
@@ -36,30 +31,77 @@ import 'art/art_detail_screen.dart';
 import 'art/ar_screen.dart';
 import 'community/user_profile_screen.dart';
 import '../utils/grid_utils.dart';
-import '../utils/marker_subject_utils.dart';
+import '../utils/artwork_media_resolver.dart';
+import '../utils/map_marker_subject_loader.dart';
+import '../utils/map_search_suggestion.dart';
+import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
+import '../widgets/art_map_view.dart';
+import 'dart:ui' as ui;
+import '../services/search_service.dart';
+
+/// Custom painter for the direction cone indicator
+class DirectionConePainter extends CustomPainter {
+  final Color color;
+
+  DirectionConePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color.withValues(alpha: 0.25)
+      ..style = PaintingStyle.fill;
+
+    final strokePaint = Paint()
+      ..color = color.withValues(alpha: 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    // Center of the size
+    final center = Offset(size.width / 2, size.height / 2);
+
+    // Draw cone pointing upward (will be rotated by the parent Transform)
+    // Cone dimensions: 60° spread angle
+    final coneAngle = math.pi / 3; // 60 degrees in radians
+    final coneLength = size.height * 0.8;
+
+    // Calculate the two edges of the cone
+    final leftEdge = Offset(
+      center.dx - coneLength * math.sin(coneAngle / 2),
+      center.dy + coneLength * math.cos(coneAngle / 2),
+    );
+
+    final rightEdge = Offset(
+      center.dx + coneLength * math.sin(coneAngle / 2),
+      center.dy + coneLength * math.cos(coneAngle / 2),
+    );
+
+    // Draw the cone as a filled path
+    final conePath = ui.Path()
+      ..moveTo(center.dx, center.dy)
+      ..lineTo(leftEdge.dx, leftEdge.dy)
+      ..arcToPoint(
+        rightEdge,
+        radius: Radius.circular(coneLength * math.sin(coneAngle / 2) * 2),
+        clockwise: false,
+      )
+      ..close();
+
+    canvas.drawPath(conePath, paint);
+    canvas.drawPath(conePath, strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(DirectionConePainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
-}
-
-class _MarkerSubjectData {
-  final List<Artwork> artworks;
-  final List<Institution> institutions;
-  final List<Event> events;
-  final List<Delegate> delegates;
-  final bool wasRefreshed;
-
-  const _MarkerSubjectData({
-    required this.artworks,
-    required this.institutions,
-    required this.events,
-    required this.delegates,
-    this.wasRefreshed = false,
-  });
 }
 
 class _MapScreenState extends State<MapScreen>
@@ -84,16 +126,17 @@ class _MapScreenState extends State<MapScreen>
 
   // Animation
   late AnimationController _animationController;
+  AnimationController? _locationIndicatorController;
 
   // AR Integration
   final ARIntegrationService _arIntegrationService = ARIntegrationService();
-  final BackendApiService _backendApi = BackendApiService();
   final MapMarkerService _mapMarkerService = MapMarkerService();
   final PushNotificationService _pushNotificationService =
       PushNotificationService();
   List<ArtMarker> _artMarkers = [];
   final Set<String> _notifiedMarkers =
       {}; // Track which markers we've notified about
+  ArtMarker? _activeMarker;
   Timer? _proximityCheckTimer;
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
   Timer? _markerRefreshDebounce;
@@ -105,7 +148,8 @@ class _MapScreenState extends State<MapScreen>
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   Timer? _searchDebounce;
-  List<_SearchSuggestion> _searchSuggestions = [];
+  List<MapSearchSuggestion> _searchSuggestions = [];
+  final SearchService _searchService = SearchService();
 
   final Map<ArtMarkerType, bool> _markerLayerVisibility = {
     ArtMarkerType.artwork: true,
@@ -123,6 +167,7 @@ class _MapScreenState extends State<MapScreen>
   bool _useGridLayout = false;
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
+  double _markerRadiusKm = 5.0;
 
   // Discovery and Progress
   bool _isDiscoveryExpanded = false;
@@ -138,6 +183,8 @@ class _MapScreenState extends State<MapScreen>
   static const double _markerRefreshDistanceMeters = 1200; // Increased to reduce API calls
   static const Duration _markerRefreshInterval = Duration(minutes: 5); // Increased from 150s to 5 min
   bool _isLoadingMarkers = false; // Prevent concurrent fetches
+
+  MarkerSubjectLoader get _subjectLoader => MarkerSubjectLoader(context);
 
   @override
   void initState() {
@@ -206,6 +253,7 @@ class _MapScreenState extends State<MapScreen>
     _markerRefreshDebounce?.cancel();
     _markerSocketSubscription?.cancel();
     _animationController.dispose();
+    _locationIndicatorController?.dispose();
     _sheetController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -261,7 +309,6 @@ class _MapScreenState extends State<MapScreen>
     }
 
     _getLocation();
-    _showIntroDialogIfNeeded();
     _startLocationTimer();
 
     final compassStream = FlutterCompass.events;
@@ -276,6 +323,11 @@ class _MapScreenState extends State<MapScreen>
     WidgetsBinding.instance.addObserver(this);
 
     _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _locationIndicatorController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
@@ -326,15 +378,19 @@ class _MapScreenState extends State<MapScreen>
       _isLoadingMarkers = true;
       final markers = await _mapMarkerService.loadMarkers(
         center: queryCenter,
-        radiusKm: 5.0,
+        radiusKm: _markerRadiusKm,
         forceRefresh: forceRefresh,
       );
 
+      final filteredMarkers =
+          markers.where((marker) => marker.hasValidPosition).toList();
+
       if (mounted) {
         setState(() {
-          _artMarkers = markers;
+          _artMarkers = filteredMarkers;
         });
       }
+      await _hydrateMarkersWithArtworks(filteredMarkers);
       _lastMarkerFetchCenter = queryCenter;
       _lastMarkerFetchTime = DateTime.now();
 
@@ -348,6 +404,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleMarkerCreated(ArtMarker marker) {
     try {
+      if (!marker.hasValidPosition) return;
       if (_currentPosition != null) {
         final distanceKm = _distanceCalculator.as(
           LengthUnit.Kilometer,
@@ -483,6 +540,50 @@ class _MapScreenState extends State<MapScreen>
     });
   }
 
+  Future<void> _openMarkerRadiusDialog() async {
+    double tempRadius = _markerRadiusKm;
+    final result = await showDialog<double>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Nearby radius'),
+          content: StatefulBuilder(
+            builder: (context, setStateDialog) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('${tempRadius.toStringAsFixed(1)} km'),
+                  Slider(
+                    min: 1,
+                    max: 50,
+                    divisions: 49,
+                    value: tempRadius,
+                    onChanged: (v) => setStateDialog(() => tempRadius = v),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(tempRadius),
+              child: const Text('Apply'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() => _markerRadiusKm = result);
+      await _loadArtMarkers(forceRefresh: true);
+    }
+  }
+
   void _showProximityNotification(ArtMarker marker, double distance) {
     if (!mounted) return;
 
@@ -553,86 +654,34 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  void _handleMarkerTap(ArtMarker marker) {
+    setState(() => _activeMarker = marker);
+    _ensureLinkedArtworkLoaded(marker);
+  }
+
+  Future<void> _ensureLinkedArtworkLoaded(ArtMarker marker) async {
+    final artworkId = marker.artworkId;
+    if (artworkId == null || artworkId.isEmpty) return;
+
+    final artworkProvider = context.read<ArtworkProvider>();
+    if (artworkProvider.getArtworkById(artworkId) != null) return;
+
+    try {
+      await artworkProvider.fetchArtworkIfNeeded(artworkId);
+      if (!mounted) return;
+      // Trigger overlay rebuild if the same marker is still active.
+      if (_activeMarker?.id == marker.id) {
+        setState(() {});
+      }
+    } catch (e) {
+      debugPrint('MapScreen: failed to load linked artwork $artworkId for marker ${marker.id}: $e');
+    }
+  }
+
   void _showArtMarkerDialog(ArtMarker marker) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(
-              Icons.view_in_ar,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                marker.name,
-                style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (marker.description.isNotEmpty)
-              Text(
-                marker.description,
-                style: GoogleFonts.outfit(),
-              ),
-            const SizedBox(height: 12),
-            if (_currentPosition != null) ...[
-              Builder(
-                builder: (context) {
-                  final distance = _distanceCalculator.as(
-                    LengthUnit.Meter,
-                    _currentPosition!,
-                    marker.position,
-                  );
-                  return Row(
-                    children: [
-                      Icon(
-                        Icons.location_on,
-                        size: 16,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${distance.round()}m away',
-                        style: GoogleFonts.outfit(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close', style: GoogleFonts.outfit()),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _launchARExperience(marker);
-            },
-            icon: const Icon(Icons.view_in_ar),
-            label: Text('View in AR', style: GoogleFonts.outfit()),
-          ),
-        ],
-      ),
-    );
+    // For compatibility with legacy calls: center and show inline overlay
+    _handleMarkerTap(marker);
+    _mapController.move(marker.position, math.max(_mapController.camera.zoom, 15));
   }
 
   Future<void> _launchARExperience(ArtMarker marker) async {
@@ -659,43 +708,22 @@ class _MapScreenState extends State<MapScreen>
 
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
-    Color base;
+    // Subject/type-driven palette; avoid rarity blending to keep tones stable
     switch (marker.type) {
       case ArtMarkerType.artwork:
-        base = themeProvider.accentColor;
-        break;
+        return themeProvider.accentColor;
       case ArtMarkerType.institution:
-        base = scheme.secondary;
-        break;
+        return scheme.secondary;
       case ArtMarkerType.event:
-        base = scheme.tertiary;
-        break;
+        return scheme.tertiary;
       case ArtMarkerType.residency:
-        base = scheme.primaryContainer;
-        break;
+        return scheme.primaryContainer;
       case ArtMarkerType.drop:
-        base = scheme.secondaryContainer;
-        break;
+        return scheme.error;
       case ArtMarkerType.experience:
-        base = scheme.primary;
-        break;
+        return scheme.primary;
       case ArtMarkerType.other:
-        base = scheme.outline;
-        break;
-    }
-
-    switch (marker.signalTier) {
-      case ArtMarkerSignal.legendary:
-        return Color.alphaBlend(scheme.error.withValues(alpha: 0.45), base);
-      case ArtMarkerSignal.featured:
-        return Color.alphaBlend(scheme.tertiary.withValues(alpha: 0.35), base);
-      case ArtMarkerSignal.active:
-        return base;
-      case ArtMarkerSignal.subtle:
-        return Color.alphaBlend(
-          scheme.surfaceContainerHighest.withValues(alpha: 0.55),
-          base,
-        );
+        return scheme.outline;
     }
   }
 
@@ -715,25 +743,6 @@ class _MapScreenState extends State<MapScreen>
         return Icons.view_in_ar;
       case ArtMarkerType.other:
         return Icons.location_on_outlined;
-    }
-  }
-
-  String _describeMarkerType(ArtMarkerType type) {
-    switch (type) {
-      case ArtMarkerType.artwork:
-        return 'Artwork';
-      case ArtMarkerType.institution:
-        return 'Institution';
-      case ArtMarkerType.event:
-        return 'Event';
-      case ArtMarkerType.residency:
-        return 'Residency';
-      case ArtMarkerType.drop:
-        return 'Drop/Reward';
-      case ArtMarkerType.experience:
-        return 'AR Experience';
-      case ArtMarkerType.other:
-        return 'Other';
     }
   }
 
@@ -768,711 +777,87 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  _MarkerSubjectData _snapshotMarkerSubjectData() {
-    final artworkProvider = context.read<ArtworkProvider>();
-    final institutionProvider = context.read<InstitutionProvider>();
-    final daoProvider = context.read<DAOProvider>();
-    return _MarkerSubjectData(
-      artworks: List<Artwork>.from(artworkProvider.artworks),
-      institutions: List<Institution>.from(institutionProvider.institutions),
-      events: List<Event>.from(institutionProvider.events),
-      delegates: List<Delegate>.from(daoProvider.delegates),
-    );
+  MarkerSubjectData _snapshotMarkerSubjectData() {
+    return _subjectLoader.snapshot();
   }
 
-  Future<_MarkerSubjectData?> _refreshMarkerSubjectData({bool force = false}) async {
-    final artworkProvider = context.read<ArtworkProvider>();
-    final institutionProvider = context.read<InstitutionProvider>();
-    final daoProvider = context.read<DAOProvider>();
-
-    final fetches = <Future<void>>[];
-    final shouldLoadArtworks = artworkProvider.artworks.isEmpty || force;
-    final shouldLoadInstitutions =
-        force || institutionProvider.institutions.isEmpty || institutionProvider.events.isEmpty;
-    final shouldLoadDelegates = force || daoProvider.delegates.isEmpty;
-
-    final bool needsFetch = shouldLoadArtworks || shouldLoadInstitutions || shouldLoadDelegates;
-
-    if (!needsFetch) {
-      return null;
-    }
-
-    if (shouldLoadArtworks) {
-      fetches.add(artworkProvider.loadArtworks());
-    }
-    if (shouldLoadInstitutions) {
-      fetches.add(institutionProvider.refreshData());
-    }
-    if (shouldLoadDelegates) {
-      fetches.add(daoProvider.refreshData(force: true));
-    }
-
-    try {
-      await Future.wait(fetches);
-      return _MarkerSubjectData(
-        artworks: List<Artwork>.from(artworkProvider.artworks),
-        institutions: List<Institution>.from(institutionProvider.institutions),
-        events: List<Event>.from(institutionProvider.events),
-        delegates: List<Delegate>.from(daoProvider.delegates),
-        wasRefreshed: true,
-      );
-    } catch (e) {
-      debugPrint('MapScreen: Failed to refresh marker subjects: $e');
-      return null;
-    }
+  Future<MarkerSubjectData?> _refreshMarkerSubjectData({bool force = false}) {
+    return _subjectLoader.refresh(force: force);
   }
 
   Future<void> _startMarkerCreationFlow() async {
     if (_currentPosition == null) return;
-    final subjectData = _snapshotMarkerSubjectData();
+    final refreshed = await _refreshMarkerSubjectData(force: true);
     if (!mounted) return;
-    _showMarkerCreationDialog(subjectData);
-  }
-
-  void _showMarkerCreationDialog(_MarkerSubjectData subjectData) {
-    if (_currentPosition == null) return;
-
-    List<Artwork> arEnabledArtworks =
-        subjectData.artworks.where(artworkSupportsAR).toList();
-
-    Map<MarkerSubjectType, List<MarkerSubjectOption>> subjectOptionsByType =
-        <MarkerSubjectType, List<MarkerSubjectOption>>{
-      for (final type in MarkerSubjectType.values)
-        type: buildSubjectOptions(
-          type: type,
-          artworks: subjectData.artworks,
-          institutions: subjectData.institutions,
-          events: subjectData.events,
-          delegates: subjectData.delegates,
+    final subjectData = refreshed ?? _snapshotMarkerSubjectData();
+    if (subjectData.artworks.isEmpty) {
+      final wallet = context.read<WalletProvider>().currentWalletAddress;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            wallet == null || wallet.isEmpty
+                ? 'Connect your wallet and create an AR-enabled artwork to place a marker.'
+                : 'No AR-enabled artworks found for your wallet. Create one first to place a marker.',
+            style: GoogleFonts.outfit(),
+          ),
+          behavior: SnackBarBehavior.floating,
         ),
-    };
-
-    MarkerSubjectType selectedSubjectType = MarkerSubjectType.artwork;
-    MarkerSubjectOption? selectedSubject =
-        (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
-            ? subjectOptionsByType[selectedSubjectType]!.first
-            : null;
-    bool subjectSelectionRequired(MarkerSubjectType type) =>
-        type != MarkerSubjectType.misc;
-    bool arAssetRequired(MarkerSubjectType type) =>
-        type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
-
-    Artwork? resolveDefaultAsset(
-      MarkerSubjectType type,
-      MarkerSubjectOption? subjectOption,
-    ) {
-      if (type == MarkerSubjectType.artwork) {
-        return findArtworkById(arEnabledArtworks, subjectOption?.id);
-      }
-      if (arAssetRequired(type) && arEnabledArtworks.isNotEmpty) {
-        return arEnabledArtworks.first;
-      }
-      return null;
+      );
+      return;
     }
-
-    Artwork? selectedArAsset = resolveDefaultAsset(
-      selectedSubjectType,
-      selectedSubject,
-    );
-    ArtMarkerType selectedMarkerType = selectedSubjectType.defaultMarkerType;
-    bool isPublic = true;
-
-    final titleController =
-        TextEditingController(text: selectedSubject?.title ?? '');
-    final descriptionController = TextEditingController(
-      text: selectedSubject != null && selectedSubject.subtitle.isNotEmpty
-          ? selectedSubject.subtitle
-          : '',
-    );
-    final categoryController =
-        TextEditingController(text: selectedSubjectType.defaultCategory);
-    final formKey = GlobalKey<FormState>();
-    bool isCreating = false;
-
-    void applySubjectType(MarkerSubjectType type, StateSetter refresh) {
-      final options = subjectOptionsByType[type] ?? [];
-      final nextSubject = options.isNotEmpty ? options.first : null;
-
-      refresh(() {
-        selectedSubjectType = type;
-        selectedMarkerType = type.defaultMarkerType;
-        selectedSubject = nextSubject;
-        categoryController.text = type.defaultCategory;
-        if (nextSubject != null) {
-          titleController.text = nextSubject.title;
-          descriptionController.text = nextSubject.subtitle.isNotEmpty
-              ? nextSubject.subtitle
-              : 'Marker for ${nextSubject.title}';
-        } else if (subjectSelectionRequired(type)) {
-          titleController.clear();
-          descriptionController.clear();
-        }
-        selectedArAsset = resolveDefaultAsset(type, nextSubject);
-      });
-    }
-
-    Future<void> maybeRefreshSubjectsInDialog(StateSetter refresh) async {
-      // Force a refresh when opening the dialog to ensure options are populated.
-      final fresh = await _refreshMarkerSubjectData(force: true);
-      if (fresh == null || !mounted) return;
-      refresh(() {
-        subjectOptionsByType = {
-          for (final type in MarkerSubjectType.values)
-            type: buildSubjectOptions(
-              type: type,
-              artworks: fresh.artworks,
-              institutions: fresh.institutions,
-              events: fresh.events,
-              delegates: fresh.delegates,
-            ),
-        };
-        arEnabledArtworks =
-            fresh.artworks.where(artworkSupportsAR).toList();
-        // Preserve current selections when possible
-        final updatedOptions = subjectOptionsByType[selectedSubjectType] ?? [];
-        MarkerSubjectOption? preserved;
-        if (selectedSubject != null) {
-          try {
-            preserved = updatedOptions
-                .firstWhere((option) => option.id == selectedSubject!.id);
-          } catch (_) {}
-        }
-        selectedSubject =
-            preserved ?? (updatedOptions.isNotEmpty ? updatedOptions.first : null);
-        selectedArAsset = resolveDefaultAsset(selectedSubjectType, selectedSubject);
-      });
-    }
-
-    bool refreshScheduled = false;
-
-    showDialog(
+    final MapMarkerFormResult? result = await MapMarkerDialog.show(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          if (!refreshScheduled) {
-            refreshScheduled = true;
-            unawaited(maybeRefreshSubjectsInDialog(setDialogState));
-          }
-          return AlertDialog(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            title: Row(
-              children: [
-                Icon(
-                  Icons.add_location_alt,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
+      subjectData: subjectData,
+      onRefreshSubjects: ({bool force = false}) => _refreshMarkerSubjectData(force: force),
+      initialPosition: _currentPosition!,
+      allowManualPosition: false,
+      initialSubjectType: MarkerSubjectType.artwork,
+    );
+
+    if (!mounted || result == null) return;
+
+    final success = await _createMarkerAtCurrentLocation(result);
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Create Art Marker',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+                  'Marker created successfully!',
+                  style: GoogleFonts.outfit(color: Colors.white),
                 ),
               ),
             ],
           ),
-          content: SingleChildScrollView(
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Attach an existing subject and AR asset to this location.',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Subject Type',
-                    style: GoogleFonts.outfit(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<MarkerSubjectType>(
-                    initialValue: selectedSubjectType,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: MarkerSubjectType.values
-                        .map(
-                          (type) => DropdownMenuItem<MarkerSubjectType>(
-                            value: type,
-                            child: Text(type.label),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        applySubjectType(value, setDialogState);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  if (subjectSelectionRequired(selectedSubjectType))
-                    if ((subjectOptionsByType[selectedSubjectType] ?? [])
-                        .isNotEmpty)
-                      DropdownButtonFormField<MarkerSubjectOption>(
-                        initialValue: selectedSubject,
-                        decoration: InputDecoration(
-                          labelText: '${selectedSubjectType.label} *',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items: (subjectOptionsByType[selectedSubjectType] ?? [])
-                            .map(
-                              (option) => DropdownMenuItem<MarkerSubjectOption>(
-                                value: option,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(option.title,
-                                        style: GoogleFonts.outfit(
-                                            fontWeight: FontWeight.w600)),
-                                    if (option.subtitle.isNotEmpty)
-                                      Text(
-                                        option.subtitle,
-                                        style: GoogleFonts.outfit(fontSize: 12),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setDialogState(() {
-                              selectedSubject = value;
-                              titleController.text = value.title;
-                              descriptionController.text =
-                                  value.subtitle.isNotEmpty
-                                      ? value.subtitle
-                                      : 'Marker for ${value.title}';
-                              if (selectedSubjectType ==
-                                  MarkerSubjectType.artwork) {
-                                selectedArAsset = findArtworkById(
-                                    arEnabledArtworks, value.id);
-                              }
-                            });
-                          }
-                        },
-                      )
-                    else
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'No ${selectedSubjectType.label.toLowerCase()}s available. Use the respective module to create one first.',
-                          style: GoogleFonts.outfit(fontSize: 13),
-                        ),
-                      )
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest
-                            .withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        'Misc markers do not need a linked subject. Provide a custom title and description below.',
-                        style: GoogleFonts.outfit(fontSize: 13),
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  if (arAssetRequired(selectedSubjectType)) ...[
-                    Text(
-                      'Linked AR Asset',
-                      style: GoogleFonts.outfit(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (arEnabledArtworks.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest
-                              .withValues(alpha: 0.4),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          'No AR-enabled artworks available. Create one from the AR screen (Create tab) first.',
-                          style: GoogleFonts.outfit(fontSize: 13),
-                        ),
-                      )
-                    else
-                      DropdownButtonFormField<Artwork>(
-                        initialValue: selectedArAsset,
-                        decoration: InputDecoration(
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                        ),
-                        items: arEnabledArtworks
-                            .map(
-                              (artwork) => DropdownMenuItem<Artwork>(
-                                value: artwork,
-                                child: Text(artwork.title),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          setDialogState(() => selectedArAsset = value);
-                        },
-                      ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (selectedArAsset != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primaryContainer
-                            .withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'AR Asset: ${selectedArAsset!.title}',
-                            style:
-                                GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                          ),
-                          Text(
-                            selectedArAsset!.model3DCID != null
-                                ? 'IPFS CID linked'
-                                : 'HTTP Model linked',
-                            style: GoogleFonts.outfit(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: titleController,
-                    decoration: InputDecoration(
-                      labelText: 'Marker Title *',
-                      hintText: 'Enter marker name',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a title';
-                      }
-                      if (value.trim().length < 3) {
-                        return 'Title must be at least 3 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: descriptionController,
-                    maxLines: 4,
-                    decoration: InputDecoration(
-                      labelText: 'Description *',
-                      hintText:
-                          'Describe this location and what visitors will experience',
-                      alignLabelWithHint: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter a description';
-                      }
-                      if (value.trim().length < 10) {
-                        return 'Description must be at least 10 characters';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: categoryController,
-                    decoration: InputDecoration(
-                      labelText: 'Category',
-                      hintText: 'e.g., Residency, Gallery, Experience',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<ArtMarkerType>(
-                    initialValue: selectedMarkerType,
-                    decoration: InputDecoration(
-                      labelText: 'Marker Layer',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                    ),
-                    items: ArtMarkerType.values
-                        .map(
-                          (type) => DropdownMenuItem<ArtMarkerType>(
-                            value: type,
-                            child: Text(_describeMarkerType(type)),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setDialogState(() => selectedMarkerType = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Public marker',
-                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
-                    subtitle: Text('Visible to all explorers on the map',
-                        style: GoogleFonts.outfit(fontSize: 12)),
-                    value: isPublic,
-                    onChanged: (value) =>
-                        setDialogState(() => isPublic = value),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primaryContainer
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.location_on,
-                          size: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Current Location',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              Text(
-                                '${_currentPosition!.latitude.toStringAsFixed(6)}, ${_currentPosition!.longitude.toStringAsFixed(6)}',
-                                style: GoogleFonts.outfit(
-                                  fontSize: 11,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isCreating) ...[
-                    const SizedBox(height: 16),
-                    const Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      await _loadArtMarkers(forceRefresh: true);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to create marker. Please try again.',
+            style: GoogleFonts.outfit(color: Colors.white),
           ),
-          actions: [
-            TextButton(
-              onPressed: isCreating
-                  ? null
-                  : () {
-                      Navigator.of(dialogContext).pop();
-                      titleController.dispose();
-                      descriptionController.dispose();
-                      categoryController.dispose();
-                    },
-              child: Text('Cancel', style: GoogleFonts.outfit()),
-            ),
-            ElevatedButton.icon(
-              onPressed: isCreating
-                  ? null
-                  : () async {
-                      if (!formKey.currentState!.validate()) {
-                        return;
-                      }
-
-                      if (subjectSelectionRequired(selectedSubjectType) &&
-                          selectedSubject == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Select a subject to continue'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      if (arAssetRequired(selectedSubjectType) &&
-                          selectedArAsset == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Select an AR-enabled artwork to link to this marker'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                        return;
-                      }
-
-                      setDialogState(() => isCreating = true);
-
-                      final success = await _createMarkerAtCurrentLocation(
-                        title: titleController.text.trim(),
-                        description: descriptionController.text.trim(),
-                        type: selectedMarkerType,
-                        category: categoryController.text.trim(),
-                        subjectType: selectedSubjectType,
-                        subject: selectedSubject,
-                        linkedArtwork: selectedArAsset,
-                        isPublic: isPublic,
-                      );
-
-                      if (!dialogContext.mounted) {
-                        titleController.dispose();
-                        descriptionController.dispose();
-                        categoryController.dispose();
-                        return;
-                      }
-                      Navigator.of(dialogContext).pop();
-                      titleController.dispose();
-                      descriptionController.dispose();
-                      categoryController.dispose();
-
-                      if (!mounted) {
-                        return;
-                      }
-
-                      if (success) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Row(
-                              children: [
-                                const Icon(Icons.check_circle,
-                                    color: Colors.white),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    'Marker created successfully!',
-                                    style:
-                                        GoogleFonts.outfit(color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            backgroundColor: Colors.green,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                        await _loadArtMarkers(forceRefresh: true);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Failed to create marker. Please try again.',
-                              style: GoogleFonts.outfit(color: Colors.white),
-                            ),
-                            backgroundColor: Colors.red,
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      }
-                    },
-              icon: const Icon(Icons.add_location_alt),
-              label: Text('Create Marker', style: GoogleFonts.outfit()),
-            ),
-          ],
-        );
-       }
-      ),
-    );
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
-  Future<bool> _createMarkerAtCurrentLocation({
-    required String title,
-    required String description,
-    required ArtMarkerType type,
-    required String category,
-    required MarkerSubjectType subjectType,
-    MarkerSubjectOption? subject,
-    Artwork? linkedArtwork,
-    required bool isPublic,
-  }) async {
+  Future<bool> _createMarkerAtCurrentLocation(MapMarkerFormResult form) async {
     if (_currentPosition == null) return false;
 
     try {
-      if (linkedArtwork != null) {
-        final hasCid = linkedArtwork.model3DCID?.isNotEmpty ?? false;
-        final hasUrl = linkedArtwork.model3DURL?.isNotEmpty ?? false;
-        if (!hasCid && !hasUrl) {
-          debugPrint('Selected AR asset is missing model metadata');
-          return false;
-        }
-      }
 
       // Snap to the nearest grid cell center at the current zoom level
       // We use the current camera zoom to determine which grid level is most relevant
@@ -1482,24 +867,24 @@ class _MapScreenState extends State<MapScreen>
       // This ensures we snap to the grid lines the user is likely seeing
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
       final LatLng snappedPosition = tileProviders?.snapToVisibleGrid(
-            _currentPosition!,
+            form.positionOverride ?? _currentPosition!,
             currentZoom,
           ) ??
           gridCell.center;
 
-      final resolvedCategory = category.isNotEmpty
-          ? category
-          : subject?.type.defaultCategory ?? subjectType.defaultCategory;
+      final resolvedCategory = form.category.isNotEmpty
+          ? form.category
+          : form.subject?.type.defaultCategory ?? form.subjectType.defaultCategory;
       final marker = await _mapMarkerService.createMarker(
         location: snappedPosition,
-        title: title,
-        description: description,
-        type: type,
+        title: form.title,
+        description: form.description,
+        type: form.markerType,
         category: resolvedCategory,
-        artworkId: linkedArtwork?.id,
-        modelCID: linkedArtwork?.model3DCID,
-        modelURL: linkedArtwork?.model3DURL,
-        isPublic: isPublic,
+        artworkId: form.linkedArtwork?.id,
+        modelCID: form.linkedArtwork?.model3DCID,
+        modelURL: form.linkedArtwork?.model3DURL,
+        isPublic: form.isPublic,
         metadata: {
           'snapZoom': currentZoom,
           'gridAnchor': gridCell.anchorKey,
@@ -1509,19 +894,19 @@ class _MapScreenState extends State<MapScreen>
             'v': gridCell.vIndex,
           },
           'createdFrom': 'map_screen',
-          'subjectType': subjectType.name,
-          'subjectLabel': subjectType.label,
-          if (subject != null) ...{
-            'subjectId': subject.id,
-            'subjectTitle': subject.title,
-            'subjectSubtitle': subject.subtitle,
+          'subjectType': form.subjectType.name,
+          'subjectLabel': form.subjectType.label,
+          if (form.subject != null) ...{
+            'subjectId': form.subject!.id,
+            'subjectTitle': form.subject!.title,
+            'subjectSubtitle': form.subject!.subtitle,
           },
-          if (linkedArtwork != null) ...{
-            'linkedArtworkId': linkedArtwork.id,
-            'linkedArtworkTitle': linkedArtwork.title,
+          if (form.linkedArtwork != null) ...{
+            'linkedArtworkId': form.linkedArtwork!.id,
+            'linkedArtworkTitle': form.linkedArtwork!.title,
           },
-          'visibility': isPublic ? 'public' : 'private',
-          if (subject?.metadata != null) ...subject!.metadata!,
+          'visibility': form.isPublic ? 'public' : 'private',
+          if (form.subject?.metadata != null) ...form.subject!.metadata!,
         },
       );
 
@@ -1814,63 +1199,19 @@ class _MapScreenState extends State<MapScreen>
       setState(() {
         _direction = heading;
       });
+      // Animate to navigation icon when moving
+      _locationIndicatorController?.forward();
+      
       if (_autoFollow && _currentPosition != null) {
         _animateMapTo(_currentPosition!,
             zoom: _mapController.camera.zoom, rotation: heading);
       } else if (_autoFollow) {
         _mapController.rotate(heading);
       }
+    } else if (mounted && heading == null) {
+      // Animate back to dot when stationary
+      _locationIndicatorController?.reverse();
     }
-  }
-
-  Future<void> _showIntroDialogIfNeeded() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasSeenIntro = prefs.getBool('has_seen_map_intro') ?? false;
-
-    if (!hasSeenIntro && mounted) {
-      await prefs.setBool('has_seen_map_intro', true);
-      _showMapIntroDialog();
-    }
-  }
-
-  void _showMapIntroDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Consumer<ThemeProvider>(
-        builder: (context, themeProvider, child) => AlertDialog(
-          title: Text(
-            'Welcome to AR Art Discovery!',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.map,
-                size: 48,
-                color: themeProvider.accentColor,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Explore art around you in augmented reality. Get close to artworks to discover them and earn rewards!',
-                style: GoogleFonts.outfit(),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                foregroundColor: themeProvider.accentColor,
-              ),
-              child: Text('Got it!', style: GoogleFonts.outfit()),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> _markAsDiscovered(Artwork artwork) async {
@@ -2049,124 +1390,209 @@ class _MapScreenState extends State<MapScreen>
     final tileProviders = Provider.of<TileProviders?>(context, listen: false);
     final double devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     final bool isRetina = devicePixelRatio >= 2.0;
-    return FlutterMap(
+    return ArtMapView(
       mapController: _mapController,
-      options: MapOptions(
-        initialCenter: _currentPosition ?? _cameraCenter,
-        initialZoom: _lastZoom,
-        minZoom: 3.0,
-        maxZoom: 20.0,
-        onMapReady: () {
-          if (_currentPosition != null) {
-            _mapController.move(_currentPosition!, _lastZoom);
-          }
-        },
-        onPositionChanged: (camera, hasGesture) {
-          _cameraCenter = camera.center;
-          _lastZoom = camera.zoom;
-          if (hasGesture && _autoFollow) {
-            setState(() => _autoFollow = false);
-          }
-          _queueMarkerRefresh(camera.center, fromGesture: hasGesture);
-        },
-        interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.pinchZoom |
-              InteractiveFlag.drag |
-              InteractiveFlag.doubleTapZoom |
-              InteractiveFlag.flingAnimation |
-              InteractiveFlag.pinchMove |
-              InteractiveFlag.scrollWheelZoom |
-              InteractiveFlag.rotate,
-        ),
+      initialCenter: _currentPosition ?? _cameraCenter,
+      initialZoom: _lastZoom,
+      minZoom: 3.0,
+      maxZoom: 20.0,
+      isDarkMode: isDark,
+      isRetina: isRetina,
+      tileProviders: tileProviders,
+      markers: _buildMarkers(themeProvider),
+      onMapReady: () {
+        if (_currentPosition != null) {
+          _mapController.move(_currentPosition!, _lastZoom);
+        }
+      },
+      onPositionChanged: (camera, hasGesture) {
+        _cameraCenter = camera.center;
+        _lastZoom = camera.zoom;
+        if (hasGesture && _autoFollow) {
+          setState(() => _autoFollow = false);
+        }
+        if (hasGesture && _activeMarker != null) {
+          setState(() => _activeMarker = null);
+        }
+        _queueMarkerRefresh(camera.center, fromGesture: hasGesture);
+      },
+      interactionOptions: const InteractionOptions(
+        flags: InteractiveFlag.pinchZoom |
+            InteractiveFlag.drag |
+            InteractiveFlag.doubleTapZoom |
+            InteractiveFlag.flingAnimation |
+            InteractiveFlag.pinchMove |
+            InteractiveFlag.scrollWheelZoom |
+            InteractiveFlag.rotate,
       ),
-      children: [
-        // Prefer the shared TileProviders tile layer when registered.
-        if (tileProviders != null)
-          (isRetina
-              ? tileProviders.getTileLayer()
-              : tileProviders.getNonRetinaTileLayer())
-        else
-          // Fall back to the previous inline tile layer if TileProviders isn't registered yet.
-          TileLayer(
-            urlTemplate: isDark
-                ? 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png'
-                : 'https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png',
-            subdomains: const ['a', 'b', 'c'],
-            userAgentPackageName: 'com.art.kubus',
-          ),
-        MarkerLayer(markers: _buildMarkers(themeProvider)),
-      ],
     );
   }
 
   List<Marker> _buildMarkers(ThemeProvider themeProvider) {
     final markers = <Marker>[];
+    final locationController = _locationIndicatorController;
 
     if (_currentPosition != null) {
-      markers.add(
-        Marker(
-          point: _currentPosition!,
-          width: 60,
-          height: 60,
-          child: GestureDetector(
-            onTap: () => unawaited(_handleCurrentLocationTap()),
-            child: Container(
-              decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.18),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Theme.of(context).colorScheme.surface,
-                  width: 2,
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: themeProvider.accentColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  if (_direction != null)
-                    Transform.rotate(
-                      angle: (_direction! * math.pi) / 180,
-                      child: Icon(
-                        Icons.navigation,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onPrimary,
+      // If controller is initialized, use animated version; otherwise show static dot
+      if (locationController != null) {
+        markers.add(
+          Marker(
+            point: _currentPosition!,
+            width: 60,
+            height: 60,
+            child: GestureDetector(
+              onTap: () => unawaited(_handleCurrentLocationTap()),
+              child: AnimatedBuilder(
+                animation: locationController,
+                builder: (context, child) {
+                  final animValue = locationController.value;
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Direction cone (visible when stationary, fades out when moving)
+                      if (_direction != null)
+                        Opacity(
+                          opacity: (1.0 - animValue) * 0.6,
+                          child: Transform.rotate(
+                            angle: (_direction! * math.pi) / 180,
+                            child: CustomPaint(
+                              size: const Size(60, 80),
+                              painter: DirectionConePainter(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // Stationary dot (fades out as we move)
+                      Opacity(
+                        opacity: 1.0 - animValue,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: themeProvider.accentColor.withValues(alpha: 0.18),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 2,
+                            ),
+                          ),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: themeProvider.accentColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                ],
+                      // Navigation icon (fades in as we move, rotates with heading)
+                      Opacity(
+                        opacity: animValue,
+                        child: _direction != null
+                            ? Transform.rotate(
+                                angle: (_direction! * math.pi) / 180,
+                                child: Icon(
+                                  Icons.navigation,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.secondary,
+                                ),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
+          ),
+        );
+      } else {
+        // Fallback: show static dot while controller initializes
+        markers.add(
+          Marker(
+            point: _currentPosition!,
+            width: 60,
+            height: 60,
+            child: GestureDetector(
+              onTap: () => unawaited(_handleCurrentLocationTap()),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: themeProvider.accentColor.withValues(alpha: 0.18),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.surface,
+                    width: 2,
+                  ),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: themeProvider.accentColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    // Group markers for clustering when zoomed out
+    final zoom = _lastZoom;
+    final shouldCluster = zoom < 12.0;
+    final List<Marker> markerWidgets = [];
+
+    if (shouldCluster) {
+      // Cluster markers when zoomed out
+      final clusters = _clusterMarkers(_artMarkers.where((m) => _markerLayerVisibility[m.type] ?? true).toList(), zoom);
+      for (final cluster in clusters) {
+        if (cluster.markers.length == 1) {
+          final marker = cluster.markers.first;
+          markerWidgets.add(_buildSingleMarker(marker, themeProvider, zoom));
+        } else {
+          markerWidgets.add(_buildClusterMarker(cluster, themeProvider, zoom));
+        }
+      }
+    } else {
+      // Show individual markers when zoomed in
+      markerWidgets.addAll(
+        _artMarkers.where((marker) {
+          return _markerLayerVisibility[marker.type] ?? true;
+        }).map((marker) => _buildSingleMarker(marker, themeProvider, zoom)),
+      );
+    }
+
+    markers.addAll(markerWidgets);
+
+    if (_activeMarker != null) {
+      final marker = _activeMarker!;
+      final artwork =
+          context.read<ArtworkProvider>().getArtworkById(marker.artworkId ?? '');
+      markers.add(
+        Marker(
+          point: marker.position,
+          width: 260,
+          height: 240,
+          alignment: Alignment.topCenter,
+          child: Transform.translate(
+            offset: const Offset(0, -120),
+            child: _buildMarkerOverlay(marker, artwork, themeProvider),
           ),
         ),
       );
     }
-
-    markers.addAll(
-      _artMarkers.where((marker) {
-        return _markerLayerVisibility[marker.type] ?? true;
-      }).map(
-        (marker) => Marker(
-          point: marker.position,
-          width: 54,
-          height: 58,
-          child: GestureDetector(
-            onTap: () => _showArtMarkerDialog(marker),
-            child: ArtMarkerCube(
-              marker: marker,
-              size: 44,
-              baseColor: _resolveArtMarkerColor(marker, themeProvider),
-              icon: _resolveArtMarkerIcon(marker.type),
-            ),
-          ),
-        ),
-      ),
-    );
 
     return markers;
   }
@@ -2198,6 +1624,446 @@ class _MapScreenState extends State<MapScreen>
         ],
       ),
     );
+  }
+
+  Widget _buildMarkerOverlay(
+    ArtMarker marker,
+    Artwork? artwork,
+    ThemeProvider themeProvider,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final baseColor = _resolveArtMarkerColor(marker, themeProvider);
+    final distanceText = () {
+      if (_currentPosition == null) return null;
+      final meters = _distanceCalculator.as(
+        LengthUnit.Meter,
+        _currentPosition!,
+        marker.position,
+      );
+      if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
+      return '${meters.round()} m';
+    }();
+    final imageUrl = ArtworkMediaResolver.resolveCover(
+      artwork: artwork,
+      metadata: marker.metadata,
+    );
+
+    return GestureDetector(
+      onTap: () => _openMarkerDetail(marker, artwork),
+      child: Material(
+        color: Colors.transparent,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 240, maxHeight: 250),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.94),
+                borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: baseColor.withValues(alpha: 0.25),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+              border: Border.all(
+                color: baseColor.withValues(alpha: 0.35),
+                width: 1.2,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              marker.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.outfit(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 15,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            if (artwork != null)
+                              Text(
+                                artwork.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () => setState(() => _activeMarker = null),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SizedBox(
+                      height: 110,
+                      width: double.infinity,
+                      child: imageUrl != null
+                          ? Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _markerImageFallback(baseColor, scheme, marker),
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Container(
+                                  color: baseColor.withValues(alpha: 0.12),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                );
+                              },
+                            )
+                          : _markerImageFallback(baseColor, scheme, marker),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 40),
+                    child: Text(
+                      marker.description.isNotEmpty
+                          ? marker.description
+                          : (artwork?.description ?? 'No description available'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.outfit(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: [
+                      if (distanceText != null)
+                        _overlayChip(scheme, Icons.near_me, distanceText, baseColor),
+                      if (marker.category.isNotEmpty)
+                        _overlayChip(
+                          scheme,
+                          Icons.category_outlined,
+                          marker.category,
+                          baseColor,
+                        ),
+                      if (artwork != null)
+                        _overlayChip(
+                          scheme,
+                          Icons.card_giftcard,
+                          '${artwork.rewards} POAP',
+                          baseColor,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: baseColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      onPressed: () => _openMarkerDetail(marker, artwork),
+                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                      label: Text(
+                        'More info',
+                        style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ),
+      ),
+    );
+  }
+
+  Widget _overlayChip(ColorScheme scheme, IconData icon, String label, Color accent) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: accent),
+          const SizedBox(width: 6),
+          Text(label, style: GoogleFonts.outfit(fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _markerImageFallback(Color baseColor, ColorScheme scheme, ArtMarker marker) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            baseColor.withValues(alpha: 0.25),
+            baseColor.withValues(alpha: 0.55),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(
+        _resolveArtMarkerIcon(marker.type),
+        color: scheme.onPrimary,
+        size: 42,
+      ),
+    );
+  }
+
+  Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
+    setState(() => _activeMarker = marker);
+
+    Artwork? resolvedArtwork = artwork;
+    final artworkId = marker.artworkId;
+    if (resolvedArtwork == null && artworkId != null && artworkId.isNotEmpty) {
+      try {
+        final artworkProvider = context.read<ArtworkProvider>();
+        await artworkProvider.fetchArtworkIfNeeded(artworkId);
+        resolvedArtwork = artworkProvider.getArtworkById(artworkId);
+      } catch (e) {
+        debugPrint('MapScreen: failed to fetch artwork $artworkId for marker ${marker.id}: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    if (resolvedArtwork == null) {
+      await _showMarkerInfoFallback(marker);
+      return;
+    }
+
+    final artworkToOpen = resolvedArtwork;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ArtDetailScreen(artworkId: artworkToOpen.id),
+      ),
+    );
+  }
+
+  Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
+    final scheme = Theme.of(context).colorScheme;
+    final coverUrl = ArtworkMediaResolver.resolveCover(
+      metadata: marker.metadata,
+    );
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: scheme.surface,
+        title: Text(
+          marker.name,
+          style: GoogleFonts.outfit(
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (coverUrl != null && coverUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  coverUrl,
+                  width: double.infinity,
+                  height: 160,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      _markerImageFallback(_resolveArtMarkerColor(marker, context.read<ThemeProvider>()), scheme, marker),
+                ),
+              ),
+            const SizedBox(height: 12),
+            Text(
+              marker.description.isNotEmpty
+                  ? marker.description
+                  : 'No linked artwork found for this marker yet.',
+              style: GoogleFonts.outfit(color: scheme.onSurfaceVariant),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Marker _buildSingleMarker(ArtMarker marker, ThemeProvider themeProvider, double zoom) {
+    final double scale = (zoom / 15.0).clamp(0.5, 1.5);
+    final double cubeSize = 46 * scale;
+    final double markerWidth = 56 * scale;
+    final double markerHeight = 72 * scale;
+    return Marker(
+      point: marker.position,
+      width: markerWidth,
+      height: markerHeight,
+      child: GestureDetector(
+        onTap: () => _handleMarkerTap(marker),
+        child: ArtMarkerCube(
+          marker: marker,
+          size: cubeSize,
+          baseColor: _resolveArtMarkerColor(marker, themeProvider),
+          icon: _resolveArtMarkerIcon(marker.type),
+        ),
+      ),
+    );
+  }
+
+  Marker _buildClusterMarker(_ClusterBucket cluster, ThemeProvider themeProvider, double zoom) {
+    final double scale = (zoom / 15.0).clamp(0.5, 1.5);
+    final double clusterSize = 60 * scale;
+    final Color dominantColor = _resolveArtMarkerColor(cluster.markers.first, themeProvider);
+    
+    return Marker(
+      point: cluster.center,
+      width: clusterSize,
+      height: clusterSize,
+      child: GestureDetector(
+        onTap: () {
+          _mapController.move(cluster.center, math.min(zoom + 2, 18.0));
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: dominantColor.withValues(alpha: 0.9),
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white,
+              width: 3,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Text(
+              cluster.markers.length.toString(),
+              style: GoogleFonts.outfit(
+                color: Colors.white,
+                fontSize: 18 * scale,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<_ClusterBucket> _clusterMarkers(List<ArtMarker> markers, double zoom) {
+    if (markers.isEmpty) return [];
+    
+    // Clustering distance in degrees (larger distance for lower zoom levels)
+    final clusterDistance = 0.01 * math.pow(2, 15 - zoom);
+    final List<_ClusterBucket> clusters = [];
+
+    for (final marker in markers) {
+      bool addedToCluster = false;
+      for (final cluster in clusters) {
+        final distance = _distanceCalculator.as(
+          LengthUnit.Meter,
+          marker.position,
+          cluster.center,
+        );
+        if (distance < clusterDistance * 111000) { // Convert degrees to meters
+          cluster.markers.add(marker);
+          // Recalculate center
+          double sumLat = 0;
+          double sumLng = 0;
+          for (final m in cluster.markers) {
+            sumLat += m.position.latitude;
+            sumLng += m.position.longitude;
+          }
+          cluster.center = LatLng(
+            sumLat / cluster.markers.length,
+            sumLng / cluster.markers.length,
+          );
+          addedToCluster = true;
+          break;
+        }
+      }
+      if (!addedToCluster) {
+        clusters.add(_ClusterBucket(
+          marker.position,
+          [marker],
+        ));
+      }
+    }
+    return clusters;
+  }
+
+  Future<void> _hydrateMarkersWithArtworks(List<ArtMarker> markers) async {
+    try {
+      final artworkProvider = context.read<ArtworkProvider>();
+      final missingIds = <String>{};
+      for (final marker in markers) {
+        final artworkId = marker.artworkId;
+        if (artworkId == null || artworkId.isEmpty) continue;
+        if (artworkProvider.getArtworkById(artworkId) == null) {
+          missingIds.add(artworkId);
+        }
+      }
+
+      for (final artworkId in missingIds) {
+        try {
+          await artworkProvider.fetchArtworkIfNeeded(artworkId);
+        } catch (e) {
+          debugPrint('MapScreen: failed to hydrate artwork $artworkId: $e');
+        }
+      }
+
+      for (final marker in markers) {
+        final artworkId = marker.artworkId;
+        if (artworkId == null || artworkId.isEmpty) continue;
+        final artwork = artworkProvider.getArtworkById(artworkId);
+        if (artwork != null && !artwork.hasValidLocation && marker.hasValidPosition) {
+          artworkProvider.addOrUpdateArtwork(
+            artwork.copyWith(
+              position: marker.position,
+              arMarkerId: marker.id,
+              metadata: {
+                ...?artwork.metadata,
+                'linkedMarkerId': marker.id,
+              },
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('MapScreen: marker hydration failed: $e');
+    }
   }
 
   
@@ -2273,24 +2139,11 @@ class _MapScreenState extends State<MapScreen>
       setState(() => _isFetchingSuggestions = true);
 
       try {
-        final dynamic rr = await _backendApi.getSearchSuggestions(
-          query: value.trim(),
-          limit: 8,
+        final suggestions = await _searchService.fetchSuggestions(
+          context: context,
+          query: value,
+          scope: SearchScope.map,
         );
-
-        // Use centralized normalizer to convert backend response to stable items
-        final List<Map<String, dynamic>> items = _backendApi.normalizeSearchSuggestions(rr);
-
-        final suggestions = <_SearchSuggestion>[];
-        for (final m in items) {
-          try {
-            final suggestion = _SearchSuggestion.fromMap(m);
-            if (suggestion.label.isNotEmpty) suggestions.add(suggestion);
-          } catch (e) {
-            // skip malformed entries
-          }
-        }
-
         if (!mounted) return;
         setState(() {
           _searchSuggestions = suggestions;
@@ -2393,7 +2246,7 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  Future<void> _handleSuggestionTap(_SearchSuggestion suggestion) async {
+  Future<void> _handleSuggestionTap(MapSearchSuggestion suggestion) async {
     setState(() {
       _searchQuery = suggestion.label;
       _searchController.text = suggestion.label;
@@ -2738,6 +2591,11 @@ class _MapScreenState extends State<MapScreen>
                                 ),
                               ],
                             ),
+                            IconButton(
+                              tooltip: 'Nearby radius (${_markerRadiusKm.toInt()} km)',
+                              onPressed: _openMarkerRadiusDialog,
+                              icon: const Icon(Icons.radar),
+                            ),
                             const Spacer(),
                             IconButton(
                               tooltip: _useGridLayout
@@ -2921,7 +2779,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   List<Artwork> _filterArtworks(List<Artwork> artworks) {
-    var filtered = List<Artwork>.from(artworks);
+    var filtered = artworks.where((a) => a.hasValidLocation).toList();
     final query = _searchQuery.trim().toLowerCase();
 
     if (query.isNotEmpty) {
@@ -2938,7 +2796,7 @@ class _MapScreenState extends State<MapScreen>
         if (_currentPosition != null) {
           filtered = filtered
               .where((artwork) =>
-                  artwork.getDistanceFrom(_currentPosition!) <= 1000)
+                  artwork.getDistanceFrom(_currentPosition!) <= _markerRadiusKm * 1000)
               .toList();
         }
         break;
@@ -3031,68 +2889,6 @@ class _MapScreenState extends State<MapScreen>
   }
 }
 
-class _SearchSuggestion {
-  final String label;
-  final String type;
-  final String? subtitle;
-  final String? id;
-  final LatLng? position;
-
-  const _SearchSuggestion({
-    required this.label,
-    required this.type,
-    this.subtitle,
-    this.id,
-    this.position,
-  });
-
-  IconData get icon {
-    switch (type) {
-      case 'profile':
-        return Icons.account_circle_outlined;
-      case 'institution':
-        return Icons.museum_outlined;
-      case 'event':
-        return Icons.event_available;
-      case 'marker':
-        return Icons.location_on_outlined;
-      case 'artwork':
-      default:
-        return Icons.auto_awesome;
-    }
-  }
-
-  factory _SearchSuggestion.fromMap(Map<String, dynamic> map) {
-    final lat = map['lat'] ?? map['latitude'];
-    final lng = map['lng'] ?? map['longitude'];
-    LatLng? position;
-    if (lat is num && lng is num) {
-      position = LatLng(lat.toDouble(), lng.toDouble());
-    }
-
-    // Build a friendly label/subtitle: prefer displayName + @username
-    final label = (map['label'] ?? map['displayName'] ?? map['display_name'] ?? map['title'] ?? '').toString();
-    String? subtitle = map['subtitle']?.toString();
-    if ((subtitle == null || subtitle.isEmpty)) {
-      final username = (map['username'] ?? map['handle'])?.toString();
-      final wallet = (map['wallet'] ?? map['walletAddress'] ?? map['wallet_address'])?.toString();
-      if (username != null && username.isNotEmpty) {
-        subtitle = '@$username';
-      } else if (wallet != null && wallet.isNotEmpty) {
-        subtitle = wallet.length > 10 ? '${wallet.substring(0,4)}...${wallet.substring(wallet.length-4)}' : wallet;
-      }
-    }
-
-    return _SearchSuggestion(
-      label: label,
-      type: map['type']?.toString() ?? 'artwork',
-      subtitle: subtitle,
-      id: map['id']?.toString() ?? (map['wallet']?.toString()),
-      position: position,
-    );
-  }
-}
-
 enum _ArtworkSort {
   nearest('Nearest'),
   newest('Newest'),
@@ -3171,6 +2967,7 @@ class _ArtworkListTile extends StatelessWidget {
     final previewHeight = dense ? 120.0 : 150.0;
     final distanceLabel = _distanceLabel();
     final isDiscovered = artwork.isDiscovered;
+    final previewUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
 
     return Material(
       color: scheme.surfaceContainerHighest,
@@ -3184,7 +2981,7 @@ class _ArtworkListTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ArtworkPreview(
-                imageUrl: artwork.imageUrl,
+                imageUrl: previewUrl,
                 height: previewHeight,
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -3235,6 +3032,36 @@ class _ArtworkListTile extends StatelessWidget {
                       backgroundColor:
                           scheme.surfaceContainerHighest.withValues(alpha: 0.5),
                       foregroundColor: scheme.onSurfaceVariant,
+                    ),
+                  if (artwork.category.isNotEmpty)
+                    _InfoChip(
+                      icon: Icons.category_outlined,
+                      label: artwork.category,
+                      backgroundColor:
+                          scheme.tertiaryContainer.withValues(alpha: 0.4),
+                      foregroundColor: scheme.tertiary,
+                    ),
+                  if (artwork.metadata != null && 
+                      (artwork.metadata!['subjectLabel'] != null || 
+                       artwork.metadata!['subject_type'] != null))
+                    _InfoChip(
+                      icon: Icons.palette_outlined,
+                      label: artwork.metadata!['subjectLabel']?.toString() ?? 
+                             artwork.metadata!['subject_type']?.toString() ?? '',
+                      backgroundColor:
+                          scheme.secondaryContainer.withValues(alpha: 0.4),
+                      foregroundColor: scheme.secondary,
+                    ),
+                  if (artwork.metadata != null && 
+                      (artwork.metadata!['locationName'] != null || 
+                       artwork.metadata!['location'] != null))
+                    _InfoChip(
+                      icon: Icons.location_on_outlined,
+                      label: artwork.metadata!['locationName']?.toString() ?? 
+                             artwork.metadata!['location']?.toString() ?? '',
+                      backgroundColor:
+                          scheme.primaryContainer.withValues(alpha: 0.25),
+                      foregroundColor: scheme.primary,
                     ),
                 ],
               ),
@@ -3428,4 +3255,10 @@ class _ArtworkPreview extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ClusterBucket {
+  LatLng center;
+  List<ArtMarker> markers;
+  _ClusterBucket(this.center, this.markers);
 }

@@ -9,7 +9,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
   static const String _themeKey = 'app_theme_mode';
   static const String _accentColorKey = 'accent_color';
   
-  ThemeMode _themeMode = ThemeMode.dark; // Default to dark theme
+  ThemeMode _themeMode = ThemeMode.system; // Default to system theme
   Color _accentColor = const Color(0xFF00838F); // Deep blue-cyan
   bool _isInitialized = false;
 
@@ -92,7 +92,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_themeKey, _themeMode.index);
-      await prefs.setInt(_accentColorKey, _accentColor.toARGB32());
+      await prefs.setInt(_accentColorKey, _accentColor.value);
     } catch (e) {
       debugPrint('Error saving theme preferences: $e');
     }

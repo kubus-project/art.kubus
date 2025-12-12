@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../onboarding/web3_onboarding.dart';
-import '../onboarding/onboarding_data.dart';
+import '../../onboarding/web3/web3_onboarding.dart';
+import '../../onboarding/web3/onboarding_data.dart';
 import 'event_creator.dart';
 import 'event_manager.dart';
 import 'institution_analytics.dart';
@@ -221,7 +221,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.green, Colors.green],
+          colors: [Colors.deepPurple, Colors.blue],
         ),
         borderRadius: BorderRadius.circular(16),
       ),

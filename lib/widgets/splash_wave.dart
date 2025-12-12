@@ -34,7 +34,6 @@ class _SplashWaveState extends State<SplashWave> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Determine background and accent colors from theme, with sensible defaults
     final baseBackground = theme.colorScheme.surface;
     final accent = widget.color ?? theme.colorScheme.primary;
     // Compute a lighter highlight color for the wave
@@ -47,47 +46,61 @@ class _SplashWaveState extends State<SplashWave> with SingleTickerProviderStateM
       highlight = accent.withValues(alpha: 0.85);
     }
 
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final media = MediaQuery.of(context).size;
-        final logoSize = min(media.width, media.height) * 0.22; // slightly larger logo
-        // Constrain the splash to a finite height so it can be used safely
-        // inside scrollable/sliver parents. When MediaQuery isn't available
-        // (tests) fall back to a reasonable default.
-        final mq = MediaQuery.maybeOf(context);
-        final screen = mq?.size ?? const Size(800, 600);
-        final double computedHeight = (() {
-          final h = min(screen.height * 0.45, 420.0);
-          if (h.isNaN || !h.isFinite || h <= 0) return 300.0;
-          return h;
-        })();
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final mediaQuery = MediaQuery.maybeOf(context);
+        final mediaSize = mediaQuery?.size ?? const Size(800, 600);
+        double sanitizeDimension(double candidate, double fallback) {
+          if (candidate.isNaN || !candidate.isFinite || candidate <= 0) {
+            return fallback;
+          }
+          return candidate;
+        }
 
-        return SizedBox(
-          height: computedHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              CustomPaint(
-                painter: _IsometricGridPainter(
-                  progress: _controller.value,
-                  accent: accent,
-                  highlight: highlight,
-                  background: baseBackground,
-                ),
-              ),
-              Center(
-                child: ScaleTransition(
-                  scale: _logoScale,
-                  child: SizedBox(
-                    width: logoSize,
-                    height: logoSize,
-                    child: const AppLogo(),
+        final fallbackWidth = mediaSize.width.isFinite && mediaSize.width > 0 ? mediaSize.width : 800.0;
+        final fallbackHeight = mediaSize.height.isFinite && mediaSize.height > 0 ? mediaSize.height : 600.0;
+        final width = sanitizeDimension(
+          constraints.hasBoundedWidth ? constraints.maxWidth : mediaSize.width,
+          fallbackWidth,
+        );
+        final height = sanitizeDimension(
+          constraints.hasBoundedHeight ? constraints.maxHeight : mediaSize.height,
+          fallbackHeight,
+        );
+
+        final logoSize = min(width, height) * 0.22;
+
+        return AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) {
+            return SizedBox(
+              height: height,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CustomPaint(
+                    size: Size(width, height),
+                    painter: _IsometricGridPainter(
+                      progress: _controller.value,
+                      accent: accent,
+                      highlight: highlight,
+                      background: baseBackground,
+                    ),
                   ),
-                ),
+                  Center(
+                    child: ScaleTransition(
+                      scale: _logoScale,
+                      child: SizedBox(
+                        width: logoSize,
+                        height: logoSize,
+                        child: const AppLogo(),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

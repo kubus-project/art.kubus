@@ -36,14 +36,16 @@ List<MarkerSubjectOption> buildSubjectOptions({
   switch (type) {
     case MarkerSubjectType.artwork:
       return artworks
-          .where(artworkSupportsAR)
           .map(
             (artwork) => MarkerSubjectOption(
               type: MarkerSubjectType.artwork,
               id: artwork.id,
               title: artwork.title,
               subtitle: artwork.description,
-              metadata: {'artist': artwork.artist},
+              metadata: {
+                'artist': artwork.artist,
+                'arEnabled': artwork.arEnabled,
+              },
             ),
           )
           .toList();
@@ -67,7 +69,7 @@ List<MarkerSubjectOption> buildSubjectOptions({
               id: event.id,
               title: event.title,
               subtitle:
-                  '${event.location} • ${formatEventDate(event.startDate)}',
+                  '${event.location} -> ${formatEventDate(event.startDate)}',
               metadata: {'institutionId': event.institutionId},
             ),
           )

@@ -69,6 +69,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       description: 'Highlight a location-based activation',
     ),
     _ComposerCategoryOption(
+      value: 'art_review',
+      label: 'Art review',
+      icon: Icons.rate_review_outlined,
+      description: 'Share your thoughts on an artwork',
+    ),
+    _ComposerCategoryOption(
       value: 'event',
       label: 'Event',
       icon: Icons.event_outlined,
@@ -99,8 +105,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _isLoadingSuggestions = false;
   String? _suggestionsError;
   String? _activeConversationId;
-  bool _conversationModalVisible = false;
   String _messageSearchQuery = '';
+  final List<_PaneRoute> _paneStack = [];
+  final Map<String, _TagFeedState> _tagFeeds = {};
+  String _discoverSortMode = 'recent';
+  String _followingSortMode = 'recent';
+  String _artSortMode = 'recent';
   
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
@@ -164,8 +174,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     ]);
   }
 
-  Future<void> _loadDiscoverFeed() async {
+  Future<void> _loadDiscoverFeed({String? sortOverride}) async {
     if (_isLoadingDiscover) return;
+    final sort = sortOverride ?? _discoverSortMode;
+    if (sortOverride != null) {
+      _discoverSortMode = sortOverride;
+    }
     setState(() {
       _isLoadingDiscover = true;
       _discoverError = null;
@@ -175,6 +189,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         page: 1,
         limit: 50,
         followingOnly: false,
+        sort: sort,
       );
       if (mounted) {
         setState(() {
@@ -211,6 +226,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       var normalized = _normalizeTrendingTopics(results);
       var usedFallback = false;
       final fallback = _buildFallbackTrendingTopics();
+      final fallbackCounts = {for (final item in fallback) (item['tag'] as String).toLowerCase(): item['count'] as int};
 
       if (normalized.isEmpty && fallback.isNotEmpty) {
         normalized = List<Map<String, dynamic>>.from(fallback);
@@ -227,6 +243,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           seen.add(key);
           usedFallback = true;
           if (normalized.length >= 12) break;
+        }
+      }
+
+      // If backend provided tags but without counts, enrich from fallback map
+      for (final entry in normalized) {
+        final tag = entry['tag']?.toString().toLowerCase();
+        if (tag == null) continue;
+        final count = (entry['count'] ?? 0) as num;
+        if (count == 0 && fallbackCounts.containsKey(tag)) {
+          entry['count'] = fallbackCounts[tag]!;
         }
       }
 
@@ -303,8 +329,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  Future<void> _loadFollowingFeed() async {
+  Future<void> _loadFollowingFeed({String? sortOverride}) async {
     if (_isLoadingFollowing) return;
+    final sort = sortOverride ?? _followingSortMode;
+    if (sortOverride != null) {
+      _followingSortMode = sortOverride;
+    }
     setState(() {
       _isLoadingFollowing = true;
       _followingError = null;
@@ -314,6 +344,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         page: 1,
         limit: 50,
         followingOnly: true,
+        sort: sort,
       );
       if (mounted) {
         setState(() {
@@ -356,90 +387,580 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final isLarge = screenWidth >= 1200;
     final isMedium = screenWidth >= 900 && screenWidth < 1200;
 
-    return Scaffold(
-      backgroundColor: themeProvider.isDarkMode
-          ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
-      body: Stack(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Main feed
-              Expanded(
-                flex: isLarge ? 3 : 2,
-                child: _buildMainFeed(themeProvider, animationTheme),
-              ),
+    return PopScope(
+      canPop: _paneStack.isEmpty,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_paneStack.isNotEmpty) {
+          _popPane();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: themeProvider.isDarkMode
+            ? Theme.of(context).scaffoldBackgroundColor
+            : const Color(0xFFF8F9FA),
+        body: Stack(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Main feed
+                Expanded(
+                  flex: isLarge ? 3 : 2,
+                  child: _buildMainFeed(themeProvider, animationTheme),
+                ),
 
-              // Right sidebar
-              if (isMedium || isLarge)
-                Container(
-                  width: isLarge ? 360 : 300,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      left: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                // Right sidebar
+                if (isMedium || isLarge)
+                  Container(
+                    width: isLarge ? 360 : 300,
+                    decoration: BoxDecoration(
+                      border: Border(
+                        left: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                        ),
                       ),
                     ),
+                    child: _buildRightSidebar(themeProvider),
                   ),
-                  child: _buildRightSidebar(themeProvider),
-                ),
-            ],
-          ),
+              ],
+            ),
 
-          if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
+            if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
 
-          // Compose dialog
-          if (_showComposeDialog)
-            _buildComposeDialog(themeProvider),
-        ],
+            // Compose dialog
+            if (_showComposeDialog)
+              _buildComposeDialog(themeProvider),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildMainFeed(ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
-    return AnimatedBuilder(
-      animation: _animationController,
-      builder: (context, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(
-            parent: _animationController,
-            curve: animationTheme.fadeCurve,
+    final bool hasPane = _paneStack.isNotEmpty;
+    final _PaneRoute? activePane = hasPane ? _paneStack.last : null;
+    final Widget homePane = _buildHomeContent(themeProvider);
+    final Widget overlayPane = hasPane
+        ? _buildPaneView(activePane!, themeProvider)
+        : const SizedBox.shrink(key: ValueKey('community-pane-empty'));
+
+    return FadeTransition(
+      opacity: CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.fadeCurve,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Offstage(
+            offstage: hasPane,
+            child: homePane,
           ),
-          child: Stack(
-            children: [
-              Column(
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: animationTheme.medium,
+              switchInCurve: animationTheme.emphasisCurve,
+              switchOutCurve: animationTheme.fadeCurve,
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                fit: StackFit.expand,
                 children: [
-                  // Header with tabs
-                  _buildHeader(themeProvider),
+                  ...previousChildren.map((child) => Positioned.fill(child: child)),
+                  if (currentChild != null) Positioned.fill(child: currentChild),
+                ],
+              ),
+              child: overlayPane,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-                  // Tab bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: _buildTabBar(themeProvider),
+  Widget _buildHomeContent(ThemeProvider themeProvider) {
+    return Stack(
+      key: const ValueKey('community-home-pane'),
+      children: [
+        Column(
+          children: [
+            // Header with tabs
+            _buildHeader(themeProvider),
+
+            // Tab bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: _buildTabBar(themeProvider),
+            ),
+
+            _buildSortControls(themeProvider),
+
+            // Feed content
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: _tabs.map((tab) => _buildFeedList(tab, themeProvider)).toList(),
+              ),
+            ),
+          ],
+        ),
+
+        // Floating actions
+        Positioned(
+          bottom: 20,
+          right: 20,
+          child: _buildFloatingActions(themeProvider),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPaneView(_PaneRoute route, ThemeProvider themeProvider) {
+    Widget child;
+    switch (route.type) {
+      case _PaneViewType.tagFeed:
+        final tag = route.tag ?? '';
+        child = _buildTagFeedPane(tag, themeProvider);
+        break;
+      case _PaneViewType.postDetail:
+        final post = route.post;
+        child = post == null ? const SizedBox.shrink() : _buildPostDetailPane(post);
+        break;
+      case _PaneViewType.conversation:
+        final conversation = route.conversation;
+        child = conversation == null ? const SizedBox.shrink() : _buildConversationPane(conversation);
+        break;
+    }
+    return KeyedSubtree(
+      key: ValueKey(route.viewKey),
+      child: child,
+    );
+  }
+
+  void _popPane() {
+    if (_paneStack.isEmpty) return;
+    setState(() {
+      final removed = _paneStack.removeLast();
+      if (removed.type == _PaneViewType.conversation) {
+        _activeConversationId = null;
+      }
+    });
+  }
+
+  Widget _buildTagFeedPane(String tag, ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
+    final sanitized = _sanitizeTagValue(tag);
+    if (sanitized == null) {
+      return Container(
+        key: const ValueKey('tag-pane-invalid'),
+        color: scheme.surface,
+        child: Column(
+          children: [
+            _buildTagFeedHeader(
+              displayTag: '#$tag',
+              tagValue: tag,
+              themeProvider: themeProvider,
+              isLoading: false,
+              tagCount: null,
+            ),
+            Expanded(
+              child: _buildScrollablePlaceholder(
+                _buildEmptyState(
+                  themeProvider,
+                  Icons.local_offer_outlined,
+                  'Tag unavailable',
+                  'We could not open that tag feed.',
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final tagKey = sanitized.toLowerCase();
+    final tagState = _tagFeeds[tagKey] ?? const _TagFeedState();
+    final posts = tagState.posts;
+    final isLoading = tagState.isLoading;
+    final error = tagState.error;
+    final sortMode = tagState.sortMode;
+    final followingOnly = tagState.followingOnly;
+    final arOnly = tagState.arOnly;
+    final Map<String, dynamic> trendEntry = _trendingTopics.firstWhere(
+      (topic) => (topic['tag'] ?? '').toString().toLowerCase() == tagKey,
+      orElse: () => <String, dynamic>{},
+    );
+    num? taggedCount;
+    final rawCount = trendEntry['count'] ??
+        trendEntry['post_count'] ??
+        trendEntry['search_count'] ??
+        trendEntry['frequency'];
+    if (rawCount is num) {
+      taggedCount = rawCount;
+    } else if (rawCount != null) {
+      taggedCount = num.tryParse(rawCount.toString());
+    }
+
+    if (!isLoading && posts.isEmpty && error == null) {
+      Future.microtask(() => _loadTagFeed(sanitized));
+    }
+
+    Widget buildBody() {
+      if (isLoading && posts.isEmpty) {
+        return _buildScrollablePlaceholder(
+          _buildLoadingState(themeProvider, 'Loading #$sanitized posts...'),
+        );
+      }
+      if (error != null && posts.isEmpty) {
+        return _buildScrollablePlaceholder(
+          _buildErrorState(
+            themeProvider,
+            error,
+            () => _loadTagFeed(sanitized, forceRefresh: true),
+          ),
+        );
+      }
+      if (posts.isEmpty) {
+        return _buildScrollablePlaceholder(
+          _buildEmptyState(
+            themeProvider,
+            Icons.local_offer_outlined,
+            'No posts for #$sanitized',
+            'Create or discover posts tagged #$sanitized to see them here.',
+          ),
+        );
+      }
+
+      return ListView.separated(
+        key: ValueKey('tag-feed-$tagKey'),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        itemCount: posts.length + 1,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          if (index == 0) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Top posts for #$sanitized',
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
                   ),
-
-                  // Feed content
-                  Expanded(
-                    child: TabBarView(
-                      controller: _tabController,
-                      children: _tabs.map((tab) => _buildFeedList(tab, themeProvider)).toList(),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Sorted by popularity (likes, shares, comments, and views).',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: scheme.onSurface.withValues(alpha: 0.65),
+                  ),
+                ),
+                if (taggedCount != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '${_formatTrendingCount(taggedCount)} tagged posts across the community',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          }
+          final post = posts[index - 1];
+          final rank = index;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: themeProvider.accentColor.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '#$rank',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w700,
+                        color: themeProvider.accentColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Popular for #$sanitized',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
               ),
-
-              // Floating actions
-              Positioned(
-                bottom: 20,
-                right: 20,
-                child: _buildFloatingActions(themeProvider),
-              ),
+              const SizedBox(height: 8),
+              _buildPostCard(post, themeProvider),
             ],
+          );
+        },
+      );
+    }
+
+    return Container(
+      key: ValueKey('tag-pane-$tagKey'),
+      color: scheme.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTagFeedHeader(
+            displayTag: '#$sanitized',
+            tagValue: sanitized,
+            themeProvider: themeProvider,
+            isLoading: isLoading,
+            tagCount: taggedCount,
+            sortMode: sortMode,
+            followingOnly: followingOnly,
+            arOnly: arOnly,
           ),
-        );
-      },
+          _buildTagFilters(
+            themeProvider: themeProvider,
+            tagValue: sanitized,
+            followingOnly: followingOnly,
+            arOnly: arOnly,
+            sortMode: sortMode,
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () => _loadTagFeed(sanitized, forceRefresh: true),
+              color: themeProvider.accentColor,
+              child: buildBody(),
+            ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildTagFeedHeader({
+    required String displayTag,
+    required String tagValue,
+    required ThemeProvider themeProvider,
+    required bool isLoading,
+    num? tagCount,
+    String sortMode = 'popularity',
+    bool followingOnly = false,
+    bool arOnly = false,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: Row(
+        children: [
+          IconButton(
+            tooltip: 'Back to feed',
+            onPressed: _popPane,
+            icon: Icon(
+              Icons.arrow_back,
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayTag,
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text(
+                      'Sorted by popularity',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                    if (tagCount != null) ...[
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(
+                          Icons.circle,
+                          size: 4,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      Text(
+                        '${_formatTrendingCount(tagCount)} tagged posts',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: sortMode == 'popularity' ? 'Sorted by popularity' : 'Sorted by recent',
+            onPressed: isLoading
+                ? null
+                : () => _updateTagFeedFilters(
+                      tagValue,
+                      sortMode: sortMode == 'popularity' ? 'recent' : 'popularity',
+                    ),
+            icon: Icon(
+              sortMode == 'popularity' ? Icons.bar_chart : Icons.schedule,
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          IconButton(
+            tooltip: isLoading ? 'Loading' : 'Refresh',
+            onPressed: isLoading ? null : () => _loadTagFeed(tagValue, forceRefresh: true),
+            icon: isLoading
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: themeProvider.accentColor,
+                    ),
+                  )
+                : Icon(
+                    Icons.refresh,
+                    color: scheme.onSurface.withValues(alpha: 0.6),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScrollablePlaceholder(Widget child) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      children: [child],
+    );
+  }
+
+  Widget _buildPostDetailPane(CommunityPost post) {
+    return Container(
+      key: ValueKey('post-pane-${post.id}'),
+      color: Theme.of(context).colorScheme.surface,
+      child: PostDetailScreen(
+        post: post,
+        onClose: _popPane,
+      ),
+    );
+  }
+
+  Widget _buildConversationPane(Conversation conversation) {
+    return Container(
+      key: ValueKey('conversation-pane-${conversation.id}'),
+      color: Theme.of(context).colorScheme.surface,
+      child: ConversationScreen(
+        conversation: conversation,
+        onClose: _popPane,
+      ),
+    );
+  }
+
+  Future<void> _openTagFeed(String rawTag) async {
+    final sanitized = _sanitizeTagValue(rawTag);
+    if (sanitized == null) return;
+    final tagKey = sanitized.toLowerCase();
+    setState(() {
+      _paneStack.removeWhere(
+        (route) => route.type == _PaneViewType.tagFeed && (route.tag?.toLowerCase() == tagKey),
+      );
+      _paneStack.add(_PaneRoute.tag(sanitized));
+      _activeConversationId = null;
+    });
+    await _loadTagFeed(sanitized);
+  }
+
+  Future<void> _updateTagFeedFilters(
+    String tag, {
+    bool? followingOnly,
+    bool? arOnly,
+    String? sortMode,
+  }) async {
+    final sanitized = _sanitizeTagValue(tag);
+    if (sanitized == null) return;
+    final key = sanitized.toLowerCase();
+    final previous = _tagFeeds[key] ?? const _TagFeedState();
+    final nextState = previous.copyWith(
+      followingOnly: followingOnly ?? previous.followingOnly,
+      arOnly: arOnly ?? previous.arOnly,
+      sortMode: sortMode ?? previous.sortMode,
+    );
+    setState(() {
+      _tagFeeds[key] = nextState;
+    });
+    await _loadTagFeed(sanitized, forceRefresh: true);
+  }
+
+  Future<void> _loadTagFeed(String tag, {bool forceRefresh = false}) async {
+    final sanitized = _sanitizeTagValue(tag);
+    if (sanitized == null) return;
+    final key = sanitized.toLowerCase();
+    final previous = _tagFeeds[key] ?? const _TagFeedState();
+    final sortMode = previous.sortMode;
+    final followingOnly = previous.followingOnly;
+    final arOnly = previous.arOnly;
+    final isFresh = previous.lastFetched != null &&
+        DateTime.now().difference(previous.lastFetched!) < const Duration(minutes: 5);
+    if (!forceRefresh && previous.isLoading) return;
+    if (!forceRefresh && isFresh && previous.error == null && previous.posts.isNotEmpty) return;
+
+    if (!mounted) return;
+    setState(() {
+      _tagFeeds[key] = previous.copyWith(isLoading: true, error: null);
+    });
+
+    try {
+      final posts = await _backendApi.getCommunityPosts(
+        page: 1,
+        limit: 50,
+        tag: sanitized,
+        sort: sortMode,
+        followingOnly: followingOnly,
+        arOnly: arOnly,
+      );
+      final chosenPosts = posts.isNotEmpty ? posts : _filterLocalPostsByTag(sanitized);
+      if (!mounted) return;
+      setState(() {
+        _tagFeeds[key] = previous.copyWith(
+          posts: _sortPosts(chosenPosts, sortMode),
+          isLoading: false,
+          error: chosenPosts.isEmpty ? 'No posts found for #$sanitized' : null,
+          lastFetched: DateTime.now(),
+        );
+      });
+    } catch (e) {
+      final fallback = _filterLocalPostsByTag(sanitized);
+      if (!mounted) return;
+      setState(() {
+        _tagFeeds[key] = previous.copyWith(
+          posts: _sortPosts(fallback, sortMode),
+          isLoading: false,
+          error: fallback.isEmpty ? e.toString() : null,
+        );
+      });
+    }
   }
 
   Widget _buildHeader(ThemeProvider themeProvider) {
@@ -488,6 +1009,101 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 onSubmitted: _handleSearchSubmit,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagFilters({
+    required ThemeProvider themeProvider,
+    required String tagValue,
+    required bool followingOnly,
+    required bool arOnly,
+    required String sortMode,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget buildChip({
+      required String label,
+      required bool active,
+      required VoidCallback onTap,
+      IconData? icon,
+    }) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 8, bottom: 8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: active
+                  ? themeProvider.accentColor.withValues(alpha: 0.12)
+                  : scheme.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: active
+                    ? themeProvider.accentColor.withValues(alpha: 0.5)
+                    : scheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: Icon(
+                      icon,
+                      size: 16,
+                      color: active ? themeProvider.accentColor : scheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: active ? themeProvider.accentColor : scheme.onSurface.withValues(alpha: 0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+      child: Wrap(
+        children: [
+          buildChip(
+            label: 'All posts',
+            active: !followingOnly,
+            onTap: () => _updateTagFeedFilters(tagValue, followingOnly: false),
+            icon: Icons.public,
+          ),
+          buildChip(
+            label: 'Following',
+            active: followingOnly,
+            onTap: () => _updateTagFeedFilters(tagValue, followingOnly: true),
+            icon: Icons.people_alt,
+          ),
+          buildChip(
+            label: 'AR only',
+            active: arOnly,
+            onTap: () => _updateTagFeedFilters(tagValue, arOnly: !arOnly),
+            icon: Icons.view_in_ar_outlined,
+          ),
+          buildChip(
+            label: sortMode == 'popularity' ? 'Popularity' : 'Recent',
+            active: true,
+            onTap: () => _updateTagFeedFilters(
+              tagValue,
+              sortMode: sortMode == 'popularity' ? 'recent' : 'popularity',
+            ),
+            icon: sortMode == 'popularity' ? Icons.trending_up : Icons.access_time,
           ),
         ],
       ),
@@ -690,6 +1306,95 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
+  Widget _buildSortControls(ThemeProvider themeProvider) {
+    if (_paneStack.isNotEmpty) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    final currentTab = _tabs[_tabController.index];
+    if (currentTab == 'Groups') return const SizedBox.shrink();
+    final sortMode = _sortModeForTab(currentTab);
+
+    Widget buildChip(String label, String value, IconData icon) {
+      final selected = sortMode == value;
+      return ChoiceChip(
+        label: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: selected ? scheme.onPrimary : scheme.onSurface.withValues(alpha: 0.6)),
+            const SizedBox(width: 6),
+            Text(label),
+          ],
+        ),
+        selected: selected,
+        onSelected: (isSelected) {
+          if (isSelected) _changeSortForTab(currentTab, value);
+        },
+        selectedColor: themeProvider.accentColor,
+        backgroundColor: scheme.surfaceContainerHighest,
+        labelStyle: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: selected ? scheme.onPrimary : scheme.onSurface,
+        ),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+      child: Row(
+        children: [
+          Icon(Icons.sort, size: 18, color: scheme.onSurface.withValues(alpha: 0.65)),
+          const SizedBox(width: 8),
+          Text(
+            'Sort',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: scheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(width: 12),
+          buildChip('Recent', 'recent', Icons.schedule),
+          const SizedBox(width: 8),
+          buildChip('Top', 'popularity', Icons.trending_up),
+        ],
+      ),
+    );
+  }
+
+  String _sortModeForTab(String tabName) {
+    switch (tabName) {
+      case 'Following':
+        return _followingSortMode;
+      case 'Art':
+        return _artSortMode;
+      default:
+        return _discoverSortMode;
+    }
+  }
+
+  void _changeSortForTab(String tabName, String mode) {
+    switch (tabName) {
+      case 'Following':
+        if (_followingSortMode == mode) return;
+        _followingSortMode = mode;
+        _loadFollowingFeed(sortOverride: mode);
+        break;
+      case 'Art':
+        if (_artSortMode == mode) return;
+        setState(() {
+          _artSortMode = mode;
+        });
+        break;
+      default:
+        if (_discoverSortMode == mode) return;
+        _discoverSortMode = mode;
+        _loadDiscoverFeed(sortOverride: mode);
+        break;
+    }
+  }
+
   void _handleSearchChange(String value) {
     setState(() {
       _searchQuery = value;
@@ -855,7 +1560,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildDiscoverFeed(ThemeProvider themeProvider) {
-    final posts = _filterPostsForQuery(_discoverPosts);
+    final posts = _sortPosts(_filterPostsForQuery(_discoverPosts), _discoverSortMode);
 
     if (_isLoadingDiscover && _discoverPosts.isEmpty) {
       return _buildLoadingState(themeProvider, 'Loading posts...');
@@ -888,7 +1593,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildFollowingFeed(ThemeProvider themeProvider) {
-    final posts = _filterPostsForQuery(_followingPosts);
+    final posts = _sortPosts(_filterPostsForQuery(_followingPosts), _followingSortMode);
 
     if (_isLoadingFollowing && _followingPosts.isEmpty) {
       return _buildLoadingState(themeProvider, 'Loading posts...');
@@ -951,7 +1656,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           );
         }
 
-        final posts = _filterPostsForQuery(allPosts);
+        final posts = _sortPosts(_filterPostsForQuery(allPosts), _artSortMode);
         if (posts.isEmpty) {
           return _buildEmptyState(
             themeProvider,
@@ -1677,7 +2382,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   Widget _buildPostCard(CommunityPost post, ThemeProvider themeProvider) {
     return DesktopCard(
-      onTap: () => _openPostDetailModal(post),
+      onTap: () => _openPostDetail(post),
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1874,7 +2579,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon: Icons.chat_bubble_outline,
                 label: _formatTrendingCount(post.commentCount),
                 themeProvider: themeProvider,
-                onPressed: () => _openPostDetailModal(post),
+                onPressed: () => _openPostDetail(post),
               ),
               const SizedBox(width: 24),
               _buildActionButton(
@@ -2263,15 +2968,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   void _handleSidebarTabChange(bool showMessages) {
-    if (!showMessages && _conversationModalVisible) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (_) {}
-    }
-
     setState(() {
       _showMessagesPanel = showMessages;
       if (!showMessages) {
+        _paneStack.removeWhere((route) => route.type == _PaneViewType.conversation);
         _activeConversationId = null;
       }
     });
@@ -2965,31 +3665,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Future<void> _openConversation(Conversation conversation) async {
-    if (_conversationModalVisible) {
-      try {
-        Navigator.of(context, rootNavigator: true).pop();
-      } catch (_) {}
-    }
-
+  void _openConversation(Conversation conversation) {
     setState(() {
       _showMessagesPanel = true;
       _activeConversationId = conversation.id;
-      _conversationModalVisible = true;
-    });
-
-    await _showDesktopModal(
-      builder: (_) => ConversationScreen(conversation: conversation),
-      maxWidth: 1024,
-      maxHeight: 900,
-      minWidth: 560,
-      wrapWithSurface: false,
-    );
-
-    if (!mounted) return;
-    setState(() {
-      _conversationModalVisible = false;
-      _activeConversationId = null;
+      _paneStack.removeWhere(
+        (route) => route.type == _PaneViewType.conversation && route.conversation?.id == conversation.id,
+      );
+      _paneStack.add(_PaneRoute.conversation(conversation));
     });
   }
 
@@ -3539,14 +4222,21 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Future<void> _openPostDetailModal(CommunityPost post) async {
-    await _showDesktopModal(
-      builder: (_) => PostDetailScreen(post: post),
-      maxWidth: 860,
-      maxHeight: 900,
-      minWidth: 520,
-      wrapWithSurface: false,
+  void _openPostDetail(CommunityPost post) {
+    // Avoid stacking duplicate instances of the same post detail
+    final existingIndex = _paneStack.lastIndexWhere(
+      (route) => route.type == _PaneViewType.postDetail && route.post?.id == post.id,
     );
+    if (existingIndex != -1 && existingIndex == _paneStack.length - 1) {
+      return;
+    }
+    setState(() {
+      // Remove any older instance of the same post to keep stack clean
+      if (existingIndex != -1) {
+        _paneStack.removeAt(existingIndex);
+      }
+      _paneStack.add(_PaneRoute.post(post));
+    });
   }
 
   Future<void> _showMentionPicker(CommunityHubProvider hub) async {
@@ -3924,10 +4614,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: DesktopCard(
-                    onTap: () {
-                      hub.addTag(rawTag);
-                      _appendComposerToken(displayTag);
-                    },
+                    onTap: () => _openTagFeed(rawTag),
                     child: Row(
                       children: [
                       Container(
@@ -3973,10 +4660,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ],
                         ),
                       ),
-                      Icon(
-                        Icons.add,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      IconButton(
+                        tooltip: 'Add to post',
+                        onPressed: () {
+                          hub.addTag(rawTag);
+                          _appendComposerToken(displayTag);
+                        },
+                        icon: Icon(
+                          Icons.add,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ),
                       ),
                       ],
                     ),
@@ -4007,7 +4701,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (tag == null) continue;
       final key = tag.toLowerCase();
       if (seen.contains(key)) continue;
-      final countValue = entry['count'] ?? entry['search_count'] ?? entry['occurrences'] ?? entry['uses'] ?? 0;
+      final countValue = entry['count'] ??
+          entry['search_count'] ??
+          entry['post_count'] ??
+          entry['frequency'] ??
+          entry['occurrences'] ??
+          entry['uses'] ??
+          0;
       final numCount = countValue is num ? countValue : num.tryParse(countValue.toString()) ?? 0;
       normalized.add({'tag': tag, 'count': numCount});
       seen.add(key);
@@ -4040,7 +4740,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     value = value.replaceFirst(RegExp(r'^#+'), '');
     value = value.replaceAll(RegExp(r'\s+'), '');
     if (value.isEmpty) return null;
-    if (!RegExp(r'[a-zA-Z0-9]').hasMatch(value)) return null;
+    if (!RegExp(r'[a-zA-Z0-9_-]').hasMatch(value)) return null;
     return value;
   }
 
@@ -4049,6 +4749,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     combinedPosts
       ..addAll(_discoverPosts)
       ..addAll(_followingPosts);
+    try {
+      final communityProvider = context.read<CommunityHubProvider>();
+      combinedPosts.addAll(communityProvider.artFeedPosts);
+    } catch (_) {}
     if (combinedPosts.isEmpty) return const [];
 
     final counts = <String, Map<String, dynamic>>{};
@@ -4065,6 +4769,45 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final sorted = counts.values.toList()
       ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
     return sorted;
+  }
+
+  List<CommunityPost> _sortPosts(List<CommunityPost> posts, String sortMode) {
+    if (posts.length <= 1) return posts;
+    final normalized = sortMode.toLowerCase();
+    final sorted = List<CommunityPost>.from(posts);
+    if (normalized == 'popularity' || normalized == 'popular') {
+      sorted.sort((a, b) => _popularityScore(b).compareTo(_popularityScore(a)));
+    } else {
+      sorted.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    }
+    return sorted;
+  }
+
+  double _popularityScore(CommunityPost post) {
+    final likes = post.likeCount.toDouble();
+    final comments = post.commentCount.toDouble();
+    final shares = post.shareCount.toDouble();
+    final views = post.viewCount.toDouble();
+    final hoursOld = DateTime.now().difference(post.timestamp).inMinutes / 60.0;
+    final recencyBoost = math.max(0, 72 - hoursOld);
+    return (likes * 4) + (comments * 6) + (shares * 5) + (views * 0.25) + recencyBoost;
+  }
+
+  List<CommunityPost> _filterLocalPostsByTag(String tag) {
+    final key = _sanitizeTagValue(tag)?.toLowerCase() ?? tag.toLowerCase();
+    final List<CommunityPost> local = [];
+    local
+      ..addAll(_discoverPosts)
+      ..addAll(_followingPosts);
+    try {
+      local.addAll(context.read<CommunityHubProvider>().artFeedPosts);
+    } catch (_) {}
+    return local.where((post) {
+      return post.tags.any((t) {
+        final normalized = _sanitizeTagValue(t)?.toLowerCase() ?? t.toLowerCase();
+        return normalized == key;
+      });
+    }).toList();
   }
 
   String _formatTrendingCount(num? count) {
@@ -5568,6 +6311,81 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         );
       }
     }
+  }
+}
+
+enum _PaneViewType { tagFeed, postDetail, conversation }
+
+class _PaneRoute {
+  const _PaneRoute.tag(this.tag)
+      : type = _PaneViewType.tagFeed,
+        post = null,
+        conversation = null;
+
+  const _PaneRoute.post(this.post)
+      : type = _PaneViewType.postDetail,
+        tag = null,
+        conversation = null;
+
+  const _PaneRoute.conversation(this.conversation)
+      : type = _PaneViewType.conversation,
+        tag = null,
+        post = null;
+
+  final _PaneViewType type;
+  final String? tag;
+  final CommunityPost? post;
+  final Conversation? conversation;
+
+  String get viewKey {
+    switch (type) {
+      case _PaneViewType.tagFeed:
+        return 'tag-${(tag ?? '').toLowerCase()}';
+      case _PaneViewType.postDetail:
+        return 'post-${post?.id ?? ''}';
+      case _PaneViewType.conversation:
+        return 'conversation-${conversation?.id ?? ''}';
+    }
+  }
+}
+
+class _TagFeedState {
+  final List<CommunityPost> posts;
+  final bool isLoading;
+  final String? error;
+  final DateTime? lastFetched;
+  final bool followingOnly;
+  final bool arOnly;
+  final String sortMode; // 'popularity' or 'recent'
+
+  const _TagFeedState({
+    this.posts = const <CommunityPost>[],
+    this.isLoading = false,
+    this.error,
+    this.lastFetched,
+    this.followingOnly = false,
+    this.arOnly = false,
+    this.sortMode = 'popularity',
+  });
+
+  _TagFeedState copyWith({
+    List<CommunityPost>? posts,
+    bool? isLoading,
+    String? error,
+    DateTime? lastFetched,
+    bool? followingOnly,
+    bool? arOnly,
+    String? sortMode,
+  }) {
+    return _TagFeedState(
+      posts: posts ?? this.posts,
+      isLoading: isLoading ?? this.isLoading,
+      error: error,
+      lastFetched: lastFetched ?? this.lastFetched,
+      followingOnly: followingOnly ?? this.followingOnly,
+      arOnly: arOnly ?? this.arOnly,
+      sortMode: sortMode ?? this.sortMode,
+    );
   }
 }
 

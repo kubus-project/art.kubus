@@ -244,3 +244,105 @@ class MarketplaceOnboardingData {
     ),
   ];
 }
+
+class Web3FeaturesOnboardingData {
+  static const String featureName = 'Web3 Features';
+
+  static const List<OnboardingPage> pages = [
+    OnboardingPage(
+      title: 'Welcome to Web3',
+      description: 'Connect your wallet to unlock decentralized features powered by blockchain technology.',
+      icon: Icons.account_balance_wallet,
+      gradientColors: [
+        Colors.blue,
+        Color(0xFF3F51B5),
+      ],
+      features: [
+        'Secure wallet-based authentication',
+        'True ownership of digital assets',
+        'Decentralized transactions',
+        'Cross-platform compatibility',
+      ],
+    ),
+    OnboardingPage(
+      title: 'NFT Marketplace',
+      description: 'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
+      icon: Icons.store,
+      gradientColors: [
+        Color(0xFFFF6B6B),
+        Color(0xFFE91E63),
+      ],
+      features: [
+        'Browse trending digital artworks',
+        'Purchase NFTs with SOL tokens',
+        'List your own creations for sale',
+        'Track marketplace analytics',
+        'Discover featured collections',
+      ],
+    ),
+    OnboardingPage(
+      title: 'Artist Studio',
+      description: 'Create, mint, and manage your digital artworks with professional tools.',
+      icon: Icons.palette,
+      gradientColors: [
+        Color(0xFFFF9A8B),
+        Color(0xFFFF7043),
+      ],
+      features: [
+        'Upload and mint AR artworks as NFTs',
+        'Set pricing and royalties',
+        'Track creation analytics',
+        'Manage your digital portfolio',
+        'Collaborate with other artists',
+      ],
+    ),
+    OnboardingPage(
+      title: 'DAO Governance',
+      description: 'Participate in community decisions and help shape the future of the platform.',
+      icon: Icons.how_to_vote,
+      gradientColors: [
+        Color(0xFF4ECDC4),
+        Color(0xFF26A69A),
+      ],
+      features: [
+        'Vote on platform proposals',
+        'Submit improvement suggestions',
+        'Earn governance tokens',
+        'Access exclusive DAO benefits',
+        'Shape community guidelines',
+      ],
+    ),
+    OnboardingPage(
+      title: 'Institution Hub',
+      description: 'Connect with galleries, museums, and cultural institutions in the Web3 space.',
+      icon: Icons.museum,
+      gradientColors: [
+        Color(0xFF667eea),
+        Color(0xFF764ba2),
+      ],
+      features: [
+        'Partner with verified institutions',
+        'Access exclusive exhibitions',
+        'Institutional-grade security',
+        'Professional networking tools',
+        'Curated collection management',
+      ],
+    ),
+    OnboardingPage(
+      title: 'KUB8 Token Economy',
+      description: 'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
+      icon: Icons.monetization_on,
+      gradientColors: [
+        Color(0xFFFFD700),
+        Color(0xFFFF8C00),
+      ],
+      features: [
+        'Earn tokens for discoveries',
+        'Reward system for creators',
+        'Stake tokens for benefits',
+        'Pay for premium features',
+        'Trade on decentralized exchanges',
+      ],
+    ),
+  ];
+}

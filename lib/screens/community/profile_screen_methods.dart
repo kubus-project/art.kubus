@@ -10,6 +10,7 @@ import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
 import 'user_profile_screen.dart';
+import '../art/art_detail_screen.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
@@ -208,6 +209,13 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+            ),
+          ),
           child: ListTile(
             onTap: () {
               Navigator.pop(context);
@@ -221,10 +229,11 @@ class _FollowersBottomSheetState extends State<_FollowersBottomSheet> {
                 ),
               );
             },
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: AvatarWidget(
               wallet: walletAddress,
               avatarUrl: avatarUrl,
-              radius: 25,
+              radius: 28,
             ),
             title: Row(
               children: [
@@ -394,7 +403,14 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
       height: MediaQuery.of(context).size.height * 0.7,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Column(
         children: [
@@ -409,7 +425,7 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
           ),
           
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -457,6 +473,13 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
+            ),
+          ),
           child: ListTile(
             onTap: () {
               Navigator.pop(context);
@@ -470,10 +493,11 @@ class _FollowingBottomSheetState extends State<_FollowingBottomSheet> {
                 ),
               );
             },
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             leading: AvatarWidget(
               wallet: walletAddress,
               avatarUrl: avatarUrl,
-              radius: 25,
+              radius: 28,
             ),
             title: Row(
               children: [
@@ -588,7 +612,14 @@ class _ArtworksBottomSheet extends StatelessWidget {
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
           ),
           child: Column(
             children: [
@@ -603,7 +634,7 @@ class _ArtworksBottomSheet extends StatelessWidget {
               ),
               
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -657,14 +688,31 @@ class _ArtworksBottomSheet extends StatelessWidget {
                       itemCount: userArtworks.length,
                       itemBuilder: (context, index) {
                         final artwork = userArtworks[index];
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ArtDetailScreen(artworkId: artwork.id),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.05),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
-                          ),
-                          child: Column(
+                            child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
@@ -709,7 +757,8 @@ class _ArtworksBottomSheet extends StatelessWidget {
                               ),
                             ],
                           ),
-                        );
+                        ),
+                      );
                       },
                     ),
               ),
@@ -733,9 +782,16 @@ class _CollectionsBottomSheet extends StatelessWidget {
       height: MediaQuery.of(context).size.height * 0.6,
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

@@ -13,6 +13,7 @@ import '../../models/artwork_comment.dart';
 import '../../services/nft_minting_service.dart';
 import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/artwork_media_resolver.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -31,42 +32,56 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   late TextEditingController _commentController;
   late ScrollController _scrollController;
   bool _showComments = false;
+  bool _animationsInitialized = false;
+  bool _artworkLoading = true;
+  String? _artworkError;
 
   @override
   void initState() {
     super.initState();
     _commentController = TextEditingController();
     _scrollController = ScrollController();
-    
-    final animationTheme = context.animationTheme;
-
     _animationController = AnimationController(
-      duration: animationTheme.long,
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: animationTheme.fadeCurve,
-    ));
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: animationTheme.defaultCurve,
-    ));
-
-    _animationController.forward();
+    _loadArtworkDetails();
     
     // Increment view count when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ArtworkProvider>().incrementViewCount(widget.artworkId);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    
+    if (!_animationsInitialized) {
+      final animationTheme = context.animationTheme;
+      
+      _animationController.duration = animationTheme.long;
+
+      _fadeAnimation = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.fadeCurve,
+      ));
+
+      _slideAnimation = Tween<Offset>(
+        begin: const Offset(0, 0.3),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _animationController,
+        curve: animationTheme.defaultCurve,
+      ));
+
+      _animationController.forward();
+      _animationsInitialized = true;
+    }
   }
 
   @override
@@ -82,6 +97,43 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
+        
+        if (_artworkLoading) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Loading artwork', style: GoogleFonts.outfit()),
+            ),
+            body: const Center(child: InlineLoading()),
+          );
+        }
+
+        if (_artworkError != null) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('Artwork', style: GoogleFonts.outfit()),
+            ),
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _artworkError!,
+                    style: GoogleFonts.outfit(
+                      fontSize: 16,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _loadArtworkDetails,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         
         if (artwork == null) {
           return Scaffold(
@@ -136,6 +188,42 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         );
       },
     );
+  }
+
+  Future<void> _loadArtworkDetails() async {
+    final provider = context.read<ArtworkProvider>();
+    final existing = provider.getArtworkById(widget.artworkId);
+
+    if (existing != null) {
+      if (mounted) {
+        setState(() {
+          _artworkLoading = false;
+          _artworkError = null;
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _artworkLoading = true;
+        _artworkError = null;
+      });
+    }
+
+    try {
+      await provider.fetchArtworkIfNeeded(widget.artworkId);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _artworkError = 'Failed to load artwork details. Please try again.';
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _artworkLoading = false;
+      });
+    }
   }
 
   Widget _buildAppBar(Artwork artwork) {
@@ -215,103 +303,163 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildArtPreview(Artwork artwork) {
+    final rarityColor = Color(Artwork.getRarityColor(artwork.rarity));
+    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
+
     return Container(
-      height: 200,
+      height: 220,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: rarityColor.withValues(alpha: 0.3),
+          width: 2,
+        ),
+        color: Theme.of(context).colorScheme.surfaceContainer,
+      ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+            _buildPreviewCoverImage(coverUrl, rarityColor),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.08),
+                      Colors.black.withValues(alpha: 0.18),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Rarity badge
+            Positioned(
+              top: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: rarityColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  artwork.rarity.name.toUpperCase(),
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            // Status badge
+            if (artwork.isDiscovered)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.check, size: 16, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        'DISCOVERED',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            // AR badge
+            if (artwork.arEnabled)
+              Positioned(
+                bottom: 16,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.view_in_ar, size: 16, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(
+                        'AR ENABLED',
+                        style: GoogleFonts.outfit(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreviewCoverImage(String? imageUrl, Color fallbackColor) {
+    final placeholder = Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.2),
-            Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.1),
+            fallbackColor.withValues(alpha: 0.25),
+            fallbackColor.withValues(alpha: 0.1),
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Color(Artwork.getRarityColor(artwork.rarity)).withValues(alpha: 0.3),
-          width: 2,
+      ),
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported,
+          color: Colors.white.withValues(alpha: 0.9),
+          size: 40,
         ),
       ),
-      child: Stack(
-        children: [
-          // Rarity badge
-          Positioned(
-            top: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Color(Artwork.getRarityColor(artwork.rarity)),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                artwork.rarity.name.toUpperCase(),
-                style: GoogleFonts.outfit(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
+    );
+
+    if (imageUrl == null || imageUrl.isEmpty) {
+      return placeholder;
+    }
+
+    return Image.network(
+      imageUrl,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => placeholder,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: InlineLoading(
+              shape: BoxShape.circle,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          // Status badge
-          if (artwork.isDiscovered)
-            Positioned(
-              top: 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.check, size: 16, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Text(
-                      'DISCOVERED',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          // AR badge
-          if (artwork.arEnabled)
-            Positioned(
-              bottom: 16,
-              left: 16,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.view_in_ar, size: 16, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Text(
-                      'AR ENABLED',
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 

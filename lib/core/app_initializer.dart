@@ -1,4 +1,6 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,7 +14,10 @@ import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/cache_provider.dart';
 import '../services/backend_api_service.dart';
-import '../onboarding/onboarding_screen.dart';
+import '../services/app_bootstrap_service.dart';
+import '../screens/onboarding/onboarding_screen.dart';
+import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
+import '../screens/desktop/desktop_shell.dart';
 import '../main_app.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../widgets/app_loading.dart';
@@ -149,10 +154,22 @@ class _AppInitializerState extends State<AppInitializer> {
       (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
     
     debugPrint('  shouldSkipOnboarding: $shouldSkipOnboarding');
+
+    // Detect desktop layout for responsive onboarding
+    final isDesktop = DesktopBreakpoints.isDesktop(context);
+    debugPrint('  isDesktop: $isDesktop');
+
+    // Prime all data providers before the main UI renders so users see fresh
+    // content without needing manual refreshes on first interaction.
+    final bootstrapper = AppBootstrapService();
+    final warmupFuture = bootstrapper.warmUp(
+      context: context,
+      walletAddress: walletAddress,
+    );
     
     if (shouldSkipOnboarding) {
       // Returning user - skip onboarding and go directly to main app
-      debugPrint('📍 Route: Skipping onboarding → MainApp');
+      debugPrint('Route: Skipping onboarding -> MainApp');
       // Mark as no longer first time if not already set
       if (isFirstTime) {
         await prefs.setBool('first_time', false);
@@ -160,6 +177,7 @@ class _AppInitializerState extends State<AppInitializer> {
         await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
       }
       
+      await warmupFuture;
       if (!mounted) return;
       if (shouldShowSignIn) {
         Navigator.of(context).pushReplacement(
@@ -172,13 +190,25 @@ class _AppInitializerState extends State<AppInitializer> {
       }
     } else if (!hasCompletedOnboarding) {
       // First-time user - show onboarding (no wallet required)
-      debugPrint('📍 Route: First-time user → OnboardingScreen (wallet optional, setup when needed)');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
-      );
+      // Use desktop onboarding for desktop layouts
+      if (isDesktop) {
+        debugPrint('Route: First-time user -> DesktopOnboardingScreen');
+        unawaited(warmupFuture);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
+        );
+      } else {
+        debugPrint('Route: First-time user -> OnboardingScreen (wallet optional, setup when needed)');
+        unawaited(warmupFuture);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const OnboardingScreen()),
+        );
+      }
     } else {
       // Returning user who completed onboarding - go to main app (wallet optional)
-      debugPrint('📍 Route: Returning user → MainApp (wallet optional)');
+      debugPrint('Route: Returning user -> MainApp (wallet optional)');
+      await warmupFuture;
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => shouldShowSignIn ? const SignInScreen() : const MainApp()),
       );

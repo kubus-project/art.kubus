@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../widgets/app_logo.dart';
-import '../widgets/gradient_icon_card.dart';
+import '../../widgets/app_logo.dart';
+import '../../widgets/gradient_icon_card.dart';
+import '../../screens/desktop/desktop_shell.dart';
+import '../desktop/onboarding/desktop_onboarding_screen.dart';
 import 'permissions_screen.dart';
-import '../screens/auth/sign_in_screen.dart';
+import '../auth/sign_in_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -100,6 +102,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
 
   @override
   Widget build(BuildContext context) {
+    // Redirect to desktop onboarding if on desktop
+    if (DesktopBreakpoints.isDesktop(context)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
+          );
+        }
+      });
+    }
+
     final mediaQuery = MediaQuery.of(context);
     final screenHeight = mediaQuery.size.height;
     final screenWidth = mediaQuery.size.width;

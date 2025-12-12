@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../models/artwork.dart' as art_model;
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../utils/artwork_media_resolver.dart';
 
 class ArtworkGallery extends StatefulWidget {
   final VoidCallback? onCreateRequested;
@@ -404,16 +405,16 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Widget _buildArtworkCover(art_model.Artwork artwork) {
-    final hasImage = artwork.imageUrl != null && artwork.imageUrl!.isNotEmpty;
+    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
     final borderRadius = const BorderRadius.vertical(top: Radius.circular(16));
 
-    if (hasImage) {
+    if (coverUrl != null && coverUrl.isNotEmpty) {
       return Container(
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: borderRadius,
           image: DecorationImage(
-            image: NetworkImage(artwork.imageUrl!),
+            image: NetworkImage(coverUrl),
             fit: BoxFit.cover,
           ),
         ),
@@ -620,6 +621,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _showArtworkDetails(art_model.Artwork artwork) {
+    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -627,18 +629,18 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         child: Container(
           width: MediaQuery.of(context).size.width * 0.8,
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: artwork.imageUrl != null && artwork.imageUrl!.isNotEmpty
-                    ? Image.network(
-                        artwork.imageUrl!,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: coverUrl != null && coverUrl.isNotEmpty
+                      ? Image.network(
+                          coverUrl,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        )
                     : Container(
                         height: 200,
                         width: double.infinity,
