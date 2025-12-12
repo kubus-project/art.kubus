@@ -4581,40 +4581,9 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
 
   // Parse original post for reposts
   CommunityPost? originalPost;
-<<<<<<< HEAD
-  if (json['originalPost'] != null && json['originalPost'] is Map<String, dynamic>) {
-    final origJson = json['originalPost'] as Map<String, dynamic>;
-    final origAuthor = origJson['author'] as Map<String, dynamic>?;
-    
-    final origRoleHint = (origAuthor?['role'] ?? origAuthor?['type'] ?? '')
-        .toString()
-        .toLowerCase();
-    final origIsArtist = communityBool(
-          origAuthor?['isArtist'] ?? origAuthor?['is_artist']);
-    final origIsInstitution = communityBool(
-          origAuthor?['isInstitution'] ?? origAuthor?['is_institution']);
-
-    originalPost = CommunityPost(
-      id: origJson['id'] as String,
-      authorId: origJson['walletAddress'] as String? ?? 'unknown',
-      authorWallet: origJson['walletAddress'] as String?,
-      authorName: origAuthor?['displayName'] as String? ?? origAuthor?['username'] as String? ?? 'Anonymous',
-      authorAvatar: MediaUrlResolver.resolve(origAuthor?['avatar'] as String?),
-      authorUsername: origAuthor?['username'] as String?,
-      content: origJson['content'] as String,
-      imageUrl: origJson['mediaUrls'] != null && (origJson['mediaUrls'] as List).isNotEmpty 
-          ? (origJson['mediaUrls'] as List).first as String? 
-          : null,
-      timestamp: origJson['createdAt'] != null 
-          ? DateTime.parse(origJson['createdAt'] as String)
-          : DateTime.now(),
-      authorIsArtist: origIsArtist || origRoleHint.contains('artist') || origRoleHint.contains('creator'),
-      authorIsInstitution: origIsInstitution || origRoleHint.contains('institution') || origRoleHint.contains('museum') || origRoleHint.contains('gallery'),
-    );
-=======
   final originalPostPayload =
       json['originalPost'] ?? json['original_post'];
-  if (originalPostPayload is Map<String, dynamic>) {
+  if (originalPostPayload is Map) {
     final nested = Map<String, dynamic>.from(originalPostPayload);
     nested.remove('originalPost');
     nested.remove('original_post');
@@ -4623,7 +4592,6 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     } catch (e) {
       debugPrint('Failed to parse nested original post: $e');
     }
->>>>>>> c21d8445d2dc615a18efce765293639a7f5186e9
   }
 
   final postTypeValue =
