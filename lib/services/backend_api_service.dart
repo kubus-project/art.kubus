@@ -4599,57 +4599,62 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
   CommunityArtworkReference? artworkRef;
   final artworkJson = json['artwork'];
   if (artworkJson is Map<String, dynamic>) {
-    final artworkId = (artworkJson['id'] ?? artworkJson['artworkId'])?.toString();
+    final artworkId =
+        (artworkJson['id'] ?? artworkJson['artworkId'] ?? artworkJson['artwork_id'])
+            ?.toString();
     if (artworkId != null && artworkId.isNotEmpty) {
+      final artworkImage = artworkJson['imageUrl']?.toString() ??
+          artworkJson['image_url']?.toString() ??
+          artworkJson['artworkImage']?.toString() ??
+          artworkJson['artwork_image']?.toString() ??
+          artworkJson['artworkImageUrl']?.toString() ??
+          artworkJson['artwork_image_url']?.toString();
+      final artworkTitle = (artworkJson['title'] ??
+              artworkJson['artworkTitle'] ??
+              artworkJson['artwork_title'] ??
+              'Artwork')
+          .toString();
       artworkRef = CommunityArtworkReference(
         id: artworkId,
-        title: (artworkJson['title'] ?? 'Artwork').toString(),
-        imageUrl: artworkJson['imageUrl']?.toString() ?? artworkJson['image_url']?.toString(),
+        title: artworkTitle,
+        imageUrl: artworkImage,
       );
     }
   } else {
-    final fallbackArtworkId = json['artworkId']?.toString();
+    final fallbackArtworkId =
+        (json['artworkId'] ?? json['artwork_id'])?.toString();
     if (fallbackArtworkId != null && fallbackArtworkId.isNotEmpty) {
       artworkRef = CommunityArtworkReference(
         id: fallbackArtworkId,
-        title: (json['artworkTitle'] ?? json['artwork_title'] ?? 'Artwork').toString(),
-        imageUrl: json['artworkImage']?.toString() ?? json['artwork_image']?.toString(),
+        title:
+            (json['artworkTitle'] ?? json['artwork_title'] ?? 'Artwork').toString(),
+        imageUrl: json['artworkImage']?.toString() ??
+            json['artwork_image']?.toString() ??
+            json['artworkImageUrl']?.toString() ??
+            json['artwork_image_url']?.toString(),
       );
     }
   }
 
   // Parse original post for reposts
   CommunityPost? originalPost;
-  if (json['originalPost'] != null && json['originalPost'] is Map<String, dynamic>) {
-    final origJson = json['originalPost'] as Map<String, dynamic>;
-    final origAuthor = origJson['author'] as Map<String, dynamic>?;
-    
-    final origRoleHint = (origAuthor?['role'] ?? origAuthor?['type'] ?? '')
-        .toString()
-        .toLowerCase();
-    final origIsArtist = communityBool(
-          origAuthor?['isArtist'] ?? origAuthor?['is_artist']);
-    final origIsInstitution = communityBool(
-          origAuthor?['isInstitution'] ?? origAuthor?['is_institution']);
-
-    originalPost = CommunityPost(
-      id: origJson['id'] as String,
-      authorId: origJson['walletAddress'] as String? ?? 'unknown',
-      authorWallet: origJson['walletAddress'] as String?,
-      authorName: origAuthor?['displayName'] as String? ?? origAuthor?['username'] as String? ?? 'Anonymous',
-      authorAvatar: _normalizeBackendAvatarUrl(origAuthor?['avatar'] as String?),
-      authorUsername: origAuthor?['username'] as String?,
-      content: origJson['content'] as String,
-      imageUrl: origJson['mediaUrls'] != null && (origJson['mediaUrls'] as List).isNotEmpty 
-          ? (origJson['mediaUrls'] as List).first as String? 
-          : null,
-      timestamp: origJson['createdAt'] != null 
-          ? DateTime.parse(origJson['createdAt'] as String)
-          : DateTime.now(),
-      authorIsArtist: origIsArtist || origRoleHint.contains('artist') || origRoleHint.contains('creator'),
-      authorIsInstitution: origIsInstitution || origRoleHint.contains('institution') || origRoleHint.contains('museum') || origRoleHint.contains('gallery'),
-    );
+  final originalPostPayload =
+      json['originalPost'] ?? json['original_post'];
+  if (originalPostPayload is Map<String, dynamic>) {
+    final nested = Map<String, dynamic>.from(originalPostPayload);
+    nested.remove('originalPost');
+    nested.remove('original_post');
+    try {
+      originalPost = _communityPostFromBackendJson(nested);
+    } catch (e) {
+      debugPrint('Failed to parse nested original post: $e');
+    }
   }
+
+  final postTypeValue =
+      (json['postType'] ?? json['post_type'] ?? json['type'])?.toString();
+  final originalPostId =
+      (json['originalPostId'] ?? json['original_post_id'])?.toString();
 
   return CommunityPost(
     id: json['id'] as String,
@@ -4676,8 +4681,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     groupId: (json['groupId'] as String?) ?? (json['group_id'] as String?) ?? groupRef?.id,
     artwork: artworkRef,
     distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? (json['distance_km'] as num?)?.toDouble(),
-    postType: json['postType'] as String?,
-    originalPostId: json['originalPostId'] as String?,
+    postType: postTypeValue,
+    originalPostId: originalPostId,
     originalPost: originalPost,
     likeCount: stats?['likes'] as int? ?? json['likes'] as int? ?? json['likeCount'] as int? ?? 0,
     shareCount: stats?['shares'] as int? ?? json['shares'] as int? ?? json['shareCount'] as int? ?? 0,
