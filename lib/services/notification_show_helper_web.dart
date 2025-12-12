@@ -1,4 +1,5 @@
-import 'dart:js_util' as js_util;
+import 'dart:convert';
+import 'dart:js_interop';
 
 import 'package:web/web.dart' as web;
 
@@ -6,14 +7,15 @@ Future<void> showNotification(String title, String body, [Map<String, dynamic>? 
   try {
     final options = web.NotificationOptions(
       body: body,
-      data: data == null ? null : js_util.jsify(data),
+      // Keep payload simple and analyzer-friendly: a JSON string.
+      // (Service workers/handlers can JSON-decode if needed.)
+      data: data == null ? null : jsonEncode(data).toJS,
     );
 
     // If permission not granted, attempt to request it
     if (web.Notification.permission != 'granted') {
-      final status = await js_util.promiseToFuture<String>(
-        web.Notification.requestPermission(),
-      );
+      final statusAny = await (web.Notification.requestPermission() as JSPromise<JSAny?>).toDart;
+      final status = (statusAny as JSString?)?.toDart;
       if (status != 'granted') return;
     }
 
@@ -24,13 +26,13 @@ Future<void> showNotification(String title, String body, [Map<String, dynamic>? 
       // active registration. Some web bindings surface this as a JS Promise
       // that completes with `null`, which can crash if we await it with a
       // non-nullable generic type.
-      final regAny = await js_util.promiseToFuture(swContainer.getRegistration());
+      final regAny = await (swContainer.getRegistration() as JSPromise<JSAny?>).toDart;
       if (regAny != null) {
         final reg = regAny as web.ServiceWorkerRegistration;
-        await js_util.promiseToFuture(reg.showNotification(title, options));
+        await (reg.showNotification(title, options)).toDart;
         return;
       }
-        } catch (_) {
+    } catch (_) {
       // ignore and fallback to in-page Notification
     }
 
@@ -46,7 +48,7 @@ Future<void> showNotification(String title, String body, [Map<String, dynamic>? 
     try {
       web.Notification(title);
     } catch (_) {}
-  } catch (e) {
+  } catch (_) {
     // ignore errors
   }
 }
