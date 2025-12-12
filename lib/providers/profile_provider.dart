@@ -9,6 +9,7 @@ import '../models/user.dart';
 import '../services/user_service.dart';
 import '../services/event_bus.dart';
 import '../models/dao.dart';
+import '../utils/media_url_resolver.dart';
 
 class ProfileProvider extends ChangeNotifier {
   UserProfile? _currentUser;
@@ -33,30 +34,7 @@ class ProfileProvider extends ChangeNotifier {
 
   // Normalize returned URLs (make absolute if backend returns relative paths or IPFS links)
   String _resolveUrl(String? url) {
-    if (url == null || url.isEmpty) {
-      return '';
-    }
-
-    // IPFS handling
-    if (url.startsWith('ipfs://')) {
-      final cid = url.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    }
-
-    // Already absolute
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-
-    // If backend returned a relative path like /uploads/..., prefix with baseUrl
-    try {
-      final base = _apiService.baseUrl;
-      if (url.startsWith('/')) {
-        return base.replaceAll(RegExp(r'/$'), '') + url;
-      }
-      // Otherwise, just prefix
-      return '${base.replaceAll(RegExp(r'/$'), '')}/$url';
-    } catch (_) {
-      return url;
-    }
+    return MediaUrlResolver.resolve(url) ?? '';
   }
 
   // Convert known SVG avatar providers to raster (PNG) so the app renders images only

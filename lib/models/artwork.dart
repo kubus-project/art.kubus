@@ -110,20 +110,6 @@ class Artwork {
   /// Check if artwork is favorite
   bool get isFavorite => status == ArtworkStatus.favorite;
 
-  /// Get rarity color
-  static int getRarityColor(ArtworkRarity rarity) {
-    switch (rarity) {
-      case ArtworkRarity.common:
-        return 0xFF9E9E9E; // Grey
-      case ArtworkRarity.rare:
-        return 0xFF2196F3; // Blue
-      case ArtworkRarity.epic:
-        return 0xFF9C27B0; // Purple
-      case ArtworkRarity.legendary:
-        return 0xFFFF9800; // Orange
-    }
-  }
-
   /// Get rarity multiplier for rewards
   static double getRarityMultiplier(ArtworkRarity rarity) {
     switch (rarity) {
@@ -312,4 +298,3 @@ class Artwork {
     return 'Artwork(id: $id, title: $title, artist: $artist, rarity: $rarity)';
   }
 }
-

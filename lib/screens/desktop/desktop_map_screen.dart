@@ -18,6 +18,7 @@ import '../../models/map_marker_subject.dart';
 import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../utils/map_marker_subject_loader.dart';
+import '../../utils/map_marker_helper.dart';
 import '../../utils/map_search_suggestion.dart';
 import '../../widgets/art_marker_cube.dart';
 import '../../widgets/art_map_view.dart';
@@ -200,7 +201,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _buildMapLayer(ThemeProvider themeProvider) {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, _) {
-        final artworks = _getFilteredArtworks(artworkProvider.artworks);
+        _getFilteredArtworks(artworkProvider.artworks);
         // TileProviders centralizes tile logic (tiles + optional grid overlay) just like mobile MapScreen
         final tileProviders = Provider.of<TileProviders?>(context, listen: false);
         final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
@@ -316,50 +317,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               spreadRadius: 3,
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Marker _buildArtworkMarker(Artwork artwork, ThemeProvider themeProvider) {
-    final isSelected = _selectedArtwork?.id == artwork.id;
-    final hasAR = artwork.arEnabled;
-
-    return Marker(
-      point: artwork.position,
-      width: isSelected ? 56 : 44,
-      height: isSelected ? 56 : 44,
-      child: GestureDetector(
-        onTap: () {
-          unawaited(_selectArtwork(
-            artwork,
-            focusPosition: artwork.position,
-          ));
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? themeProvider.accentColor
-                : (hasAR ? const Color(0xFF4ECDC4) : themeProvider.accentColor.withValues(alpha: 0.8)),
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white,
-              width: isSelected ? 4 : 3,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: themeProvider.accentColor.withValues(alpha: 0.3),
-                blurRadius: isSelected ? 12 : 6,
-                spreadRadius: isSelected ? 2 : 0,
-              ),
-            ],
-          ),
-          child: Icon(
-            hasAR ? Icons.view_in_ar : Icons.location_on,
-            color: Colors.white,
-            size: isSelected ? 28 : 22,
-          ),
         ),
       ),
     );
@@ -1343,10 +1300,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         elevation: 1,
                         child: InkWell(
                           onTap: () {
-                            unawaited(_selectArtwork(
-                              artwork,
-                              focusPosition: artwork.position,
-                            ));
+                            // Find the corresponding marker for this artwork
+                            final marker = _artMarkers.firstWhere(
+                              (m) => m.artworkId == artwork.id,
+                              orElse: () => _artMarkers.first,
+                            );
+                            // Center on marker and show floating card only
+                            _moveCamera(artwork.position, math.max(_effectiveZoom, 15.0));
+                            setState(() => _activeMarker = marker);
                           },
                           borderRadius: BorderRadius.circular(8),
                           child: Padding(
@@ -1837,83 +1798,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _isLoadingMarkers = true;
     try {
       final center = _userLocation ?? _effectiveCenter;
-      final markers = await _mapMarkerService.loadMarkers(
+      final result = await MapMarkerHelper.loadAndHydrateMarkers(
+        context: context,
+        mapMarkerService: _mapMarkerService,
         center: center,
         radiusKm: _searchRadius,
         forceRefresh: force,
       );
-      final filtered =
-          markers.where((marker) => marker.hasValidPosition).toList();
-      await _hydrateMarkersWithArtworks(filtered);
       if (!mounted) return;
       setState(() {
-        _artMarkers = filtered;
+        _artMarkers = result.markers;
       });
-      _lastMarkerFetchCenter = center;
-      _lastMarkerFetchTime = DateTime.now();
+      _lastMarkerFetchCenter = result.center;
+      _lastMarkerFetchTime = result.fetchedAt;
     } finally {
       _isLoadingMarkers = false;
     }
   }
 
   void _queueMarkerRefresh(LatLng center, {required bool fromGesture}) {
-    final lastFetch = _lastMarkerFetchTime;
-    final lastCenter = _lastMarkerFetchCenter;
-    final now = DateTime.now();
+    final shouldRefresh = MapMarkerHelper.shouldRefreshMarkers(
+      newCenter: center,
+      lastCenter: _lastMarkerFetchCenter,
+      lastFetchTime: _lastMarkerFetchTime,
+      distance: _distance,
+      refreshInterval: _markerRefreshInterval,
+      refreshDistanceMeters: _markerRefreshDistanceMeters,
+      hasMarkers: _artMarkers.isNotEmpty,
+    );
 
-    final bool timeElapsed =
-        lastFetch == null || now.difference(lastFetch) >= _markerRefreshInterval;
-    final bool movedEnough = lastCenter == null ||
-        _distance.as(LengthUnit.Meter, lastCenter, center) >= _markerRefreshDistanceMeters;
-
-    if (!timeElapsed && !movedEnough && _artMarkers.isNotEmpty) {
-      return;
-    }
+    if (!shouldRefresh) return;
 
     _markerRefreshDebounce?.cancel();
+    final shouldForce = shouldRefresh;
     _markerRefreshDebounce = Timer(fromGesture ? const Duration(milliseconds: 350) : Duration.zero, () {
-      _loadMarkers(force: timeElapsed || movedEnough);
+      _loadMarkers(force: shouldForce);
     });
-  }
-
-  Future<void> _hydrateMarkersWithArtworks(List<ArtMarker> markers) async {
-    final artworkProvider = context.read<ArtworkProvider>();
-
-    final missingIds = <String>{};
-    for (final marker in markers) {
-      final artworkId = marker.artworkId;
-      if (artworkId == null || artworkId.isEmpty) continue;
-      if (artworkProvider.getArtworkById(artworkId) == null) {
-        missingIds.add(artworkId);
-      }
-    }
-
-    for (final artworkId in missingIds) {
-      try {
-        await artworkProvider.fetchArtworkIfNeeded(artworkId);
-      } catch (e) {
-        debugPrint('DesktopMapScreen: failed to hydrate artwork $artworkId: $e');
-      }
-    }
-
-    // Backfill positions for artworks created without coordinates once a marker exists.
-    for (final marker in markers) {
-      final artworkId = marker.artworkId;
-      if (artworkId == null || artworkId.isEmpty) continue;
-      final artwork = artworkProvider.getArtworkById(artworkId);
-      if (artwork != null && !artwork.hasValidLocation && marker.hasValidPosition) {
-        artworkProvider.addOrUpdateArtwork(
-          artwork.copyWith(
-            position: marker.position,
-            arMarkerId: marker.id,
-            metadata: {
-              ...?artwork.metadata,
-              'linkedMarkerId': marker.id,
-            },
-          ),
-        );
-      }
-    }
   }
 
   Marker _buildPendingMarker(LatLng point, ThemeProvider themeProvider) {
@@ -2074,118 +1994,153 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       metadata: marker.metadata,
     );
 
+    // Use artwork title if available, otherwise marker name
+    final displayTitle = artwork?.title.isNotEmpty == true ? artwork!.title : marker.name;
+    final description = marker.description.isNotEmpty
+        ? marker.description
+        : (artwork?.description ?? '');
+
+    final markerHeight = _computeMarkerOverlayHeight(
+      title: displayTitle,
+      distanceText: distanceText,
+      description: description,
+      hasChips: _hasMetadataChips(marker, artwork),
+      imageHeight: 90,
+      buttonVerticalPadding: 8,
+      buttonTextStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+    );
+
     return Marker(
       point: marker.position,
       width: 260,
-      height: 230,
+      height: markerHeight,
       alignment: Alignment.topCenter,
-      child: Transform.translate(
-        offset: const Offset(0, -115),
-        child: GestureDetector(
-          onTap: () => _openMarkerDetail(marker, artwork),
-          child: Material(
-            color: Colors.transparent,
-            child: Container(
-              width: 240,
-              height: 220,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: scheme.surface.withValues(alpha: 0.96),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: baseColor.withValues(alpha: 0.35)),
-                boxShadow: [
-                  BoxShadow(
-                    color: baseColor.withValues(alpha: 0.28),
-                    blurRadius: 16,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+      child: GestureDetector(
+        onTap: () => _openMarkerDetail(marker, artwork),
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            width: 240,
+            margin: const EdgeInsets.only(bottom: 48),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: scheme.surface.withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: baseColor.withValues(alpha: 0.35)),
+              boxShadow: [
+                BoxShadow(
+                  color: baseColor.withValues(alpha: 0.28),
+                  blurRadius: 16,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row: Title + distance + close button
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        displayTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (distanceText != null) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: baseColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            Icon(Icons.near_me, size: 10, color: baseColor),
+                            const SizedBox(width: 3),
                             Text(
-                              marker.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              distanceText,
                               style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: baseColor,
                               ),
                             ),
-                            if (artwork != null) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                artwork.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
                           ],
                         ),
                       ),
-                      InkWell(
-                        onTap: () => setState(() => _activeMarker = null),
-                        borderRadius: BorderRadius.circular(4),
-                        child: Icon(Icons.close, size: 18, color: scheme.onSurfaceVariant),
-                      ),
+                      const SizedBox(width: 6),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: SizedBox(
-                      height: 90,
-                      width: double.infinity,
-                      child: imageUrl != null
-                          ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _markerImageFallback(baseColor, scheme, marker),
-                              loadingBuilder: (context, child, progress) {
-                                if (progress == null) return child;
-                                return Container(
-                                  color: baseColor.withValues(alpha: 0.12),
-                                  child: const Center(
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  ),
-                                );
-                              },
-                            )
-                          : _markerImageFallback(baseColor, scheme, marker),
+                    InkWell(
+                      onTap: () => setState(() => _activeMarker = null),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Icon(Icons.close, size: 18, color: scheme.onSurfaceVariant),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // Image
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    height: 90,
+                    width: double.infinity,
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => _markerImageFallback(baseColor, scheme, marker),
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return Container(
+                                color: baseColor.withValues(alpha: 0.12),
+                                child: const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              );
+                            },
+                          )
+                        : _markerImageFallback(baseColor, scheme, marker),
                   ),
-                  const SizedBox(height: 8),
+                ),
+                // Description (only if available)
+                if (description.isNotEmpty) ...[
+                  const SizedBox(height: 10),
                   Text(
-                    marker.description.isNotEmpty
-                        ? marker.description
-                        : (artwork?.description ?? 'No description available'),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    description.length > 180 ? '${description.substring(0, 180)}...' : description,
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                ],
+                // Metadata chips
+                if (_hasMetadataChips(marker, artwork)) ...[
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      if (distanceText != null)
-                        _compactChip(scheme, Icons.near_me, distanceText, baseColor),
-                      if (marker.category.isNotEmpty)
-                        _compactChip(scheme, Icons.category_outlined, marker.category, baseColor),
+                      if (artwork != null && artwork.category.isNotEmpty && artwork.category != 'General')
+                        _compactChip(scheme, Icons.palette, artwork.category, baseColor),
+                      if (marker.metadata?['subjectCategory'] != null || marker.metadata?['subject_category'] != null)
+                        _compactChip(
+                          scheme,
+                          Icons.category_outlined,
+                          (marker.metadata!['subjectCategory'] ?? marker.metadata!['subject_category']).toString(),
+                          baseColor,
+                        ),
                       if (marker.metadata?['subjectLabel'] != null || marker.metadata?['subject_type'] != null)
                         _compactChip(
                           scheme,
@@ -2200,33 +2155,149 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           (marker.metadata!['locationName'] ?? marker.metadata!['location']).toString(),
                           baseColor,
                         ),
-                      if (artwork != null)
-                        _compactChip(scheme, Icons.card_giftcard, '${artwork.rewards} POAP', baseColor),
+                      if (artwork != null && artwork.rewards > 0)
+                        _compactChip(scheme, Icons.card_giftcard, '+${artwork.rewards}', baseColor),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: baseColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      ),
-                      onPressed: () => _openMarkerDetail(marker, artwork),
-                      icon: const Icon(Icons.arrow_forward, size: 16),
-                      label: Text(
-                        'More info',
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
-                      ),
+                ],
+                const SizedBox(height: 10),
+                // Action button
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: baseColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    onPressed: () => _openMarkerDetail(marker, artwork),
+                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    label: Text(
+                      'View details',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  double _computeMarkerOverlayHeight({
+    required String title,
+    required String? distanceText,
+    required String description,
+    required bool hasChips,
+    required double imageHeight,
+    required double buttonVerticalPadding,
+    required TextStyle buttonTextStyle,
+  }) {
+    const double cardWidth = 240;
+    const double horizontalPadding = 12;
+    const double verticalPadding = 12;
+    final double contentWidth = cardWidth - (horizontalPadding * 2);
+
+    // Title height (max 2 lines)
+    final titlePainter = TextPainter(
+      text: TextSpan(
+        text: title,
+        style: GoogleFonts.inter(
+          fontWeight: FontWeight.w700,
+          fontSize: 14,
+          height: 1.2,
+        ),
+      ),
+      maxLines: 2,
+      textDirection: TextDirection.ltr,
+    )
+      ..layout(maxWidth: contentWidth);
+    final double titleHeight = titlePainter.size.height;
+
+    // Distance badge height
+    double distanceBadgeHeight = 0;
+    if (distanceText != null && distanceText.isNotEmpty) {
+      final distancePainter = TextPainter(
+        text: TextSpan(
+          text: distanceText,
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )
+        ..layout(maxWidth: contentWidth);
+      // padding vertical 2 + icon size 10 -> height is max(text, icon) + padding*2
+      distanceBadgeHeight = (distancePainter.size.height).clamp(10, 20) + 4;
+    }
+
+    // Close icon height (18)
+    const double closeIconHeight = 18;
+    final double headerHeight = [titleHeight, distanceBadgeHeight, closeIconHeight].reduce((a, b) => a > b ? a : b);
+
+    // Description height (wrap, no maxLines since text trimmed already)
+    double descriptionHeight = 0;
+    if (description.isNotEmpty) {
+      final descriptionPainter = TextPainter(
+        text: TextSpan(
+          text: description,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            height: 1.4,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+        maxLines: null,
+      )
+        ..layout(maxWidth: contentWidth);
+      descriptionHeight = descriptionPainter.size.height;
+    }
+
+    // Chips height (single wrap row approx chip height 20 plus run spacing)
+    final double chipsHeight = hasChips ? 24.0 : 0.0;
+
+    // Button height: text + vertical padding*2 (icon height 16 already fits)
+    final buttonTextPainter = TextPainter(
+      text: TextSpan(text: 'View details', style: buttonTextStyle),
+      textDirection: TextDirection.ltr,
+    )
+      ..layout();
+    final double buttonHeight = buttonTextPainter.size.height + (buttonVerticalPadding * 2);
+
+    // Spacing between sections
+    double spacing = 0;
+    spacing += 10; // after header
+    spacing += 10; // after image
+    if (descriptionHeight > 0) spacing += 10;
+    if (chipsHeight > 0) spacing += 10;
+    spacing += 10; // before button
+
+    // Total container height
+    final double containerHeight = verticalPadding * 2 +
+        headerHeight +
+        imageHeight +
+        descriptionHeight +
+        chipsHeight +
+        buttonHeight +
+        spacing;
+
+    // Marker height includes bottom margin offset (48)
+    return containerHeight + 48;
+  }
+
+  /// Check if marker has any metadata chips to display
+  bool _hasMetadataChips(ArtMarker marker, Artwork? artwork) {
+    return (artwork != null && artwork.category.isNotEmpty && artwork.category != 'General') ||
+        marker.metadata?['subjectCategory'] != null ||
+        marker.metadata?['subject_category'] != null ||
+        marker.metadata?['subjectLabel'] != null ||
+        marker.metadata?['subject_type'] != null ||
+        marker.metadata?['locationName'] != null ||
+        marker.metadata?['location'] != null ||
+        (artwork != null && artwork.rewards > 0);
   }
 
   /// Unified chip widget for displaying metadata with icon
@@ -2317,22 +2388,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
-    setState(() {
-      _activeMarker = marker;
-      _selectedArtwork = artwork;
-      _showFiltersPanel = false;
-    });
-
     final resolvedArtwork = await _ensureLinkedArtworkLoaded(marker, initial: artwork);
     if (!mounted) return;
 
-    setState(() {
-      _selectedArtwork = resolvedArtwork;
-    });
-
     if (resolvedArtwork == null) {
       await _showMarkerInfoFallback(marker);
+      return;
     }
+
+    // Open the left side panel with artwork details
+    setState(() {
+      _selectedArtwork = resolvedArtwork;
+      _showFiltersPanel = false;
+    });
   }
 
   Future<Artwork?> _ensureLinkedArtworkLoaded(ArtMarker marker, {Artwork? initial}) async {
@@ -2472,6 +2540,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         setState(() => _pendingMarkerLocation = center);
       },
       initialSubjectType: MarkerSubjectType.artwork,
+      blockedArtworkIds: _artMarkers
+          .where((m) => (m.artworkId ?? '').isNotEmpty)
+          .map((m) => m.artworkId!)
+          .toSet(),
+      useSheet: true,
     );
 
     if (!mounted || result == null) return;
@@ -2575,6 +2648,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         });
         return true;
       }
+      return false;
+    } on StateError catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              e.message,
+              style: GoogleFonts.inter(color: Colors.white),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      debugPrint('DesktopMapScreen: duplicate marker prevented: $e');
       return false;
     } catch (e) {
       debugPrint('DesktopMapScreen: error creating marker: $e');

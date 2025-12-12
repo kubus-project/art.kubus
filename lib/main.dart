@@ -29,6 +29,7 @@ import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/art/ar_screen.dart';
+import 'screens/art/art_detail_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
@@ -117,133 +118,125 @@ class _AppLauncherState extends State<AppLauncher> {
   }
 
   Future<void> _init() async {
-    const initTimeout = Duration(seconds: 6); // safe fallback for web reload stalls
-      try {
-        // Previously we initialized the user store on app startup; we now move
-        // initialization to wallet registration/profile creation flows to avoid
-        // unnecessarily initializing persisted caches for anonymous users.
-        // Keep a small comment here to avoid losing historical context.
-      // Initialize push notification service and request permission so the
-      // permission state is persisted early and notifications can be shown
-      // immediately when events arrive.
-      try {
-        await PushNotificationService().initialize();
-        // Request permission (may prompt user). It's safe to await; service
-        // will persist the result and future calls will be no-ops if denied.
-        await PushNotificationService().requestPermission();
-        debugPrint('AppLauncher: PushNotificationService initialized and permission requested.');
-      } catch (e) {
-        debugPrint('AppLauncher: PushNotificationService init/requestPermission failed: $e');
-      }
+    const initTimeout = Duration(seconds: 6);
+    try {
+      // Initialize push notification service and (optionally) request permission
+      // early so the preference is persisted for subsequent launches.
+      final service = PushNotificationService();
+      await service.initialize().timeout(initTimeout);
+      await service.requestPermission().timeout(initTimeout);
+      debugPrint('AppLauncher: PushNotificationService initialized.');
     } on TimeoutException catch (e) {
-      debugPrint('AppLauncher: UserService.initialize timed out after ${initTimeout.inSeconds}s: $e');
+      debugPrint('AppLauncher: PushNotificationService init timed out after ${initTimeout.inSeconds}s: $e');
     } catch (e, st) {
-      debugPrint('AppLauncher: UserService.initialize failed: $e\n$st');
+      debugPrint('AppLauncher: PushNotificationService init failed: $e\n$st');
     } finally {
-      // Ensure the app proceeds even if initialization failed or timed out.
       if (mounted) setState(() => _initialized = true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Create a single ThemeProvider instance and make it available for the
-    // entire app lifecycle (splash + main) to avoid `ProviderNotFound` risks
-    // and to keep the theme consistent across both app states.
-    final topTheme = ThemeProvider();
-    if (!_initialized) {
-      debugPrint('AppLauncher: Initialization not complete, showing splash screen.');
-      debugPrint('AppLauncher: Temporary ThemeProvider created with: \\\${topTheme.lightTheme}, dark theme: \\\${topTheme.darkTheme}, mode: \\\${topTheme.themeMode}.');
-      return ChangeNotifierProvider<ThemeProvider>.value(
-        value: topTheme,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: topTheme.lightTheme,
-          darkTheme: topTheme.darkTheme,
-          themeMode: topTheme.themeMode,
-          home: Scaffold(
-            body: const AppLoading(),
-          ),
-        ),
-      );
-    }
-    
-    // Ensure ThemeProvider is present at the top of the tree for consumers.
-    // Provide ThemeProvider here (created once) to be consistent across splash and main UI.
-    return ChangeNotifierProvider<ThemeProvider>.value(
-      value: topTheme,
-      child: MultiProvider(
-      providers: [
-        Provider<SolanaWalletService>(
-          create: (_) => SolanaWalletService(),
-        ),
-        ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
-        ChangeNotifierProvider(create: (context) => ConfigProvider()),
-        ChangeNotifierProvider(create: (context) => PlatformProvider()),
-        ChangeNotifierProvider(create: (context) => ConnectionProvider()),
-        ChangeNotifierProvider(create: (context) => ProfileProvider()),
-        ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
-        ChangeNotifierProvider(create: (context) => ChatProvider()),
-        ChangeNotifierProvider(create: (context) => NotificationProvider()),
-        ChangeNotifierProxyProvider<NotificationProvider, RecentActivityProvider>(
-          create: (context) => RecentActivityProvider(),
-          update: (context, notificationProvider, recentActivityProvider) {
-            final provider = recentActivityProvider ?? RecentActivityProvider();
-            provider.bindNotificationProvider(notificationProvider);
-            if (!provider.initialized && !provider.isLoading) {
-              unawaited(provider.initialize());
-            }
-            return provider;
-          },
-        ),
-        ChangeNotifierProvider(
-          create: (context) => Web3Provider(
-            solanaWalletService: context.read<SolanaWalletService>(),
-          ),
-        ),
-        // ThemeProvider is provided above; no duplicate provider here.
-        ChangeNotifierProvider(create: (context) => NavigationProvider()),
-        ChangeNotifierProvider(create: (context) => TaskProvider()),
-        ChangeNotifierProvider(create: (context) => CacheProvider()),
-        ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
-        ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
-          create: (context) {
-            final artworkProvider = ArtworkProvider();
-            artworkProvider.setTaskProvider(context.read<TaskProvider>());
-            return artworkProvider;
-          },
-          update: (context, taskProvider, artworkProvider) {
-            artworkProvider?.setTaskProvider(taskProvider);
-            return artworkProvider ?? ArtworkProvider()..setTaskProvider(taskProvider);
-          },
-        ),
-        ChangeNotifierProvider(create: (context) => CollectiblesProvider()),
-        ChangeNotifierProvider(create: (context) => InstitutionProvider()),
-        ChangeNotifierProvider(
-          create: (context) => DAOProvider(
-            solanaWalletService: context.read<SolanaWalletService>(),
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (context) => WalletProvider(
-            solanaWalletService: context.read<SolanaWalletService>(),
-          ),
-        ),
-        // Provide TileProviders so tiles + grid overlay are centralized and
-        // respond to ThemeProvider updates. Dispose manually when the provider
-        // tree is torn down.
-        Provider<TileProviders>(
-          create: (context) => TileProviders(context.read<ThemeProvider>()),
-          dispose: (context, value) => value.dispose(),
-        ),
-      ],
-      child: const ArtKubus(),
+    // Create ThemeProvider once at the top of the widget tree so theme and
+    // accent state stays stable across splash + main UI.
+    return ChangeNotifierProvider<ThemeProvider>(
+      create: (_) => ThemeProvider(),
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          if (!_initialized) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              theme: themeProvider.lightTheme,
+              darkTheme: themeProvider.darkTheme,
+              themeMode: themeProvider.themeMode,
+              home: Scaffold(body: const AppLoading()),
+            );
+          }
+
+          return MultiProvider(
+            providers: [
+              Provider<SolanaWalletService>(
+                create: (_) => SolanaWalletService(),
+              ),
+              ChangeNotifierProvider(create: (context) => AppRefreshProvider()),
+              ChangeNotifierProvider(create: (context) => ConfigProvider()),
+              ChangeNotifierProvider(create: (context) => PlatformProvider()),
+              ChangeNotifierProvider(create: (context) => ConnectionProvider()),
+              ChangeNotifierProvider(create: (context) => ProfileProvider()),
+              ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
+              ChangeNotifierProxyProvider<AppRefreshProvider, ChatProvider>(
+                create: (context) => ChatProvider(),
+                update: (context, appRefreshProvider, chatProvider) {
+                  final provider = chatProvider ?? ChatProvider();
+                  provider.bindToRefresh(appRefreshProvider);
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider<AppRefreshProvider, NotificationProvider>(
+                create: (context) => NotificationProvider(),
+                update: (context, appRefreshProvider, notificationProvider) {
+                  final provider = notificationProvider ?? NotificationProvider();
+                  provider.bindToRefresh(appRefreshProvider);
+                  return provider;
+                },
+              ),
+              ChangeNotifierProxyProvider<NotificationProvider, RecentActivityProvider>(
+                create: (context) => RecentActivityProvider(),
+                update: (context, notificationProvider, recentActivityProvider) {
+                  final provider = recentActivityProvider ?? RecentActivityProvider();
+                  provider.bindNotificationProvider(notificationProvider);
+                  if (!provider.initialized && !provider.isLoading) {
+                    unawaited(provider.initialize());
+                  }
+                  return provider;
+                },
+              ),
+              ChangeNotifierProvider(
+                create: (context) => Web3Provider(
+                  solanaWalletService: context.read<SolanaWalletService>(),
+                ),
+              ),
+              ChangeNotifierProvider(create: (context) => NavigationProvider()),
+              ChangeNotifierProvider(create: (context) => TaskProvider()),
+              ChangeNotifierProvider(create: (context) => CacheProvider()),
+              ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
+              ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
+                create: (context) {
+                  final artworkProvider = ArtworkProvider();
+                  artworkProvider.setTaskProvider(context.read<TaskProvider>());
+                  return artworkProvider;
+                },
+                update: (context, taskProvider, artworkProvider) {
+                  artworkProvider?.setTaskProvider(taskProvider);
+                  return artworkProvider ?? ArtworkProvider()..setTaskProvider(taskProvider);
+                },
+              ),
+              ChangeNotifierProvider(create: (context) => CollectiblesProvider()),
+              ChangeNotifierProvider(create: (context) => InstitutionProvider()),
+              ChangeNotifierProvider(
+                create: (context) => DAOProvider(
+                  solanaWalletService: context.read<SolanaWalletService>(),
+                ),
+              ),
+              ChangeNotifierProvider(
+                create: (context) => WalletProvider(
+                  solanaWalletService: context.read<SolanaWalletService>(),
+                ),
+              ),
+              Provider<TileProviders>(
+                create: (context) => TileProviders(context.read<ThemeProvider>()),
+                dispose: (context, value) => value.dispose(),
+              ),
+            ],
+            child: const ArtKubus(),
+          );
+        },
       ),
     );
   }
 }
  
-
+ 
 
 class ArtKubus extends StatefulWidget {
   const ArtKubus({super.key});
@@ -256,35 +249,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // Cache already initialized at startup (blocking call in main)
     WidgetsBinding.instance.addObserver(this);
-    // Ensure ChatProvider initializes sockets and subscriptions as soon as
-    // the widget tree is available so incoming socket events (unread
-    // counts, read receipts) are processed immediately.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      try {
-        final cp = Provider.of<ChatProvider>(context, listen: false);
-        await cp.initialize();
-        if (!mounted) return;
-        debugPrint('ArtKubus: ChatProvider.initialize called from ArtKubus.initState');
-        try {
-          // Bind NotificationProvider to AppRefreshProvider so screens can trigger
-          // notification refreshes centrally (home/community auto-refresh).
-          final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
-          final notif = Provider.of<NotificationProvider>(context, listen: false);
-          final profile = Provider.of<ProfileProvider>(context, listen: false);
-          final wallet = profile.currentUser?.walletAddress;
-          await notif.initialize(walletOverride: wallet);
-          notif.bindToRefresh(appRefresh);
-          cp.bindToRefresh(appRefresh);
-          debugPrint('ArtKubus: NotificationProvider + ChatProvider bound to AppRefreshProvider');
-        } catch (e) {
-          debugPrint('ArtKubus: failed to bind NotificationProvider to AppRefreshProvider: $e');
-        }
-      } catch (e) {
-        debugPrint('ArtKubus.initState: ChatProvider.initialize failed: $e');
-      }
-    });
   }
 
   @override
@@ -320,6 +285,23 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           routes: {
             '/main': (context) => const MainApp(),
             '/ar': (context) => const ARScreen(),
+            '/artwork': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              String? artworkId;
+              if (args is Map) {
+                final raw = args['artworkId'] ?? args['id'] ?? args['artwork_id'];
+                if (raw != null) artworkId = raw.toString();
+              } else if (args is String) {
+                artworkId = args;
+              }
+              artworkId = artworkId?.trim();
+              if (artworkId == null || artworkId.isEmpty) {
+                return const Scaffold(
+                  body: Center(child: Text('Artwork not found')),
+                );
+              }
+              return ArtDetailScreen(artworkId: artworkId);
+            },
             '/wallet_connect': (context) => const ConnectWallet(),
             '/connect_wallet': (context) => const ConnectWallet(),
             '/connect-wallet': (context) => const ConnectWallet(),

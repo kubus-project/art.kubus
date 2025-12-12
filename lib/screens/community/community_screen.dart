@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/inline_loading.dart';
@@ -20,12 +21,16 @@ import 'dart:io';
 import 'dart:math' as math;
 import '../../providers/themeprovider.dart';
 import '../../providers/config_provider.dart';
+import '../../providers/artwork_provider.dart';
+import '../../providers/institution_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/block_list_service.dart';
 import '../../services/push_notification_service.dart';
+import '../map_screen.dart';
 import 'user_profile_screen.dart';
 import 'post_detail_screen.dart';
 import 'group_feed_screen.dart';
@@ -377,7 +382,15 @@ class _CommunityScreenState extends State<CommunityScreen>
       posts,
       walletAddress: walletAddress,
     );
-    return posts;
+
+    final blocked = await BlockListService().loadBlockedWallets();
+    if (blocked.isEmpty) return posts;
+
+    return posts.where((post) {
+      final authorWallet = WalletUtils.canonical(post.authorWallet);
+      if (authorWallet.isEmpty) return true;
+      return !blocked.contains(authorWallet);
+    }).toList();
   }
 
   Future<void> _loadInitialFeeds({bool force = false, String? walletAddress}) async {
@@ -3041,6 +3054,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           onPressed: isCreating || nameController.text.trim().isEmpty
                               ? null
                               : () async {
+                                  final sheetNavigator = Navigator.of(sheetContext);
                                   setModalState(() => isCreating = true);
                                   try {
                                     final created = await hub.createGroup(
@@ -3051,7 +3065,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       isPublic: isPublic,
                                     );
                                     if (!mounted) return;
-                                    Navigator.pop(sheetContext);
+                                    sheetNavigator.pop();
                                     if (created != null) {
                                       _showSnack('Group "${created.name}" created!');
                                       _openGroupFeed(created);
@@ -3099,193 +3113,352 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   // Navigation and interaction methods
-  void _showSearchBottomSheet() {
+  void _showSearchBottomSheet({String initialType = 'profiles', String? initialQuery}) {
     if (!mounted) return;
     final sheetContext = context;
-    // Basic profile search in bottom sheet. For now this displays profiles (users).
-    // TODO: Expand to include artworks, institutions, and in-app screen search.
-    final sheetSearchController = TextEditingController();
     final backend = BackendApiService();
+    final sheetSearchController = TextEditingController(text: initialQuery ?? '');
+
+    String searchType = initialType;
     List<Map<String, dynamic>> results = [];
     bool isLoading = false;
+    Timer? debounce;
+    int requestId = 0;
+
+    Future<void> runSearch(StateSetter setModalState, {String? overrideQuery}) async {
+      final query = (overrideQuery ?? sheetSearchController.text).trim();
+      final currentType = searchType;
+
+      if (query.isEmpty) {
+        setModalState(() {
+          results.clear();
+          isLoading = false;
+        });
+        return;
+      }
+
+      final myRequest = ++requestId;
+      setModalState(() => isLoading = true);
+
+      try {
+        List<Map<String, dynamic>> list = [];
+        if (currentType == 'profiles') {
+          final resp = await backend.search(query: query, type: 'profiles', limit: 20);
+          list = _extractSearchResults(resp, 'profiles');
+        } else if (currentType == 'posts') {
+          final resp = await backend.search(query: query, type: 'posts', limit: 20);
+          list = _extractSearchResults(resp, 'posts');
+        } else if (currentType == 'artworks') {
+          final artworkProvider = Provider.of<ArtworkProvider>(sheetContext, listen: false);
+          list = artworkProvider.artworks
+              .where((a) {
+                final q = query.toLowerCase();
+                return a.title.toLowerCase().contains(q) || a.artist.toLowerCase().contains(q);
+              })
+              .take(30)
+              .map((a) => {
+                    'id': a.id,
+                    'title': a.title,
+                    'artistName': a.artist,
+                    'imageUrl': a.imageUrl,
+                  })
+              .toList();
+        } else if (currentType == 'institutions') {
+          final institutionProvider = Provider.of<InstitutionProvider>(sheetContext, listen: false);
+          final q = query.toLowerCase();
+          list = institutionProvider.institutions
+              .where((i) =>
+                  i.name.toLowerCase().contains(q) ||
+                  i.description.toLowerCase().contains(q) ||
+                  i.address.toLowerCase().contains(q))
+              .take(30)
+              .map((i) => {
+                    'id': i.id,
+                    'name': i.name,
+                    'type': i.type,
+                    'address': i.address,
+                    'latitude': i.latitude,
+                    'longitude': i.longitude,
+                  })
+              .toList();
+        } else if (currentType == 'screens') {
+          final q = query.toLowerCase();
+          list = NavigationProvider.screenDefinitions.entries
+              .where((e) => e.value.name.toLowerCase().contains(q))
+              .map((e) => {
+                    'screenKey': e.key,
+                    'name': e.value.name,
+                    'icon': e.value.icon,
+                  })
+              .toList();
+        }
+
+        if (!mounted) return;
+        if (myRequest != requestId) return;
+        setModalState(() {
+          results = list;
+          isLoading = false;
+        });
+      } catch (e) {
+        debugPrint('Community search error: $e');
+        if (!mounted) return;
+        if (myRequest != requestId) return;
+        setModalState(() => isLoading = false);
+      }
+    }
 
     showModalBottomSheet(
       context: sheetContext,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outline,
-                  borderRadius: BorderRadius.circular(2),
+        builder: (context, setModalState) {
+          final scheme = Theme.of(context).colorScheme;
+          final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+
+          if (sheetSearchController.text.trim().isNotEmpty && results.isEmpty && !isLoading) {
+            Future.microtask(() => runSearch(setModalState));
+          }
+
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: scheme.outline.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: TextField(
-                  controller: sheetSearchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search artists, artworks, collections...',
-                    hintStyle: TextStyle(
-                      fontSize:
-                          MediaQuery.of(context).size.width < 400 ? 14 : 16,
-                    ),
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Theme.of(context).colorScheme.primaryContainer,
-                    contentPadding: EdgeInsets.symmetric(
-                      vertical:
-                          MediaQuery.of(context).size.width < 400 ? 12 : 16,
-                      horizontal: 16,
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildSearchTypeChip(
+                          label: 'Profiles',
+                          selected: searchType == 'profiles',
+                          scheme: scheme,
+                          themeProvider: themeProvider,
+                          onTap: () {
+                            setModalState(() {
+                              searchType = 'profiles';
+                              results.clear();
+                            });
+                            runSearch(setModalState);
+                          },
+                        ),
+                        _buildSearchTypeChip(
+                          label: 'Artworks',
+                          selected: searchType == 'artworks',
+                          scheme: scheme,
+                          themeProvider: themeProvider,
+                          onTap: () {
+                            setModalState(() {
+                              searchType = 'artworks';
+                              results.clear();
+                            });
+                            runSearch(setModalState);
+                          },
+                        ),
+                        _buildSearchTypeChip(
+                          label: 'Institutions',
+                          selected: searchType == 'institutions',
+                          scheme: scheme,
+                          themeProvider: themeProvider,
+                          onTap: () {
+                            setModalState(() {
+                              searchType = 'institutions';
+                              results.clear();
+                            });
+                            runSearch(setModalState);
+                          },
+                        ),
+                        _buildSearchTypeChip(
+                          label: 'Screens',
+                          selected: searchType == 'screens',
+                          scheme: scheme,
+                          themeProvider: themeProvider,
+                          onTap: () {
+                            setModalState(() {
+                              searchType = 'screens';
+                              results.clear();
+                            });
+                            runSearch(setModalState);
+                          },
+                        ),
+                        _buildSearchTypeChip(
+                          label: 'Posts',
+                          selected: searchType == 'posts',
+                          scheme: scheme,
+                          themeProvider: themeProvider,
+                          onTap: () {
+                            setModalState(() {
+                              searchType = 'posts';
+                              results.clear();
+                            });
+                            runSearch(setModalState);
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                  style: TextStyle(
-                    fontSize: MediaQuery.of(context).size.width < 400 ? 14 : 16,
-                  ),
-                  onChanged: (q) async {
-                    final query = q.trim();
-                    if (query.isEmpty) {
-                      setModalState(() {
-                        results.clear();
-                      });
-                      return;
-                    }
-                    try {
-                      setModalState(() => isLoading = true);
-                      final resp = await backend.search(
-                          query: query, type: 'profiles', limit: 20);
-                      final list = <Map<String, dynamic>>[];
-                      if (resp['success'] == true) {
-                        if (resp['results'] is Map<String, dynamic>) {
-                          final data = resp['results'] as Map<String, dynamic>;
-                          final profiles =
-                              (data['profiles'] as List<dynamic>?) ??
-                                  (data['results'] as List<dynamic>?) ??
-                                  [];
-                          for (final d in profiles) {
-                            try {
-                              list.add(d as Map<String, dynamic>);
-                            } catch (_) {}
-                          }
-                        } else if (resp['data'] is List) {
-                          for (final d in resp['data']) {
-                            try {
-                              list.add(d as Map<String, dynamic>);
-                            } catch (_) {}
-                          }
-                        } else if (resp['data'] is Map<String, dynamic>) {
-                          final data = resp['data'] as Map<String, dynamic>;
-                          final profiles =
-                              (data['profiles'] as List<dynamic>?) ?? [];
-                          for (final d in profiles) {
-                            try {
-                              list.add(d as Map<String, dynamic>);
-                            } catch (_) {}
-                          }
-                        }
-                      }
-                      if (!mounted) return;
-                      setModalState(() {
-                        results = list;
-                        isLoading = false;
-                      });
-                    } catch (e) {
-                      debugPrint('Community search error: $e');
-                      if (mounted) setModalState(() => isLoading = false);
-                    }
-                  },
                 ),
-              ),
-              Expanded(
-                child: isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : results.isEmpty
-                        ? ListView(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            children: [
-                              Padding(
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: TextField(
+                    controller: sheetSearchController,
+                    decoration: InputDecoration(
+                      hintText: searchType == 'profiles'
+                          ? 'Search people…'
+                          : searchType == 'artworks'
+                              ? 'Search artworks…'
+                              : searchType == 'institutions'
+                                  ? 'Search institutions…'
+                                  : searchType == 'screens'
+                                      ? 'Search screens…'
+                                      : 'Search posts…',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      filled: true,
+                      fillColor: scheme.surfaceContainerHighest,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    ),
+                    onChanged: (_) {
+                      debounce?.cancel();
+                      debounce = Timer(const Duration(milliseconds: 250), () {
+                        if (!mounted) return;
+                        runSearch(setModalState);
+                      });
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : results.isEmpty
+                          ? Center(
+                              child: Padding(
                                 padding: const EdgeInsets.all(24),
                                 child: Text(
-                                  'No results',
+                                  sheetSearchController.text.trim().isEmpty ? 'Start typing to search' : 'No results',
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.4),
+                                    color: scheme.onSurface.withValues(alpha: 0.45),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            ],
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            itemCount: results.length,
-                            itemBuilder: (ctx, idx) {
-                              final s = results[idx];
-                              final username = s['username'] ??
-                                  s['wallet_address'] ??
-                                  s['wallet'];
-                              final display =
-                                  s['displayName'] ?? s['display_name'] ?? '';
-                              final avatar = s['avatar'] ??
-                                  s['avatar_url'] ??
-                                  s['profileImageUrl'] ??
-                                  '';
-                              final walletAddr = (s['wallet_address'] ??
-                                          s['wallet'] ??
-                                          s['walletAddress'])
-                                      ?.toString() ??
-                                  '';
-                              final title = (display ?? username)?.toString();
-                              final subtitle = walletAddr.isNotEmpty
-                                  ? walletAddr
-                                  : (username ?? '').toString();
-                              return ListTile(
-                                leading: AvatarWidget(
-                                    avatarUrl: (avatar != null &&
-                                            avatar.toString().isNotEmpty)
-                                        ? avatar.toString()
-                                        : null,
-                                    wallet: subtitle,
-                                    radius: 20,
-                                    allowFabricatedFallback: false),
-                                title: Text(title ?? ''),
-                                subtitle: Text(subtitle),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  if (walletAddr.isNotEmpty) {
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (_) => UserProfileScreen(
-                                                userId: walletAddr)));
-                                  }
-                                },
-                              );
-                            },
-                          ),
-              ),
-            ],
-          ),
+                            )
+                          : ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: results.length,
+                              itemBuilder: (ctx, idx) {
+                                final result = results[idx];
+                                return _buildSearchResultTile(
+                                  result: result,
+                                  searchType: searchType,
+                                  themeProvider: themeProvider,
+                                  scheme: scheme,
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _handleSearchSelection(searchType, result);
+                                  },
+                                );
+                              },
+                            ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    ).whenComplete(() {
+      debounce?.cancel();
+      sheetSearchController.dispose();
+    });
+  }
+
+  Widget _buildSearchTypeChip({
+    required String label,
+    required bool selected,
+    required ColorScheme scheme,
+    required ThemeProvider themeProvider,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => onTap(),
+        selectedColor: themeProvider.accentColor.withValues(alpha: 0.2),
+        labelStyle: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: selected ? scheme.onSurface : scheme.onSurface.withValues(alpha: 0.7),
         ),
       ),
     );
+  }
+
+  void _handleSearchSelection(String type, Map<String, dynamic> result) {
+    if (type == 'profiles') {
+      final walletAddr = (result['wallet_address'] ?? result['wallet'] ?? result['walletAddress'] ?? result['id'])?.toString() ?? '';
+      if (walletAddr.isNotEmpty) {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => UserProfileScreen(userId: walletAddr)));
+      }
+      return;
+    }
+
+    if (type == 'artworks') {
+      final id = (result['id'] ?? result['artworkId'] ?? result['artwork_id'])?.toString() ?? '';
+      if (id.isNotEmpty) {
+        Navigator.pushNamed(context, '/artwork', arguments: {'artworkId': id});
+      }
+      return;
+    }
+
+    if (type == 'institutions') {
+      final lat = (result['latitude'] as num?)?.toDouble() ?? (result['lat'] as num?)?.toDouble();
+      final lng = (result['longitude'] as num?)?.toDouble() ?? (result['lng'] as num?)?.toDouble();
+      if (lat != null && lng != null) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MapScreen(
+              initialCenter: LatLng(lat, lng),
+              initialZoom: 15,
+              autoFollow: false,
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (type == 'screens') {
+      final screenKey = (result['screenKey'] ?? result['key'])?.toString() ?? '';
+      if (screenKey.isNotEmpty) {
+        Provider.of<NavigationProvider>(context, listen: false).navigateToScreen(context, screenKey);
+      }
+      return;
+    }
+
+    if (type == 'posts') {
+      final postId = (result['id'] ?? result['postId'] ?? result['post_id'])?.toString() ?? '';
+      if (postId.isNotEmpty) {
+        PostDetailScreen.openById(context, postId);
+      }
+    }
   }
 
   Future<void> _showNotifications() async {
@@ -4989,6 +5162,107 @@ class _CommunityScreenState extends State<CommunityScreen>
         trailing: const Icon(Icons.add_circle_outline, size: 20),
         onTap: onTap,
       );
+    } else if (searchType == 'institutions') {
+      final name = result['name'] ?? result['title'] ?? 'Institution';
+      final type = result['type'] ?? '';
+      final address = result['address'] ?? '';
+
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            Icons.location_city,
+            color: themeProvider.accentColor,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          name.toString(),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          [type, address].where((e) => e.toString().trim().isNotEmpty).join(' • '),
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+        onTap: onTap,
+      );
+    } else if (searchType == 'screens') {
+      final name = result['name'] ?? 'Screen';
+      final icon = result['icon'] as IconData? ?? Icons.open_in_new;
+
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: themeProvider.accentColor, size: 20),
+        ),
+        title: Text(
+          name.toString(),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          'Open screen',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+        onTap: onTap,
+      );
+    } else if (searchType == 'posts') {
+      final content = (result['content'] ?? result['text'] ?? result['message'] ?? '').toString();
+      final author = (result['authorName'] ?? result['author_name'] ?? result['author'] ?? 'Post').toString();
+      final snippet = content.trim().isNotEmpty ? content.trim() : 'Open post';
+
+      return ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: themeProvider.accentColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(Icons.article_outlined, color: themeProvider.accentColor, size: 20),
+        ),
+        title: Text(
+          snippet,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        subtitle: Text(
+          author,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(Icons.chevron_right, size: 20),
+        onTap: onTap,
+      );
     }
 
     // Default tile
@@ -5431,17 +5705,12 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   // Interaction methods
   void _toggleLike(int index) async {
-    debugPrint('DEBUG: _toggleLike called for index: $index');
     if (index >= _communityPosts.length) {
-      debugPrint(
-          'DEBUG: Index $index is out of bounds (posts length: ${_communityPosts.length})');
       return;
     }
 
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
-    debugPrint(
-        'DEBUG: Post ${post.id} was liked: $wasLiked, count: ${post.likeCount}');
     final walletAddress = Provider.of<WalletProvider>(context, listen: false)
         .currentWalletAddress;
 
@@ -5451,8 +5720,6 @@ class _CommunityScreenState extends State<CommunityScreen>
         post,
         currentUserWallet: walletAddress,
       );
-      debugPrint(
-          'DEBUG: Service call completed successfully - liked: ${post.isLiked}, count: ${post.likeCount}');
 
       if (!mounted) return;
       // Rebuild UI to reflect the updated post state
@@ -5466,7 +5733,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
       );
     } catch (e) {
-      debugPrint('DEBUG: Error in togglePostLike: $e');
+      debugPrint('CommunityScreen: togglePostLike failed: $e');
       // CommunityService performs rollback on error; ensure UI is refreshed
       setState(() {});
       if (!mounted) return;
@@ -7227,19 +7494,9 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   void _filterByTag(String tag) {
-    // TODO: Implement tag filtering - for now show a snackbar
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Search posts with #$tag'),
-        action: SnackBarAction(
-          label: 'Search',
-          onPressed: () {
-            // Could open search with pre-filled tag
-            _showSearchBottomSheet();
-          },
-        ),
-      ),
-    );
+    final cleaned = tag.replaceAll('#', '').trim();
+    if (cleaned.isEmpty) return;
+    _showSearchBottomSheet(initialType: 'posts', initialQuery: '#$cleaned');
   }
 
   void _searchMention(String mention) {
@@ -7248,20 +7505,19 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   void _openLocationOnMap(CommunityLocation location) {
-    // TODO: Navigate to map screen centered on location
-    if (location.lat != null && location.lng != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Location: ${location.name ?? 'Map view'}'),
-          action: SnackBarAction(
-            label: 'View',
-            onPressed: () {
-              // Could navigate to map screen
-            },
-          ),
+    final lat = location.lat;
+    final lng = location.lng;
+    if (lat == null || lng == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapScreen(
+          initialCenter: LatLng(lat, lng),
+          initialZoom: 15,
+          autoFollow: false,
         ),
-      );
-    }
+      ),
+    );
   }
 
   void _openArtworkDetail(CommunityArtworkReference artwork) {

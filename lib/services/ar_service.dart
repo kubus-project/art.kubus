@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
+import 'storage_config.dart';
 
 /// Professional AR Service using Google ARCore Scene Viewer and ARKit Quick Look
 /// Supports IPFS models via HTTP gateways
@@ -29,8 +30,8 @@ class ARService {
     bool resizable = true,
   }) async {
     try {
-      // Handle IPFS URLs - convert to HTTP gateway
-      String resolvedUrl = _resolveIPFSUrl(modelUrl);
+      // Resolve IPFS/relative URLs via centralized storage config
+      final resolvedUrl = StorageConfig.resolveUrl(modelUrl) ?? modelUrl;
 
       // For Android: Use ARCore Scene Viewer
       if (Platform.isAndroid) {
@@ -120,17 +121,6 @@ class ARService {
       debugPrint('Error launching iOS AR viewer: $e');
       return false;
     }
-  }
-
-  /// Convert IPFS URLs to HTTP gateway URLs
-  String _resolveIPFSUrl(String url) {
-    if (url.startsWith('ipfs://')) {
-      final cid = url.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    } else if (url.contains('/ipfs/') && !url.startsWith('http')) {
-      return 'https://ipfs.io$url';
-    }
-    return url;
   }
 
   /// Check if the device supports AR features

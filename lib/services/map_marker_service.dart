@@ -136,6 +136,29 @@ class MapMarkerService {
     String? modelURL,
   }) async {
     try {
+      if (artworkId != null && artworkId.isNotEmpty) {
+        // Local cache check
+        final alreadyHasMarker = _cachedMarkers.any(
+          (m) => (m.artworkId ?? '').isNotEmpty && m.artworkId == artworkId,
+        );
+        if (alreadyHasMarker) {
+          throw StateError('Marker already exists for artwork $artworkId');
+        }
+
+        // Remote check (fetch nearby markers to ensure uniqueness)
+        final nearby = await _artMarkerService.fetchMarkers(
+          latitude: location.latitude,
+          longitude: location.longitude,
+          radiusKm: 25,
+        );
+        final remoteHas = nearby.any(
+          (m) => (m.artworkId ?? '').isNotEmpty && m.artworkId == artworkId,
+        );
+        if (remoteHas) {
+          throw StateError('Marker already exists for artwork $artworkId');
+        }
+      }
+
       final hasCid = modelCID?.isNotEmpty ?? false;
       final hasUrl = modelURL?.isNotEmpty ?? false;
       final storageProvider = hasCid && hasUrl

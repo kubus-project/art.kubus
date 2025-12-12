@@ -92,7 +92,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_themeKey, _themeMode.index);
-      await prefs.setInt(_accentColorKey, _accentColor.value);
+      await prefs.setInt(_accentColorKey, _accentColor.toARGB32());
     } catch (e) {
       debugPrint('Error saving theme preferences: $e');
     }

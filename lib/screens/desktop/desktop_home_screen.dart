@@ -817,17 +817,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             scrollDirection: Axis.horizontal,
             child: Row(
               children: quickScreens.map((screen) {
-                final color = (screen['color'] as Color?) ?? themeProvider.accentColor;
-                final icon = screen['icon'] as IconData? ?? Icons.arrow_forward;
-                final key = screen['key']?.toString() ?? '';
                 return Padding(
                   padding: const EdgeInsets.only(right: 12),
                   child: _buildQuickActionCard(
-                    screen['name']?.toString() ?? 'Open',
-                    icon,
-                    color,
-                    () => _handleQuickAction(key),
-                    visitCount: screen['visitCount'] as int? ?? 0,
+                    screen.name,
+                    screen.icon,
+                    themeProvider.accentColor,
+                    () => _handleQuickAction(screen.key),
+                    visitCount: screen.visitCount,
                   ),
                 );
               }).toList(),

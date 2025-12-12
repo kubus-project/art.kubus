@@ -3,10 +3,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/artwork_provider.dart';
+import '../../../providers/collectibles_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/artwork.dart';
-import '../../../services/backend_api_service.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/rarity_ui.dart';
 
 class ArtistAnalytics extends StatefulWidget {
   const ArtistAnalytics({super.key});
@@ -74,8 +75,13 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     }
 
     try {
-      final apiService = BackendApiService();
-      final nfts = await apiService.getUserNFTs(userId: web3.walletAddress);
+      final collectiblesProvider = Provider.of<CollectiblesProvider>(context, listen: false);
+      if (!collectiblesProvider.isLoading &&
+          collectiblesProvider.allSeries.isEmpty &&
+          collectiblesProvider.allCollectibles.isEmpty) {
+        await collectiblesProvider.initialize();
+      }
+      final nfts = collectiblesProvider.getCollectiblesByOwner(web3.walletAddress);
       setState(() {
         _nftsSold = nfts.length;
         _loadingNFTs = false;
@@ -701,7 +707,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Color(Artwork.getRarityColor(artwork.rarity)),
+                        color: RarityUi.artworkColor(context, artwork.rarity),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
@@ -975,8 +981,6 @@ class LineChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
-
-
 
 
 

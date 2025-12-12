@@ -35,7 +35,8 @@ class EmptyStateCard extends StatelessWidget {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08)),
+          color: Theme.of(context).colorScheme.onSurface.withAlpha((0.08 * 255).round()),
+        ),
       ),
       child: Column(
         // Center content both vertically and horizontally so the icon/text
@@ -47,7 +48,7 @@ class EmptyStateCard extends StatelessWidget {
         children: [
           Icon(icon,
               size: 48,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.32)),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.32 * 255).round())),
           const SizedBox(height: 12),
           Text(
             title,
@@ -64,7 +65,7 @@ class EmptyStateCard extends StatelessWidget {
             textAlign: TextAlign.center,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()),
             ),
           ),
           if (showAction && onAction != null && actionLabel != null) ...[

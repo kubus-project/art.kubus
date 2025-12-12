@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../models/institution.dart';
+import '../../../providers/institution_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
+import 'event_creator.dart';
 
 class EventManager extends StatefulWidget {
   const EventManager({super.key});
@@ -17,7 +21,7 @@ class _EventManagerState extends State<EventManager>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   String _selectedFilter = 'All';
-  List<Event> _events = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -35,7 +39,6 @@ class _EventManagerState extends State<EventManager>
       curve: Curves.easeInOut,
     ));
     
-    _loadEvents();
     _animationController.forward();
   }
 
@@ -45,67 +48,10 @@ class _EventManagerState extends State<EventManager>
     super.dispose();
   }
 
-  void _loadEvents() {
-    // Simulate loading events
-    _events = [
-      Event(
-        id: '1',
-        title: 'Digital Dreams Exhibition',
-        description: 'A showcase of contemporary digital art from emerging artists',
-        startDate: DateTime.now().add(const Duration(days: 3)),
-        endDate: DateTime.now().add(const Duration(days: 10)),
-        location: 'Main Gallery',
-        status: EventStatus.upcoming,
-        capacity: 200,
-        registeredCount: 156,
-        price: 25.0,
-        imageUrl: 'https://example.com/digital-dreams.jpg',
-      ),
-      Event(
-        id: '2',
-        title: 'Modern Art Workshop',
-        description: 'Interactive workshop on modern art techniques',
-        startDate: DateTime.now().subtract(const Duration(days: 2)),
-        endDate: DateTime.now().add(const Duration(days: 1)),
-        location: 'Workshop Room A',
-        status: EventStatus.active,
-        capacity: 30,
-        registeredCount: 28,
-        price: 50.0,
-        imageUrl: 'https://example.com/workshop.jpg',
-      ),
-      Event(
-        id: '3',
-        title: 'Artist Talk Series',
-        description: 'Monthly talk with renowned contemporary artists',
-        startDate: DateTime.now().add(const Duration(days: 15)),
-        endDate: DateTime.now().add(const Duration(days: 15)),
-        location: 'Auditorium',
-        status: EventStatus.upcoming,
-        capacity: 100,
-        registeredCount: 67,
-        price: 15.0,
-        imageUrl: 'https://example.com/artist-talk.jpg',
-      ),
-      Event(
-        id: '4',
-        title: 'Virtual Reality Art Experience',
-        description: 'Immerse yourself in virtual art installations',
-        startDate: DateTime.now().subtract(const Duration(days: 5)),
-        endDate: DateTime.now().subtract(const Duration(days: 1)),
-        location: 'VR Room',
-        status: EventStatus.completed,
-        capacity: 15,
-        registeredCount: 15,
-        price: 35.0,
-        imageUrl: 'https://example.com/vr-art.jpg',
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
-    final filteredEvents = _getFilteredEvents();
+    final institutionProvider = context.watch<InstitutionProvider>();
+    final filteredEvents = _getFilteredEvents(institutionProvider.events);
     
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -115,7 +61,7 @@ class _EventManagerState extends State<EventManager>
           children: [
             _buildHeader(),
             _buildFilterBar(),
-            _buildStatsRow(),
+            _buildStatsRow(institutionProvider.events),
             Expanded(child: _buildEventsList(filteredEvents)),
           ],
         ),
@@ -199,10 +145,10 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Widget _buildStatsRow() {
-    final totalEvents = _events.length;
-    final activeEvents = _events.where((e) => e.status == EventStatus.active).length;
-    final totalRegistrations = _events.fold<int>(0, (sum, event) => sum + event.registeredCount);
+  Widget _buildStatsRow(List<Event> events) {
+    final totalEvents = events.length;
+    final activeEvents = events.where((e) => e.isActive).length;
+    final totalRegistrations = events.fold<int>(0, (sum, event) => sum + event.currentAttendees);
     
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -273,8 +219,13 @@ class _EventManagerState extends State<EventManager>
 
   Widget _buildEventCard(Event event) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final statusColor = _getStatusColor(event.status);
-    final occupancyPercentage = event.registeredCount / event.capacity;
+    final scheme = Theme.of(context).colorScheme;
+    final status = _statusForEvent(event);
+    final statusColor = _statusColor(status, scheme, themeProvider);
+
+    final capacity = event.capacity ?? 0;
+    final hasCapacity = capacity > 0;
+    final occupancyPercentage = hasCapacity ? (event.currentAttendees / capacity) : 0.0;
     
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -310,7 +261,7 @@ class _EventManagerState extends State<EventManager>
                   border: Border.all(color: statusColor),
                 ),
                 child: Text(
-                  event.status.name.toUpperCase(),
+                  _statusLabel(status),
                   style: GoogleFonts.inter(
                     fontSize: 9,
                     fontWeight: FontWeight.w600,
@@ -368,31 +319,34 @@ class _EventManagerState extends State<EventManager>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Occupancy: ${event.registeredCount}/${event.capacity}',
+                      hasCapacity
+                          ? 'Occupancy: ${event.currentAttendees}/$capacity'
+                          : 'Attendees: ${event.currentAttendees}',
                       style: GoogleFonts.inter(
                         fontSize: 10,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    SizedBox(
-                      height: 6,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: InlineLoading(
-                          progress: occupancyPercentage,
-                          tileSize: 6.0,
-                          color: occupancyPercentage > 0.8 ? Colors.red : themeProvider.accentColor,
-                          duration: const Duration(milliseconds: 700),
+                    if (hasCapacity)
+                      SizedBox(
+                        height: 6,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: InlineLoading(
+                            progress: occupancyPercentage,
+                            tileSize: 6.0,
+                            color: occupancyPercentage > 0.8 ? scheme.error : themeProvider.accentColor,
+                            duration: const Duration(milliseconds: 700),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               Text(
-                '\$${event.price.toStringAsFixed(0)}',
+                event.formattedPrice,
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -430,16 +384,31 @@ class _EventManagerState extends State<EventManager>
     );
   }
 
-  Color _getStatusColor(EventStatus status) {
+  _EventStatus _statusForEvent(Event event) {
+    if (event.isActive) return _EventStatus.active;
+    if (event.isUpcoming) return _EventStatus.upcoming;
+    return _EventStatus.completed;
+  }
+
+  String _statusLabel(_EventStatus status) {
     switch (status) {
-      case EventStatus.upcoming:
-        return Colors.blue;
-      case EventStatus.active:
-        return Colors.green;
-      case EventStatus.completed:
-        return Colors.orange;
-      default:
-        return Colors.grey;
+      case _EventStatus.upcoming:
+        return 'UPCOMING';
+      case _EventStatus.active:
+        return 'ACTIVE';
+      case _EventStatus.completed:
+        return 'COMPLETED';
+    }
+  }
+
+  Color _statusColor(_EventStatus status, ColorScheme scheme, ThemeProvider themeProvider) {
+    switch (status) {
+      case _EventStatus.upcoming:
+        return scheme.primary;
+      case _EventStatus.active:
+        return themeProvider.accentColor;
+      case _EventStatus.completed:
+        return scheme.outline;
     }
   }
 
@@ -447,20 +416,46 @@ class _EventManagerState extends State<EventManager>
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  List<Event> _getFilteredEvents() {
+  List<Event> _getFilteredEvents(List<Event> events) {
+    final query = _searchQuery.trim().toLowerCase();
+    final filtered = events.where((e) {
+      if (query.isEmpty) return true;
+      return e.title.toLowerCase().contains(query) ||
+          e.description.toLowerCase().contains(query) ||
+          e.location.toLowerCase().contains(query);
+    }).toList();
+
     switch (_selectedFilter) {
       case 'Upcoming':
-        return _events.where((e) => e.status == EventStatus.upcoming).toList();
+        return filtered.where((e) => e.isUpcoming).toList();
       case 'Active':
-        return _events.where((e) => e.status == EventStatus.active).toList();
+        return filtered.where((e) => e.isActive).toList();
       case 'Completed':
-        return _events.where((e) => e.status == EventStatus.completed).toList();
+        return filtered.where((e) => !e.isUpcoming && !e.isActive).toList();
       default:
-        return _events;
+        return filtered;
     }
   }
 
   void _showNotifications() {
+    final provider = context.read<InstitutionProvider>();
+    final now = DateTime.now();
+    final alerts = <Map<String, String>>[];
+
+    for (final event in provider.events) {
+      final capacity = event.capacity;
+      if (capacity != null && capacity > 0) {
+        final pct = event.currentAttendees / capacity;
+        if (pct >= 0.9) {
+          alerts.add({'message': '"${event.title}" capacity at ${(pct * 100).toStringAsFixed(0)}%', 'time': 'Now'});
+        }
+      }
+      final diff = event.startDate.difference(now);
+      if (diff.inHours >= 0 && diff.inHours <= 48) {
+        alerts.add({'message': '"${event.title}" starts in ${diff.inHours}h', 'time': 'Soon'});
+      }
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -469,9 +464,16 @@ class _EventManagerState extends State<EventManager>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildNotificationItem('Workshop capacity at 93%', '2 hours ago'),
-            _buildNotificationItem('New registration for Digital Dreams', '4 hours ago'),
-            _buildNotificationItem('Artist Talk rescheduled', '1 day ago'),
+            if (alerts.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'No alerts right now.',
+                  style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                ),
+              )
+            else
+              ...alerts.take(6).map((a) => _buildNotificationItem(a['message']!, a['time']!)),
           ],
         ),
         actions: [
@@ -538,7 +540,7 @@ class _EventManagerState extends State<EventManager>
           ),
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           onChanged: (value) {
-            // Implement search functionality
+            setState(() => _searchQuery = value);
           },
         ),
         actions: [
@@ -556,21 +558,45 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _editEvent(Event event) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Editing ${event.title}')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => EventCreator(initialEvent: event)),
     );
   }
 
   void _viewEvent(Event event) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Viewing ${event.title}')),
+    showDialog(
+      context: context,
+      builder: (context) {
+        final scheme = Theme.of(context).colorScheme;
+        return AlertDialog(
+          backgroundColor: scheme.surfaceContainerHighest,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(event.title, style: GoogleFonts.inter(color: scheme.onSurface, fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(event.description, style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8))),
+              const SizedBox(height: 12),
+              Text('Location: ${event.location}', style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8))),
+              Text('Dates: ${_formatDate(event.startDate)} - ${_formatDate(event.endDate)}',
+                  style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8))),
+              Text('Price: ${event.formattedPrice}', style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8))),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+          ],
+        );
+      },
     );
   }
 
   void _shareEvent(Event event) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Sharing ${event.title}')),
-    );
+    final shareText = '${event.title}\n${event.location}\n${_formatDate(event.startDate)}';
+    Clipboard.setData(ClipboardData(text: shareText));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Copied "${event.title}" to clipboard')));
   }
 
   void _deleteEvent(Event event) {
@@ -589,11 +615,9 @@ class _EventManagerState extends State<EventManager>
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
             onPressed: () {
-              setState(() {
-                _events.removeWhere((e) => e.id == event.id);
-              });
+              context.read<InstitutionProvider>().deleteEvent(event.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('${event.title} deleted')),
@@ -607,45 +631,4 @@ class _EventManagerState extends State<EventManager>
   }
 }
 
-// Event model
-class Event {
-  final String id;
-  final String title;
-  final String description;
-  final DateTime startDate;
-  final DateTime endDate;
-  final String location;
-  final EventStatus status;
-  final int capacity;
-  final int registeredCount;
-  final double price;
-  final String imageUrl;
-
-  Event({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.startDate,
-    required this.endDate,
-    required this.location,
-    required this.status,
-    required this.capacity,
-    required this.registeredCount,
-    required this.price,
-    required this.imageUrl,
-  });
-}
-
-enum EventStatus {
-  upcoming,
-  active,
-  completed,
-  cancelled,
-}
-
-
-
-
-
-
-
+enum _EventStatus { upcoming, active, completed }

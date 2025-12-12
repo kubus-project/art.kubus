@@ -1,10 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:art_kubus/providers/themeprovider.dart';
+
+import '../../../config/config.dart';
+import '../../../models/collectible.dart';
+import '../../../providers/collectibles_provider.dart';
+import '../../../providers/themeprovider.dart';
+import '../../../providers/web3provider.dart';
+import '../../../utils/media_url_resolver.dart';
+import '../../../utils/rarity_ui.dart';
 import '../../../widgets/app_loading.dart';
-import '../../../services/backend_api_service.dart';
 import '../../../widgets/empty_state_card.dart';
 
 class NFTGallery extends StatefulWidget {
@@ -15,52 +22,23 @@ class NFTGallery extends StatefulWidget {
 }
 
 class _NFTGalleryState extends State<NFTGallery> {
-  final BackendApiService _backendApi = BackendApiService();
-  List<Map<String, dynamic>> _nfts = [];
-  bool _isLoading = true;
-  String? _error;
+  bool _requestedInit = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadNFTs();
-  }
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_requestedInit) return;
+    _requestedInit = true;
 
-  Future<void> _loadNFTs() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('user_id');
-
-      if (userId == null) {
-        setState(() {
-          _error = 'Please connect your wallet first';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      final nfts = await _backendApi.getUserNFTs(userId: userId);
-      
-      setState(() {
-        _nfts = nfts;
-        _isLoading = false;
-      });
-    } catch (e) {
-      debugPrint('Error loading NFTs: $e');
-      setState(() {
-        _error = 'Failed to load NFTs';
-        _isLoading = false;
-      });
+    final provider = Provider.of<CollectiblesProvider>(context, listen: false);
+    if (!provider.isLoading && provider.allSeries.isEmpty && provider.allCollectibles.isEmpty) {
+      unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -71,157 +49,155 @@ class _NFTGalleryState extends State<NFTGallery> {
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
         ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onPrimary),
+          icon: Icon(Icons.arrow_back, color: scheme.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _loadNFTs,
+            onPressed: () {
+              final provider = Provider.of<CollectiblesProvider>(context, listen: false);
+              unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
+            },
             tooltip: 'Refresh',
           ),
         ],
       ),
-      body: _buildBody(),
-    );
-  }
-
-  Widget _buildBody() {
-    if (_isLoading) {
-      return const AppLoading();
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red.withValues(alpha: 0.5),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+      body: Consumer2<Web3Provider, CollectiblesProvider>(
+        builder: (context, web3Provider, collectiblesProvider, _) {
+          final walletAddress = web3Provider.walletAddress.trim();
+          if (walletAddress.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                child: EmptyStateCard(
+                  icon: Icons.account_balance_wallet,
+                  title: 'Connect your wallet',
+                  description: 'Connect a wallet to view your collectibles.',
+                  showAction: true,
+                  actionLabel: 'Connect Wallet',
+                  onAction: () => Navigator.of(context).pushNamed('/connect-wallet'),
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _loadNFTs,
-              icon: const Icon(Icons.refresh),
-              label: Text('Retry', style: GoogleFonts.inter()),
-            ),
-          ],
-        ),
-      );
-    }
+            );
+          }
 
-    if (_nfts.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-          child: EmptyStateCard(
-            icon: Icons.diamond_outlined,
-            title: 'No NFTs yet',
-            description: 'Mint some NFTs from artworks to see them here',
-            showAction: false,
-          ),
-        ),
-      );
-    }
+          if (collectiblesProvider.isLoading &&
+              collectiblesProvider.allSeries.isEmpty &&
+              collectiblesProvider.allCollectibles.isEmpty) {
+            return const AppLoading();
+          }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = constraints.maxWidth < 600 ? 2 : 3;
-        double childAspectRatio = constraints.maxWidth < 600 ? 0.75 : 0.8;
-        
-        return GridView.builder(
-          padding: EdgeInsets.all(constraints.maxWidth < 600 ? 16 : 24),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: childAspectRatio,
-          ),
-          itemCount: _nfts.length,
-          itemBuilder: (context, index) {
-            return _buildNFTCard(context, _nfts[index], constraints.maxWidth < 600);
-          },
-        );
-      },
+          final owned = collectiblesProvider.getCollectiblesByOwner(walletAddress);
+          if (owned.isEmpty) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+                child: EmptyStateCard(
+                  icon: Icons.diamond_outlined,
+                  title: 'No collectibles yet',
+                  description: 'Mint NFTs from artworks to see them here.',
+                  showAction: false,
+                ),
+              ),
+            );
+          }
+
+          final seriesById = <String, CollectibleSeries>{
+            for (final series in collectiblesProvider.allSeries) series.id: series,
+          };
+
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final isSmallScreen = constraints.maxWidth < 600;
+              final crossAxisCount = isSmallScreen ? 2 : 3;
+              final childAspectRatio = isSmallScreen ? 0.75 : 0.82;
+
+              return GridView.builder(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 24),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: childAspectRatio,
+                ),
+                itemCount: owned.length,
+                itemBuilder: (context, index) {
+                  final collectible = owned[index];
+                  final series = seriesById[collectible.seriesId];
+                  return _buildCollectibleCard(context, collectible, series, isSmallScreen);
+                },
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildNFTCard(BuildContext context, Map<String, dynamic> nft, bool isSmallScreen) {
-    final tokenId = nft['token_id'] ?? nft['tokenId'] ?? 'Unknown';
-    final status = nft['status'] ?? 'minted';
-    final transactionHash = nft['transaction_hash'] ?? nft['transactionHash'];
-    final properties = nft['properties'] as Map<String, dynamic>? ?? {};
-    final edition = properties['edition'] ?? '?';
-    final maxEdition = properties['maxEdition'] ?? '?';
-    
+  Widget _buildCollectibleCard(
+    BuildContext context,
+    Collectible collectible,
+    CollectibleSeries? series,
+    bool isSmallScreen,
+  ) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final scheme = Theme.of(context).colorScheme;
+    final title = series?.name ?? 'Collectible';
+    final rawImage = series?.imageUrl ?? series?.animationUrl;
+    final resolvedImage = rawImage == null ? null : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
+    final rarityColor = series != null
+        ? RarityUi.collectibleColor(context, series.rarity)
+        : themeProvider.accentColor;
+
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 3,
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.4),
-                    Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.9).withValues(alpha: 0.4),
-                  ],
-                ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              ),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
               child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Center(
-                    child: Icon(
-                      Icons.diamond,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      size: 48,
-                    ),
-                  ),
-                  if (status == 'listed')
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'LISTED',
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                  if (resolvedImage != null && resolvedImage.isNotEmpty)
+                    Image.network(
+                      resolvedImage,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _imageFallback(themeProvider, rarityColor),
+                    )
+                  else
+                    _imageFallback(themeProvider, rarityColor),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: scheme.surface.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: scheme.outline.withValues(alpha: 0.2)),
+                      ),
+                      child: Text(
+                        collectible.status.name.toUpperCase(),
+                        style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: scheme.onSurface,
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),
@@ -229,59 +205,55 @@ class _NFTGalleryState extends State<NFTGallery> {
           Expanded(
             flex: 2,
             child: Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 8 : 12),
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Flexible(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'NFT #$tokenId',
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 12 : 14,
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Edition $edition/$maxEdition',
-                          style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: isSmallScreen ? 13 : 15,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 6),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Flexible(
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: rarityColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
                         child: Text(
-                          status.toUpperCase(),
+                          'Token #${collectible.tokenId}',
                           style: GoogleFonts.inter(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            fontWeight: FontWeight.w600,
-                            color: Provider.of<ThemeProvider>(context).accentColor,
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.7),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (transactionHash != null)
-                        Icon(
-                          Icons.verified,
-                          color: Colors.green,
-                          size: 16,
-                        ),
                     ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    (collectible.transactionHash ?? '').isNotEmpty
+                        ? 'Tx: ${_shortenHash(collectible.transactionHash ?? '')}'
+                        : 'Tx: —',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: scheme.onSurface.withValues(alpha: 0.55),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -291,9 +263,32 @@ class _NFTGalleryState extends State<NFTGallery> {
       ),
     );
   }
+
+  Widget _imageFallback(ThemeProvider themeProvider, Color rarityColor) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            rarityColor.withValues(alpha: 0.25),
+            themeProvider.accentColor.withValues(alpha: 0.10),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          Icons.diamond_outlined,
+          size: 42,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+        ),
+      ),
+    );
+  }
+
+  String _shortenHash(String hash) {
+    final value = hash.trim();
+    if (value.length <= 14) return value;
+    return '${value.substring(0, 6)}…${value.substring(value.length - 6)}';
+  }
 }
-
-
-
-
-

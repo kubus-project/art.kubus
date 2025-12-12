@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 
 import 'tile_disk_cache.dart';
 
@@ -40,7 +40,7 @@ class TileDiskCacheImpl implements TileDiskCache {
 
   List<String> _readIndex() {
     try {
-      final raw = html.window.localStorage[_indexKey];
+      final raw = web.window.localStorage.getItem(_indexKey);
       if (raw == null || raw.isEmpty) return <String>[];
       final decoded = jsonDecode(raw);
       if (decoded is List) {
@@ -52,7 +52,7 @@ class TileDiskCacheImpl implements TileDiskCache {
 
   void _writeIndex(List<String> keys) {
     try {
-      html.window.localStorage[_indexKey] = jsonEncode(keys);
+      web.window.localStorage.setItem(_indexKey, jsonEncode(keys));
     } catch (_) {}
   }
 
@@ -62,7 +62,7 @@ class TileDiskCacheImpl implements TileDiskCache {
     if (keys.isEmpty) return;
     for (var i = 0; i < count && keys.isNotEmpty; i++) {
       final removeKey = keys.removeAt(0);
-      html.window.localStorage.remove(removeKey);
+      web.window.localStorage.removeItem(removeKey);
     }
     _writeIndex(keys);
   }
@@ -71,7 +71,7 @@ class TileDiskCacheImpl implements TileDiskCache {
   Future<Uint8List?> read(String key) async {
     final storageKey = _keyFor(key);
     try {
-      final encoded = html.window.localStorage[storageKey];
+      final encoded = web.window.localStorage.getItem(storageKey);
       if (encoded == null) return null;
       final bytes = base64Decode(encoded);
       // Move key to end for LRU behavior when eviction is enabled
@@ -94,14 +94,14 @@ class TileDiskCacheImpl implements TileDiskCache {
     }
     try {
       final encoded = base64Encode(bytes);
-      html.window.localStorage[storageKey] = encoded;
+      web.window.localStorage.setItem(storageKey, encoded);
       final keys = _readIndex();
       keys.remove(storageKey);
       keys.add(storageKey);
       if (maxEntries > 0) {
         while (keys.length > maxEntries) {
           final removeKey = keys.removeAt(0);
-          html.window.localStorage.remove(removeKey);
+          web.window.localStorage.removeItem(removeKey);
         }
       }
       _writeIndex(keys);
@@ -110,14 +110,14 @@ class TileDiskCacheImpl implements TileDiskCache {
       _evictOldest(5);
       try {
         final encoded = base64Encode(bytes);
-        html.window.localStorage[storageKey] = encoded;
+        web.window.localStorage.setItem(storageKey, encoded);
         final keys = _readIndex();
         keys.remove(storageKey);
         keys.add(storageKey);
         if (maxEntries > 0) {
           while (keys.length > maxEntries) {
             final removeKey = keys.removeAt(0);
-            html.window.localStorage.remove(removeKey);
+            web.window.localStorage.removeItem(removeKey);
           }
         }
         _writeIndex(keys);

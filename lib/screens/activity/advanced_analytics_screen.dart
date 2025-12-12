@@ -512,7 +512,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           _buildTrendItem('Overall Trend', 'Upward', Icons.trending_up, Colors.green),
           _buildTrendItem('Growth Rate', '+15.2% avg', Icons.speed, Colors.blue),
           _buildTrendItem('Volatility', 'Low', Icons.show_chart, Colors.orange),
-          _buildTrendItem('Momentum', 'Strong', Icons.rocket_launch, Colors.purple),
+          _buildTrendItem('Momentum', 'Strong', Icons.rocket_launch, Theme.of(context).colorScheme.primary),
         ],
       ),
     );
@@ -603,7 +603,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           const SizedBox(height: 16),
           _buildProjectionItem('Next Month', '+12%', Colors.green),
           _buildProjectionItem('Next Quarter', '+38%', Colors.blue),
-          _buildProjectionItem('Next Year', '+150%', Colors.purple),
+          _buildProjectionItem('Next Year', '+150%', Theme.of(context).colorScheme.primary),
         ],
       ),
     );
@@ -643,6 +643,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   }
 
   Widget _buildAIInsights() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -650,19 +651,19 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Colors.purple.withValues(alpha: 0.1),
-            Colors.blue.withValues(alpha: 0.1),
+            scheme.primary.withValues(alpha: 0.10),
+            scheme.secondary.withValues(alpha: 0.10),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.purple.withValues(alpha: 0.3)),
+        border: Border.all(color: scheme.primary.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.psychology, color: Colors.purple, size: 24),
+              Icon(Icons.psychology, color: scheme.primary, size: 24),
               const SizedBox(width: 8),
               Text(
                 'AI Insights',
@@ -741,7 +742,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           _buildPerformanceBar('Quality Score', 0.85, Colors.green),
           _buildPerformanceBar('Engagement Rate', 0.72, Colors.blue),
           _buildPerformanceBar('Growth Velocity', 0.68, Colors.orange),
-          _buildPerformanceBar('Consistency', 0.91, Colors.purple),
+          _buildPerformanceBar('Consistency', 0.91, Theme.of(context).colorScheme.primary),
         ],
       ),
     );
@@ -828,7 +829,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             'Collaborate more',
             'Community features could amplify your reach by 25%',
             Icons.people,
-            Colors.purple,
+            Theme.of(context).colorScheme.primary,
           ),
         ],
       ),
@@ -1128,11 +1129,12 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   }
 
   List<Map<String, dynamic>> _getKeyMetrics() {
+    final scheme = Theme.of(context).colorScheme;
     return [
-      {'label': 'Daily Avg', 'value': '6.2', 'icon': Icons.today, 'color': Colors.blue},
-      {'label': 'Peak Day', 'value': '12', 'icon': Icons.trending_up, 'color': Colors.green},
-      {'label': 'Growth Rate', 'value': '15%', 'icon': Icons.speed, 'color': Colors.orange},
-      {'label': 'Consistency', 'value': '91%', 'icon': Icons.check_circle, 'color': Colors.purple},
+      {'label': 'Daily Avg', 'value': '6.2', 'icon': Icons.today, 'color': scheme.primary},
+      {'label': 'Peak Day', 'value': '12', 'icon': Icons.trending_up, 'color': scheme.secondary},
+      {'label': 'Growth Rate', 'value': '15%', 'icon': Icons.speed, 'color': scheme.primary.withValues(alpha: 0.85)},
+      {'label': 'Consistency', 'value': '91%', 'icon': Icons.check_circle, 'color': scheme.primary},
     ];
   }
 
@@ -1284,4 +1286,3 @@ class SeasonalityChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
-

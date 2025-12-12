@@ -496,39 +496,46 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   }
 
   Future<void> _toggleTorch() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
     try {
       await _controller.toggleTorch();
+      if (!mounted) return;
       setState(() {
         _isTorchOn = !_isTorchOn;
       });
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      messenger.showSnackBar(
         SnackBar(
           content: const Text('Torch toggle not supported on this device.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: scheme.error,
         ),
       );
     }
   }
 
   Future<void> _switchCamera() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
     try {
       await _controller.switchCamera();
+      if (!mounted) return;
       setState(() {
         _cameraFacing = _cameraFacing == CameraFacing.back
             ? CameraFacing.front
             : CameraFacing.back;
       });
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted) return;
+      messenger.showSnackBar(
         SnackBar(
           content: const Text('Unable to switch camera.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+          backgroundColor: scheme.error,
         ),
       );
     }
   }
 }
-
 
 

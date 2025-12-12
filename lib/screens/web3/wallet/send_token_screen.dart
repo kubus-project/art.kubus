@@ -515,7 +515,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final background = isSelected
         ? accent.withValues(alpha: 0.25)
-        : theme.colorScheme.surfaceVariant;
+        : theme.colorScheme.surfaceContainerHighest;
 
     if (token.logoUrl != null && token.logoUrl!.isNotEmpty) {
       return Container(
@@ -916,6 +916,5 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
   }
 }
-
 
 

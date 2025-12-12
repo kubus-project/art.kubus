@@ -14,6 +14,7 @@ import '../../../models/dao.dart';
 import '../../../services/event_bus.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../components/desktop_widgets.dart';
 
 /// Desktop profile edit screen - form layout with card sections
@@ -784,9 +785,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No wallet connected. Connect your wallet to upload avatar.'),
-                backgroundColor: Colors.red,
+              SnackBar(
+                content: const Text('No wallet connected. Connect your wallet to upload avatar.'),
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
             return;
@@ -855,7 +856,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(saved ? 'Avatar uploaded and saved!' : 'Avatar uploaded locally (save failed)'),
-              backgroundColor: saved ? Colors.green : Colors.orange,
+              backgroundColor: saved
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.secondary,
               duration: const Duration(seconds: 2),
             ),
           );
@@ -866,7 +869,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Upload failed: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
 
@@ -909,7 +912,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error picking image: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -940,9 +943,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('No wallet connected. Connect your wallet to upload cover image.'),
-                backgroundColor: Colors.red,
+              SnackBar(
+                content: const Text('No wallet connected. Connect your wallet to upload cover image.'),
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
             return;
@@ -981,7 +984,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(saved ? 'Cover image uploaded!' : 'Cover image uploaded locally'),
-              backgroundColor: saved ? Colors.green : Colors.orange,
+              backgroundColor: saved
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.secondary,
               duration: const Duration(seconds: 2),
             ),
           );
@@ -991,7 +996,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Cover upload failed: $e'),
-              backgroundColor: Colors.red,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -1001,30 +1006,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error picking cover image: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null) return null;
-    final candidate = url.trim();
-    if (candidate.isEmpty) return null;
-    if (candidate.startsWith('data:')) return candidate;
-    if (candidate.startsWith('ipfs://')) {
-      final cid = candidate.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    }
-    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-    if (candidate.startsWith('//')) return 'https:$candidate';
-    if (candidate.startsWith('/')) return '$base$candidate';
-    if (candidate.startsWith('api/')) return '$base/$candidate';
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
-    if (!hasScheme) {
-      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
-    }
-    return candidate;
+    return MediaUrlResolver.resolve(url);
   }
 
   Future<void> _saveProfile() async {
@@ -1067,9 +1056,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profile updated successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: const Text('Profile updated successfully!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
         );
         
@@ -1103,7 +1092,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
-          backgroundColor: Colors.red,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     } finally {

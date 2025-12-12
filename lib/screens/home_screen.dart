@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -486,6 +487,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final navigationProvider = Provider.of<NavigationProvider>(context);
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
         final frequentScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
 
         return Column(
@@ -554,13 +556,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     return Padding(
                       padding: const EdgeInsets.only(right: 12),
                       child: _buildActionCard(
-                        screen['name'],
-                        screen['icon'],
-                        screen['color'],
+                        screen.name,
+                        screen.icon,
+                        themeProvider.accentColor,
                         false,
                         onTap: () => navigationProvider.navigateToScreen(
-                            context, screen['key']),
-                        visitCount: screen['visitCount'],
+                            context, screen.key),
+                        visitCount: screen.visitCount,
                       ),
                     );
                   }).toList(),
@@ -1738,15 +1740,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   String? _getScreenKeyFromName(String name) {
-    final entry = NavigationProvider.screenDefinitions.entries
-        .where((entry) => entry.value['name'] == name)
-        .firstOrNull;
-    return entry?.key;
+    for (final entry in NavigationProvider.screenDefinitions.entries) {
+      if (entry.value.name == name) return entry.key;
+    }
+    return null;
   }
 
   // Show wallet onboarding for first-time users
   void _showWalletOnboarding(BuildContext context) {
-    debugPrint('DEBUG: Wallet onboarding triggered from home screen');
+    if (kDebugMode) {
+      debugPrint('HomeScreen: wallet onboarding triggered');
+    }
 
     // Navigate directly to comprehensive Web3 onboarding
     Navigator.of(context).push(

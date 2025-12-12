@@ -20,6 +20,7 @@ class NotificationProvider extends ChangeNotifier {
   bool _hasNew = false;
   int _lastNotifVersion = 0;
   int _lastGlobalVersion = 0;
+  dynamic _boundRefreshProvider;
   String? _lastNotifHash;
   DateTime? _lastNotifTimestamp;
   bool _initialized = false;
@@ -386,6 +387,8 @@ class NotificationProvider extends ChangeNotifier {
   void bindToRefresh(dynamic appRefresh) {
     try {
       if (appRefresh == null) return;
+      if (identical(_boundRefreshProvider, appRefresh)) return;
+      _boundRefreshProvider = appRefresh;
       _lastNotifVersion = appRefresh.notificationsVersion ?? 0;
       _lastGlobalVersion = appRefresh.globalVersion ?? 0;
       appRefresh.addListener(() {

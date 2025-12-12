@@ -1,0 +1,118 @@
+import 'package:flutter/widgets.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:provider/provider.dart';
+
+import '../models/art_marker.dart';
+import '../providers/artwork_provider.dart';
+import '../services/map_marker_service.dart';
+
+class MapMarkerLoadResult {
+  const MapMarkerLoadResult({
+    required this.markers,
+    required this.center,
+    required this.fetchedAt,
+  });
+
+  final List<ArtMarker> markers;
+  final LatLng center;
+  final DateTime fetchedAt;
+}
+
+class MapMarkerHelper {
+  static const Duration defaultRefreshInterval = Duration(minutes: 5);
+  static const double defaultRefreshDistanceMeters = 1200;
+  static const Duration defaultEmptyFallbackInterval = Duration(seconds: 30);
+
+  /// Loads markers for a given center, filters invalid ones, and hydrates
+  /// linked artworks so downstream UI can render metadata without null checks.
+  static Future<MapMarkerLoadResult> loadAndHydrateMarkers({
+    required BuildContext context,
+    required MapMarkerService mapMarkerService,
+    required LatLng center,
+    required double radiusKm,
+    bool forceRefresh = false,
+  }) async {
+    final artworkProvider = context.read<ArtworkProvider>();
+    final markers = await mapMarkerService.loadMarkers(
+      center: center,
+      radiusKm: radiusKm,
+      forceRefresh: forceRefresh,
+    );
+
+    final filteredMarkers = markers.where((marker) => marker.hasValidPosition).toList();
+    await hydrateMarkersWithArtworks(artworkProvider, filteredMarkers);
+
+    return MapMarkerLoadResult(
+      markers: filteredMarkers,
+      center: center,
+      fetchedAt: DateTime.now(),
+    );
+  }
+
+  /// Determines whether markers should refresh based on movement and staleness.
+  static bool shouldRefreshMarkers({
+    required LatLng newCenter,
+    LatLng? lastCenter,
+    DateTime? lastFetchTime,
+    required Distance distance,
+    Duration refreshInterval = defaultRefreshInterval,
+    double refreshDistanceMeters = defaultRefreshDistanceMeters,
+    bool hasMarkers = false,
+    bool force = false,
+    Duration emptyFallbackInterval = defaultEmptyFallbackInterval,
+  }) {
+    if (force) return true;
+
+    final now = DateTime.now();
+    final timeElapsed = lastFetchTime == null || now.difference(lastFetchTime) >= refreshInterval;
+    final movedEnough =
+        lastCenter == null || distance.as(LengthUnit.Meter, newCenter, lastCenter) >= refreshDistanceMeters;
+    final noMarkersYet =
+        !hasMarkers && (lastFetchTime == null || now.difference(lastFetchTime) >= emptyFallbackInterval);
+
+    return (movedEnough && timeElapsed) || noMarkersYet;
+  }
+
+  /// Ensures artworks linked to markers are present and backfilled with positions.
+  static Future<void> hydrateMarkersWithArtworks(
+    ArtworkProvider artworkProvider,
+    List<ArtMarker> markers,
+  ) async {
+    final missingIds = <String>{};
+
+    for (final marker in markers) {
+      final artworkId = marker.artworkId;
+      if (artworkId == null || artworkId.isEmpty) continue;
+      if (artworkProvider.getArtworkById(artworkId) == null) {
+        missingIds.add(artworkId);
+      }
+    }
+
+    for (final artworkId in missingIds) {
+      try {
+        await artworkProvider.fetchArtworkIfNeeded(artworkId);
+      } catch (e) {
+        debugPrint('MapMarkerHelper: failed to hydrate artwork $artworkId: $e');
+      }
+    }
+
+    for (final marker in markers) {
+      final artworkId = marker.artworkId;
+      if (artworkId == null || artworkId.isEmpty) continue;
+
+      final artwork = artworkProvider.getArtworkById(artworkId);
+      if (artwork != null && !artwork.hasValidLocation && marker.hasValidPosition) {
+        artworkProvider.addOrUpdateArtwork(
+          artwork.copyWith(
+            position: marker.position,
+            arMarkerId: marker.id,
+            metadata: {
+              ...?artwork.metadata,
+              'linkedMarkerId': marker.id,
+            },
+          ),
+        );
+      }
+    }
+  }
+}

@@ -22,7 +22,7 @@ class GradientIconCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color endColor = end ?? start.withOpacity(0.7);
+    final Color endColor = end ?? start.withAlpha((0.7 * 255).round());
     return Container(
       width: width,
       height: height,
@@ -35,7 +35,7 @@ class GradientIconCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
-            color: start.withOpacity(0.28),
+            color: start.withAlpha((0.28 * 255).round()),
             blurRadius: 30,
             spreadRadius: 0,
             offset: const Offset(0, 15),

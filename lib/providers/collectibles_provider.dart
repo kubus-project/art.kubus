@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 import '../models/collectible.dart';
+import '../services/collectibles_storage.dart';
 
 class CollectiblesProvider with ChangeNotifier {
   final List<CollectibleSeries> _series = [];
   final List<Collectible> _collectibles = [];
+  final CollectiblesStorage _storage = CollectiblesStorage();
   
   bool _isLoading = false;
   String? _error;
@@ -13,6 +15,32 @@ class CollectiblesProvider with ChangeNotifier {
   List<Collectible> get allCollectibles => List.unmodifiable(_collectibles);
   bool get isLoading => _isLoading;
   String? get error => _error;
+
+  Future<void> initialize({bool loadMockIfEmpty = false}) async {
+    _setLoading(true);
+
+    try {
+      final loadedSeries = await _storage.loadSeries();
+      final loadedCollectibles = await _storage.loadCollectibles();
+
+      _series
+        ..clear()
+        ..addAll(loadedSeries);
+      _collectibles
+        ..clear()
+        ..addAll(loadedCollectibles);
+
+      if (loadMockIfEmpty && _series.isEmpty) {
+        await initializeMockData();
+      } else {
+        notifyListeners();
+      }
+    } catch (e) {
+      _setError('Failed to load collectibles: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
 
   // Get series by artwork ID
   CollectibleSeries? getSeriesByArtworkId(String artworkId) {
@@ -98,6 +126,7 @@ class CollectiblesProvider with ChangeNotifier {
 
       _series.add(series);
       notifyListeners();
+      await _persist();
       
       return series;
     } catch (e) {
@@ -143,6 +172,7 @@ class CollectiblesProvider with ChangeNotifier {
       _series[seriesIndex] = updatedSeries;
       
       notifyListeners();
+      await _persist();
       
       return collectible;
     } catch (e) {
@@ -174,6 +204,7 @@ class CollectiblesProvider with ChangeNotifier {
 
       _collectibles[collectibleIndex] = updatedCollectible;
       notifyListeners();
+      await _persist();
     } catch (e) {
       _setError('Failed to list collectible: $e');
       rethrow;
@@ -209,6 +240,7 @@ class CollectiblesProvider with ChangeNotifier {
 
       _collectibles[collectibleIndex] = updatedCollectible;
       notifyListeners();
+      await _persist();
     } catch (e) {
       _setError('Failed to purchase collectible: $e');
       rethrow;
@@ -222,13 +254,25 @@ class CollectiblesProvider with ChangeNotifier {
     _setLoading(true);
     
     try {
+      _series.clear();
+      _collectibles.clear();
       // Create some mock NFT series for AR artworks
       await _createMockSeries();
       await _createMockCollectibles();
+      await _persist();
     } catch (e) {
       _setError('Failed to initialize mock data: $e');
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<void> _persist() async {
+    try {
+      await _storage.saveSeries(_series);
+      await _storage.saveCollectibles(_collectibles);
+    } catch (e) {
+      debugPrint('CollectiblesProvider: persist failed: $e');
     }
   }
 

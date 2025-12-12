@@ -16,6 +16,7 @@ import '../../../community/community_interactions.dart';
 import '../../../models/community_group.dart';
 import '../../../models/conversation.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/block_list_service.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
@@ -174,6 +175,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     ]);
   }
 
+  Future<List<CommunityPost>> _filterBlockedPosts(List<CommunityPost> posts) async {
+    final blocked = await BlockListService().loadBlockedWallets();
+    if (blocked.isEmpty) return posts;
+    return posts.where((post) {
+      final author = WalletUtils.canonical(post.authorWallet);
+      if (author.isEmpty) return true;
+      return !blocked.contains(author);
+    }).toList();
+  }
+
   Future<void> _loadDiscoverFeed({String? sortOverride}) async {
     if (_isLoadingDiscover) return;
     final sort = sortOverride ?? _discoverSortMode;
@@ -191,9 +202,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         followingOnly: false,
         sort: sort,
       );
+      final filtered = await _filterBlockedPosts(posts);
       if (mounted) {
         setState(() {
-          _discoverPosts = posts;
+          _discoverPosts = filtered;
           _isLoadingDiscover = false;
         });
       }
@@ -346,9 +358,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         followingOnly: true,
         sort: sort,
       );
+      final filtered = await _filterBlockedPosts(posts);
       if (mounted) {
         setState(() {
-          _followingPosts = posts;
+          _followingPosts = filtered;
           _isLoadingFollowing = false;
         });
       }
@@ -941,23 +954,25 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         arOnly: arOnly,
       );
       final chosenPosts = posts.isNotEmpty ? posts : _filterLocalPostsByTag(sanitized);
+      final filtered = await _filterBlockedPosts(chosenPosts);
       if (!mounted) return;
       setState(() {
         _tagFeeds[key] = previous.copyWith(
-          posts: _sortPosts(chosenPosts, sortMode),
+          posts: _sortPosts(filtered, sortMode),
           isLoading: false,
-          error: chosenPosts.isEmpty ? 'No posts found for #$sanitized' : null,
+          error: filtered.isEmpty ? 'No posts found for #$sanitized' : null,
           lastFetched: DateTime.now(),
         );
       });
     } catch (e) {
       final fallback = _filterLocalPostsByTag(sanitized);
+      final filtered = await _filterBlockedPosts(fallback);
       if (!mounted) return;
       setState(() {
         _tagFeeds[key] = previous.copyWith(
-          posts: _sortPosts(fallback, sortMode),
+          posts: _sortPosts(filtered, sortMode),
           isLoading: false,
-          error: fallback.isEmpty ? e.toString() : null,
+          error: filtered.isEmpty ? e.toString() : null,
         );
       });
     }
@@ -2232,7 +2247,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10}) {
     final widgets = <Widget>[];
-    debugPrint('DEBUG: Building badges for post ${post.id}: artist=${post.authorIsArtist}, institution=${post.authorIsInstitution}');
     if (post.authorIsArtist) {
       widgets.add(const SizedBox(width: 6));
       widgets.add(ArtistBadge(
@@ -3655,11 +3669,31 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     // Show dialog to start new conversation
     showDialog(
       context: context,
-      builder: (context) => _NewConversationDialog(
-        themeProvider: Provider.of<ThemeProvider>(context),
-        onStartConversation: (userId) {
-          Navigator.pop(context);
-          // Navigate to conversation screen
+      builder: (dialogContext) => _NewConversationDialog(
+        themeProvider: Provider.of<ThemeProvider>(dialogContext),
+        onStartConversation: (walletAddress) async {
+          final target = walletAddress.trim();
+          Navigator.of(dialogContext).pop();
+          if (target.isEmpty) return;
+
+          final chatProvider = context.read<ChatProvider>();
+          final messenger = ScaffoldMessenger.of(context);
+          try {
+            final conv = await chatProvider.createConversation('', false, [target]);
+            if (!mounted) return;
+            if (conv != null) {
+              _openConversation(conv);
+              return;
+            }
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Unable to start conversation')),
+            );
+          } catch (e) {
+            if (!mounted) return;
+            messenger.showSnackBar(
+              SnackBar(content: Text('Unable to start conversation: $e')),
+            );
+          }
         },
       ),
     );
@@ -6430,14 +6464,93 @@ class _ComposerCategoryOption {
 }
 
 class _NewConversationDialogState extends State<_NewConversationDialog> {
+  final BackendApiService _backendApi = BackendApiService();
   final TextEditingController _searchController = TextEditingController();
-  final List<dynamic> _searchResults = [];
+  Timer? _debounce;
+  List<Map<String, dynamic>> _searchResults = [];
   bool _isSearching = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    final query = value.trim();
+    setState(() {
+      _isSearching = query.isNotEmpty;
+    });
+
+    _debounce?.cancel();
+    if (query.length < 2) {
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+      });
+      return;
+    }
+
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
+      if (!mounted) return;
+      setState(() => _isLoading = true);
+      try {
+        final resp = await _backendApi.search(query: query, type: 'profiles', limit: 20);
+        final parsed = _parseProfileSearchResults(resp);
+        if (!mounted) return;
+        setState(() {
+          _searchResults = parsed;
+          _isLoading = false;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        setState(() {
+          _searchResults = [];
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  List<Map<String, dynamic>> _parseProfileSearchResults(Map<String, dynamic> payload) {
+    final results = <Map<String, dynamic>>[];
+
+    void addEntries(List<dynamic>? entries) {
+      if (entries == null) return;
+      for (final item in entries) {
+        if (item is Map<String, dynamic>) {
+          results.add(item);
+        } else if (item is Map) {
+          final mapped = <String, dynamic>{};
+          item.forEach((key, value) {
+            mapped[key.toString()] = value;
+          });
+          results.add(mapped);
+        }
+      }
+    }
+
+    final dynamic resultsNode = payload['results'];
+    if (resultsNode is Map<String, dynamic>) {
+      addEntries((resultsNode['profiles'] as List?) ?? (resultsNode['results'] as List?));
+    } else if (resultsNode is List) {
+      addEntries(resultsNode);
+    }
+
+    final dynamic dataNode = payload['data'];
+    if (dataNode is Map<String, dynamic>) {
+      addEntries((dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
+    } else if (dataNode is List) {
+      addEntries(dataNode);
+    }
+
+    if (results.isEmpty) {
+      addEntries(payload['profiles'] as List?);
+    }
+
+    return results;
   }
 
   @override
@@ -6493,14 +6606,15 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                 ),
                 style: GoogleFonts.inter(fontSize: 14),
                 onChanged: (value) {
-                  // Search users - placeholder
-                  setState(() => _isSearching = value.isNotEmpty);
+                  _onSearchChanged(value);
                 },
               ),
             ),
             const SizedBox(height: 16),
             Flexible(
-              child: _isSearching && _searchResults.isEmpty
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _isSearching && _searchResults.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -6526,15 +6640,24 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                       itemCount: _searchResults.length,
                       itemBuilder: (context, index) {
                         final user = _searchResults[index];
+                        final wallet = (user['wallet_address'] ?? user['walletAddress'] ?? user['wallet'] ?? user['id'])?.toString() ?? '';
+                        final name = user['displayName']?.toString() ??
+                            user['display_name']?.toString() ??
+                            user['username']?.toString() ??
+                            (wallet.isNotEmpty ? wallet : 'User');
+                        final username = user['username']?.toString();
+                        final subtitle = username != null && username.isNotEmpty ? '@$username' : wallet;
+                        final avatarUrl = user['avatar'] ?? user['avatar_url'] ?? user['profileImageUrl'] ?? user['profileImage'];
                         return ListTile(
                           leading: AvatarWidget(
-                            wallet: user['wallet'] ?? '',
+                            wallet: wallet,
+                            avatarUrl: avatarUrl?.toString(),
                             radius: 20,
                             allowFabricatedFallback: true,
                           ),
-                          title: Text(user['name'] ?? 'User'),
-                          subtitle: Text(user['username'] ?? ''),
-                          onTap: () => widget.onStartConversation(user['id']),
+                          title: Text(name),
+                          subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
+                          onTap: wallet.isEmpty ? null : () => widget.onStartConversation(wallet),
                         );
                       },
                     ),

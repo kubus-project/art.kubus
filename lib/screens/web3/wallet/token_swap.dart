@@ -626,7 +626,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 ),
               ),
               Text(
-                '${tx.amount.toStringAsFixed(4)}',
+                tx.amount.toStringAsFixed(4),
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
               ),
             ],
@@ -859,7 +859,6 @@ class _TokenAvatar extends StatelessWidget {
     );
   }
 }
-
 
 
 

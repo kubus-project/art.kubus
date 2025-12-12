@@ -8,7 +8,9 @@ import '../providers/app_refresh_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/chat_provider.dart';
+import '../providers/collectibles_provider.dart';
 import '../providers/community_hub_provider.dart';
+import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
@@ -34,7 +36,6 @@ class AppBootstrapService {
     String? walletAddress,
   }) async {
     final backend = BackendApiService();
-    await _runTask('auth_token', () => backend.ensureAuthLoaded(walletAddress: walletAddress));
 
     // Providers
     final artworkProvider = context.read<ArtworkProvider>();
@@ -48,8 +49,12 @@ class AppBootstrapService {
     final chatProvider = context.read<ChatProvider>();
     final cacheProvider = context.read<CacheProvider>();
     final savedItemsProvider = context.read<SavedItemsProvider>();
+    final collectiblesProvider = context.read<CollectiblesProvider>();
+    final institutionProvider = context.read<InstitutionProvider>();
     final taskProvider = context.read<TaskProvider>();
     final appRefreshProvider = context.read<AppRefreshProvider>();
+
+    await _runTask('auth_token', () => backend.ensureAuthLoaded(walletAddress: walletAddress));
 
     final shouldLoadWeb3 = AppConfig.enableWeb3;
     final shouldLoadCommunity = AppConfig.enableUserProfiles;
@@ -60,6 +65,8 @@ class AppBootstrapService {
       _runTask('navigation', navigationProvider.initialize),
       _runTask('tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
+      _runTask('collectibles', () => collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment)),
+      _runTask('institutions', () => institutionProvider.initialize(seedMockIfEmpty: AppConfig.isDevelopment)),
     ];
 
     if (shouldLoadCommunity) {

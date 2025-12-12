@@ -546,7 +546,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   Future<void> _shareAddress(String address, Token? token) async {
     final tokenSymbol = token?.symbol ?? _selectedToken;
     final payload = _buildQrPayload(address, token);
-    await Share.share('Send $tokenSymbol to $address\n$payload');
+    await SharePlus.instance.share(
+      ShareParams(text: 'Send $tokenSymbol to $address\n$payload'),
+    );
   }
 
   String _buildQrPayload(String address, Token? token) {
@@ -606,7 +608,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final background = isSelected
         ? accent.withValues(alpha: 0.25)
-        : theme.colorScheme.surfaceVariant;
+        : theme.colorScheme.surfaceContainerHighest;
 
     if (token.logoUrl != null && token.logoUrl!.isNotEmpty) {
       return Container(
@@ -652,7 +654,6 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     );
   }
 }
-
 
 
 

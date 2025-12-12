@@ -121,15 +121,14 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                           final wallet = Provider.of<WalletProvider>(context, listen: false);
                           final messenger = ScaffoldMessenger.of(context);
                           final ok = await wallet.authenticateWithBiometrics();
+                          if (!mounted) return;
                           if (ok) {
-                            setState(() { _masked = false; });
+                            setState(() => _masked = false);
                             return;
                           }
                           // fallback to PIN entry dialog
-                          if (!mounted) return;
-                          final dialogContext = context;
                           final entered = await showDialog<String?>(
-                            context: dialogContext,
+                            context: this.context,
                             builder: (ctx) => AlertDialog(
                               title: const Text('Enter PIN'),
                               content: TextField(controller: _pinController, obscureText: true, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'PIN')),
@@ -140,15 +139,23 @@ class _MnemonicRevealScreenState extends State<MnemonicRevealScreen> {
                             ),
                           );
 
+                          if (!mounted) return;
                           if (entered == null || entered.isEmpty) return;
                           final m2 = await wallet.revealMnemonic(pin: entered);
                           if (!mounted) return;
                           if (m2 != null) {
-                            setState(() { _mnemonic = m2; _masked = false; });
+                            setState(() {
+                              _mnemonic = m2;
+                              _masked = false;
+                            });
                           } else {
                             final rem = await wallet.getPinLockoutRemainingSeconds();
                             if (!mounted) return;
-                            messenger.showSnackBar(SnackBar(content: Text(rem > 0 ? 'PIN locked for $rem seconds' : 'Incorrect PIN')));
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(rem > 0 ? 'PIN locked for $rem seconds' : 'Incorrect PIN'),
+                              ),
+                            );
                           }
                         },
                         child: const Text('Show'),

@@ -520,6 +520,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       onPressed: () async {
                         // Launch AR viewer for this artwork using ARManager
                         final messenger = ScaffoldMessenger.of(context);
+                        final scheme = Theme.of(context).colorScheme;
                         try {
                           // Add model to AR scene
                           await _arManager.addModel(
@@ -529,23 +530,21 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             name: artwork['id'],
                           );
 
-                          if (mounted) {
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('AR model loaded successfully'),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: const Text('AR model loaded successfully'),
+                              backgroundColor: scheme.primary,
+                            ),
+                          );
                         } catch (e) {
-                          if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to load AR model: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to load AR model: $e'),
+                              backgroundColor: scheme.error,
+                            ),
+                          );
                         }
                       },
                     ),
@@ -678,7 +677,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to place artwork: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -883,7 +882,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Artwork placed successfully!'),
-        backgroundColor: Colors.green,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         duration: const Duration(seconds: 2),
       ),
     );
@@ -1098,7 +1097,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       title: Text(obj['title']),
                       subtitle: Text('by ${obj['artist']}'),
                       trailing: IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red[400]),
+                        icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
                         onPressed: () {
                           setState(() {
                             _placedObjects.removeAt(index);
@@ -1325,10 +1324,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
         Navigator.of(context).pop();
 
-        final resolvedUrl = marker.getContentURL() ??
-            (marker.modelCID != null
-                ? 'https://ipfs.io/ipfs/${marker.modelCID}'
-                : marker.modelURL);
+        final resolvedUrl = marker.getContentURL() ?? marker.modelURL;
 
         setState(() {
           final artistName = selectedSubject?.metadata?['artist']?.toString() ??
@@ -1853,7 +1849,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         setModalState(() {}); // Update modal state immediately
                       },
                       isActive: _likedArtworks.contains(artwork['id']),
-                      activeColor: Colors.red,
+                      activeColor: Theme.of(context).colorScheme.error,
                     ),
                     const SizedBox(width: 12),
                     _buildInteractionButton(
@@ -1866,7 +1862,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         setModalState(() {}); // Update modal state immediately
                       },
                       isActive: _savedArtworks.contains(artwork['id']),
-                      activeColor: Colors.blue,
+                      activeColor: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
@@ -2024,16 +2020,16 @@ Experience it in augmented reality!
       await CommunityService.sharePost(post);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary),
                 const SizedBox(width: 8),
                 Text('Artwork shared successfully!'),
               ],
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
@@ -2045,7 +2041,7 @@ Experience it in augmented reality!
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Share failed: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -2089,25 +2085,23 @@ Experience it in augmented reality!
     );
 
     if (mounted) {
+      final scheme = Theme.of(context).colorScheme;
+      final isLiked = _likedArtworks.contains(artwork['id']);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(
-                _likedArtworks.contains(artwork['id'])
-                    ? Icons.favorite
-                    : Icons.favorite_border,
-                color: Colors.white,
+                isLiked ? Icons.favorite : Icons.favorite_border,
+                color: isLiked ? scheme.onPrimary : scheme.onSurface,
               ),
               const SizedBox(width: 8),
-              Text(_likedArtworks.contains(artwork['id'])
-                  ? 'Added to your likes!'
-                  : 'Removed from likes'),
+              Text(isLiked ? 'Added to your likes!' : 'Removed from likes'),
             ],
           ),
-          backgroundColor: _likedArtworks.contains(artwork['id'])
-              ? Colors.pink
-              : Colors.grey[700],
+          backgroundColor: isLiked
+              ? scheme.primary
+              : scheme.surfaceContainerHighest,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
         ),
@@ -2145,31 +2139,29 @@ Experience it in augmented reality!
     }
 
     if (mounted) {
+      final scheme = Theme.of(context).colorScheme;
+      final isSaved = _savedArtworks.contains(artwork['id']);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(
-                _savedArtworks.contains(artwork['id'])
-                    ? Icons.bookmark
-                    : Icons.bookmark_border,
-                color: Colors.white,
+                isSaved ? Icons.bookmark : Icons.bookmark_border,
+                color: isSaved ? scheme.onPrimary : scheme.onSurface,
               ),
               const SizedBox(width: 8),
-              Text(_savedArtworks.contains(artwork['id'])
-                  ? 'Saved to your collection!'
-                  : 'Removed from saved items'),
+              Text(isSaved ? 'Saved to your collection!' : 'Removed from saved items'),
             ],
           ),
-          backgroundColor: _savedArtworks.contains(artwork['id'])
-              ? Colors.blue
-              : Colors.grey[700],
+          backgroundColor: isSaved
+              ? scheme.primary
+              : scheme.surfaceContainerHighest,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
           action: _savedArtworks.contains(artwork['id'])
               ? SnackBarAction(
                   label: 'View',
-                  textColor: Colors.white,
+                  textColor: scheme.onPrimary,
                   onPressed: () {
                     // Navigate to profile collections using proper navigation
                     Navigator.of(context).pop(); // Close AR screen first

@@ -14,6 +14,32 @@ import '../screens/web3/dao/governance_hub.dart';
 import '../screens/web3/artist/artist_studio.dart';
 import '../screens/web3/institution/institution_hub.dart';
 
+@immutable
+class ScreenDefinition {
+  final String name;
+  final IconData icon;
+
+  const ScreenDefinition({
+    required this.name,
+    required this.icon,
+  });
+}
+
+@immutable
+class QuickActionScreen {
+  final String key;
+  final String name;
+  final IconData icon;
+  final int visitCount;
+
+  const QuickActionScreen({
+    required this.key,
+    required this.name,
+    required this.icon,
+    required this.visitCount,
+  });
+}
+
 class NavigationProvider with ChangeNotifier {
   static const String _visitCountKey = 'screen_visit_counts';
   static const String _lastVisitKey = 'screen_last_visit_times';
@@ -27,85 +53,20 @@ class NavigationProvider with ChangeNotifier {
   List<String> get frequentScreens => _frequentScreens;
 
   // Screen definitions with their display names and navigation actions
-  static const Map<String, Map<String, dynamic>> screenDefinitions = {
-    'ar': {
-      'name': 'Create AR',
-      'icon': Icons.add_box,
-      'color': Color(0xFF6C63FF),
-      'route': '/ar',
-    },
-    'map': {
-      'name': 'Explore Map',
-      'icon': Icons.explore,
-      'color': Color(0xFF00D4AA),
-      'tabIndex': 0,
-    },
-    'community': {
-      'name': 'Community',
-      'icon': Icons.people,
-      'color': Color(0xFFFFD93D),
-      'tabIndex': 3,
-    },
-    'profile': {
-      'name': 'Profile',
-      'icon': Icons.person,
-      'color': Color(0xFF9C27B0),
-      'tabIndex': 4,
-    },
-    'marketplace': {
-      'name': 'Marketplace',
-      'icon': Icons.store,
-      'color': Color(0xFFFF6B6B),
-      'route': '/marketplace',
-    },
-    'wallet': {
-      'name': 'Wallet',
-      'icon': Icons.account_balance_wallet,
-      'color': Color(0xFF4ECDC4),
-      'route': '/wallet',
-    },
-    'analytics': {
-      'name': 'Analytics',
-      'icon': Icons.analytics,
-      'color': Color(0xFF2196F3),
-      'action': 'analytics',
-    },
-    'settings': {
-      'name': 'Settings',
-      'icon': Icons.settings,
-      'color': Color(0xFF757575),
-      'tabIndex': 5,
-    },
-    'stats': {
-      'name': 'My Stats',
-      'icon': Icons.bar_chart,
-      'color': Color(0xFF4CAF50),
-      'action': 'stats',
-    },
-    'achievements': {
-      'name': 'Achievements',
-      'icon': Icons.emoji_events,
-      'color': Color(0xFFFFC107),
-      'action': 'achievements',
-    },
-    'dao_hub': {
-      'name': 'DAO Hub',
-      'icon': Icons.how_to_vote,
-      'color': Color(0xFF10B981),
-      'action': 'dao',
-    },
-    'studio': {
-      'name': 'Artist Studio',
-      'icon': Icons.palette,
-      'color': Color(0xFFF59E0B),
-      'action': 'artist_studio',
-    },
-    'institution_hub': {
-      'name': 'Institution Hub',
-      'icon': Icons.location_city,
-      'color': Color(0xFF667EEA),
-      'action': 'institution_hub',
-    },
+  static const Map<String, ScreenDefinition> screenDefinitions = {
+    'ar': ScreenDefinition(name: 'Create AR', icon: Icons.add_box),
+    'map': ScreenDefinition(name: 'Explore Map', icon: Icons.explore),
+    'community': ScreenDefinition(name: 'Community', icon: Icons.people),
+    'profile': ScreenDefinition(name: 'Profile', icon: Icons.person),
+    'marketplace': ScreenDefinition(name: 'Marketplace', icon: Icons.store),
+    'wallet': ScreenDefinition(name: 'Wallet', icon: Icons.account_balance_wallet),
+    'analytics': ScreenDefinition(name: 'Analytics', icon: Icons.analytics),
+    'settings': ScreenDefinition(name: 'Settings', icon: Icons.settings),
+    'stats': ScreenDefinition(name: 'My Stats', icon: Icons.bar_chart),
+    'achievements': ScreenDefinition(name: 'Achievements', icon: Icons.emoji_events),
+    'dao_hub': ScreenDefinition(name: 'DAO Hub', icon: Icons.how_to_vote),
+    'studio': ScreenDefinition(name: 'Artist Studio', icon: Icons.palette),
+    'institution_hub': ScreenDefinition(name: 'Institution Hub', icon: Icons.location_city),
   };
 
   Future<void> initialize() async {
@@ -252,22 +213,23 @@ class NavigationProvider with ChangeNotifier {
     _frequentScreens = _frequentScreens.take(4).toList();
   }
 
-  List<Map<String, dynamic>> getFrequentScreensData() {
-    return _frequentScreens.map((screenKey) {
+  List<QuickActionScreen> getFrequentScreensData() {
+    return _frequentScreens
+        .where((key) => screenDefinitions.containsKey(key))
+        .map((screenKey) {
       final definition = screenDefinitions[screenKey]!;
-      return {
-        'key': screenKey,
-        'name': definition['name'],
-        'icon': definition['icon'],
-        'color': definition['color'],
-        'visitCount': _visitCounts[screenKey] ?? 0,
-      };
+      return QuickActionScreen(
+        key: screenKey,
+        name: definition.name,
+        icon: definition.icon,
+        visitCount: _visitCounts[screenKey] ?? 0,
+      );
     }).toList();
   }
 
   /// Return only visited screens as quick actions, sorted by most recent.
   /// Cards only appear once you visit them, and disappear after 24h of inactivity.
-  List<Map<String, dynamic>> getQuickActionScreens({int maxItems = 12}) {
+  List<QuickActionScreen> getQuickActionScreens({int maxItems = 12}) {
     // Only include screens that have been visited (have visit count > 0)
     final visitedScreens = _visitCounts.entries
         .where((e) => e.value > 0 && screenDefinitions.containsKey(e.key))
@@ -283,13 +245,12 @@ class NavigationProvider with ChangeNotifier {
 
     return visitedScreens.take(maxItems).map((key) {
       final definition = screenDefinitions[key]!;
-      return {
-        'key': key,
-        'name': definition['name'],
-        'icon': definition['icon'],
-        'color': definition['color'],
-        'visitCount': _visitCounts[key] ?? 0,
-      };
+      return QuickActionScreen(
+        key: key,
+        name: definition.name,
+        icon: definition.icon,
+        visitCount: _visitCounts[key] ?? 0,
+      );
     }).toList();
   }
 
@@ -346,58 +307,9 @@ class NavigationProvider with ChangeNotifier {
 
     final definition = screenDefinitions[screenKey];
     if (definition == null) return;
-
-    if (definition.containsKey('tabIndex')) {
-      try {
-        final tabController = DefaultTabController.of(context);
-        tabController.animateTo(definition['tabIndex'] as int);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to navigate to ${definition['name']}')),
-        );
-      }
-    } else if (definition.containsKey('action')) {
-      _handleCustomAction(context, definition['action']);
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Unable to navigate to ${definition.name}')),
+    );
   }
 
-  void _handleCustomAction(BuildContext context, String action) {
-    switch (action) {
-      case 'analytics':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const AdvancedAnalyticsScreen(statType: 'Engagement'),
-        ));
-        break;
-      case 'stats':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const AdvancedStatsScreen(statType: 'Engagement'),
-        ));
-        break;
-      case 'achievements':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const AchievementsPage(),
-        ));
-        break;
-      case 'dao':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const GovernanceHub(),
-        ));
-        break;
-      case 'artist_studio':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const ArtistStudio(),
-        ));
-        break;
-      case 'institution_hub':
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => const InstitutionHub(),
-        ));
-        break;
-      default:
-        // Fallback to showing a snackbar or dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$action feature coming soon!')),
-        );
-    }
-  }
 }

@@ -13,6 +13,7 @@ import '../../providers/task_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
 import '../web3/achievements/achievements_page.dart';
@@ -1452,23 +1453,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   String? _normalizeMediaUrl(String? url) {
-    if (url == null) return null;
-    final candidate = url.trim();
-    if (candidate.isEmpty) return null;
-    if (candidate.startsWith('data:')) return candidate;
-    if (candidate.startsWith('ipfs://')) {
-      final cid = candidate.replaceFirst('ipfs://', '');
-      return 'https://ipfs.io/ipfs/$cid';
-    }
-    final base = BackendApiService().baseUrl.replaceAll(RegExp(r'/$'), '');
-    if (candidate.startsWith('//')) return 'https:$candidate';
-    if (candidate.startsWith('/')) return '$base$candidate';
-    if (candidate.startsWith('api/')) return '$base/$candidate';
-    final hasScheme = RegExp(r'^[a-zA-Z][a-zA-Z0-9+.-]*:').hasMatch(candidate);
-    if (!hasScheme) {
-      return '$base/${candidate.startsWith('/') ? candidate.substring(1) : candidate}';
-    }
-    return candidate;
+    return MediaUrlResolver.resolve(url);
   }
 
   String _formatDateLabel(dynamic value) {
@@ -1515,6 +1500,8 @@ class _ProfileScreenState extends State<ProfileScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Consumer2<TaskProvider, ConfigProvider>(
         builder: (context, taskProvider, configProvider, child) {
+        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+        final accent = themeProvider.accentColor;
         if (!configProvider.useMockData) {
           // Show real achievement data when mock data is disabled
           final achievements = taskProvider.achievementProgress;
@@ -1548,16 +1535,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
+                        color: accent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF9C27B0), width: 1),
+                        border: Border.all(color: accent, width: 1),
                       ),
                       child: Text(
                         'View All',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF9C27B0),
+                          color: accent,
                         ),
                       ),
                     ),
@@ -1620,16 +1607,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF9C27B0).withValues(alpha: 0.1),
+                        color: accent.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF9C27B0), width: 1),
+                        border: Border.all(color: accent, width: 1),
                       ),
                       child: Text(
                         'View All',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF9C27B0),
+                          color: accent,
                         ),
                       ),
                     ),
@@ -2484,4 +2471,3 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
-
