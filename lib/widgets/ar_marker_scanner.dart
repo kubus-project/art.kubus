@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../services/ar_service.dart';
 import '../providers/themeprovider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -75,6 +77,9 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
 
   Future<void> _processQRCode(String code) async {
     if (_isProcessing || code == _lastScannedCode) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     
     setState(() {
       _isProcessing = true;
@@ -92,22 +97,20 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
         // Direct IPFS link
         artworkData = {
           'modelUrl': code,
-          'title': 'AR Artwork',
+          'title': l10n.arMarkerScannerDefaultArtworkTitle,
           'type': 'ar_model',
         };
       } else if (Uri.tryParse(code)?.hasAbsolutePath ?? false) {
         // Regular URL
         artworkData = {
           'modelUrl': code,
-          'title': 'AR Artwork',
+          'title': l10n.arMarkerScannerDefaultArtworkTitle,
           'type': 'ar_model',
         };
       } else {
         // Unknown format
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR code format')),
-          );
+          messenger.showSnackBar(SnackBar(content: Text(l10n.arMarkerScannerInvalidQrFormatToast)));
         }
         return;
       }
@@ -115,9 +118,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
       // Validate required fields
       if (!artworkData.containsKey('modelUrl')) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('QR code missing model URL')),
-          );
+          messenger.showSnackBar(SnackBar(content: Text(l10n.arMarkerScannerMissingModelUrlToast)));
         }
         return;
       }
@@ -126,14 +127,16 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
       widget.onArtworkFound?.call(artworkData);
 
       // Show confirmation and launch AR
-        if (mounted) {
-        // Ensure we're mounted before showing the dialog to avoid using a stale BuildContext
-        if (!mounted) return;
-        final shouldLaunch = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
+      if (!mounted) return;
+      final shouldLaunch = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          final dialogL10n = AppLocalizations.of(dialogContext)!;
+          return AlertDialog(
             title: Text(
-              artworkData['title'] ?? 'AR Artwork',
+              (artworkData['title']?.toString().trim().isNotEmpty ?? false)
+                  ? artworkData['title'].toString()
+                  : dialogL10n.arMarkerScannerDefaultArtworkTitle,
               style: GoogleFonts.inter(fontWeight: FontWeight.bold),
             ),
             content: Column(
@@ -141,30 +144,32 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (artworkData['artist'] != null)
-                  Text('By ${artworkData['artist']}'),
+                  Text(dialogL10n.arMarkerScannerByArtist(artworkData['artist'].toString())),
                 if (artworkData['description'] != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(artworkData['description']),
+                    child: Text(artworkData['description'].toString()),
                   ),
                 const SizedBox(height: 16),
-                const Text('Launch AR viewer?'),
+                Text(dialogL10n.arMarkerScannerLaunchViewerPrompt),
               ],
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: Text(dialogL10n.commonCancel),
               ),
               ElevatedButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('View in AR'),
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: Text(dialogL10n.commonViewInAr),
               ),
             ],
-          ),
-        );
+          );
+        },
+      );
 
-          if (shouldLaunch == true) {
+      if (!mounted) return;
+      if (shouldLaunch == true) {
           final arService = ARService();
           final success = await arService.launchARViewer(
             modelUrl: artworkData['modelUrl'],
@@ -174,25 +179,23 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
           );
 
           if (!success && mounted) {
-            final messenger = ScaffoldMessenger.of(context);
             messenger.showSnackBar(
               SnackBar(
-                content: const Text('Failed to launch AR viewer. Install Google AR Core?'),
+                content: Text(l10n.arMarkerScannerLaunchFailedInstallPrompt),
                 action: SnackBarAction(
-                  label: 'Install',
+                  label: l10n.commonInstall,
                   onPressed: ARService().installARCore,
                 ),
               ),
             );
           }
-        }
       }
     } catch (e) {
-      debugPrint('Error processing QR code: $e');
+      if (kDebugMode) {
+        debugPrint('ARMarkerScanner: Error processing QR code: $e');
+      }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        messenger.showSnackBar(SnackBar(content: Text(l10n.arMarkerScannerProcessingFailedToast)));
       }
     } finally {
       setState(() {
@@ -214,6 +217,8 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final l10n = AppLocalizations.of(context)!;
+    final colors = Theme.of(context).colorScheme;
     
     return Stack(
       children: [
@@ -259,9 +264,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   decoration: BoxDecoration(
-                    color: isDark 
-                        ? Colors.black.withValues(alpha: 0.8)
-                        : Colors.white.withValues(alpha: 0.9),
+                    color: colors.surface.withValues(alpha: isDark ? 0.85 : 0.92),
                     borderRadius: BorderRadius.circular(25),
                     border: Border.all(
                       color: themeProvider.accentColor.withValues(alpha: 0.3),
@@ -281,10 +284,10 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
                       Expanded(
                         child: Text(
                           _isProcessing
-                              ? 'Processing QR code...'
-                              : 'Point camera at QR code to discover AR artwork',
+                              ? l10n.arMarkerScannerProcessingQrLabel
+                              : l10n.arMarkerScannerPointCameraLabel,
                           style: GoogleFonts.inter(
-                            color: isDark ? Colors.white : Colors.black87,
+                            color: colors.onSurface,
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
@@ -300,7 +303,7 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
           // Processing indicator
           if (_isProcessing)
             Container(
-              color: Colors.black.withValues(alpha: 0.7),
+              color: colors.scrim.withValues(alpha: 0.7),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -308,9 +311,9 @@ class _ARMarkerScannerState extends State<ARMarkerScanner> with SingleTickerProv
                     AppLoading(),
                     const SizedBox(height: 20),
                     Text(
-                      'Launching AR Viewer...',
+                      l10n.arMarkerScannerLaunchingViewerLabel,
                       style: GoogleFonts.inter(
-                        color: Colors.white,
+                        color: colors.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -41,6 +42,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
+    final l10n = AppLocalizations.of(context)!;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
@@ -75,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       debugPrint('RegisterScreen: profile load skipped/failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created. Loading profile in the background.')),
+          SnackBar(content: Text(l10n.authAccountCreatedProfileLoading)),
         );
       }
     }
@@ -84,15 +86,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _registerWithEmail() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableEmailAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email registration is disabled.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailRegistrationDisabled)));
       return;
     }
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final username = _usernameController.text.trim();
     if (email.isEmpty || password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid email and an 8+ character password.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
     setState(() => _isSubmitting = true);
@@ -106,7 +109,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _handleAuthSuccess(result);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Registration failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authRegistrationFailed)));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -190,8 +193,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _registerWithGoogle() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in is disabled.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
     setState(() => _isGoogleSubmitting = true);
@@ -210,15 +214,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _handleAuthSuccess(result);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Google sign-in failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
   }
 
   void _showConnectWalletModal() {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wallet connection is disabled right now.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }
     final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
@@ -233,6 +238,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       builder: (ctx) {
         final colorScheme = Theme.of(ctx).colorScheme;
+        final sheetL10n = AppLocalizations.of(ctx)!;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -240,17 +246,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Connect a wallet', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+                Text(sheetL10n.authConnectWalletModalTitle, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
                 const SizedBox(height: 6),
-                Text('Approve a signature in your wallet app. No gas fee is needed to finish registration.', style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                Text(sheetL10n.authConnectWalletModalDescriptionRegister, style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.7))),
                 const SizedBox(height: 16),
                 const SizedBox(height: 8),
-                _walletOptionButton(ctx, 'WalletConnect', Icons.qr_code_2_outlined, () {
+                _walletOptionButton(ctx, sheetL10n.authWalletOptionWalletConnect, Icons.qr_code_2_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 3)));
                 }),
                 const SizedBox(height: 8),
-                _walletOptionButton(ctx, 'Other wallets', Icons.apps_outlined, () {
+                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets, Icons.apps_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
                 }),
@@ -282,6 +288,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
@@ -297,12 +304,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (isDesktop) {
       return DesktopAuthShell(
-        title: 'Create your account',
-        subtitle: 'Wallet, email, or Google sign-up with your keys in your control.',
-        highlights: const [
-          'Wallet or email onboarding',
-          'Keys stay on your device',
-          'Web3-ready from the start',
+        title: l10n.authRegisterTitle,
+        subtitle: l10n.authRegisterSubtitle,
+        highlights: [
+          l10n.authHighlightOnboardingOptions,
+          l10n.authHighlightKeysLocal,
+          l10n.authHighlightOptionalWeb3,
         ],
         icon: GradientIconCard(
           start: const Color(0xFFF59E0B),
@@ -321,7 +328,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: TextButton(
             onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen())),
             child: Text(
-              'Have an account? Sign in',
+              l10n.authHaveAccountSignIn,
               style: GoogleFonts.inter(
                 color: colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
@@ -349,7 +356,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const AppLogo(width: 48, height: 48),
                       TextButton(
                         onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const SignInScreen())),
-                        child: Text('Have an account? Sign in', style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                        child: Text(l10n.authHaveAccountSignIn, style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
                       ),
                     ],
                   ),
@@ -371,6 +378,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required bool enableGoogle,
     required bool isDesktop,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -390,10 +398,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   radius: 18,
                 ),
                 const SizedBox(height: 12),
-                Text('Create your account', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+                Text(l10n.authRegisterTitle, style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
                 const SizedBox(height: 8),
                 Text(
-                  'and start exploring, creating, and connecting with other artists.',
+                  l10n.authSignInSubtitle,
                   style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
                   textAlign: TextAlign.center,
                 ),
@@ -412,7 +420,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
             onPressed: _showConnectWalletModal,
             icon: Icon(Icons.account_balance_wallet_outlined, size: 24, color: colorScheme.onPrimary),
-            label: Text('Connect wallet', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
+            label: Text(l10n.authConnectWalletButton, style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
           ),
         if (enableWallet) const SizedBox(height: 16),
         Container(
@@ -426,7 +434,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Or use email', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+              Text(l10n.authOrUseEmail, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
               const SizedBox(height: 12),
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[
@@ -451,8 +459,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Email',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.commonEmail,
             border: OutlineInputBorder(),
           ),
         ),
@@ -460,16 +468,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
         TextField(
           controller: _passwordController,
           obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'Password',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.commonPassword,
             border: OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: 10),
         TextField(
           controller: _usernameController,
-          decoration: const InputDecoration(
-            labelText: 'Username (optional)',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.commonUsernameOptional,
             border: OutlineInputBorder(),
           ),
         ),
@@ -488,7 +496,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ? const SizedBox(width: 20, height: 20, child: InlineLoading(width: 20, height: 20, tileSize: 5))
               : Icon(Icons.person_add_alt, color: colorScheme.onPrimary, size: 22),
           label: Text(
-            _isSubmitting ? 'Working...' : 'Continue with email',
+            _isSubmitting ? AppLocalizations.of(context)!.commonWorking : AppLocalizations.of(context)!.authContinueWithEmail,
             style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onPrimary),
           ),
         ),

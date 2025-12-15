@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/inline_progress.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -17,6 +18,7 @@ import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/exhibitions_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
 import '../models/map_marker_subject.dart';
@@ -42,6 +44,9 @@ import '../providers/tile_providers.dart';
 import '../widgets/art_map_view.dart';
 import 'dart:ui' as ui;
 import '../services/search_service.dart';
+import '../services/backend_api_service.dart';
+import '../config/config.dart';
+import 'events/exhibition_detail_screen.dart';
 
 /// Custom painter for the direction cone indicator
 class DirectionConePainter extends CustomPainter {
@@ -99,6 +104,7 @@ class DirectionConePainter extends CustomPainter {
     return oldDelegate.color != color;
   }
 }
+
 
 class MapScreen extends StatefulWidget {
   final LatLng? initialCenter;
@@ -551,17 +557,18 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _openMarkerRadiusDialog() async {
     double tempRadius = _markerRadiusKm;
+    final l10n = AppLocalizations.of(context)!;
     final result = await showDialog<double>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Nearby radius'),
+          title: Text(l10n.mapNearbyRadiusTitle),
           content: StatefulBuilder(
             builder: (context, setStateDialog) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('${tempRadius.toStringAsFixed(1)} km'),
+                  Text(l10n.commonDistanceKm(tempRadius.toStringAsFixed(1))),
                   Slider(
                     min: 1,
                     max: 50,
@@ -576,11 +583,11 @@ class _MapScreenState extends State<MapScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: Text(l10n.commonCancel),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(tempRadius),
-              child: const Text('Apply'),
+              child: Text(l10n.commonApply),
             ),
           ],
         );
@@ -595,6 +602,7 @@ class _MapScreenState extends State<MapScreen>
 
   void _showProximityNotification(ArtMarker marker, double distance) {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
 
     // On web the push channel requires a service worker; skip if unsupported to avoid console spam.
     if (!kIsWeb) {
@@ -633,14 +641,14 @@ class _MapScreenState extends State<MapScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'AR Artwork Nearby!',
+                    l10n.mapArArtworkNearbyTitle,
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
                   Text(
-                    '${marker.name} - ${distance.round()}m away',
+                    l10n.mapArArtworkNearbySubtitle(marker.name, distance.round()),
                     style: GoogleFonts.outfit(
                       fontSize: 12,
                       color: Colors.white.withValues(alpha: 0.9),
@@ -655,7 +663,7 @@ class _MapScreenState extends State<MapScreen>
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
         action: SnackBarAction(
-          label: 'View',
+          label: l10n.commonView,
           textColor: Colors.white,
           onPressed: () => _launchARExperience(marker),
         ),
@@ -705,9 +713,10 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       debugPrint('Error launching AR experience: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to launch AR: $e'),
+            content: Text(l10n.mapFailedToLaunchAr),
             backgroundColor: Colors.red,
           ),
         );
@@ -799,14 +808,14 @@ class _MapScreenState extends State<MapScreen>
     final refreshed = await _refreshMarkerSubjectData(force: true);
     if (!mounted) return;
     final subjectData = refreshed ?? _snapshotMarkerSubjectData();
-    if (subjectData.artworks.isEmpty) {
-      final wallet = context.read<WalletProvider>().currentWalletAddress;
+
+    final l10n = AppLocalizations.of(context)!;
+    final wallet = context.read<WalletProvider>().currentWalletAddress;
+    if (wallet == null || wallet.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            wallet == null || wallet.isEmpty
-                ? 'Connect your wallet and create an AR-enabled artwork to place a marker.'
-                : 'No AR-enabled artworks found for your wallet. Create one first to place a marker.',
+            l10n.mapMarkerCreateWalletRequired,
             style: GoogleFonts.outfit(),
           ),
           behavior: SnackBarBehavior.floating,
@@ -814,13 +823,34 @@ class _MapScreenState extends State<MapScreen>
       );
       return;
     }
+
+    final allowedSubjectTypes = <MarkerSubjectType>{
+      MarkerSubjectType.misc,
+      if (subjectData.artworks.isNotEmpty) MarkerSubjectType.artwork,
+      if (subjectData.exhibitions.isNotEmpty) MarkerSubjectType.exhibition,
+      if (subjectData.institutions.isNotEmpty) MarkerSubjectType.institution,
+      if (subjectData.events.isNotEmpty) MarkerSubjectType.event,
+      if (subjectData.delegates.isNotEmpty) MarkerSubjectType.group,
+    };
+
+    final initialSubjectType = allowedSubjectTypes.contains(MarkerSubjectType.artwork)
+        ? MarkerSubjectType.artwork
+        : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
+            ? MarkerSubjectType.exhibition
+            : allowedSubjectTypes.contains(MarkerSubjectType.event)
+                ? MarkerSubjectType.event
+                : allowedSubjectTypes.contains(MarkerSubjectType.institution)
+                    ? MarkerSubjectType.institution
+                    : MarkerSubjectType.misc;
+
     final MapMarkerFormResult? result = await MapMarkerDialog.show(
       context: context,
       subjectData: subjectData,
       onRefreshSubjects: ({bool force = false}) => _refreshMarkerSubjectData(force: force),
       initialPosition: _currentPosition!,
       allowManualPosition: false,
-      initialSubjectType: MarkerSubjectType.artwork,
+      initialSubjectType: initialSubjectType,
+      allowedSubjectTypes: allowedSubjectTypes,
       blockedArtworkIds: _artMarkers
           .where((m) => (m.artworkId ?? '').isNotEmpty)
           .map((m) => m.artworkId!)
@@ -842,7 +872,7 @@ class _MapScreenState extends State<MapScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Marker created successfully!',
+                  l10n.mapMarkerCreatedToast,
                   style: GoogleFonts.outfit(color: Colors.white),
                 ),
               ),
@@ -857,7 +887,7 @@ class _MapScreenState extends State<MapScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to create marker. Please try again.',
+            l10n.mapMarkerCreateFailedToast,
             style: GoogleFonts.outfit(color: Colors.white),
           ),
           backgroundColor: Colors.red,
@@ -871,6 +901,8 @@ class _MapScreenState extends State<MapScreen>
     if (_currentPosition == null) return false;
 
     try {
+
+      final exhibitionsProvider = context.read<ExhibitionsProvider>();
 
       // Snap to the nearest grid cell center at the current zoom level
       // We use the current camera zoom to determine which grid level is most relevant
@@ -925,6 +957,28 @@ class _MapScreenState extends State<MapScreen>
 
       if (marker != null) {
         debugPrint('Marker created and saved: ${marker.id}');
+
+        if (form.subjectType == MarkerSubjectType.exhibition) {
+          final exhibitionId = (form.subject?.id ?? '').trim();
+          if (exhibitionId.isNotEmpty) {
+            try {
+              await exhibitionsProvider.linkExhibitionMarkers(exhibitionId, [marker.id]);
+            } catch (_) {
+              // Non-fatal: endpoint may be disabled or user may not have permissions.
+            }
+
+            final linkedArtworkId = (form.linkedArtwork?.id ?? '').trim();
+            if (linkedArtworkId.isNotEmpty) {
+              try {
+                await exhibitionsProvider.linkExhibitionArtworks(exhibitionId, [linkedArtworkId]);
+              } catch (_) {
+                // Non-fatal.
+              }
+            }
+          }
+        }
+
+        if (!mounted) return false;
         // Update local markers list
         setState(() {
           _artMarkers.add(marker);
@@ -1290,6 +1344,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _showDiscoveryRewardForArtwork(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1298,7 +1353,7 @@ class _MapScreenState extends State<MapScreen>
             const Icon(Icons.celebration, color: Colors.amber),
             const SizedBox(width: 8),
             Text(
-              'Art Discovered!',
+              l10n.mapArtDiscoveredTitle,
               style:
                   GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -1330,7 +1385,7 @@ class _MapScreenState extends State<MapScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'by ${artwork.artist}',
+              l10n.commonByArtist(artwork.artist),
               style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
@@ -1348,7 +1403,7 @@ class _MapScreenState extends State<MapScreen>
                   const Icon(Icons.stars, color: Colors.amber, size: 16),
                   const SizedBox(width: 4),
                   Text(
-                    '+${artwork.rewards} KUB8',
+                    l10n.commonKub8PointsReward(artwork.rewards),
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.bold,
                       color: Colors.amber[800],
@@ -1362,7 +1417,7 @@ class _MapScreenState extends State<MapScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Continue Exploring', style: GoogleFonts.outfit()),
+            child: Text(l10n.commonContinueExploring, style: GoogleFonts.outfit()),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1374,7 +1429,7 @@ class _MapScreenState extends State<MapScreen>
                 ),
               );
             },
-            child: Text('View Details', style: GoogleFonts.outfit()),
+            child: Text(l10n.commonViewDetails, style: GoogleFonts.outfit()),
           ),
         ],
       ),
@@ -1609,12 +1664,31 @@ class _MapScreenState extends State<MapScreen>
       final artwork =
           context.read<ArtworkProvider>().getArtworkById(marker.artworkId ?? '');
 
+      final l10n = AppLocalizations.of(context)!;
+      final primaryExhibition = marker.primaryExhibitionSummary;
+      final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
+      final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
+      final canPresentExhibition =
+          exhibitionsFeatureEnabled &&
+          primaryExhibition != null &&
+          primaryExhibition.id.isNotEmpty &&
+          exhibitionsApiAvailable != false;
+
+      final exhibitionTitle = (primaryExhibition?.title ?? '').trim();
+      final effectiveTitle =
+          canPresentExhibition && exhibitionTitle.isNotEmpty
+              ? exhibitionTitle
+              : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
+
       final description = marker.description.isNotEmpty
           ? marker.description
           : (artwork?.description ?? '');
 
+      final hasChips = _hasMetadataChips(marker, artwork) || canPresentExhibition;
+      final buttonLabel = canPresentExhibition ? 'Odpri razstavo' : l10n.commonViewDetails;
+
       final containerHeight = _computeMobileMarkerHeight(
-        title: artwork?.title.isNotEmpty == true ? artwork!.title : marker.name,
+        title: effectiveTitle,
         distanceText: () {
           if (_currentPosition == null) return null;
           final meters = _distanceCalculator.as(
@@ -1622,11 +1696,13 @@ class _MapScreenState extends State<MapScreen>
             _currentPosition!,
             marker.position,
           );
-          if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
-          return '${meters.round()} m';
+          if (meters >= 1000) return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
+          return l10n.commonDistanceM(meters.round().toString());
         }(),
         description: description,
-        hasChips: _hasMetadataChips(marker, artwork),
+        hasChips: hasChips,
+        buttonLabel: buttonLabel,
+        showTypeLabel: canPresentExhibition,
       );
 
       // Include small buffer for translate and to avoid clipping shadows
@@ -1683,8 +1759,19 @@ class _MapScreenState extends State<MapScreen>
     Artwork? artwork,
     ThemeProvider themeProvider,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
+    final primaryExhibition = marker.primaryExhibitionSummary;
+    final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
+    final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
+    final canPresentExhibition =
+        exhibitionsFeatureEnabled &&
+        primaryExhibition != null &&
+        primaryExhibition.id.isNotEmpty &&
+        exhibitionsApiAvailable != false;
+
+    final exhibitionTitle = (primaryExhibition?.title ?? '').trim();
     final distanceText = () {
       if (_currentPosition == null) return null;
       final meters = _distanceCalculator.as(
@@ -1692,8 +1779,8 @@ class _MapScreenState extends State<MapScreen>
         _currentPosition!,
         marker.position,
       );
-      if (meters >= 1000) return '${(meters / 1000).toStringAsFixed(1)} km';
-      return '${meters.round()} m';
+      if (meters >= 1000) return l10n.commonDistanceKm((meters / 1000).toStringAsFixed(1));
+      return l10n.commonDistanceM(meters.round().toString());
     }();
     final imageUrl = ArtworkMediaResolver.resolveCover(
       artwork: artwork,
@@ -1701,10 +1788,15 @@ class _MapScreenState extends State<MapScreen>
     );
 
     // Use artwork title if available, otherwise marker name
-    final displayTitle = artwork?.title.isNotEmpty == true ? artwork!.title : marker.name;
+    final displayTitle =
+        canPresentExhibition && exhibitionTitle.isNotEmpty
+            ? exhibitionTitle
+            : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
     final description = marker.description.isNotEmpty
         ? marker.description
         : (artwork?.description ?? '');
+
+    final showChips = _hasMetadataChips(marker, artwork) || canPresentExhibition;
 
     return Material(
       color: Colors.transparent,
@@ -1735,15 +1827,32 @@ class _MapScreenState extends State<MapScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    displayTitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      height: 1.2,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (canPresentExhibition) ...[
+                        Text(
+                          'Razstava',
+                          style: GoogleFonts.outfit(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: baseColor,
+                            height: 1.0,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                      ],
+                      Text(
+                        displayTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -1817,12 +1926,13 @@ class _MapScreenState extends State<MapScreen>
               ),
             ],
             // Metadata chips
-            if (_hasMetadataChips(marker, artwork)) ...[
+            if (showChips) ...[
               const SizedBox(height: 10),
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
                 children: [
+                  if (canPresentExhibition) _attendanceProofChip(scheme, baseColor),
                   if (artwork != null && artwork.category.isNotEmpty && artwork.category != 'General')
                     _overlayChip(scheme, Icons.palette, artwork.category, baseColor),
                   if (marker.metadata?['subjectCategory'] != null || marker.metadata?['subject_category'] != null)
@@ -1851,10 +1961,15 @@ class _MapScreenState extends State<MapScreen>
                   backgroundColor: baseColor,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
-                onPressed: () => _openMarkerDetail(marker, artwork),
-                icon: const Icon(Icons.arrow_forward, size: 16),
+                onPressed: canPresentExhibition
+                    ? () => _openExhibitionFromMarker(marker, primaryExhibition, artwork)
+                    : () => _openMarkerDetail(marker, artwork),
+                icon: Icon(
+                  canPresentExhibition ? Icons.museum_outlined : Icons.arrow_forward,
+                  size: 16,
+                ),
                 label: Text(
-                  'View details',
+                  canPresentExhibition ? 'Odpri razstavo' : l10n.commonViewDetails,
                   style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 12),
                 ),
               ),
@@ -1870,11 +1985,32 @@ class _MapScreenState extends State<MapScreen>
     required String? distanceText,
     required String description,
     required bool hasChips,
+    required String buttonLabel,
+    bool showTypeLabel = false,
   }) {
     const double cardWidth = 240;
     const double horizontalPadding = 12;
     const double verticalPadding = 12;
     final double contentWidth = cardWidth - (horizontalPadding * 2);
+
+    // Optional type label height (e.g. "Razstava")
+    double typeLabelHeight = 0;
+    if (showTypeLabel) {
+      final typeLabelPainter = TextPainter(
+        text: TextSpan(
+          text: 'Razstava',
+          style: GoogleFonts.outfit(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            height: 1.0,
+          ),
+        ),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )
+        ..layout(maxWidth: contentWidth);
+      typeLabelHeight = typeLabelPainter.size.height + 2;
+    }
 
     // Title height (max 2 lines)
     final titlePainter = TextPainter(
@@ -1911,7 +2047,8 @@ class _MapScreenState extends State<MapScreen>
 
     // Close icon height (18)
     const double closeIconHeight = 18;
-    final double headerHeight = [titleHeight, distanceBadgeHeight, closeIconHeight].reduce((a, b) => a > b ? a : b);
+    final double headerContentHeight = typeLabelHeight + titleHeight;
+    final double headerHeight = [headerContentHeight, distanceBadgeHeight, closeIconHeight].reduce((a, b) => a > b ? a : b);
 
     // Description height
     double descriptionHeight = 0;
@@ -1938,7 +2075,7 @@ class _MapScreenState extends State<MapScreen>
     // Button height (text + padding *2)
     final buttonTextPainter = TextPainter(
       text: TextSpan(
-        text: 'View details',
+        text: buttonLabel,
         style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 12),
       ),
       textDirection: TextDirection.ltr,
@@ -1991,6 +2128,13 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
+  Widget _attendanceProofChip(ColorScheme scheme, Color accent) {
+    return Tooltip(
+      message: 'POAP (Proof of Attendance Protocol) je zbirateljski digitalni dokaz obiska.',
+      child: _overlayChip(scheme, Icons.verified_outlined, 'digitalni dokaz obiska', accent),
+    );
+  }
+
   Widget _markerImageFallback(Color baseColor, ColorScheme scheme, ArtMarker marker) {
     return Container(
       decoration: BoxDecoration(
@@ -2007,6 +2151,52 @@ class _MapScreenState extends State<MapScreen>
         _resolveArtMarkerIcon(marker.type),
         color: scheme.onPrimary,
         size: 42,
+      ),
+    );
+  }
+
+  Future<void> _openExhibitionFromMarker(
+    ArtMarker marker,
+    ExhibitionSummaryDto? exhibition,
+    Artwork? artwork,
+  ) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final api = BackendApiService();
+
+    if (exhibition == null || exhibition.id.isEmpty) {
+      await _openMarkerDetail(marker, artwork);
+      return;
+    }
+
+    if (!AppConfig.isFeatureEnabled('exhibitions') || api.exhibitionsApiAvailable == false) {
+      await _openMarkerDetail(marker, artwork);
+      return;
+    }
+
+    final fetched = await (() async {
+      try {
+        return await api.getExhibition(exhibition.id);
+      } catch (_) {
+        return null;
+      }
+    })();
+
+    if (!mounted) return;
+
+    if (fetched == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Razstave trenutno niso na voljo.')),
+      );
+      // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
+      setState(() {});
+      await _openMarkerDetail(marker, artwork);
+      return;
+    }
+
+    navigator.push(
+      MaterialPageRoute(
+        builder: (_) => ExhibitionDetailScreen(exhibitionId: exhibition.id),
       ),
     );
   }
@@ -2042,6 +2232,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final coverUrl = ArtworkMediaResolver.resolveCover(
       metadata: marker.metadata,
@@ -2078,7 +2269,7 @@ class _MapScreenState extends State<MapScreen>
             Text(
               marker.description.isNotEmpty
                   ? marker.description
-                  : 'No linked artwork found for this marker yet.',
+                  : l10n.mapNoLinkedArtworkForMarker,
               style: GoogleFonts.outfit(color: scheme.onSurfaceVariant),
             ),
           ],
@@ -2086,7 +2277,7 @@ class _MapScreenState extends State<MapScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -2201,6 +2392,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildSearchCard(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     return Material(
       elevation: 8,
@@ -2211,11 +2403,11 @@ class _MapScreenState extends State<MapScreen>
         focusNode: _searchFocusNode,
         style: GoogleFonts.outfit(),
         decoration: InputDecoration(
-          hintText: 'Search artworks, artists, institutions…',
+          hintText: l10n.mapSearchHint,
           prefixIcon: const Icon(Icons.search),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  tooltip: 'Clear search',
+                  tooltip: l10n.mapClearSearchTooltip,
                   icon: const Icon(Icons.close),
                   onPressed: () {
                     setState(() {
@@ -2233,7 +2425,7 @@ class _MapScreenState extends State<MapScreen>
                     _filtersExpanded ? Icons.filter_alt_off : Icons.filter_alt,
                   ),
                   tooltip:
-                      _filtersExpanded ? 'Hide filters' : 'Show filters',
+                      _filtersExpanded ? l10n.mapHideFiltersTooltip : l10n.mapShowFiltersTooltip,
                   onPressed: () {
                     setState(() {
                       _filtersExpanded = !_filtersExpanded;
@@ -2293,6 +2485,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildSuggestionSheet(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     final double top = MediaQuery.of(context).padding.top + 86;
     return Positioned(
@@ -2310,7 +2503,7 @@ class _MapScreenState extends State<MapScreen>
               return Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'Type at least 2 characters to search',
+                  l10n.mapSearchMinCharsHint,
                   style: GoogleFonts.outfit(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -2329,7 +2522,7 @@ class _MapScreenState extends State<MapScreen>
               return Padding(
                 padding: const EdgeInsets.all(16),
                 child: Text(
-                  'No suggestions',
+                  l10n.mapNoSuggestions,
                   style: GoogleFonts.outfit(
                     color: scheme.onSurfaceVariant,
                   ),
@@ -2411,14 +2604,15 @@ class _MapScreenState extends State<MapScreen>
     if (!_filtersExpanded) {
       return const SizedBox.shrink();
     }
+    final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
-    const filters = <Map<String, String>>[
-      {'key': 'all', 'label': 'All nearby'},
-      {'key': 'nearby', 'label': 'Within 1km'},
-      {'key': 'discovered', 'label': 'Discovered'},
-      {'key': 'undiscovered', 'label': 'Undiscovered'},
-      {'key': 'ar', 'label': 'AR enabled'},
-      {'key': 'favorites', 'label': 'Favorites'},
+    final filters = <Map<String, String>>[
+      {'key': 'all', 'label': l10n.mapFilterAllNearby},
+      {'key': 'nearby', 'label': l10n.mapFilterWithin1Km},
+      {'key': 'discovered', 'label': l10n.mapFilterDiscovered},
+      {'key': 'undiscovered', 'label': l10n.mapFilterUndiscovered},
+      {'key': 'ar', 'label': l10n.mapFilterArEnabled},
+      {'key': 'favorites', 'label': l10n.mapFilterFavorites},
     ];
 
     return Column(
@@ -2427,7 +2621,7 @@ class _MapScreenState extends State<MapScreen>
         Row(
           children: [
             Text(
-              'Filters',
+              l10n.mapFiltersTitle,
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.w600,
                 color: scheme.onSurface,
@@ -2453,7 +2647,7 @@ class _MapScreenState extends State<MapScreen>
         ),
         const SizedBox(height: 12),
         Text(
-          'Map layers',
+          l10n.mapLayersTitle,
           style: GoogleFonts.outfit(
             fontWeight: FontWeight.w600,
             color: scheme.onSurface,
@@ -2466,7 +2660,7 @@ class _MapScreenState extends State<MapScreen>
           children: ArtMarkerType.values.map((type) {
             final selected = _markerLayerVisibility[type] ?? true;
             return FilterChip(
-              label: Text(_markerTypeLabel(type)),
+              label: Text(_markerTypeLabel(l10n, type)),
               selected: selected,
               onSelected: (value) {
                 setState(() => _markerLayerVisibility[type] = value);
@@ -2483,6 +2677,7 @@ class _MapScreenState extends State<MapScreen>
     final activeProgress = taskProvider.getActiveTaskProgress();
     if (activeProgress.isEmpty) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context)!;
     final showTasks = _isDiscoveryExpanded;
     final tasksToRender =
       showTasks ? activeProgress : const <TaskProgress>[];
@@ -2522,14 +2717,14 @@ class _MapScreenState extends State<MapScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Discovery path',
+                      l10n.mapDiscoveryPathTitle,
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                       ),
                     ),
                     Text(
-                      '${(overall * 100).round()}% complete',
+                      l10n.commonPercentComplete((overall * 100).round()),
                       style: GoogleFonts.outfit(
                         color: scheme.onSurfaceVariant,
                         fontSize: 12,
@@ -2539,7 +2734,7 @@ class _MapScreenState extends State<MapScreen>
                 ),
               ),
               IconButton(
-                tooltip: _isDiscoveryExpanded ? 'Collapse' : 'Expand',
+                tooltip: _isDiscoveryExpanded ? l10n.commonCollapse : l10n.commonExpand,
                 onPressed: () => setState(
                     () => _isDiscoveryExpanded = !_isDiscoveryExpanded),
                 icon: Icon(
@@ -2623,6 +2818,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildPrimaryControls(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Positioned(
       right: 16,
       bottom: 150,
@@ -2630,7 +2826,7 @@ class _MapScreenState extends State<MapScreen>
         children: [
           _MapIconButton(
             icon: Icons.my_location,
-            tooltip: 'Center on me',
+            tooltip: l10n.mapCenterOnMeTooltip,
             active: _autoFollow,
             onTap: _currentPosition == null
                 ? null
@@ -2645,7 +2841,7 @@ class _MapScreenState extends State<MapScreen>
           const SizedBox(height: 12),
           _MapIconButton(
             icon: Icons.add_location_alt,
-            tooltip: 'Add map marker',
+            tooltip: l10n.mapAddMapMarkerTooltip,
             onTap: () => unawaited(_startMarkerCreationFlow()),
           ),
         ],
@@ -2670,6 +2866,7 @@ class _MapScreenState extends State<MapScreen>
         snap: true,
         snapSizes: const [0.2, 0.45, 0.85],
         builder: (context, scrollController) {
+          final l10n = AppLocalizations.of(context)!;
           return Container(
             decoration: BoxDecoration(
               color: scheme.surface,
@@ -2709,14 +2906,17 @@ class _MapScreenState extends State<MapScreen>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Nearby art',
+                                  l10n.mapNearbyArtTitle,
                                   style: GoogleFonts.outfit(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 Text(
-                                  '${artworks.length} results · ${(discoveryProgress * 100).round()}% discovered',
+                                  l10n.mapResultsDiscoveredLabel(
+                                    artworks.length,
+                                    (discoveryProgress * 100).round(),
+                                  ),
                                   style: GoogleFonts.outfit(
                                     fontSize: 12,
                                     color: scheme.onSurfaceVariant,
@@ -2725,15 +2925,15 @@ class _MapScreenState extends State<MapScreen>
                               ],
                             ),
                             IconButton(
-                              tooltip: 'Nearby radius (${_markerRadiusKm.toInt()} km)',
+                              tooltip: l10n.mapNearbyRadiusTooltip(_markerRadiusKm.toInt()),
                               onPressed: _openMarkerRadiusDialog,
                               icon: const Icon(Icons.radar),
                             ),
                             const Spacer(),
                             IconButton(
                               tooltip: _useGridLayout
-                                  ? 'Show list view'
-                                  : 'Show grid view',
+                                  ? l10n.mapShowListViewTooltip
+                                  : l10n.mapShowGridViewTooltip,
                               onPressed: () => setState(
                                   () => _useGridLayout = !_useGridLayout),
                               icon: Icon(
@@ -2743,7 +2943,7 @@ class _MapScreenState extends State<MapScreen>
                               ),
                             ),
                             PopupMenuButton<_ArtworkSort>(
-                              tooltip: 'Sort results',
+                              tooltip: l10n.mapSortResultsTooltip,
                               onSelected: (value) =>
                                   setState(() => _sort = value),
                               itemBuilder: (context) => [
@@ -2752,7 +2952,7 @@ class _MapScreenState extends State<MapScreen>
                                     value: sort,
                                     child: Row(
                                       children: [
-                                        Expanded(child: Text(sort.label)),
+                                        Expanded(child: Text(sort.label(l10n))),
                                         if (sort == _sort)
                                           Icon(Icons.check,
                                               color: scheme.primary),
@@ -2836,6 +3036,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Widget _buildEmptyState(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = theme.colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     
@@ -2870,7 +3071,7 @@ class _MapScreenState extends State<MapScreen>
               ),
               const SizedBox(height: 20),
               Text(
-                'No artworks nearby',
+                l10n.mapEmptyNoArtworksTitle,
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -2879,7 +3080,7 @@ class _MapScreenState extends State<MapScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Explore different areas or adjust your filters to discover art around you.',
+                l10n.mapEmptyNoArtworksDescription,
                 textAlign: TextAlign.center,
                 style: GoogleFonts.outfit(
                   fontSize: 14,
@@ -2893,13 +3094,13 @@ class _MapScreenState extends State<MapScreen>
                 children: [
                   _EmptyStateChip(
                     icon: Icons.zoom_out_map,
-                    label: 'Zoom out',
+                    label: l10n.mapEmptyZoomOutAction,
                     color: themeProvider.accentColor,
                   ),
                   const SizedBox(width: 8),
                   _EmptyStateChip(
                     icon: Icons.filter_alt_outlined,
-                    label: 'Adjust filters',
+                    label: l10n.mapEmptyAdjustFiltersAction,
                     color: scheme.tertiary,
                   ),
                 ],
@@ -3002,35 +3203,47 @@ class _MapScreenState extends State<MapScreen>
     );
   }
 
-  String _markerTypeLabel(ArtMarkerType type) {
+  String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
     switch (type) {
       case ArtMarkerType.artwork:
-        return 'Artworks';
+        return l10n.mapMarkerTypeArtworks;
       case ArtMarkerType.institution:
-        return 'Institutions';
+        return l10n.mapMarkerTypeInstitutions;
       case ArtMarkerType.event:
-        return 'Events';
+        return l10n.mapMarkerTypeEvents;
       case ArtMarkerType.residency:
-        return 'Residencies';
+        return l10n.mapMarkerTypeResidencies;
       case ArtMarkerType.drop:
-        return 'Drops';
+        return l10n.mapMarkerTypeDrops;
       case ArtMarkerType.experience:
-        return 'Experiences';
+        return l10n.mapMarkerTypeExperiences;
       case ArtMarkerType.other:
-        return 'Misc';
+        return l10n.mapMarkerTypeMisc;
     }
   }
 }
 
 enum _ArtworkSort {
-  nearest('Nearest'),
-  newest('Newest'),
-  rarity('Rarity'),
-  rewards('Highest rewards'),
-  popular('Most viewed');
+  nearest,
+  newest,
+  rarity,
+  rewards,
+  popular;
 
-  const _ArtworkSort(this.label);
-  final String label;
+  String label(AppLocalizations l10n) {
+    switch (this) {
+      case _ArtworkSort.nearest:
+        return l10n.mapSortNearest;
+      case _ArtworkSort.newest:
+        return l10n.mapSortNewest;
+      case _ArtworkSort.rarity:
+        return l10n.mapSortRarity;
+      case _ArtworkSort.rewards:
+        return l10n.mapSortHighestRewards;
+      case _ArtworkSort.popular:
+        return l10n.mapSortMostViewed;
+    }
+  }
 }
 
 class _MapIconButton extends StatelessWidget {
@@ -3095,10 +3308,11 @@ class _ArtworkListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final borderRadius = BorderRadius.circular(22);
     final previewHeight = dense ? 120.0 : 150.0;
-    final distanceLabel = _distanceLabel();
+    final distanceLabel = _distanceLabel(l10n);
     final isDiscovered = artwork.isDiscovered;
     final previewUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
 
@@ -3130,7 +3344,7 @@ class _ArtworkListTile extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'by ${artwork.artist}',
+                l10n.commonByArtist(artwork.artist),
                 style: GoogleFonts.outfit(
                   color: scheme.onSurfaceVariant,
                   fontSize: dense ? 12 : 13,
@@ -3153,7 +3367,7 @@ class _ArtworkListTile extends StatelessWidget {
                   if (artwork.arEnabled)
                     _InfoChip(
                       icon: Icons.view_in_ar,
-                      label: 'AR ready',
+                      label: l10n.mapArReadyChipLabel,
                       backgroundColor:
                           scheme.primaryContainer.withValues(alpha: 0.35),
                       foregroundColor: scheme.primary,
@@ -3204,7 +3418,7 @@ class _ArtworkListTile extends StatelessWidget {
                   Icon(Icons.token, size: 18, color: scheme.primary),
                   const SizedBox(width: 4),
                   Text(
-                    '+${artwork.rewards} KUB8',
+                    l10n.commonKub8PointsReward(artwork.rewards),
                     style: GoogleFonts.outfit(
                       fontWeight: FontWeight.w600,
                       color: scheme.primary,
@@ -3229,14 +3443,14 @@ class _ArtworkListTile extends StatelessWidget {
                   Expanded(
                     child: FilledButton.tonal(
                       onPressed: onOpenDetails,
-                      child: const Text('View details'),
+                      child: Text(l10n.commonViewDetails),
                     ),
                   ),
                   const SizedBox(width: 12),
                   IconButton.filledTonal(
                     tooltip: isDiscovered
-                        ? 'Already discovered'
-                        : 'Mark as discovered',
+                        ? l10n.mapAlreadyDiscoveredTooltip
+                        : l10n.mapMarkAsDiscoveredTooltip,
                     onPressed: isDiscovered ? null : onMarkDiscovered,
                     icon: Icon(
                       isDiscovered ? Icons.check_circle : Icons.flag_outlined,
@@ -3251,14 +3465,14 @@ class _ArtworkListTile extends StatelessWidget {
     );
   }
 
-  String? _distanceLabel() {
+  String? _distanceLabel(AppLocalizations l10n) {
     if (currentPosition == null) return null;
     final meters = artwork.getDistanceFrom(currentPosition!);
     if (meters >= 1000) {
       final km = meters / 1000;
-      return '${km.toStringAsFixed(km >= 10 ? 0 : 1)} km';
+      return l10n.commonDistanceKm(km.toStringAsFixed(km >= 10 ? 0 : 1));
     }
-    return '${meters.round()} m';
+    return l10n.commonDistanceM(meters.round().toString());
   }
 }
 

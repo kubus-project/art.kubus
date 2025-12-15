@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/app_loading.dart';
@@ -245,6 +246,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Future<void> _loadPosts() async {
     if (user == null) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _postsLoading = true;
       _postsError = null;
@@ -278,13 +280,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       setState(() {
         _posts = [];
         _postsLoading = false;
-        _postsError = 'Failed to load posts';
+        _postsError = l10n.userProfilePostsLoadFailedDescription;
       });
     }
   }
 
   Future<void> _loadMorePosts() async {
     if (user == null || _isLastPage || _loadingMore) return;
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _loadingMore = true;
       _currentPage += 1;
@@ -308,7 +311,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       debugPrint('Error loading more posts: $e');
       setState(() {
         _loadingMore = false;
-        _postsError = 'Failed to load more posts';
+        _postsError = l10n.userProfilePostsLoadMoreFailedDescription;
       });
       // Roll back page counter on failure
       setState(() {
@@ -323,6 +326,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Future<void> _toggleFollow() async {
     if (user == null) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final theme = Theme.of(context);
 
     _followButtonController.forward().then((_) {
       _followButtonController.reverse();
@@ -339,11 +346,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     } catch (e) {
       debugPrint('UserProfileScreen: failed to toggle follow for ${user!.id}: $e');
       if (!mounted) return;
-      final theme = Theme.of(context);
       final message = e.toString().contains('401')
-          ? 'Please sign in to follow creators.'
-          : 'Could not update follow status. Please try again.';
-      ScaffoldMessenger.of(context).showSnackBar(
+          ? l10n.userProfileSignInToFollowToast
+          : l10n.userProfileFollowUpdateFailedToast;
+      messenger.showSnackBar(
         SnackBar(
           content: Text(message),
           duration: const Duration(seconds: 3),
@@ -367,12 +373,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
     // Show feedback
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
             newFollowState 
-                ? 'Following ${user!.name}' 
-                : 'Unfollowed ${user!.name}',
+                ? l10n.userProfileNowFollowingToast(user!.name)
+                : l10n.userProfileUnfollowedToast(user!.name),
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
@@ -400,12 +406,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
     
     if (isLoading) {
       return Scaffold(
         appBar: AppBar(
           title: Text(
-            'Profile',
+            l10n.userProfileTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -420,15 +427,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       return Scaffold(
         appBar: AppBar(
           title: Text(
-            'Profile',
+            l10n.userProfileTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
-        body: const Center(
-          child: Text('User not found'),
+        body: Center(
+          child: Text(l10n.userProfileNotFound),
         ),
       );
     }
@@ -472,18 +479,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             icon: const Icon(Icons.share),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profile shared!'),
+                SnackBar(
+                  content: Text(l10n.userProfileSharedToast),
                   duration: Duration(seconds: 2),
                 ),
               );
             },
-            tooltip: 'Share',
+            tooltip: l10n.userProfileShareTooltip,
           ),
           TopBarIcon(
             icon: const Icon(Icons.more_vert),
             onPressed: _showMoreOptions,
-            tooltip: 'More',
+            tooltip: l10n.userProfileMoreTooltip,
           ),
         ],
       ),
@@ -499,22 +506,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               children: [
                 _buildProfileHeader(themeProvider, isArtist: isArtist, isInstitution: isInstitution),
                 const SizedBox(height: 12),
-                _buildStatsRow(),
+                _buildStatsRow(l10n),
                 const SizedBox(height: 16),
-                _buildActionButtons(themeProvider),
+                _buildActionButtons(themeProvider, l10n),
                 const SizedBox(height: 16),
                 if (isArtist) ...[
-                  _buildArtistHighlightsGrid(),
+                  _buildArtistHighlightsGrid(l10n),
                   const SizedBox(height: 24),
                 ],
                 isInstitution
-                    ? _buildInstitutionHighlights()
-                    : _buildAchievements(themeProvider),
+                    ? _buildInstitutionHighlights(l10n)
+                    : _buildAchievements(themeProvider, l10n),
                 const SizedBox(height: 24),
-                _buildPostsSection(),
+                _buildPostsSection(l10n),
                 if (isArtist) ...[
                   const SizedBox(height: 24),
-                  _buildArtistEventsShowcase(),
+                  _buildArtistEventsShowcase(l10n),
                 ],
                 const SizedBox(height: 32),
               ],
@@ -559,6 +566,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                 image: hasCoverImage ? DecorationImage(
                   image: NetworkImage(coverImageUrl),
                   fit: BoxFit.cover,
+                  onError: (error, stackTrace) {
+                    // Ignore cover image load errors (e.g., missing file/404) so the
+                    // UI falls back to the gradient without crashing on web.
+                  },
                 ) : null,
               ),
               child: hasCoverImage ? Container(
@@ -682,7 +693,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       );
   }
 
-  Widget _buildStatsRow() {
+  Widget _buildStatsRow(AppLocalizations l10n) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 0),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
@@ -700,13 +711,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       ),
     child: Row(
         children: [
-          _buildInlineStat(label: 'Posts', value: _formatCount(user!.postsCount)),
+          _buildInlineStat(label: l10n.userProfilePostsStatLabel, value: _formatCount(user!.postsCount)),
           Container(
             width: 1,
             height: 40,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           ),
-          _buildInlineStat(label: 'Followers', value: _formatCount(user!.followersCount), onTap: () async {
+          _buildInlineStat(label: l10n.userProfileFollowersStatLabel, value: _formatCount(user!.followersCount), onTap: () async {
             try { await _loadUserStats(); } catch (_) {}
             if (!mounted) return;
             ProfileScreenMethods.showFollowers(context, walletAddress: user!.id);
@@ -716,7 +727,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             height: 40,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           ),
-          _buildInlineStat(label: 'Following', value: _formatCount(user!.followingCount), onTap: () async {
+          _buildInlineStat(label: l10n.userProfileFollowingStatLabel, value: _formatCount(user!.followingCount), onTap: () async {
             try { await _loadUserStats(); } catch (_) {}
             if (!mounted) return;
             ProfileScreenMethods.showFollowing(context, walletAddress: user!.id);
@@ -765,7 +776,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildActionButtons(ThemeProvider themeProvider) {
+  Widget _buildActionButtons(ThemeProvider themeProvider, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
       child: Row(
@@ -796,7 +807,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   ),
                 ),
                 child: Text(
-                  user!.isFollowing ? 'Following' : 'Follow',
+                  user!.isFollowing
+                      ? l10n.userProfileFollowingButton
+                      : l10n.userProfileFollowButton,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -812,6 +825,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               // navigator variable no longer used; ConversationNavigator handles navigation
               final messenger = ScaffoldMessenger.of(context);
               final chatAuth = chatProvider.isAuthenticated;
+              final l10n = AppLocalizations.of(context)!;
               try {
                 final conv = await chatProvider.createConversation('', false, [user!.id]);
                 if (conv != null) {
@@ -836,18 +850,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                   // use pre-captured chatAuth variable
                   if (!chatAuth) {
                     if (mounted) {
-                      messenger.showSnackBar(const SnackBar(content: Text('Please log in to message this user.')));
+                      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileMessageLoginRequiredToast)));
                     }
                   } else {
                     if (mounted) {
-                      messenger.showSnackBar(const SnackBar(content: Text('Could not open conversation')));
+                      messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenFailedToast)));
                     }
                   }
                 }
               } catch (e) {
-                if (mounted) {
-                  messenger.showSnackBar(SnackBar(content: Text('Failed to open conversation: $e')));
-                }
+                debugPrint('UserProfileScreen: failed to open conversation: $e');
+                if (!mounted) return;
+                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileConversationOpenGenericErrorToast)));
               }
             },
             style: ElevatedButton.styleFrom(
@@ -870,7 +884,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildAchievements(ThemeProvider themeProvider) {
+  Widget _buildAchievements(ThemeProvider themeProvider, AppLocalizations l10n) {
     final progress = user?.achievementProgress ?? [];
     final achievementsToShow = allAchievements.take(6).toList();
 
@@ -889,7 +903,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Achievements',
+                l10n.userProfileAchievementsTitle,
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -909,8 +923,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           const SizedBox(height: 12),
           if (progress.isEmpty)
             _buildEmptyStateCard(
-              title: '${user!.name} hasn\'t unlocked any achievements yet.',
-              description: 'Start exploring to unlock achievements',
+              l10n: l10n,
+              title: l10n.userProfileAchievementsEmptyTitle(user!.name),
+              description: l10n.userProfileAchievementsEmptyDescription,
               icon: Icons.emoji_events,
             )
           else
@@ -935,6 +950,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   Widget _buildAchievementCard(ThemeProvider themeProvider, Achievement achievement, AchievementProgress progress) {
+    final l10n = AppLocalizations.of(context)!;
     final requiredProgress = achievement.requiredProgress > 0 ? achievement.requiredProgress : 1;
     final ratio = (progress.currentProgress / requiredProgress).clamp(0.0, 1.0);
     final isCompleted = progress.isCompleted || ratio >= 1.0;
@@ -1007,7 +1023,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                isCompleted ? 'Completed' : '${progress.currentProgress}/$requiredProgress',
+                isCompleted
+                    ? l10n.userProfileAchievementCompletedLabel
+                    : '${progress.currentProgress}/$requiredProgress',
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -1050,14 +1068,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildPostsSection() {
+  Widget _buildPostsSection(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Posts',
+            l10n.userProfilePostsTitle,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1071,16 +1089,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               child: const Center(child: CircularProgressIndicator()),
             ) else if (_postsError != null)
             _buildEmptyStateCard(
-              title: 'Could not load posts',
+              l10n: l10n,
+              title: l10n.userProfilePostsLoadFailedTitle,
               description: _postsError!,
               icon: Icons.cloud_off,
               showAction: true,
-              actionLabel: 'Try again',
+              actionLabel: l10n.commonRetry,
               onActionTap: _loadPosts,
             ) else if (_posts.isEmpty)
             _buildEmptyStateCard(
-              title: 'No posts yet',
-              description: '${user!.name} hasn\'t shared any posts so far.',
+              l10n: l10n,
+              title: l10n.userProfileNoPostsTitle,
+              description: l10n.userProfileNoPostsDescription(user!.name),
               icon: Icons.article,
             ) else
             ListView.separated(
@@ -1142,7 +1162,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                                     ],
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(_formatPostTime(post.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
+                                  Text(_formatPostTime(l10n, post.timestamp), style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))),
                                 ],
                               ),
                             ),
@@ -1186,7 +1206,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 alignment: Alignment.center,
-                child: Text('No more posts', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
+                child: Text(l10n.userProfileNoMorePostsLabel, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
               ),
             const SizedBox(height: 24),
         ],
@@ -1194,14 +1214,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildArtistHighlightsGrid() {
+  Widget _buildArtistHighlightsGrid(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Artist Highlights',
+            l10n.userProfileArtistHighlightsTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1210,7 +1230,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(height: 8),
           Text(
-            'Latest drops from ${user!.name}.',
+            l10n.userProfileArtistHighlightsSubtitle(user!.name),
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1218,16 +1238,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Artworks',
+            l10n: l10n,
+            title: l10n.userProfileArtworksTitle,
             items: _artistArtworks,
-            emptyLabel: '${user!.name} hasn\'t published any artworks yet.',
+            emptyLabel: l10n.userProfileNoArtworksYetLabel(user!.name),
+            emptyIcon: Icons.image_outlined,
             builder: _buildArtworkCard,
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Collections',
+            l10n: l10n,
+            title: l10n.userProfileCollectionsTitle,
             items: _artistCollections,
-            emptyLabel: '${user!.name} hasn\'t curated collections yet.',
+            emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
+            emptyIcon: Icons.collections_outlined,
             builder: _buildCollectionCard,
           ),
         ],
@@ -1235,14 +1259,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildArtistEventsShowcase() {
+  Widget _buildArtistEventsShowcase(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Events',
+            l10n.userProfileEventsTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1251,7 +1275,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(height: 8),
           Text(
-            'Upcoming experiences featuring ${user!.name}.',
+            l10n.userProfileEventsSubtitleFeaturing(user!.name),
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1259,9 +1283,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Events',
+            l10n: l10n,
+            title: l10n.userProfileEventsTitle,
             items: _artistEvents,
-            emptyLabel: 'No upcoming events from ${user!.name} just yet.',
+            emptyLabel: l10n.userProfileNoUpcomingEventsYetLabel(user!.name),
+            emptyIcon: Icons.event,
             builder: _buildEventCard,
           ),
         ],
@@ -1269,14 +1295,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     );
   }
 
-  Widget _buildInstitutionHighlights() {
+  Widget _buildInstitutionHighlights(AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Institution Highlights',
+            l10n.userProfileInstitutionHighlightsTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -1285,7 +1311,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(height: 8),
           Text(
-            'Programs and collections curated by ${user!.name}.',
+            l10n.userProfileInstitutionHighlightsSubtitle(user!.name),
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1293,16 +1319,20 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Events',
+            l10n: l10n,
+            title: l10n.userProfileEventsTitle,
             items: _artistEvents,
-            emptyLabel: '${user!.name} has no upcoming events yet.',
+            emptyLabel: l10n.userProfileNoUpcomingEventsYetLabel(user!.name),
+            emptyIcon: Icons.event,
             builder: _buildEventCard,
           ),
           const SizedBox(height: 20),
           _buildShowcaseSection(
-            title: 'Collections',
+            l10n: l10n,
+            title: l10n.userProfileCollectionsTitle,
             items: _artistCollections,
-            emptyLabel: '${user!.name} hasn\'t curated collections yet.',
+            emptyLabel: l10n.userProfileNoCollectionsYetLabel(user!.name),
+            emptyIcon: Icons.collections_outlined,
             builder: _buildCollectionCard,
           ),
         ],
@@ -1311,10 +1341,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   Widget _buildShowcaseSection({
+    required AppLocalizations l10n,
     required String title,
     required List<Map<String, dynamic>> items,
     required Widget Function(Map<String, dynamic>) builder,
     required String emptyLabel,
+    required IconData emptyIcon,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1341,16 +1373,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           )
         else if (items.isEmpty)
           _buildEmptyStateCard(
-            title: 'No $title',
+            l10n: l10n,
+            title: l10n.userProfileNoItemsTitle(title),
             description: emptyLabel,
-            icon: (() {
-              final lower = title.toLowerCase();
-              if (lower.contains('artwork')) return Icons.image_outlined;
-              if (lower.contains('collection')) return Icons.collections_outlined;
-              if (lower.contains('event')) return Icons.event;
-              if (lower.contains('post') || lower.contains('posts')) return Icons.article;
-              return Icons.info_outline;
-            })(),
+            icon: emptyIcon,
           )
         else
           SizedBox(
@@ -1368,9 +1394,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildArtworkCard(Map<String, dynamic> data) {
     final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage']);
-    final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
-    final medium = (data['medium'] ?? data['category'] ?? 'Digital').toString();
+    final l10n = AppLocalizations.of(context)!;
+    final title = (data['title'] ?? data['name'] ?? l10n.commonUntitled).toString();
+    final medium = (data['medium'] ?? data['category'] ?? l10n.commonDigital).toString();
     final likes = data['likesCount'] ?? data['likes'] ?? 0;
+    final likesCount = int.tryParse(likes.toString()) ?? 0;
     final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
     
     return GestureDetector(
@@ -1387,28 +1415,31 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         imageUrl: imageUrl,
         title: title,
         subtitle: medium,
-        footer: '$likes likes',
+        footer: l10n.userProfileLikesLabel(likesCount),
       ),
     );
   }
 
   Widget _buildCollectionCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
-    final title = (data['name'] ?? 'Collection').toString();
+    final title = (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
+    final artworksCount = int.tryParse(count.toString()) ?? 0;
     return _buildShowcaseCard(
       imageUrl: imageUrl,
       title: title,
-      subtitle: '$count artworks',
-      footer: (data['description'] ?? 'Curated by ${user!.name}').toString(),
+      subtitle: l10n.userProfileArtworksCountLabel(artworksCount),
+      footer: (data['description'] ?? l10n.userProfileCuratedByLabel(user!.name)).toString(),
     );
   }
 
   Widget _buildEventCard(Map<String, dynamic> data) {
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = _extractImageUrl(data, ['bannerUrl', 'image']);
-    final title = (data['title'] ?? 'Event').toString();
-    final dateLabel = _formatDateLabel(data['startDate'] ?? data['start_date']);
-    final location = (data['location'] ?? 'TBA').toString();
+    final title = (data['title'] ?? l10n.userProfileEventFallbackTitle).toString();
+    final dateLabel = _formatDateLabel(l10n, data['startDate'] ?? data['start_date']);
+    final location = (data['location'] ?? l10n.commonTba).toString();
     return _buildShowcaseCard(
       imageUrl: imageUrl,
       title: title,
@@ -1517,28 +1548,23 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     return MediaUrlResolver.resolve(url);
   }
 
-  String _formatDateLabel(dynamic value) {
-    if (value == null) return 'TBA';
+  String _formatDateLabel(AppLocalizations l10n, dynamic value) {
+    if (value == null) return l10n.commonTba;
     try {
       final date = value is DateTime ? value : DateTime.parse(value.toString());
-      return '${_monthShort(date.month)} ${date.day}, ${date.year}';
+      return MaterialLocalizations.of(context).formatMediumDate(date);
     } catch (_) {
-      return 'TBA';
+      return l10n.commonTba;
     }
   }
 
-  String _monthShort(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    if (month < 1 || month > 12) return '';
-    return months[month - 1];
-  }
-
   Widget _buildEmptyStateCard({
+    required AppLocalizations l10n,
     required String title,
     required String description,
     IconData icon = Icons.info_outline,
     bool showAction = false,
-    String actionLabel = 'Retry',
+    String? actionLabel,
     Future<void> Function()? onActionTap,
   }) {
     return EmptyStateCard(
@@ -1546,7 +1572,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       title: title,
       description: description,
       showAction: showAction,
-      actionLabel: showAction ? actionLabel : null,
+      actionLabel: showAction ? (actionLabel ?? l10n.commonRetry) : null,
       onAction: onActionTap != null ? () => onActionTap() : null,
     );
   }
@@ -1615,6 +1641,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   void _showMoreOptions() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -1635,19 +1662,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               ),
             ),
             const SizedBox(height: 24),
-            _buildOptionItem(Icons.block, 'Block User', () {
+            _buildOptionItem(Icons.block, l10n.userProfileMoreOptionsBlockUser, () {
               Navigator.pop(context);
               _showBlockConfirmation();
             }),
-            _buildOptionItem(Icons.report, 'Report User', () {
+            _buildOptionItem(Icons.report, l10n.userProfileMoreOptionsReportUser, () {
               Navigator.pop(context);
               _showReportDialog();
             }),
-            _buildOptionItem(Icons.copy, 'Copy Profile Link', () {
+            _buildOptionItem(Icons.copy, l10n.userProfileMoreOptionsCopyLink, () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profile link copied to clipboard'),
+                SnackBar(
+                  content: Text(l10n.userProfileLinkCopiedToast),
                   duration: Duration(seconds: 2),
                 ),
               );
@@ -1670,52 +1697,51 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   void _showBlockConfirmation() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(
-          'Block ${user!.name}?',
+          l10n.userProfileBlockDialogTitle(user!.name),
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'They won\'t be able to see your profile or posts.',
+          l10n.userProfileBlockDialogDescription,
           style: GoogleFonts.inter(),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final targetWallet = WalletUtils.canonical(user?.id ?? widget.userId);
               if (targetWallet.isEmpty) {
                 if (!mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Unable to block user')),
-                );
+                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileUnableToBlockToast)));
                 return;
               }
 
               try {
                 await BlockListService().blockWallet(targetWallet);
               } catch (e) {
+                debugPrint('UserProfileScreen: failed to block user: $e');
                 if (!mounted) return;
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to block user: $e')),
-                );
+                messenger.showSnackBar(SnackBar(content: Text(l10n.userProfileBlockFailedToast)));
                 return;
               }
 
               if (!mounted) return;
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Blocked ${user?.name ?? targetWallet}')),
+              messenger.showSnackBar(
+                SnackBar(content: Text(l10n.userProfileBlockedToast(user?.name ?? targetWallet))),
               );
             },
-            child: const Text('Block'),
+            child: Text(l10n.userProfileBlockButtonLabel),
           ),
         ],
       ),
@@ -1723,55 +1749,57 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   }
 
   void _showReportDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          'Report ${user!.name}',
+          l10n.userProfileReportDialogTitle(user!.name),
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Why are you reporting this user?',
+              l10n.userProfileReportDialogQuestion,
               style: GoogleFonts.inter(),
             ),
             const SizedBox(height: 16),
-            _buildReportOption('Spam'),
-            _buildReportOption('Inappropriate content'),
-            _buildReportOption('Harassment'),
-            _buildReportOption('Other'),
+            _buildReportOption(l10n.userProfileReportReasonSpam),
+            _buildReportOption(l10n.userProfileReportReasonInappropriate),
+            _buildReportOption(l10n.userProfileReportReasonHarassment),
+            _buildReportOption(l10n.userProfileReportReasonOther),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
         ],
       ),
     );
   }
 
-  String _formatPostTime(DateTime timestamp) {
+  String _formatPostTime(AppLocalizations l10n, DateTime timestamp) {
     final now = DateTime.now();
     final diff = now.difference(timestamp);
-    if (diff.inDays > 7) return '${(diff.inDays / 7).floor()}w ago';
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return 'Just now';
+    if (diff.inDays > 7) return l10n.commonWeeksAgo((diff.inDays / 7).floor());
+    if (diff.inDays > 0) return l10n.commonDaysAgo(diff.inDays);
+    if (diff.inHours > 0) return l10n.commonHoursAgo(diff.inHours);
+    if (diff.inMinutes > 0) return l10n.commonMinutesAgo(diff.inMinutes);
+    return l10n.commonJustNow;
   }
 
   Widget _buildReportOption(String reason) {
     return ListTile(
       title: Text(reason),
       onTap: () {
+        final l10n = AppLocalizations.of(context)!;
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Report submitted. Thank you for your feedback.'),
+          SnackBar(
+            content: Text(l10n.userProfileReportSubmittedToast),
             duration: Duration(seconds: 2),
           ),
         );

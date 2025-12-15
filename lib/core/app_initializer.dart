@@ -14,6 +14,7 @@ import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/cache_provider.dart';
+import '../providers/locale_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
 import '../screens/onboarding/onboarding_screen.dart';
@@ -44,6 +45,10 @@ class _AppInitializerState extends State<AppInitializer> {
   Future<void> _initializeApp() async {
     // Load JWT token for backend authentication
     await BackendApiService().loadAuthToken();
+    if (!mounted) return;
+
+    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+    await localeProvider.initialize();
     if (!mounted) return;
     
     // Initialize ConfigProvider first

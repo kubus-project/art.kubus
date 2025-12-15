@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../../config/config.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/community_hub_provider.dart';
@@ -23,11 +25,13 @@ import '../../../widgets/institution_badge.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
+import '../desktop_shell.dart';
 import '../../community/group_feed_screen.dart';
 import '../../community/conversation_screen.dart';
 import 'desktop_user_profile_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
+import '../../season0/season0_screen.dart';
 
 /// Desktop community screen with Twitter/Instagram-style feed
 /// Features multi-column layout with trending and suggestions
@@ -40,6 +44,12 @@ class DesktopCommunityScreen extends StatefulWidget {
 
 class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     with TickerProviderStateMixin {
+  // Semantic color palette for varied UI elements (matches governance/artist/institution screens)
+  static const Color _tealAccent = Color(0xFF4ECDC4);
+  static const Color _coralAccent = Color(0xFFFF6B6B);
+  static const Color _amberAccent = Color(0xFFFFB300);
+  static const Color _purpleAccent = Color(0xFF9575CD);
+  
   late AnimationController _animationController;
   late TabController _tabController;
   late ScrollController _scrollController;
@@ -173,6 +183,72 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _loadDiscoverFeed(),
       _loadFollowingFeed(),
     ]);
+
+    // Trending topics are loaded in parallel with the feeds. When the trending
+    // request finishes before the feed data is available, we end up with
+    // "0 tagged posts" because the backend trending endpoint does not include
+    // community tag counts. Once feeds are loaded, enrich (or seed) trending
+    // counts from the local posts so the desktop sidebar stays informative.
+    if (!mounted) return;
+    _enrichTrendingTopicsFromFeedCounts();
+  }
+
+  void _enrichTrendingTopicsFromFeedCounts() {
+    if (!mounted) return;
+    final fallback = _buildFallbackTrendingTopics();
+    if (fallback.isEmpty) return;
+
+    // If trending wasn't loaded yet (or failed), seed from feed-derived counts.
+    if (_trendingTopics.isEmpty) {
+      setState(() {
+        _trendingTopics = fallback.length > 12 ? fallback.sublist(0, 12) : List<Map<String, dynamic>>.from(fallback);
+        _trendingFromFeed = true;
+      });
+      return;
+    }
+
+    final fallbackCounts = <String, int>{
+      for (final item in fallback)
+        (item['tag'] as String).toLowerCase(): (item['count'] as int),
+    };
+
+    var changed = false;
+    final updated = <Map<String, dynamic>>[];
+    for (final entry in _trendingTopics) {
+      final rawTag = entry['tag'];
+      final normalizedTag = _sanitizeTagValue(rawTag)?.toLowerCase();
+      if (normalizedTag == null) {
+        updated.add(Map<String, dynamic>.from(entry));
+        continue;
+      }
+
+      final currentValue = entry['count'];
+      final currentCount = currentValue is num
+          ? currentValue
+          : num.tryParse(currentValue?.toString() ?? '') ?? 0;
+
+      if (currentCount == 0 && fallbackCounts.containsKey(normalizedTag)) {
+        updated.add({
+          ...entry,
+          'tag': _sanitizeTagValue(rawTag) ?? rawTag,
+          'count': fallbackCounts[normalizedTag]!,
+        });
+        changed = true;
+      } else {
+        // Ensure count is consistently numeric.
+        updated.add({
+          ...entry,
+          'tag': _sanitizeTagValue(rawTag) ?? rawTag,
+          'count': currentCount,
+        });
+      }
+    }
+
+    if (!changed) return;
+    setState(() {
+      _trendingTopics = updated;
+      _trendingFromFeed = true;
+    });
   }
 
   Future<List<CommunityPost>> _filterBlockedPosts(List<CommunityPost> posts) async {
@@ -234,8 +310,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
     try {
       final backend = BackendApiService();
-      final results = await backend.getTrendingSearches(limit: 24);
-      var normalized = _normalizeTrendingTopics(results);
+      // Prefer real community tag counts from the community API.
+      // This endpoint returns { tag, count }.
+      final tagResults = await backend.getTrendingCommunityTags(
+        limit: 24,
+        timeframeDays: 30,
+      );
+
+      // Fallback to the search trending endpoint only if the community tag
+      // endpoint is empty/unavailable.
+      final searchResults = tagResults.isEmpty ? await backend.getTrendingSearches(limit: 24) : const <Map<String, dynamic>>[];
+
+      var normalized = _normalizeTrendingTopics(tagResults.isNotEmpty ? tagResults : searchResults);
       var usedFallback = false;
       final fallback = _buildFallbackTrendingTopics();
       final fallbackCounts = {for (final item in fallback) (item['tag'] as String).toLowerCase(): item['count'] as int};
@@ -1601,8 +1687,92 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       color: themeProvider.accentColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        itemCount: posts.length,
-        itemBuilder: (context, index) => _buildPostCard(posts[index], themeProvider),
+        itemCount: posts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+        itemBuilder: (context, index) {
+          if (AppConfig.isFeatureEnabled('season0') && index == 0) {
+            return _buildSeason0Banner(themeProvider);
+          }
+          final postIndex = AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+          return _buildPostCard(posts[postIndex], themeProvider);
+        },
+      ),
+    );
+  }
+
+  Widget _buildSeason0Banner(ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
+    final accent = themeProvider.accentColor;
+    final l10n = AppLocalizations.of(context)!;
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {
+          final shellScope = DesktopShellScope.of(context);
+          if (shellScope != null) {
+            shellScope.pushScreen(
+              DesktopSubScreen(
+                title: 'Season 0',
+                child: const Season0Screen(),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const Season0Screen()),
+            );
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [accent.withValues(alpha: 0.12), scheme.primaryContainer.withValues(alpha: 0.3)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: accent.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.rocket_launch_outlined, color: accent, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.season0BannerTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      l10n.season0BannerTap,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.35)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -2105,12 +2275,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => GroupFeedScreen(group: group),
-            ),
-          ),
+          onTap: () {
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope != null) {
+              shellScope.pushScreen(
+                DesktopSubScreen(
+                  title: group.name,
+                  child: GroupFeedScreen(group: group),
+                ),
+              );
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GroupFeedScreen(group: group),
+                ),
+              );
+            }
+          },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -4655,7 +4837,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: themeProvider.accentColor.withValues(alpha: 0.12),
+                          color: _getTrendingRankColor(rank).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Center(
@@ -4663,7 +4845,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             '#$rank',
                             style: GoogleFonts.inter(
                               fontWeight: FontWeight.w700,
-                              color: themeProvider.accentColor,
+                              color: _getTrendingRankColor(rank),
                             ),
                           ),
                         ),
@@ -4697,8 +4879,23 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       IconButton(
                         tooltip: 'Add to post',
                         onPressed: () {
-                          hub.addTag(rawTag);
-                          _appendComposerToken(displayTag);
+                          final sanitized = _sanitizeTagValue(rawTag);
+                          if (sanitized == null) return;
+                          hub.addTag(sanitized);
+
+                          // Make the action visible immediately by expanding
+                          // the quick composer in the sidebar.
+                          if (!_isComposerExpanded) {
+                            setState(() {
+                              _isComposerExpanded = true;
+                            });
+                          } else {
+                            // Still rebuild so the mini-chip row reflects the
+                            // added tag even if the composer is already open.
+                            setState(() {});
+                          }
+
+                          _appendComposerToken('#$sanitized');
                         },
                         icon: Icon(
                           Icons.add,
@@ -4711,10 +4908,29 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ),
                 );
               }),
-            ],
+          ],
           ),
       ],
     );
+  }
+
+  /// Get varied color for trending rank badges
+  Color _getTrendingRankColor(int rank) {
+    final scheme = Theme.of(context).colorScheme;
+    switch (rank) {
+      case 1:
+        return _coralAccent; // Coral for #1
+      case 2:
+        return _amberAccent; // Amber for #2
+      case 3:
+        return _tealAccent; // Teal for #3
+      case 4:
+        return scheme.secondary;
+      case 5:
+        return _purpleAccent;
+      default:
+        return scheme.tertiary;
+    }
   }
 
   void _appendComposerToken(String token) {
@@ -6250,12 +6466,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const DownloadAppScreen(),
-                ),
-              );
+              final shellScope = DesktopShellScope.of(context);
+              if (shellScope != null) {
+                shellScope.pushScreen(
+                  DesktopSubScreen(
+                    title: 'Download App',
+                    child: const DownloadAppScreen(),
+                  ),
+                );
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DownloadAppScreen(),
+                  ),
+                );
+              }
             },
             child: Text(
               'Open mobile app',

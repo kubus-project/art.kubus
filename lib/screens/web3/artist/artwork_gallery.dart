@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/artwork.dart' as art_model;
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/themeprovider.dart';
@@ -36,6 +37,36 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
 
     _animationController.forward();
+  }
+
+  String _filterLabel(String key, AppLocalizations l10n) {
+    switch (key) {
+      case 'All':
+        return l10n.artistGalleryFilterAll;
+      case 'Active':
+        return l10n.artistGalleryFilterActive;
+      case 'Draft':
+        return l10n.artistGalleryFilterDraft;
+      case 'Sold':
+        return l10n.artistGalleryFilterSold;
+      default:
+        return key;
+    }
+  }
+
+  String _sortLabel(String key, AppLocalizations l10n) {
+    switch (key) {
+      case 'Newest':
+        return l10n.artistGallerySortNewest;
+      case 'Oldest':
+        return l10n.artistGallerySortOldest;
+      case 'Most Views':
+        return l10n.artistGallerySortMostViews;
+      case 'Most Likes':
+        return l10n.artistGallerySortMostLikes;
+      default:
+        return key;
+    }
   }
 
   @override
@@ -80,13 +111,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
 
   Widget _buildHeader(int totalArtworks, bool isBusy) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Your Gallery',
+            l10n.artistGalleryTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -95,7 +127,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           ),
           const SizedBox(height: 4),
           Text(
-            '$totalArtworks artworks',
+            l10n.artistGalleryArtworkCount(totalArtworks),
             style: GoogleFonts.inter(
               fontSize: 12,
               color: Theme.of(context)
@@ -139,6 +171,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Widget _buildStatsRow(List<art_model.Artwork> artworks) {
+    final l10n = AppLocalizations.of(context)!;
     final totalViews =
         artworks.fold<int>(0, (sum, artwork) => sum + artwork.viewsCount);
     final totalLikes =
@@ -153,11 +186,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Expanded(child: _buildStatCard('Active', activeCount.toString(), Icons.visibility)),
+          Expanded(child: _buildStatCard(l10n.artistGalleryStatActiveLabel, activeCount.toString(), Icons.visibility)),
           const SizedBox(width: 8),
-          Expanded(child: _buildStatCard('Views', totalViews.toString(), Icons.remove_red_eye)),
+          Expanded(child: _buildStatCard(l10n.artistGalleryStatViewsLabel, totalViews.toString(), Icons.remove_red_eye)),
           const SizedBox(width: 8),
-          Expanded(child: _buildStatCard('Likes', totalLikes.toString(), Icons.favorite)),
+          Expanded(child: _buildStatCard(l10n.artistGalleryStatLikesLabel, totalLikes.toString(), Icons.favorite)),
         ],
       ),
     );
@@ -206,6 +239,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Widget _buildFilterBar() {
+    final l10n = AppLocalizations.of(context)!;
     final filters = ['All', 'Active', 'Draft', 'Sold'];
 
     return Padding(
@@ -218,14 +252,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             child: FilterChip(
               selected: isSelected,
               label: Text(
-                filter,
+                _filterLabel(filter, l10n),
                 style: TextStyle(
                   color: isSelected
                       ? Theme.of(context).colorScheme.onPrimary
                       : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              backgroundColor: Colors.transparent,
+              backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.0),
               selectedColor: Provider.of<ThemeProvider>(context).accentColor,
               onSelected: (_) {
                 setState(() => _selectedFilter = filter);
@@ -386,11 +420,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                           ),
                           onSelected: (value) =>
                               _handleArtworkAction(artwork, value, provider),
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'edit', child: Text('Edit')),
-                            PopupMenuItem(value: 'share', child: Text('Share')),
-                            PopupMenuItem(value: 'delete', child: Text('Delete')),
-                          ],
+                          itemBuilder: (context) {
+                            final l10n = AppLocalizations.of(context)!;
+                            return [
+                              PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
+                              PopupMenuItem(value: 'share', child: Text(l10n.commonShare)),
+                              PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                            ];
+                          },
                         ),
                       ],
                     ),
@@ -436,6 +473,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
@@ -452,7 +490,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               ),
               const SizedBox(height: 16),
               Text(
-                'No artworks yet',
+                l10n.artistGalleryEmptyTitle,
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   color: Theme.of(context)
@@ -463,7 +501,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               ),
               const SizedBox(height: 8),
               Text(
-                'Create your first artwork to get started',
+                l10n.artistGalleryEmptyDescription,
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: Theme.of(context)
@@ -476,7 +514,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               ElevatedButton.icon(
                 onPressed: widget.onCreateRequested,
                 icon: const Icon(Icons.add),
-                label: const Text('Create Artwork'),
+                label: Text(l10n.artistGalleryCreateArtworkButton),
               ),
             ],
           ),
@@ -530,44 +568,50 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _showSortDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Sort by',
+        title: Text(l10n.artistGallerySortByTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['Newest', 'Oldest', 'Most Views', 'Most Likes'].map((option) {
-            return RadioListTile<String>(
-              title: Text(option,
-                  style:
-                      TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-              value: option,
-              groupValue: _sortBy,
-              onChanged: (value) {
-                setState(() {
-                  _sortBy = value!;
-                });
-                Navigator.pop(context);
-              },
-            );
-          }).toList(),
+        content: RadioGroup<String>(
+          groupValue: _sortBy,
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() {
+              _sortBy = value;
+            });
+            Navigator.pop(context);
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: ['Newest', 'Oldest', 'Most Views', 'Most Likes'].map((option) {
+              return RadioListTile<String>(
+                title: Text(
+                  _sortLabel(option, l10n),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                ),
+                value: option,
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
   }
 
   void _showSearchDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Search Artworks',
+        title: Text(l10n.artistGallerySearchTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: TextField(
           decoration: InputDecoration(
-            hintText: 'Enter artwork title...',
+            hintText: l10n.artistGallerySearchHint,
             hintStyle: TextStyle(
               color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54),
             ),
@@ -578,11 +622,11 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Search'),
+            child: Text(l10n.commonSearch),
           ),
         ],
       ),
@@ -590,14 +634,15 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _showCreateArtworkDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Create New Artwork',
+        title: Text(l10n.artistGalleryCreateNewTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'Navigate to the Create tab to upload and create your new artwork.',
+          l10n.artistGalleryCreateNewDescription,
           style: TextStyle(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
@@ -606,14 +651,14 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               widget.onCreateRequested?.call();
             },
-            child: const Text('Go to Create'),
+            child: Text(l10n.artistGalleryGoToCreateButton),
           ),
         ],
       ),
@@ -755,14 +800,15 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     String action,
     ArtworkProvider provider,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     switch (action) {
       case 'edit':
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Editing ${artwork.title}')));
+            .showSnackBar(SnackBar(content: Text(l10n.artistGalleryEditingToast(artwork.title))));
         break;
       case 'share':
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Sharing ${artwork.title}')));
+            .showSnackBar(SnackBar(content: Text(l10n.artistGallerySharingToast(artwork.title))));
         break;
       case 'delete':
         _confirmDelete(artwork, provider);
@@ -771,14 +817,15 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _confirmDelete(art_model.Artwork artwork, ArtworkProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Delete Artwork',
+        title: Text(l10n.artistGalleryDeleteArtworkTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'Are you sure you want to delete "${artwork.title}"? This action cannot be undone.',
+          l10n.artistGalleryDeleteConfirmBody(artwork.title),
           style: TextStyle(
             color:
                 Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7),
@@ -787,7 +834,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -797,10 +844,10 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               provider.removeArtwork(artwork.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${artwork.title} deleted')),
+                SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
               );
             },
-            child: Text('Delete',
+            child: Text(l10n.commonDelete,
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
@@ -808,8 +855,6 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 }
-
-
 
 
 

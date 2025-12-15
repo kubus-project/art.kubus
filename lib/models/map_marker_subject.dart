@@ -1,13 +1,15 @@
 import '../models/art_marker.dart';
 
 /// Subject types that map/AR markers can be associated with.
-enum MarkerSubjectType { artwork, institution, event, group, misc }
+enum MarkerSubjectType { artwork, exhibition, institution, event, group, misc }
 
 extension MarkerSubjectTypeX on MarkerSubjectType {
   String get label {
     switch (this) {
       case MarkerSubjectType.artwork:
         return 'Artwork';
+      case MarkerSubjectType.exhibition:
+        return 'Exhibition';
       case MarkerSubjectType.institution:
         return 'Institution';
       case MarkerSubjectType.event:
@@ -23,6 +25,9 @@ extension MarkerSubjectTypeX on MarkerSubjectType {
     switch (this) {
       case MarkerSubjectType.artwork:
         return ArtMarkerType.artwork;
+      case MarkerSubjectType.exhibition:
+        // No dedicated marker type exists yet; treat exhibitions as event-like markers.
+        return ArtMarkerType.event;
       case MarkerSubjectType.institution:
         return ArtMarkerType.institution;
       case MarkerSubjectType.event:
@@ -38,6 +43,8 @@ extension MarkerSubjectTypeX on MarkerSubjectType {
     switch (this) {
       case MarkerSubjectType.artwork:
         return 'Artwork';
+      case MarkerSubjectType.exhibition:
+        return 'Exhibition';
       case MarkerSubjectType.institution:
         return 'Institution';
       case MarkerSubjectType.event:

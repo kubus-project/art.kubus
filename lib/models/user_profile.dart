@@ -187,6 +187,10 @@ class ProfilePreferences {
   final bool showActivityStatus;
   final bool showCollection;
   final bool allowMessages;
+  /// UX persona (onboarding). A hint for what to emphasize in the UI.
+  ///
+  /// Expected values: "lover", "creator", "institution".
+  final String? persona;
 
   ProfilePreferences({
     this.privacy = 'public',
@@ -195,7 +199,28 @@ class ProfilePreferences {
     this.showActivityStatus = true,
     this.showCollection = true,
     this.allowMessages = true,
+    this.persona,
   });
+
+  ProfilePreferences copyWith({
+    String? privacy,
+    bool? notifications,
+    String? theme,
+    bool? showActivityStatus,
+    bool? showCollection,
+    bool? allowMessages,
+    String? persona,
+  }) {
+    return ProfilePreferences(
+      privacy: privacy ?? this.privacy,
+      notifications: notifications ?? this.notifications,
+      theme: theme ?? this.theme,
+      showActivityStatus: showActivityStatus ?? this.showActivityStatus,
+      showCollection: showCollection ?? this.showCollection,
+      allowMessages: allowMessages ?? this.allowMessages,
+      persona: persona ?? this.persona,
+    );
+  }
 
   factory ProfilePreferences.fromJson(Map<String, dynamic> json) {
     return ProfilePreferences(
@@ -205,6 +230,7 @@ class ProfilePreferences {
       showActivityStatus: json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
       showCollection: json['showCollection'] ?? json['show_collection'] ?? true,
       allowMessages: json['allowMessages'] ?? json['allow_messages'] ?? true,
+      persona: (json['persona'] ?? json['userPersona'] ?? json['user_persona'])?.toString(),
     );
   }
 
@@ -216,6 +242,7 @@ class ProfilePreferences {
       'showActivityStatus': showActivityStatus,
       'showCollection': showCollection,
       'allowMessages': allowMessages,
+      if (persona != null) 'persona': persona,
     };
   }
 }

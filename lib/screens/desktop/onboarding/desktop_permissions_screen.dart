@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
@@ -32,84 +33,88 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   bool _notificationsGranted = false;
   bool _storageGranted = false;
 
-  final List<PermissionPage> _pages = [
-    PermissionPage(
-      title: 'Location Access',
-      subtitle: 'Discover AR art around you',
-      description:
-          'We use your location to help you discover AR artworks placed in real-world locations near you. Your location data stays on your device.',
-      benefits: [
-        'Find AR artworks in your area',
-        'Get notified about nearby art installations',
-        'Place your own AR markers at locations',
-        'Navigate to artwork locations',
-      ],
-      iconData: Icons.location_on,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+  List<PermissionPage> get _allPages {
+    final l10n = AppLocalizations.of(context)!;
+
+    return [
+      PermissionPage(
+        title: l10n.permissionsLocationTitle,
+        subtitle: l10n.permissionsLocationSubtitle,
+        description: l10n.permissionsLocationDescription,
+        benefits: [
+          l10n.permissionsLocationBenefit1,
+          l10n.permissionsLocationBenefit2,
+          l10n.permissionsLocationBenefit3,
+          l10n.permissionsLocationBenefit4,
+        ],
+        iconData: Icons.location_on,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        permissionType: PermissionType.location,
       ),
-      permissionType: PermissionType.location,
-    ),
-    PermissionPage(
-      title: 'Camera Access',
-      subtitle: 'View AR experiences',
-      description:
-          'Camera access is required to view AR artworks in your environment. We only use your camera when you\'re actively viewing AR content.',
-      benefits: [
-        'View AR artworks through your camera',
-        'Capture photos with AR content',
-        'Share AR experiences with friends',
-        'Create your own AR artworks',
-      ],
-      iconData: Icons.camera_alt,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF10B981), Color(0xFF059669)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      PermissionPage(
+        title: l10n.permissionsCameraTitle,
+        subtitle: l10n.permissionsCameraSubtitle,
+        description: l10n.permissionsCameraDescription,
+        benefits: [
+          l10n.permissionsCameraBenefit1,
+          l10n.permissionsCameraBenefit2,
+          l10n.permissionsCameraBenefit3,
+          l10n.permissionsCameraBenefit4,
+        ],
+        iconData: Icons.camera_alt,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        permissionType: PermissionType.camera,
       ),
-      permissionType: PermissionType.camera,
-    ),
-    PermissionPage(
-      title: 'Notifications',
-      subtitle: 'Stay updated',
-      description:
-          'Get notified about new artworks near you, community updates, and important announcements. You can customize notification preferences anytime.',
-      benefits: [
-        'Get alerts for nearby AR artworks',
-        'Receive updates from artists you follow',
-        'Stay informed about community events',
-        'Get notified about achievement unlocks',
-      ],
-      iconData: Icons.notifications,
-      gradient: const LinearGradient(
-        colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      PermissionPage(
+        title: l10n.permissionsNotificationsTitle,
+        subtitle: l10n.permissionsNotificationsSubtitle,
+        description: l10n.permissionsNotificationsDescription,
+        benefits: [
+          l10n.permissionsNotificationsBenefit1,
+          l10n.permissionsNotificationsBenefit2,
+          l10n.permissionsNotificationsBenefit3,
+          l10n.permissionsNotificationsBenefit4,
+        ],
+        iconData: Icons.notifications,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        permissionType: PermissionType.notifications,
       ),
-      permissionType: PermissionType.notifications,
-    ),
-    PermissionPage(
-      title: 'Storage Access',
-      subtitle: 'Save and share',
-      description:
-          'Storage access allows you to save AR artwork captures and share them with the community. Your files are stored securely on your device.',
-      benefits: [
-        'Save captured AR experiences',
-        'Upload your own artworks',
-        'Download artworks for offline viewing',
-        'Share content with the community',
-      ],
-      iconData: Icons.photo_library,
-      gradient: const LinearGradient(
-        colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      PermissionPage(
+        title: l10n.permissionsPhotosTitle,
+        subtitle: l10n.permissionsPhotosSubtitle,
+        description: l10n.permissionsPhotosDescription,
+        benefits: [
+          l10n.permissionsPhotosBenefit1,
+          l10n.permissionsPhotosBenefit2,
+          l10n.permissionsPhotosBenefit3,
+          l10n.permissionsPhotosBenefit4,
+        ],
+        iconData: Icons.photo_library,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        permissionType: PermissionType.storage,
       ),
-      permissionType: PermissionType.storage,
-    ),
-  ];
+    ];
+  }
+
+  List<PermissionPage> get _pages => kIsWeb
+      ? _allPages.where((p) => p.permissionType != PermissionType.storage).toList()
+      : _allPages;
 
   @override
   void initState() {
@@ -124,33 +129,25 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     bool storageGranted = false;
 
     try {
-      for (final page in _pages) {
-        switch (page.permissionType) {
-          case PermissionType.location:
-            final locationStatus = await Permission.location.status;
-            locationGranted = locationStatus.isGranted;
-            break;
-          case PermissionType.camera:
-            final cameraStatus = await Permission.camera.status;
-            cameraGranted = cameraStatus.isGranted;
-            break;
-          case PermissionType.notifications:
-            final notificationStatus = await Permission.notification.status;
-            notificationsGranted = notificationStatus.isGranted;
-            break;
-          case PermissionType.storage:
-            if (kIsWeb) {
-              storageGranted = true;
-            } else {
-              final storageStatus = await Permission.photos.status;
-              storageGranted = storageStatus.isGranted;
-            }
-            break;
-        }
+      final locationStatus = await Permission.location.status;
+      locationGranted = locationStatus.isGranted;
+
+      final cameraStatus = await Permission.camera.status;
+      cameraGranted = cameraStatus.isGranted;
+
+      final notificationStatus = await Permission.notification.status;
+      notificationsGranted = notificationStatus.isGranted;
+
+      if (kIsWeb) {
+        storageGranted = true;
+      } else {
+        final storageStatus = await Permission.photos.status;
+        storageGranted = storageStatus.isGranted;
       }
     } catch (e, st) {
-      debugPrint(
-          'DesktopPermissionsScreen._checkExistingPermissions: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('DesktopPermissionsScreen._checkExistingPermissions: $e\n$st');
+      }
     }
 
     if (mounted) {
@@ -164,11 +161,16 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     }
 
     // If all permissions granted, auto-complete
-    if (_pages.every((p) => _isPermissionGranted(p.permissionType))) {
-      if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 500));
-        _completeOnboarding();
-      }
+    final requiredPermissions = <PermissionType>[
+      PermissionType.location,
+      PermissionType.camera,
+      PermissionType.notifications,
+      if (!kIsWeb) PermissionType.storage,
+    ];
+
+    if (requiredPermissions.every(_isPermissionGranted)) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (mounted) _completeOnboarding();
     }
   }
 
@@ -207,12 +209,15 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         break;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     PermissionStatus status;
     try {
       status = await permission.request();
     } catch (e) {
-      debugPrint('Permission request failed: $e');
+      if (kDebugMode) {
+        debugPrint('DesktopPermissionsScreen._requestPermission: permission.request failed: $e');
+      }
       status = PermissionStatus.denied;
     }
 
@@ -223,7 +228,9 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       try {
         nowGranted = await PushNotificationService().requestPermission();
       } catch (e) {
-        debugPrint('Web notification request failed: $e');
+        if (kDebugMode) {
+          debugPrint('DesktopPermissionsScreen._requestPermission: web notification request failed: $e');
+        }
         nowGranted = false;
       }
     } else {
@@ -247,11 +254,11 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
       }
     });
 
-    if (status.isGranted) {
+    if (nowGranted) {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            '${_getPermissionName(type)} permission granted!',
+            l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
             style: GoogleFonts.inter(),
           ),
           backgroundColor: Colors.green,
@@ -269,33 +276,34 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
     }
   }
 
-  String _getPermissionName(PermissionType type) {
+  String _getPermissionName(AppLocalizations l10n, PermissionType type) {
     switch (type) {
       case PermissionType.location:
-        return 'Location';
+        return l10n.permissionsLocationTitle;
       case PermissionType.camera:
-        return 'Camera';
+        return l10n.permissionsCameraTitle;
       case PermissionType.notifications:
-        return 'Notification';
+        return l10n.permissionsNotificationsTitle;
       case PermissionType.storage:
-        return 'Storage';
+        return l10n.permissionsPhotosTitle;
     }
   }
 
   void _showSettingsDialog(PermissionType type) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Permission Required',
+          l10n.permissionsPermissionRequiredTitle,
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         content: Text(
-          'To enable ${_getPermissionName(type).toLowerCase()} access, please open Settings and grant the permission.',
+          l10n.permissionsOpenSettingsDialogContent(_getPermissionName(l10n, type)),
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -303,14 +311,14 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.inter()),
+            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               openAppSettings();
             },
-            child: Text('Open Settings', style: GoogleFonts.inter()),
+            child: Text(l10n.permissionsOpenSettings, style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -400,6 +408,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Row(
@@ -410,7 +419,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
               const AppLogo(width: 48, height: 48),
               const SizedBox(width: 16),
               Text(
-                'art.kubus',
+                l10n.appTitle,
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -425,7 +434,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: Text(
-              'Skip All',
+              l10n.permissionsSkipAll,
               style: GoogleFonts.inter(
                 fontSize: 16,
                 color: Theme.of(context)
@@ -441,6 +450,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   }
 
   Widget _buildPageContent(PermissionPage page) {
+    final l10n = AppLocalizations.of(context)!;
     final isGranted = _isPermissionGranted(page.permissionType);
 
     return Padding(
@@ -540,7 +550,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'What you can do:',
+                    l10n.permissionsBenefitsTitle,
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -608,7 +618,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: Text(
-                      'Your privacy is protected. We never share your data.',
+                      l10n.permissionsPrivacyNote,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Theme.of(context)
@@ -628,6 +638,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
   }
 
   Widget _buildSidebar(Color accentColor, AppAnimationTheme animationTheme) {
+    final l10n = AppLocalizations.of(context)!;
     final currentPermission = _pages[_currentPage].permissionType;
     final isGranted = _isPermissionGranted(currentPermission);
     final isLastPage = _currentPage == _pages.length - 1;
@@ -723,7 +734,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                   const Icon(Icons.check_circle, color: Colors.green, size: 20),
                   const SizedBox(width: 12),
                   Text(
-                    'Permission Granted',
+                    l10n.permissionsGrantedLabel,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -752,8 +763,8 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
               ),
               child: Text(
                 isGranted
-                    ? (isLastPage ? 'Get Started' : 'Next Permission')
-                    : 'Grant Permission',
+                    ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
+                    : l10n.permissionsGrantPermission,
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -779,7 +790,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
                 ),
               ),
               child: Text(
-                isLastPage ? 'Skip for Now' : 'Skip This Permission',
+                isLastPage ? l10n.commonSkipForNow : l10n.permissionsSkipThisPermission,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,

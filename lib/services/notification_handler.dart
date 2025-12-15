@@ -19,7 +19,7 @@ class NotificationHandler {
 
   /// Initialize notification handler
   void initialize() {
-    _notificationService.onNotificationTap = _handleNotificationTap;
+    _notificationService.addOnNotificationTapListener(_handleNotificationTap);
     debugPrint('NotificationHandler: Initialized');
   }
 
@@ -68,12 +68,28 @@ class NotificationHandler {
         case 'system':
           _handleSystemTap(data);
           break;
+        case 'collab_invite':
+          _handleCollabInviteTap(data);
+          break;
         default:
           debugPrint('NotificationHandler: Unknown notification type: $type');
       }
     } catch (e) {
       debugPrint('NotificationHandler: Error handling tap: $e');
     }
+  }
+
+  void _handleCollabInviteTap(Map<String, dynamic> data) {
+    final inviteId = data['inviteId'] as String?;
+    final entityType = data['entityType'] as String?;
+    final entityId = data['entityId'] as String?;
+
+    _navigate('/collab_invite', {
+      if (inviteId != null) 'inviteId': inviteId,
+      if (entityType != null) 'entityType': entityType,
+      if (entityId != null) 'entityId': entityId,
+      'action': 'open',
+    });
   }
 
   /// Handle AR proximity notification tap
@@ -235,6 +251,6 @@ class NotificationHandler {
 
   /// Dispose handler
   void dispose() {
-    _notificationService.onNotificationTap = null;
+    _notificationService.removeOnNotificationTapListener(_handleNotificationTap);
   }
 }

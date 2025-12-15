@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_loading.dart';
 import '../config/config.dart';
@@ -23,6 +24,7 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
   }
 
   Future<void> _loadCurrentState() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     
     final prefs = await SharedPreferences.getInstance();
@@ -36,6 +38,7 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
     state['completed_onboarding'] = prefs.getBool('completed_onboarding') ?? false;
     state['skipOnboardingForReturningUsers'] = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
     
+    if (!mounted) return;
     setState(() {
       _currentState = state;
       _isLoading = false;
@@ -43,19 +46,21 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
   }
 
   Future<void> _resetOnboardingState() async {
+    final l10n = AppLocalizations.of(context)!;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Reset Onboarding',
+          l10n.onboardingResetDialogTitle,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'This will reset all onboarding flags. The app will show onboarding screens on next launch.\n\nContinue?',
+          l10n.onboardingResetDialogBody,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -64,7 +69,7 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
-              'Cancel',
+              AppLocalizations.of(context)!.commonCancel,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -72,7 +77,7 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Reset'),
+            child: Text(AppLocalizations.of(context)!.commonReset),
           ),
         ],
       ),
@@ -100,9 +105,9 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Onboarding state reset! Restart the app to see onboarding.'),
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: Text(l10n.onboardingResetSnackBarMessage),
+        duration: const Duration(seconds: 3),
       ),
     );
 
@@ -112,10 +117,13 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Onboarding Reset Tool'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: Text(l10n.onboardingResetToolTitle),
+        backgroundColor: scheme.primary,
       ),
         body: _isLoading
           ? const AppLoading()
@@ -125,7 +133,7 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Card(
-                    color: Colors.blue.shade50,
+                    color: scheme.secondaryContainer,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -133,22 +141,22 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.info_outline, color: Colors.blue.shade700),
+                              Icon(Icons.info_outline, color: scheme.onSecondaryContainer),
                               const SizedBox(width: 8),
                               Text(
-                                'Developer Tool',
+                                l10n.onboardingResetDeveloperToolTitle,
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.blue.shade700,
+                                  color: scheme.onSecondaryContainer,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            'This tool shows the current onboarding state and allows you to reset it for testing.',
-                            style: TextStyle(fontSize: 14),
+                          Text(
+                            l10n.onboardingResetDeveloperToolDescription,
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ],
                       ),
@@ -156,35 +164,35 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Current Onboarding State',
+                    l10n.onboardingResetCurrentStateTitle,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 16),
                   ..._currentState.entries.map((entry) => _buildStateItem(
                         entry.key,
                         entry.value.toString(),
-                        _getStateColor(entry.value),
+                        _getStateColor(entry.value, scheme),
                       )),
                   const SizedBox(height: 24),
                   Text(
-                    'Config Settings',
+                    l10n.onboardingResetConfigSettingsTitle,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 16),
                   _buildStateItem(
                     'enforceWalletOnboarding',
                     AppConfig.enforceWalletOnboarding.toString(),
-                    AppConfig.enforceWalletOnboarding ? Colors.green : Colors.orange,
+                    AppConfig.enforceWalletOnboarding ? scheme.tertiary : scheme.outline,
                   ),
                   _buildStateItem(
                     'showWelcomeScreen',
                     AppConfig.showWelcomeScreen.toString(),
-                    AppConfig.showWelcomeScreen ? Colors.green : Colors.grey,
+                    AppConfig.showWelcomeScreen ? scheme.primary : scheme.outline,
                   ),
                   _buildStateItem(
                     'skipOnboardingForReturningUsers',
                     AppConfig.skipOnboardingForReturningUsers.toString(),
-                    AppConfig.skipOnboardingForReturningUsers ? Colors.orange : Colors.green,
+                    AppConfig.skipOnboardingForReturningUsers ? scheme.tertiary : scheme.primary,
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
@@ -192,17 +200,17 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _resetOnboardingState,
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Reset Onboarding State'),
+                      label: Text(l10n.onboardingResetButtonLabel),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).colorScheme.error,
-                        foregroundColor: Colors.white,
+                        backgroundColor: scheme.error,
+                        foregroundColor: scheme.onError,
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Card(
-                    color: Colors.orange.shade50,
+                    color: scheme.tertiaryContainer,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -210,24 +218,22 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.warning_amber, color: Colors.orange.shade700),
+                              Icon(Icons.warning_amber, color: scheme.onTertiaryContainer),
                               const SizedBox(width: 8),
                               Text(
-                                'How to Test',
+                                l10n.onboardingResetHowToTestTitle,
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.orange.shade700,
+                                  color: scheme.onTertiaryContainer,
                                 ),
                               ),
                             ],
                           ),
                           const SizedBox(height: 8),
-                          const Text(
-                            '1. Tap "Reset Onboarding State"\n'
-                            '2. Restart the app (close and reopen)\n'
-                            '3. Onboarding should show on launch',
-                            style: TextStyle(fontSize: 14),
+                          Text(
+                            l10n.onboardingResetHowToTestSteps,
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ],
                       ),
@@ -279,9 +285,9 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
     return Icons.info;
   }
 
-  Color _getStateColor(dynamic value) {
-    if (value == true) return Colors.green;
-    if (value == false) return Colors.grey;
-    return Colors.blue;
+  Color _getStateColor(dynamic value, ColorScheme scheme) {
+    if (value == true) return scheme.primary;
+    if (value == false) return scheme.outline;
+    return scheme.secondary;
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../config/config.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -19,6 +21,44 @@ import '../auth/sign_in_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
 import '../onboarding/web3/onboarding_data.dart';
 import '../web3/wallet/connectwallet_screen.dart';
+import '../collab/invites_inbox_screen.dart';
+import '../../widgets/user_persona_onboarding_gate.dart';
+
+/// Provides in-shell navigation for subscreens that should appear in the main
+/// content area instead of pushing a fullscreen route.
+///
+/// Usage:
+/// ```dart
+/// DesktopShellScope.of(context)?.pushScreen(const MySubScreen());
+/// // or pop back:
+/// DesktopShellScope.of(context)?.popScreen();
+/// // or switch tabs:
+/// DesktopShellScope.of(context)?.navigateToRoute('/community');
+/// ```
+class DesktopShellScope extends InheritedWidget {
+  final void Function(Widget screen) pushScreen;
+  final VoidCallback popScreen;
+  final void Function(String route) navigateToRoute;
+  final bool canPop;
+
+  const DesktopShellScope({
+    super.key,
+    required this.pushScreen,
+    required this.popScreen,
+    required this.navigateToRoute,
+    required this.canPop,
+    required super.child,
+  });
+
+  static DesktopShellScope? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<DesktopShellScope>();
+  }
+
+  @override
+  bool updateShouldNotify(DesktopShellScope oldWidget) {
+    return canPop != oldWidget.canPop;
+  }
+}
 
 /// Responsive breakpoints for layout switching
 class DesktopBreakpoints {
@@ -60,6 +100,10 @@ class _DesktopShellState extends State<DesktopShell>
   bool _isNavigationExpanded = true;
   late AnimationController _navExpandController;
   late Animation<double> _navExpandAnimation;
+  
+  /// Stack of screens pushed via DesktopShellScope.pushScreen
+  /// When empty, shows the route-based screen from _buildCurrentScreen
+  final List<Widget> _screenStack = [];
   
   static const List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
@@ -158,6 +202,30 @@ class _DesktopShellState extends State<DesktopShell>
     super.dispose();
   }
 
+  /// Push a screen onto the in-shell stack (stays within main content area)
+  void _pushScreenToStack(Widget screen) {
+    setState(() {
+      _screenStack.add(screen);
+    });
+  }
+
+  /// Pop a screen from the in-shell stack
+  void _popScreenFromStack() {
+    if (_screenStack.isNotEmpty) {
+      setState(() {
+        _screenStack.removeLast();
+      });
+    }
+  }
+
+  /// Navigate to a specific route within the shell (clears screen stack)
+  void _navigateToRoute(String route) {
+    setState(() {
+      _activeRoute = route;
+      _screenStack.clear();
+    });
+  }
+
   void _toggleNavigation() {
     setState(() {
       _isNavigationExpanded = !_isNavigationExpanded;
@@ -180,6 +248,8 @@ class _DesktopShellState extends State<DesktopShell>
 
     setState(() {
       _activeRoute = item.route;
+      // Clear any pushed subscreens when navigating to a new main tab
+      _screenStack.clear();
     });
   }
 
@@ -240,27 +310,35 @@ class _DesktopShellState extends State<DesktopShell>
       });
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Row(
-        children: [
-          // Main content area (takes most space)
-          Expanded(
-            child: _buildCurrentScreen(effectiveRoute),
-          ),
-          
-          // Right sidebar navigation (Twitter/X style)
-          AnimatedBuilder(
-            animation: _navExpandAnimation,
-            builder: (context, child) {
-              final expandedWidth = isLarge ? 280.0 : 240.0;
-              final collapsedWidth = 72.0;
-              final currentWidth = collapsedWidth + 
-                  (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
+    return UserPersonaOnboardingGate(
+      child: DesktopShellScope(
+        pushScreen: _pushScreenToStack,
+        popScreen: _popScreenFromStack,
+        navigateToRoute: _navigateToRoute,
+        canPop: _screenStack.isNotEmpty,
+        child: Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: Row(
+            children: [
+              // Main content area (takes most space)
+              Expanded(
+                child: _screenStack.isNotEmpty
+                    ? _screenStack.last
+                    : _buildCurrentScreen(effectiveRoute),
+              ),
               
-              return Container(
-                width: currentWidth,
-                decoration: BoxDecoration(
+              // Right sidebar navigation (Twitter/X style)
+              AnimatedBuilder(
+                animation: _navExpandAnimation,
+                builder: (context, child) {
+                final expandedWidth = isLarge ? 280.0 : 240.0;
+                final collapsedWidth = 72.0;
+                final currentWidth = collapsedWidth + 
+                    (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
+                
+                return Container(
+                  width: currentWidth,
+                  decoration: BoxDecoration(
                   color: theme.colorScheme.surface,
                   border: Border(
                     left: BorderSide(
@@ -280,11 +358,16 @@ class _DesktopShellState extends State<DesktopShell>
                   onSettingsTap: () => _showSettingsScreen(context),
                   onNotificationsTap: () => _showNotificationsPanel(context),
                   onWalletTap: () => _handleWalletTap(isSignedIn),
+                  onCollabInvitesTap: isSignedIn && AppConfig.isFeatureEnabled('collabInvites')
+                      ? () => _showCollabInvites()
+                      : null,
                 ),
               );
-            },
+              },
+            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -344,6 +427,15 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 
+  void _showCollabInvites() {
+    _pushScreenToStack(
+      DesktopSubScreen(
+        title: 'Collaboration Invites',
+        child: const InvitesInboxScreen(),
+      ),
+    );
+  }
+
   void _handleWalletTap(bool isSignedIn) {
     if (!isSignedIn) {
       _startWeb3OnboardingFlow();
@@ -356,6 +448,7 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _startWeb3OnboardingFlow() {
+    final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
     navigator.push(
       MaterialPageRoute(builder: (_) => const SignInScreen()),
@@ -366,12 +459,10 @@ class _DesktopShellState extends State<DesktopShell>
       navigator.push(
         MaterialPageRoute(
           builder: (_) => web3.Web3OnboardingScreen(
-            featureName: Web3FeaturesOnboardingData.featureName,
-            pages: Web3FeaturesOnboardingData.pages,
+            featureKey: Web3FeaturesOnboardingData.featureKey,
+            featureTitle: Web3FeaturesOnboardingData.featureTitle(l10n),
+            pages: Web3FeaturesOnboardingData.pages(l10n),
             onComplete: () {
-              if (navigator.canPop()) {
-                navigator.pop(); // Close onboarding sheet
-              }
               if (mounted) {
                 setState(() {
                   _activeRoute = _walletRoute;
@@ -515,6 +606,82 @@ class _NotificationsPanel extends StatelessWidget {
             },
           ),
         ),
+      ],
+    );
+  }
+}
+
+/// A wrapper for subscreen content that provides a back button and title bar
+/// when displayed within the DesktopShellScope.
+///
+/// Usage:
+/// ```dart
+/// DesktopShellScope.of(context)?.pushScreen(
+///   DesktopSubScreen(
+///     title: 'My Gallery',
+///     child: const MyGalleryContent(),
+///   ),
+/// );
+/// ```
+class DesktopSubScreen extends StatelessWidget {
+  final String title;
+  final Widget child;
+  final List<Widget>? actions;
+
+  const DesktopSubScreen({
+    super.key,
+    required this.title,
+    required this.child,
+    this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final shellScope = DesktopShellScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      children: [
+        // Header with back button
+        Container(
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: scheme.surface,
+            border: Border(
+              bottom: BorderSide(
+                color: scheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              if (shellScope?.canPop ?? false) ...[
+                IconButton(
+                  onPressed: () => shellScope?.popScreen(),
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: scheme.onSurface,
+                  ),
+                  tooltip: 'Back',
+                ),
+                const SizedBox(width: 8),
+              ],
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const Spacer(),
+              if (actions != null) ...actions!,
+            ],
+          ),
+        ),
+        // Content
+        Expanded(child: child),
       ],
     );
   }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'inline_loading.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
@@ -60,9 +62,13 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
       await _integrationService.launchARExperience(widget.artwork);
       widget.onARTap?.call();
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ARArtworkCard: Failed to launch AR: $e');
+      }
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to launch AR: $e')),
+          SnackBar(content: Text(l10n.arArtworkCardLaunchFailedToast)),
         );
       }
     } finally {
@@ -75,6 +81,8 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final isInRange = _isInRange();
     final canViewAR = widget.artwork.arEnabled && isInRange;
 
@@ -112,11 +120,13 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: canViewAR ? Colors.green : Colors.orange.withValues(alpha: 0.9),
+                      color: canViewAR
+                          ? colors.primary.withValues(alpha: 0.95)
+                          : colors.tertiary.withValues(alpha: 0.95),
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
+                          color: colors.shadow.withValues(alpha: 0.3),
                           blurRadius: 4,
                         ),
                       ],
@@ -126,14 +136,14 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                       children: [
                         Icon(
                           Icons.view_in_ar,
-                          color: Colors.white,
+                          color: canViewAR ? colors.onPrimary : colors.onTertiary,
                           size: 16,
                         ),
                         const SizedBox(width: 4),
                         Text(
                           'AR',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: canViewAR ? colors.onPrimary : colors.onTertiary,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
@@ -151,18 +161,18 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
+                      color: colors.scrim.withValues(alpha: 0.7),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.location_on, color: Colors.white, size: 14),
+                        Icon(Icons.location_on, color: colors.surface, size: 14),
                         const SizedBox(width: 4),
                         Text(
                           _formatDistance(_distance!),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: colors.surface,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -245,18 +255,18 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                             : const Icon(Icons.view_in_ar),
                         label: Text(
                           canViewAR
-                              ? 'View in AR'
+                              ? l10n.commonViewInAr
                               : isInRange
-                                  ? 'AR Unavailable'
-                                  : 'Get Closer',
+                                  ? l10n.arArtworkCardUnavailableLabel
+                                  : l10n.arArtworkCardGetCloserLabel,
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: canViewAR
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.surfaceContainerHighest,
+                              ? colors.primary
+                              : colors.surfaceContainerHighest,
                           foregroundColor: canViewAR
-                              ? theme.colorScheme.onPrimary
-                              : theme.colorScheme.onSurfaceVariant,
+                              ? colors.onPrimary
+                              : colors.onSurfaceVariant,
                         ),
                       ),
                     ),
@@ -268,7 +278,7 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                       IconButton.filled(
                         onPressed: widget.onNavigateTap,
                         icon: const Icon(Icons.directions),
-                        tooltip: 'Navigate',
+                        tooltip: l10n.commonNavigate,
                       ),
                   ],
                 ),

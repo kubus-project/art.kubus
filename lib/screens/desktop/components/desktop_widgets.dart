@@ -105,6 +105,7 @@ class DesktopSectionHeader extends StatelessWidget {
   final Widget? action;
   final IconData? icon;
   final EdgeInsetsGeometry? padding;
+  final Color? iconColor;
 
   const DesktopSectionHeader({
     super.key,
@@ -113,11 +114,13 @@ class DesktopSectionHeader extends StatelessWidget {
     this.action,
     this.icon,
     this.padding,
+    this.iconColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final effectiveColor = iconColor ?? themeProvider.accentColor;
 
     return Padding(
       padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
@@ -127,12 +130,12 @@ class DesktopSectionHeader extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
+                color: effectiveColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
-                color: themeProvider.accentColor,
+                color: effectiveColor,
                 size: 20,
               ),
             ),

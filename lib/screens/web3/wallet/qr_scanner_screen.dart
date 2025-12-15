@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -75,6 +76,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = context.watch<ThemeProvider>().accentColor;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -86,7 +88,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Scan QR Code',
+          l10n.qrScannerTitle,
           style: GoogleFonts.inter(
             color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w600,
@@ -114,11 +116,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 ),
               ],
       ),
-      body: kIsWeb ? _buildWebNotSupported(theme, accent) : _buildMobileScanner(theme, accent),
+      body: kIsWeb
+          ? _buildWebNotSupported(theme, accent, l10n)
+          : _buildMobileScanner(theme, accent, l10n),
     );
   }
 
-  Widget _buildWebNotSupported(ThemeData theme, Color accent) {
+  Widget _buildWebNotSupported(ThemeData theme, Color accent, AppLocalizations l10n) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -132,7 +136,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
             const SizedBox(height: 24),
             Text(
-              'QR Scanner Not Available',
+              l10n.qrScannerWebUnavailableTitle,
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface,
                 fontSize: 24,
@@ -141,7 +145,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              'Camera-based QR scanning is not supported on web browsers. Please paste or type the address manually instead.',
+              l10n.qrScannerWebUnavailableDescription,
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 16,
@@ -159,7 +163,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: Text(
-                'Go Back',
+                l10n.qrScannerGoBackButton,
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
               ),
             ),
@@ -169,13 +173,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildMobileScanner(ThemeData theme, Color accent) {
+  Widget _buildMobileScanner(ThemeData theme, Color accent, AppLocalizations l10n) {
     if (_scannerState == _ScannerState.initializing) {
-      return _buildLoadingState(theme, accent);
+      return _buildLoadingState(theme, accent, l10n);
     }
 
     if (_scannerState == _ScannerState.permissionDenied) {
-      return _buildPermissionNotice(theme, accent);
+      return _buildPermissionNotice(theme, accent, l10n);
     }
 
     return Column(
@@ -189,19 +193,19 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                 fit: BoxFit.cover,
                 onDetect: _onDetect,
                 errorBuilder: (context, error, child) {
-                  return _buildCameraError(theme, error);
+                  return _buildCameraError(theme, error, l10n);
                 },
               ),
               _buildScannerOverlay(accent),
             ],
           ),
         ),
-        _buildStatusPanel(theme, accent),
+        _buildStatusPanel(theme, accent, l10n),
       ],
     );
   }
 
-  Widget _buildLoadingState(ThemeData theme, Color accent) {
+  Widget _buildLoadingState(ThemeData theme, Color accent, AppLocalizations l10n) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -209,7 +213,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           CircularProgressIndicator(color: accent),
           const SizedBox(height: 16),
           Text(
-            'Preparing camera...',
+            l10n.qrScannerPreparingCameraLabel,
             style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
           ),
         ],
@@ -217,9 +221,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildPermissionNotice(ThemeData theme, Color accent) {
+  Widget _buildPermissionNotice(ThemeData theme, Color accent, AppLocalizations l10n) {
     final permanentlyDenied = _permissionStatus?.isPermanentlyDenied ?? false;
-    final actionLabel = permanentlyDenied ? 'Open Settings' : 'Grant Camera Access';
+    final actionLabel = permanentlyDenied
+        ? l10n.qrScannerOpenSettingsButton
+        : l10n.qrScannerGrantCameraAccessButton;
     final VoidCallback action = permanentlyDenied
         ? () {
             openAppSettings();
@@ -237,7 +243,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Icon(Icons.lock, size: 80, color: accent),
             const SizedBox(height: 24),
             Text(
-              'Camera permission needed',
+              l10n.qrScannerPermissionNeededTitle,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface,
@@ -247,7 +253,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Enable camera access to scan wallet QR codes securely.',
+              l10n.qrScannerPermissionNeededDescription,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -271,7 +277,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildCameraError(ThemeData theme, MobileScannerException error) {
+  Widget _buildCameraError(ThemeData theme, MobileScannerException error, AppLocalizations l10n) {
+    if (kDebugMode) {
+      debugPrint('QRScannerScreen: camera error: ${error.errorCode.name}');
+    }
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -281,7 +290,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             Icon(Icons.error_outline, color: theme.colorScheme.error, size: 48),
             const SizedBox(height: 16),
             Text(
-              'Camera error',
+              l10n.qrScannerCameraErrorTitle,
               style: GoogleFonts.inter(
                 color: theme.colorScheme.error,
                 fontWeight: FontWeight.w600,
@@ -289,7 +298,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              error.errorCode.name,
+              l10n.qrScannerCameraErrorDescription,
               textAlign: TextAlign.center,
               style: GoogleFonts.inter(
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
@@ -342,7 +351,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Widget _buildStatusPanel(ThemeData theme, Color accent) {
+  Widget _buildStatusPanel(ThemeData theme, Color accent, AppLocalizations l10n) {
     final isSuccess = _scannerState == _ScannerState.success;
     final isError = _scannerState == _ScannerState.error;
 
@@ -352,18 +361,18 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     Color iconColor;
 
     if (isSuccess && _scanResult != null) {
-      title = 'Address captured';
+      title = l10n.qrScannerStatusAddressCapturedTitle;
       description = _formatAddress(_scanResult!.address);
       icon = Icons.check_circle;
       iconColor = accent;
     } else if (isError) {
-      title = 'Unsupported QR code';
-      description = _errorMessage ?? 'This QR code does not include a valid Solana address.';
+      title = l10n.qrScannerStatusUnsupportedQrTitle;
+      description = _errorMessage ?? l10n.qrScannerStatusUnsupportedQrDescription;
       icon = Icons.error_outline;
       iconColor = theme.colorScheme.error;
     } else {
-      title = 'Ready to scan';
-      description = 'Align the QR code inside the frame to capture a Solana address.';
+      title = l10n.qrScannerStatusReadyTitle;
+      description = l10n.qrScannerStatusReadyDescription;
       icon = Icons.qr_code_scanner;
       iconColor = theme.colorScheme.primary;
     }
@@ -398,11 +407,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           ),
           if (isSuccess && _scanResult != null && _scanResult!.hasAmount) ...[
             const SizedBox(height: 12),
-            _buildMetaChip(theme, label: 'Amount', value: _formatAmount(_scanResult!.amount!)),
+            _buildMetaChip(theme, label: l10n.qrScannerMetaAmountLabel, value: _formatAmount(_scanResult!.amount!)),
           ],
           if (isSuccess && _scanResult?.tokenMint != null) ...[
             const SizedBox(height: 8),
-            _buildMetaChip(theme, label: 'Mint', value: _formatAddress(_scanResult!.tokenMint!)),
+            _buildMetaChip(theme, label: l10n.qrScannerMetaMintLabel, value: _formatAddress(_scanResult!.tokenMint!)),
           ],
         ],
       ),
@@ -446,7 +455,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     final parsed = QRScanResult.tryParse(raw);
 
     if (parsed == null) {
-      _showScanError('Please scan a Solana wallet QR code.');
+      final l10n = AppLocalizations.of(context)!;
+      _showScanError(l10n.qrScannerInvalidQrToast);
       return;
     }
 
@@ -498,6 +508,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   Future<void> _toggleTorch() async {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     try {
       await _controller.toggleTorch();
       if (!mounted) return;
@@ -508,7 +519,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: const Text('Torch toggle not supported on this device.'),
+          content: Text(l10n.qrScannerTorchNotSupportedToast),
           backgroundColor: scheme.error,
         ),
       );
@@ -518,6 +529,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   Future<void> _switchCamera() async {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     try {
       await _controller.switchCamera();
       if (!mounted) return;
@@ -530,7 +542,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: const Text('Unable to switch camera.'),
+          content: Text(l10n.qrScannerSwitchCameraFailedToast),
           backgroundColor: scheme.error,
         ),
       );

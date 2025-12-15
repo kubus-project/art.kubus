@@ -3,14 +3,18 @@ import 'package:provider/provider.dart';
 import '../models/artwork.dart';
 import '../models/dao.dart';
 import '../models/institution.dart';
+import '../models/exhibition.dart';
+import '../providers/exhibitions_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/dao_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/wallet_provider.dart';
+import '../config/config.dart';
 import 'wallet_utils.dart';
 
 class MarkerSubjectData {
   final List<Artwork> artworks;
+  final List<Exhibition> exhibitions;
   final List<Institution> institutions;
   final List<Event> events;
   final List<Delegate> delegates;
@@ -18,6 +22,7 @@ class MarkerSubjectData {
 
   const MarkerSubjectData({
     required this.artworks,
+    required this.exhibitions,
     required this.institutions,
     required this.events,
     required this.delegates,
@@ -37,11 +42,15 @@ class MarkerSubjectLoader {
     final artworkProvider = context.read<ArtworkProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
     final daoProvider = context.read<DAOProvider>();
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final walletProvider = context.read<WalletProvider>();
     final wallet = walletProvider.currentWalletAddress;
 
     return MarkerSubjectData(
       artworks: _filterOwnedArtworks(artworkProvider.artworks, wallet),
+      exhibitions: AppConfig.isFeatureEnabled('exhibitions')
+          ? List<Exhibition>.from(exhibitionsProvider.exhibitions)
+          : const <Exhibition>[],
       institutions: List<Institution>.from(institutionProvider.institutions),
       events: List<Event>.from(institutionProvider.events),
       delegates: List<Delegate>.from(daoProvider.delegates),
@@ -52,6 +61,7 @@ class MarkerSubjectLoader {
     final artworkProvider = context.read<ArtworkProvider>();
     final institutionProvider = context.read<InstitutionProvider>();
     final daoProvider = context.read<DAOProvider>();
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
     final walletProvider = context.read<WalletProvider>();
     final wallet = walletProvider.currentWalletAddress;
 
@@ -60,6 +70,8 @@ class MarkerSubjectLoader {
     final shouldLoadInstitutions =
         force || institutionProvider.institutions.isEmpty || institutionProvider.events.isEmpty;
     final shouldLoadDelegates = force || daoProvider.delegates.isEmpty;
+    final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
+    final shouldLoadExhibitions = exhibitionsEnabled && (force || !exhibitionsProvider.initialized);
 
     final fetches = <Future<void>>[];
     if (shouldLoadArtworks) {
@@ -75,6 +87,10 @@ class MarkerSubjectLoader {
       fetches.add(daoProvider.refreshData(force: true));
     }
 
+    if (shouldLoadExhibitions) {
+      fetches.add(exhibitionsProvider.initialize(refresh: true));
+    }
+
     if (fetches.isEmpty) {
       return null;
     }
@@ -83,6 +99,9 @@ class MarkerSubjectLoader {
       await Future.wait(fetches);
       return MarkerSubjectData(
         artworks: _filterOwnedArtworks(artworkProvider.artworks, wallet),
+        exhibitions: exhibitionsEnabled
+            ? List<Exhibition>.from(exhibitionsProvider.exhibitions)
+            : const <Exhibition>[],
         institutions: List<Institution>.from(institutionProvider.institutions),
         events: List<Event>.from(institutionProvider.events),
         delegates: List<Delegate>.from(daoProvider.delegates),

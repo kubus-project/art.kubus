@@ -1,8 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -97,36 +97,74 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   final List<Map<String, dynamic>> _arModes = [
     {
       'id': 'scan',
-      'name': 'Scan',
       'icon': Icons.qr_code_scanner,
-      'description': 'Discover AR artworks'
     },
     {
       'id': 'place',
-      'name': 'Place',
       'icon': Icons.add_location,
-      'description': 'Position new artwork'
     },
     {
       'id': 'view',
-      'name': 'View',
       'icon': Icons.visibility,
-      'description': 'View placed artworks'
     },
     {
       'id': 'create',
-      'name': 'Create',
       'icon': Icons.create,
-      'description': 'Create AR artwork'
     },
   ];
+
+  String _modeName(AppLocalizations l10n, String modeId) {
+    switch (modeId) {
+      case 'scan':
+        return l10n.arModeScanName;
+      case 'place':
+        return l10n.arModePlaceName;
+      case 'view':
+        return l10n.arModeViewName;
+      case 'create':
+        return l10n.arModeCreateName;
+      default:
+        return l10n.commonUnknown;
+    }
+  }
+
+  DateTime _parseArtworkTimestamp(Object? raw) {
+    if (raw is int) {
+      return DateTime.fromMillisecondsSinceEpoch(raw);
+    }
+    if (raw is num) {
+      return DateTime.fromMillisecondsSinceEpoch(raw.toInt());
+    }
+    if (raw is String) {
+      try {
+        return DateTime.parse(raw);
+      } catch (_) {
+        // Fall through.
+      }
+    }
+    return DateTime.now();
+  }
+
+  String _modeDescription(AppLocalizations l10n, String modeId) {
+    switch (modeId) {
+      case 'scan':
+        return l10n.arModeScanDescription;
+      case 'place':
+        return l10n.arModePlaceDescription;
+      case 'view':
+        return l10n.arModeViewDescription;
+      case 'create':
+        return l10n.arModeCreateDescription;
+      default:
+        return '';
+    }
+  }
 
   bool _hasInitialized = false;
 
   @override
   void initState() {
     super.initState();
-
     _animationController = AnimationController(
       duration: AppAnimationTheme.defaults.long,
       vsync: this,
@@ -136,7 +174,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     final animationTheme = context.animationTheme;
     if (_animationController.duration != animationTheme.long) {
       _animationController.duration = animationTheme.long;
@@ -155,11 +192,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _initializeAR() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      final platformProvider =
-          Provider.of<PlatformProvider>(context, listen: false);
+      final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
 
       if (!platformProvider.supportsARFeatures) {
         if (mounted) {
@@ -169,41 +206,47 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             }
           });
         }
-        setState(() => _isLoading = false);
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
         return;
       }
 
       // Initialize AR Manager and Integration Service
       await _arManager.initialize();
       await _arIntegrationService.initialize();
+      if (!mounted) return;
 
       // Set up callbacks for AR events
       _arIntegrationService.onMarkerActivated = (marker) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('AR marker nearby: ${marker.name}'),
-              action: SnackBarAction(
-                label: 'View',
-                onPressed: () {
-                  final targetArtworkId = marker.artworkId;
-                  if (targetArtworkId != null) {
-                    _launchARForMarker(targetArtworkId);
-                  }
-                },
-              ),
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.arMarkerNearbyToast(marker.name)),
+            action: SnackBarAction(
+              label: l10n.commonView,
+              onPressed: () {
+                final targetArtworkId = marker.artworkId;
+                if (targetArtworkId != null) {
+                  _launchARForMarker(targetArtworkId);
+                }
+              },
             ),
-          );
-        }
+          ),
+        );
       };
 
       _arIntegrationService.onArtworkDiscovered = (artwork) {
-        debugPrint('Artwork discovered: ${artwork.title}');
+        if (kDebugMode) {
+          debugPrint('ARScreen: Artwork discovered: ${artwork.title}');
+        }
       };
 
       // Mock location for testing (replace with actual location service)
       _currentLocation = const LatLng(46.0569, 14.5058); // Ljubljana, Slovenia
       await _arIntegrationService.updateLocation(_currentLocation!);
+      if (!mounted) return;
 
       setState(() {
         _isARReady = true;
@@ -211,9 +254,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       });
       _animationController.forward();
     } catch (e) {
-      debugPrint('AR initialization error: $e');
-      setState(() => _isLoading = false);
+      if (kDebugMode) {
+        debugPrint('ARScreen: AR initialization error: $e');
+      }
       if (mounted) {
+        setState(() => _isLoading = false);
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _showARInitializationErrorDialog();
@@ -236,7 +281,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       _currentMode = 'view';
     });
 
-    debugPrint('Launching AR for artwork: ${artwork['title']}');
+    if (kDebugMode) {
+      debugPrint('ARScreen: Launching AR for artwork: ${artwork['title']}');
+    }
   }
 
   @override
@@ -251,13 +298,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final platformProvider = Provider.of<PlatformProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     // If on web, show download app screen instead
     if (platformProvider.isWeb) {
-      return const DownloadAppScreen(
-        feature: 'AR Experience',
-        description:
-            'Augmented Reality features require native device capabilities. Download the art.kubus app to view digital artworks in your physical space using your phone\'s camera.',
+      return DownloadAppScreen(
+        feature: l10n.arWebFallbackFeature,
+        description: l10n.arWebFallbackDescription,
       );
     }
 
@@ -276,8 +323,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           _placedObjects.add({
                             'id':
                                 artworkData['id'] ?? DateTime.now().toString(),
-                            'title': artworkData['title'] ?? 'Unknown',
-                            'artist': artworkData['artist'] ?? 'Unknown',
+                            'title': artworkData['title'] ?? l10n.commonUnknown,
+                            'artist': artworkData['artist'] ?? l10n.commonUnknown,
                             'modelUrl': artworkData['modelUrl'],
                             'timestamp': DateTime.now().millisecondsSinceEpoch,
                           });
@@ -337,10 +384,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: _arModes.map((mode) {
-                      final isSelected = mode['id'] == _currentMode;
+                      final modeId = mode['id'] as String;
+                      final modeIcon = mode['icon'] as IconData;
+                      final isSelected = modeId == _currentMode;
                       return Expanded(
                         child: GestureDetector(
-                          onTap: () => _changeMode(mode['id']),
+                          onTap: () => _changeMode(modeId),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
@@ -360,7 +409,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(
-                                  mode['icon'],
+                                  modeIcon,
                                   color: isSelected
                                       ? themeProvider.accentColor
                                       : Theme.of(context)
@@ -371,7 +420,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  mode['name'],
+                                  _modeName(l10n, modeId),
                                   style: GoogleFonts.inter(
                                     color: isSelected
                                         ? themeProvider.accentColor
@@ -401,6 +450,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildLoadingOverlay() {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
@@ -411,7 +461,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             const AppLoading(),
             const SizedBox(height: 24),
             Text(
-              'Initializing AR...',
+              l10n.arInitializingTitle,
               style: GoogleFonts.inter(
                 color: themeProvider.accentColor,
                 fontSize: 18,
@@ -421,8 +471,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             const SizedBox(height: 8),
             Text(
               _arManager.isInitialized
-                  ? 'AR Ready'
-                  : 'Setting up AR environment',
+                  ? l10n.arReadyStatus
+                  : l10n.arSettingUpStatus,
               style: GoogleFonts.inter(
                 color: Theme.of(context)
                     .colorScheme
@@ -438,6 +488,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildViewMode(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: _placedObjects.isEmpty
@@ -452,7 +503,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No Artworks Yet',
+                    l10n.arNoArtworksYetTitle,
                     style: GoogleFonts.inter(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -463,7 +514,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 40),
                     child: Text(
-                      'Scan QR codes to discover AR artworks',
+                      l10n.arNoArtworksYetDescription,
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         color: Theme.of(context)
@@ -503,13 +554,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       ),
                     ),
                     title: Text(
-                      artwork['title'] ?? 'Unknown',
+                      artwork['title'] ?? l10n.commonUnknown,
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     subtitle: Text(
-                      artwork['artist'] ?? 'Unknown Artist',
+                      artwork['artist'] ?? l10n.commonUnknown,
                       style: GoogleFonts.inter(),
                     ),
                     trailing: IconButton(
@@ -521,6 +572,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         // Launch AR viewer for this artwork using ARManager
                         final messenger = ScaffoldMessenger.of(context);
                         final scheme = Theme.of(context).colorScheme;
+                        final l10n = AppLocalizations.of(context)!;
                         try {
                           // Add model to AR scene
                           await _arManager.addModel(
@@ -533,15 +585,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           if (!mounted) return;
                           messenger.showSnackBar(
                             SnackBar(
-                              content: const Text('AR model loaded successfully'),
+                              content: Text(l10n.arModelLoadedToast),
                               backgroundColor: scheme.primary,
                             ),
                           );
                         } catch (e) {
+                          if (kDebugMode) {
+                            debugPrint('ARScreen: Failed to load AR model: $e');
+                          }
                           if (!mounted) return;
                           messenger.showSnackBar(
                             SnackBar(
-                              content: Text('Failed to load AR model: $e'),
+                              content: Text(l10n.arModelLoadFailedToast),
                               backgroundColor: scheme.error,
                             ),
                           );
@@ -556,7 +611,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildModePreview(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final mode = _arModes.firstWhere((mode) => mode['id'] == _currentMode);
+    final modeId = mode['id'] as String;
+    final modeIcon = mode['icon'] as IconData;
 
     // For place and create modes, show AR camera view
     if (_currentMode == 'place' || _currentMode == 'create') {
@@ -565,7 +623,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           // AR camera view from ARManager
           _arManager.createARView(
             onARViewCreated: (controller) {
-              debugPrint('AR View created successfully');
+              if (kDebugMode) {
+                debugPrint('ARScreen: AR View created successfully');
+              }
               // Automatically place selected artwork if in place mode
               if (_currentMode == 'place' && _selectedArtwork != null) {
                 _placeSelectedArtwork();
@@ -588,7 +648,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Placing: ${_selectedArtwork!['title']}',
+                      l10n.arPlacingTitle('${_selectedArtwork!['title']}'),
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 16,
@@ -597,7 +657,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Move your device to find a flat surface',
+                      l10n.arPlacingInstruction,
                       style: GoogleFonts.inter(
                         color: Colors.white70,
                         fontSize: 14,
@@ -623,13 +683,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              mode['icon'],
+              modeIcon,
               color: themeProvider.accentColor,
               size: 64,
             ),
             const SizedBox(height: 16),
             Text(
-              '${mode['name']} Mode',
+              l10n.arModePreviewTitle(_modeName(l10n, modeId)),
               style: GoogleFonts.inter(
                 color: Colors.white,
                 fontSize: 24,
@@ -640,7 +700,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                mode['description'],
+                _modeDescription(l10n, modeId),
                 style: GoogleFonts.inter(
                   color: Colors.white70,
                   fontSize: 16,
@@ -658,6 +718,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   Future<void> _placeSelectedArtwork() async {
     if (_selectedArtwork == null) return;
 
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
     try {
       // Place model in front of camera
       await _arManager.addModel(
@@ -667,17 +731,21 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         name: _selectedArtwork!['id'],
       );
 
-      debugPrint('Placed AR artwork: ${_selectedArtwork!['title']}');
+      if (kDebugMode) {
+        debugPrint('ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}');
+      }
 
       // Note: Discovery tracking would require converting Map to Artwork object
       // This can be implemented when backend integration is complete
     } catch (e) {
-      debugPrint('Error placing artwork: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (kDebugMode) {
+          debugPrint('ARScreen: Error placing artwork: $e');
+        }
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to place artwork: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            content: Text(l10n.arPlaceArtworkFailedToast),
+            backgroundColor: scheme.error,
           ),
         );
       }
@@ -685,10 +753,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildTopBar(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = themeProvider.isDarkMode;
     final overlayColor = isDark
         ? Theme.of(context).colorScheme.surface.withValues(alpha: 0.8)
         : Theme.of(context).colorScheme.surface.withValues(alpha: 0.95);
+
+    final currentModeId = _currentMode;
+    final currentModeIcon = _arModes.firstWhere(
+      (mode) => mode['id'] == currentModeId,
+    )['icon'] as IconData;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -716,15 +790,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _arModes.firstWhere(
-                        (mode) => mode['id'] == _currentMode)['icon'],
+                    currentModeIcon,
                     color: themeProvider.accentColor,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    _arModes.firstWhere(
-                        (mode) => mode['id'] == _currentMode)['name'],
+                    _modeName(l10n, currentModeId),
                     style: GoogleFonts.inter(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 14,
@@ -826,24 +898,25 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildActionButton(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     String buttonText = '';
     IconData buttonIcon = Icons.check;
 
     switch (_currentMode) {
       case 'scan':
-        buttonText = 'Scan for Artwork';
+        buttonText = l10n.arActionScan;
         buttonIcon = Icons.qr_code_scanner;
         break;
       case 'place':
-        buttonText = 'Place Artwork Here';
+        buttonText = l10n.arActionPlace;
         buttonIcon = Icons.add_location;
         break;
       case 'view':
-        buttonText = 'View Details';
+        buttonText = l10n.arActionView;
         buttonIcon = Icons.info_outline;
         break;
       case 'create':
-        buttonText = 'Create AR Artwork';
+        buttonText = l10n.arActionCreate;
         buttonIcon = Icons.create;
         break;
     }
@@ -878,10 +951,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   // Event handlers
 
   void _onObjectPlaced(String objectId) {
-    debugPrint('Object placed: $objectId');
+    if (kDebugMode) {
+      debugPrint('ARScreen: Object placed: $objectId');
+    }
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Artwork placed successfully!'),
+        content: Text(l10n.arArtworkPlacedToast),
         backgroundColor: Theme.of(context).colorScheme.primary,
         duration: const Duration(seconds: 2),
       ),
@@ -917,6 +993,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   }
 
   void _startScanning() {
+    final l10n = AppLocalizations.of(context)!;
     // Show available artworks in scan mode (data from backend)
     showModalBottomSheet(
       context: context,
@@ -948,7 +1025,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Nearby Artworks',
+                  l10n.arNearbyArtworksTitle,
                   style: GoogleFonts.inter(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -980,7 +1057,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         title: Text(artwork['title'],
                             style:
                                 GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                        subtitle: Text('by ${artwork['artist']}',
+                        subtitle: Text(
+                          l10n.commonByArtist(artwork['artist']?.toString() ?? l10n.commonUnknown),
                             style: GoogleFonts.inter(fontSize: 12)),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
@@ -995,8 +1073,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             if (mounted && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content:
-                                      Text('Selected: ${artwork['title']}'),
+                                  content: Text(
+                                    l10n.arSelectedArtworkToast(
+                                      artwork['title']?.toString() ?? l10n.commonUnknown,
+                                    ),
+                                  ),
                                   duration: const Duration(seconds: 2),
                                 ),
                               );
@@ -1018,10 +1099,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
   void _placeArtwork() {
     if (_selectedArtwork == null) {
       if (_mockArtworks.isEmpty) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                const Text('Select or create an artwork before placing it.'),
+            content: Text(l10n.arSelectArtworkBeforePlacingToast),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -1053,9 +1134,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   void _viewArtworkDetails() {
     if (_placedObjects.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('No artworks placed yet. Try placing some first!')),
+        SnackBar(content: Text(l10n.arNoPlacedArtworksToast)),
       );
       return;
     }
@@ -1064,7 +1145,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return Container(
         height: MediaQuery.of(context).size.height * 0.6,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
@@ -1075,7 +1158,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             Padding(
               padding: const EdgeInsets.all(24),
               child: Text(
-                'Placed Artworks (${_placedObjects.length})',
+                l10n.arPlacedArtworksTitle(_placedObjects.length),
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -1095,7 +1178,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       leading: Icon(Icons.view_in_ar,
                           color: Theme.of(context).colorScheme.primary),
                       title: Text(obj['title']),
-                      subtitle: Text('by ${obj['artist']}'),
+                      subtitle: Text(
+                        l10n.commonByArtist(obj['artist']?.toString() ?? l10n.commonUnknown),
+                      ),
                       trailing: IconButton(
                         icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
                         onPressed: () {
@@ -1104,7 +1189,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           });
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Artwork removed')),
+                            SnackBar(content: Text(l10n.arArtworkRemovedToast)),
                           );
                         },
                       ),
@@ -1119,19 +1204,20 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             ),
           ],
         ),
-      ),
+      );
+      },
     );
   }
 
   void _createArtwork() {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final location = _currentLocation;
     if (location == null) {
       messenger.showSnackBar(
         SnackBar(
-          content: const Text(
-              'Current location unavailable. Move your device to calibrate AR tracking.'),
+          content: Text(l10n.arLocationUnavailableToast),
           backgroundColor: colorScheme.error,
         ),
       );
@@ -1149,6 +1235,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         type: buildSubjectOptions(
           type: type,
           artworks: artworkProvider.artworks,
+          exhibitions: const [],
           institutions: institutionProvider.institutions,
           events: institutionProvider.events,
           delegates: daoProvider.delegates,
@@ -1187,10 +1274,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     String formatFileSize(int bytes) {
       final kb = bytes / 1024;
       if (kb < 1024) {
-        return '${kb.toStringAsFixed(1)} KB';
+        return l10n.commonFileSizeKb(kb.toStringAsFixed(1));
       }
       final mb = kb / 1024;
-      return '${mb.toStringAsFixed(2)} MB';
+      return l10n.commonFileSizeMb(mb.toStringAsFixed(2));
     }
 
     Future<void> pickModelFile(StateSetter refresh) async {
@@ -1215,7 +1302,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         if (fileBytes == null) {
           refresh(() {
             isPickingFile = false;
-            fileError = 'Unable to read file data. Please try another file.';
+            fileError = l10n.arUnableToReadFileError;
           });
           return;
         }
@@ -1228,9 +1315,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           fileError = null;
         });
       } catch (e) {
+        if (kDebugMode) {
+          debugPrint('ARScreen: File selection failed: $e');
+        }
         refresh(() {
           isPickingFile = false;
-          fileError = 'File selection failed: $e';
+          fileError = l10n.arFileSelectionFailedError;
         });
       }
     }
@@ -1243,14 +1333,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           selectedSubject == null) {
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Select a subject before creating the marker.'),
+            content: Text(l10n.arSelectSubjectBeforeMarkerToast),
             backgroundColor: colorScheme.error,
           ),
         );
         return;
       }
       if (selectedModelBytes == null || selectedModelName == null) {
-        refresh(() => fileError = 'Attach a 3D model before continuing.');
+        refresh(() => fileError = l10n.arAttach3dModelError);
         return;
       }
 
@@ -1284,8 +1374,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           refresh(() => isSubmitting = false);
           messenger.showSnackBar(
             SnackBar(
-              content: const Text(
-                  'Selected artwork is no longer available. Refresh data and try again.'),
+              content: Text(l10n.arSelectedArtworkUnavailableToast),
               backgroundColor: colorScheme.error,
             ),
           );
@@ -1311,7 +1400,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           refresh(() => isSubmitting = false);
           messenger.showSnackBar(
             SnackBar(
-              content: const Text('Upload failed. Please try again.'),
+              content: Text(l10n.arUploadFailedToast),
               backgroundColor: colorScheme.error,
             ),
           );
@@ -1329,7 +1418,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         setState(() {
           final artistName = selectedSubject?.metadata?['artist']?.toString() ??
               selectedSubject?.title ??
-              'Unknown Artist';
+              l10n.commonUnknown;
           final newArtwork = {
             'id': marker.id,
             'title': marker.name,
@@ -1347,16 +1436,18 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
         messenger.showSnackBar(
           SnackBar(
-            content: const Text(
-                'AR asset uploaded and marker created. Switching to Place mode.'),
+            content: Text(l10n.arMarkerCreatedSwitchToPlaceToast),
             backgroundColor: colorScheme.primary,
           ),
         );
       } catch (e) {
+        if (kDebugMode) {
+          debugPrint('ARScreen: Failed to create AR marker: $e');
+        }
         refresh(() => isSubmitting = false);
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to create AR marker: $e'),
+            content: Text(l10n.arCreateMarkerFailedToast),
             backgroundColor: colorScheme.error,
           ),
         );
@@ -1369,6 +1460,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => StatefulBuilder(
         builder: (context, setModalState) {
+          final l10n = AppLocalizations.of(context)!;
           final viewInsets = MediaQuery.of(context).viewInsets.bottom;
           return SafeArea(
             child: Container(
@@ -1396,7 +1488,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Upload AR Asset',
+                              l10n.arCreateUploadTitle,
                               style: GoogleFonts.inter(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w700,
@@ -1414,7 +1506,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Link an existing artwork, upload a 3D model (GLB/GLTF/USDZ), and we will enrich its AR marker.',
+                        l10n.arCreateUploadSubtitle,
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           color: Theme.of(context)
@@ -1427,7 +1519,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       DropdownButtonFormField<MarkerSubjectType>(
                         initialValue: selectedSubjectType,
                         decoration: InputDecoration(
-                          labelText: 'Subject Type',
+                          labelText: l10n.arCreateSubjectTypeLabel,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -1435,7 +1527,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             .map(
                               (type) => DropdownMenuItem(
                                 value: type,
-                                child: Text('${type.label} (required)'),
+                                child: Text('${type.label} (${l10n.commonRequired})'),
                               ),
                             )
                             .toList(),
@@ -1447,7 +1539,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         DropdownButtonFormField<MarkerSubjectOption>(
                           initialValue: selectedSubject,
                           decoration: InputDecoration(
-                            labelText: '${selectedSubjectType.label} *',
+                            labelText: l10n.arCreateSubjectLabel(selectedSubjectType.label),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12)),
                           ),
@@ -1489,7 +1581,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     descriptionController.text =
                                         value.subtitle.isNotEmpty
                                             ? value.subtitle
-                                            : 'Marker for ${value.title}';
+                                            : l10n.arCreateDefaultDescription(value.title);
                                   });
                                 },
                         )
@@ -1505,7 +1597,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'No ${selectedSubjectType.label.toLowerCase()}s available. Use the respective module to create one first.',
+                            l10n.arCreateNoSubjectsAvailable(
+                              selectedSubjectType.label.toLowerCase(),
+                            ),
                             style: GoogleFonts.inter(fontSize: 13),
                           ),
                         ),
@@ -1514,16 +1608,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         controller: titleController,
                         enabled: !isSubmitting,
                         decoration: InputDecoration(
-                          labelText: 'Marker Title *',
+                          labelText: l10n.arCreateMarkerTitleLabel,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Title is required';
+                            return l10n.arCreateTitleRequiredError;
                           }
                           if (value.trim().length < 3) {
-                            return 'Title must be at least 3 characters';
+                            return l10n.arCreateTitleMinLengthError;
                           }
                           return null;
                         },
@@ -1534,16 +1628,16 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         enabled: !isSubmitting,
                         maxLines: 4,
                         decoration: InputDecoration(
-                          labelText: 'Description *',
+                          labelText: l10n.arCreateDescriptionLabel,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Description is required';
+                            return l10n.arCreateDescriptionRequiredError;
                           }
                           if (value.trim().length < 10) {
-                            return 'Describe the experience in at least 10 characters';
+                            return l10n.arCreateDescriptionMinLengthError;
                           }
                           return null;
                         },
@@ -1553,14 +1647,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         controller: categoryController,
                         enabled: !isSubmitting,
                         decoration: InputDecoration(
-                          labelText: 'Category',
+                          labelText: l10n.arCreateCategoryLabel,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Attach 3D Asset',
+                        l10n.arCreateAttach3dAssetTitle,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -1583,8 +1677,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               )
                             : const Icon(Icons.upload_file),
                         label: Text(selectedModelName == null
-                            ? 'Select GLB / GLTF / USDZ'
-                            : 'Replace Model'),
+                            ? l10n.arCreateSelectModelButton
+                            : l10n.arCreateReplaceModelButton),
                       ),
                       if (selectedModelName != null) ...[
                         const SizedBox(height: 8),
@@ -1645,7 +1739,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       ],
                       const SizedBox(height: 16),
                       Text(
-                        'Model Scale: ${(selectedScale * 100).toStringAsFixed(0)}%',
+                        l10n.arModelScaleLabel(
+                          (selectedScale * 100).toStringAsFixed(0),
+                        ),
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -1665,8 +1761,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 }),
                       ),
                       SwitchListTile(
-                        title: const Text('Public Marker'),
-                        subtitle: const Text('Visible to nearby explorers'),
+                        title: Text(l10n.arCreatePublicMarkerTitle),
+                        subtitle: Text(l10n.arCreatePublicMarkerSubtitle),
                         value: isPublic,
                         onChanged: isSubmitting
                             ? null
@@ -1726,8 +1822,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                               : const Icon(Icons.upload),
                           label: Text(
                             isSubmitting
-                                ? 'Uploading...'
-                                : 'Upload & Create Marker',
+                                ? l10n.arCreateUploadingLabel
+                                : l10n.arCreateUploadAndCreateButton,
                             style:
                                 GoogleFonts.inter(fontWeight: FontWeight.w600),
                           ),
@@ -1770,7 +1866,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (BuildContext context, StateSetter setModalState) => Container(
+        builder: (BuildContext context, StateSetter setModalState) {
+          final l10n = AppLocalizations.of(context)!;
+          final title = artwork['title']?.toString() ?? l10n.commonUnknown;
+          final artist = artwork['artist']?.toString() ?? l10n.commonUnknown;
+          final model = artwork['model']?.toString() ?? l10n.commonUnknown;
+          final scale = artwork['scale'] is num ? (artwork['scale'] as num).toDouble() : null;
+          final scalePercent = scale == null
+              ? l10n.commonUnknown
+              : (scale * 100).toStringAsFixed(0);
+
+          return Container(
           height: MediaQuery.of(context).size.height * 0.6,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
@@ -1785,7 +1891,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   children: [
                     Expanded(
                       child: Text(
-                        artwork['title'],
+                        title,
                         style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -1801,7 +1907,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'by ${artwork['artist']}',
+                  l10n.commonByArtist(artist),
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     color: Theme.of(context)
@@ -1811,16 +1917,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(height: 24),
-                _buildDetailRow('Model', artwork['model']),
+                _buildDetailRow(l10n.arDetailModelLabel, model),
+                _buildDetailRow(l10n.arDetailScaleLabel, '$scalePercent%'),
                 _buildDetailRow(
-                    'Scale', '${(artwork['scale'] * 100).toStringAsFixed(0)}%'),
-                _buildDetailRow(
-                    'Placed', _formatTimestamp(artwork['timestamp'])),
+                  l10n.arDetailPlacedLabel,
+                  _formatTimestamp(l10n, artwork['timestamp']),
+                ),
                 const SizedBox(height: 24),
                 const Divider(),
                 const SizedBox(height: 16),
                 Text(
-                  'Actions',
+                  l10n.commonActions,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1832,7 +1939,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   children: [
                     _buildInteractionButton(
                       Icons.share_outlined,
-                      'Share',
+                      l10n.arShareButtonLabel,
                       onTap: () {
                         _handleShare(artwork);
                         setModalState(() {});
@@ -1843,7 +1950,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       _likedArtworks.contains(artwork['id'])
                           ? Icons.favorite
                           : Icons.favorite_border,
-                      _likedArtworks.contains(artwork['id']) ? 'Liked' : 'Like',
+                      _likedArtworks.contains(artwork['id'])
+                          ? l10n.arLikedButtonLabel
+                          : l10n.arLikeButtonLabel,
                       onTap: () {
                         _handleLike(artwork);
                         setModalState(() {}); // Update modal state immediately
@@ -1856,7 +1965,9 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       _savedArtworks.contains(artwork['id'])
                           ? Icons.bookmark
                           : Icons.bookmark_border,
-                      _savedArtworks.contains(artwork['id']) ? 'Saved' : 'Save',
+                      _savedArtworks.contains(artwork['id'])
+                          ? l10n.arSavedButtonLabel
+                          : l10n.arSaveButtonLabel,
                       onTap: () {
                         _handleSave(artwork);
                         setModalState(() {}); // Update modal state immediately
@@ -1869,7 +1980,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               ],
             ),
           ),
-        ),
+        );
+        },
       ),
     );
   }
@@ -1907,15 +2019,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
   }
 
-  String _formatTimestamp(String timestamp) {
-    final dateTime = DateTime.parse(timestamp);
+  String _formatTimestamp(AppLocalizations l10n, Object? timestamp) {
+    final dateTime = _parseArtworkTimestamp(timestamp);
     final now = DateTime.now();
     final diff = now.difference(dateTime);
 
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return l10n.commonJustNow;
+    if (diff.inMinutes < 60) return l10n.commonMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.commonHoursAgo(diff.inHours);
+    return l10n.commonDaysAgo(diff.inDays);
   }
 
   /// Build animated interaction button with visual feedback
@@ -1995,15 +2107,15 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   // Social interaction handlers
   Future<void> _handleShare(Map<String, dynamic> artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
     try {
-      final shareText = '''
-🎨 Check out this AR artwork on art.kubus!
-
-"${artwork['title']}"
-by ${artwork['artist']}
-
-Experience it in augmented reality!
-''';
+      final shareText = l10n.arShareText(
+        artwork['title']?.toString() ?? l10n.commonUnknown,
+        artwork['artist']?.toString() ?? l10n.commonUnknown,
+      );
 
       // Use share_plus to share
       await SharePlus.instance.share(ShareParams(text: shareText));
@@ -2020,28 +2132,30 @@ Experience it in augmented reality!
       await CommunityService.sharePost(post);
 
       if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary),
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: scheme.onPrimary),
                 const SizedBox(width: 8),
-                Text('Artwork shared successfully!'),
+                Text(l10n.arShareSuccessToast),
               ],
             ),
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: scheme.primary,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      debugPrint('Share error: $e');
+      if (kDebugMode) {
+        debugPrint('ARScreen: Share error: $e');
+      }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Share failed: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
+            content: Text(l10n.arShareFailedToast),
+            backgroundColor: scheme.error,
           ),
         );
       }
@@ -2049,6 +2163,10 @@ Experience it in augmented reality!
   }
 
   Future<void> _handleLike(Map<String, dynamic> artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
     setState(() {
       if (_likedArtworks.contains(artwork['id'])) {
         _likedArtworks.remove(artwork['id']);
@@ -2063,7 +2181,7 @@ Experience it in augmented reality!
     if (isNowLiked) {
       UserActionLogger.logArtworkLike(
         artworkId: artwork['id'].toString(),
-        artworkTitle: artwork['title']?.toString() ?? 'Artwork',
+        artworkTitle: artwork['title']?.toString() ?? l10n.commonUnknown,
         artistName: artwork['artist']?.toString(),
       );
     }
@@ -2074,7 +2192,7 @@ Experience it in augmented reality!
       authorId: artwork['artworkId'] ?? artwork['id'],
       authorName: artwork['artist'],
       content: artwork['title'],
-      timestamp: DateTime.parse(artwork['timestamp']),
+      timestamp: _parseArtworkTimestamp(artwork['timestamp']),
       isLiked: _likedArtworks.contains(artwork['id']),
     );
 
@@ -2084,10 +2202,9 @@ Experience it in augmented reality!
       trackUserAction: true,
     );
 
-    if (mounted) {
-      final scheme = Theme.of(context).colorScheme;
+    if (!mounted) return;
       final isLiked = _likedArtworks.contains(artwork['id']);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -2096,7 +2213,11 @@ Experience it in augmented reality!
                 color: isLiked ? scheme.onPrimary : scheme.onSurface,
               ),
               const SizedBox(width: 8),
-              Text(isLiked ? 'Added to your likes!' : 'Removed from likes'),
+              Text(
+                isLiked
+                    ? l10n.arLikeAddedToast
+                    : l10n.arLikeRemovedToast,
+              ),
             ],
           ),
           backgroundColor: isLiked
@@ -2106,10 +2227,13 @@ Experience it in augmented reality!
           duration: const Duration(seconds: 2),
         ),
       );
-    }
   }
 
   Future<void> _handleSave(Map<String, dynamic> artwork) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
     setState(() {
       if (_savedArtworks.contains(artwork['id'])) {
         _savedArtworks.remove(artwork['id']);
@@ -2127,7 +2251,7 @@ Experience it in augmented reality!
     if (isNowSaved) {
       UserActionLogger.logArtworkSave(
         artworkId: artwork['id'].toString(),
-        artworkTitle: artwork['title']?.toString() ?? 'Artwork',
+        artworkTitle: artwork['title']?.toString() ?? l10n.commonUnknown,
         artistName: artwork['artist']?.toString(),
       );
     }
@@ -2135,13 +2259,14 @@ Experience it in augmented reality!
     // Track save/bookmark in community interactions
     // Track in profile for "Saved Items" section
     if (_savedArtworks.contains(artwork['id'])) {
-      debugPrint('Artwork saved to profile: ${artwork['id']}');
+      if (kDebugMode) {
+        debugPrint('ARScreen: Artwork saved to profile: ${artwork['id']}');
+      }
     }
 
-    if (mounted) {
-      final scheme = Theme.of(context).colorScheme;
+    if (!mounted) return;
       final isSaved = _savedArtworks.contains(artwork['id']);
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Row(
             children: [
@@ -2150,7 +2275,11 @@ Experience it in augmented reality!
                 color: isSaved ? scheme.onPrimary : scheme.onSurface,
               ),
               const SizedBox(width: 8),
-              Text(isSaved ? 'Saved to your collection!' : 'Removed from saved items'),
+              Text(
+                isSaved
+                    ? l10n.arSaveAddedToast
+                    : l10n.arSaveRemovedToast,
+              ),
             ],
           ),
           backgroundColor: isSaved
@@ -2160,9 +2289,10 @@ Experience it in augmented reality!
           duration: const Duration(seconds: 2),
           action: _savedArtworks.contains(artwork['id'])
               ? SnackBarAction(
-                  label: 'View',
+                  label: l10n.commonView,
                   textColor: scheme.onPrimary,
                   onPressed: () {
+                    if (!mounted) return;
                     // Navigate to profile collections using proper navigation
                     Navigator.of(context).pop(); // Close AR screen first
 
@@ -2178,7 +2308,6 @@ Experience it in augmented reality!
               : null,
         ),
       );
-    }
   }
 
   void _showARSettings() {
@@ -2187,7 +2316,11 @@ Experience it in augmented reality!
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
+        builder: (context, setModalState) {
+          final l10n = AppLocalizations.of(context)!;
+          final messenger = ScaffoldMessenger.of(context);
+
+          return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
@@ -2202,7 +2335,7 @@ Experience it in augmented reality!
                   children: [
                     Expanded(
                       child: Text(
-                        'AR Settings',
+                        l10n.arSettingsTitle,
                         style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -2220,7 +2353,7 @@ Experience it in augmented reality!
                 // Scan Settings Section
                 if (_currentMode == 'scan') ...[
                   Text(
-                    'Scanner Settings',
+                    l10n.arScannerSettingsTitle,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -2231,10 +2364,12 @@ Experience it in augmented reality!
                   ListTile(
                     leading: Icon(Icons.flash_on,
                         color: Theme.of(context).colorScheme.primary),
-                    title: Text('Flash Control',
+                    title: Text(l10n.arFlashControlTitle,
                         style: GoogleFonts.inter(fontSize: 14)),
                     subtitle: Text(
-                        _flashEnabled ? 'Currently ON' : 'Currently OFF',
+                        _flashEnabled
+                            ? l10n.commonCurrentlyOn
+                            : l10n.commonCurrentlyOff,
                         style: GoogleFonts.inter(fontSize: 12)),
                     trailing: Switch(
                       value: _flashEnabled,
@@ -2242,16 +2377,19 @@ Experience it in augmented reality!
                         if (_scannerController != null) {
                           try {
                             await _scannerController.toggleTorch();
+                            if (!context.mounted || !mounted) return;
                             setModalState(() => _flashEnabled = !_flashEnabled);
                             setState(() => _flashEnabled = !_flashEnabled);
                           } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text(
-                                        'Flash not available on this device')),
-                              );
+                            if (kDebugMode) {
+                              debugPrint('ARScreen: Flash toggle failed: $e');
                             }
+                            if (!context.mounted) return;
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text(l10n.arFlashNotAvailableToast),
+                              ),
+                            );
                           }
                         }
                       },
@@ -2260,16 +2398,16 @@ Experience it in augmented reality!
                   ListTile(
                     leading: Icon(Icons.qr_code_scanner,
                         color: Theme.of(context).colorScheme.primary),
-                    title: Text('Scanner Overlay',
+                    title: Text(l10n.arScannerOverlayTitle,
                         style: GoogleFonts.inter(fontSize: 14)),
-                    subtitle: Text('Show/hide scanner guide',
+                    subtitle: Text(l10n.arScannerOverlaySubtitle,
                         style: GoogleFonts.inter(fontSize: 12)),
                     onTap: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text(
-                                'Scanner overlay resets automatically after 3 seconds')),
+                      messenger.showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.arScannerOverlayResetToast),
+                        ),
                       );
                     },
                   ),
@@ -2278,7 +2416,7 @@ Experience it in augmented reality!
                   const SizedBox(height: 16),
                 ],
                 Text(
-                  'AR Display',
+                  l10n.arDisplayTitle,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -2287,9 +2425,9 @@ Experience it in augmented reality!
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
-                  title: Text('Show Feature Points',
+                  title: Text(l10n.arShowFeaturePointsTitle,
                       style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text('Display tracking points on surfaces',
+                  subtitle: Text(l10n.arShowFeaturePointsSubtitle,
                       style: GoogleFonts.inter(fontSize: 12)),
                   value: _showFeaturePoints,
                   onChanged: (value) {
@@ -2298,9 +2436,9 @@ Experience it in augmented reality!
                   },
                 ),
                 SwitchListTile(
-                  title: Text('Show Planes',
+                  title: Text(l10n.arShowPlanesTitle,
                       style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text('Display detected plane surfaces',
+                  subtitle: Text(l10n.arShowPlanesSubtitle,
                       style: GoogleFonts.inter(fontSize: 12)),
                   value: _showPlanes,
                   onChanged: (value) {
@@ -2309,9 +2447,9 @@ Experience it in augmented reality!
                   },
                 ),
                 SwitchListTile(
-                  title: Text('Auto-detect Surfaces',
+                  title: Text(l10n.arAutoDetectSurfacesTitle,
                       style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text('Automatically detect flat surfaces',
+                  subtitle: Text(l10n.arAutoDetectSurfacesSubtitle,
                       style: GoogleFonts.inter(fontSize: 12)),
                   value: _autoDetectSurfaces,
                   onChanged: (value) {
@@ -2320,9 +2458,9 @@ Experience it in augmented reality!
                   },
                 ),
                 SwitchListTile(
-                  title: Text('Debug Info',
+                  title: Text(l10n.arDebugInfoTitle,
                       style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text('Show technical information',
+                  subtitle: Text(l10n.arDebugInfoSubtitle,
                       style: GoogleFonts.inter(fontSize: 12)),
                   value: _showDebugInfo,
                   onChanged: (value) {
@@ -2332,7 +2470,9 @@ Experience it in augmented reality!
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Model Scale: ${(_modelScale * 100).toStringAsFixed(0)}%',
+                  l10n.arModelScaleLabel(
+                    (_modelScale * 100).toStringAsFixed(0),
+                  ),
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -2354,7 +2494,7 @@ Experience it in augmented reality!
                 const Divider(),
                 const SizedBox(height: 16),
                 Text(
-                  'Actions',
+                  l10n.commonActions,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -2364,36 +2504,37 @@ Experience it in augmented reality!
                 const SizedBox(height: 12),
                 ListTile(
                   leading: const Icon(Icons.delete_sweep),
-                  title: Text('Clear All Artworks',
+                  title: Text(l10n.arClearAllArtworksTitle,
                       style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text('Remove all placed AR objects',
+                  subtitle: Text(l10n.arClearAllArtworksSubtitle,
                       style: GoogleFonts.inter(fontSize: 12)),
                   onTap: () {
                     setState(() => _placedObjects.clear());
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('All artworks cleared')),
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(l10n.arAllArtworksClearedToast)),
                     );
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.refresh),
-                  title: Text('Reset AR Session',
+                  title: Text(l10n.arResetSessionTitle,
                       style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text('Restart AR tracking',
+                  subtitle: Text(l10n.arResetSessionSubtitle,
                       style: GoogleFonts.inter(fontSize: 12)),
                   onTap: () {
                     Navigator.pop(context);
                     _initializeAR();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('AR session reset')),
+                    messenger.showSnackBar(
+                      SnackBar(content: Text(l10n.arSessionResetToast)),
                     );
                   },
                 ),
               ],
             ),
           ),
-        ),
+        );
+        },
       ),
     );
   }
@@ -2401,83 +2542,89 @@ Experience it in augmented reality!
   void _showARNotSupportedDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          'AR Not Supported',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Your device does not support AR features. AR requires ARCore (Android) or ARKit (iOS).',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              'OK',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            l10n.arNotSupportedTitle,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
+          content: Text(
+            l10n.arNotSupportedMessage,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text(
+                l10n.commonOk,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   void _showARInitializationErrorDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          'AR Initialization Failed',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Text(
-          'Could not initialize AR. Please check camera permissions and try again.',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.outline,
-              ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: Text(
+            l10n.arInitializationFailedTitle,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _initializeAR();
-            },
-            child: Text(
-              'Retry',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-              ),
+          content: Text(
+            l10n.arInitializationFailedMessage,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: Text(
+                l10n.commonCancel,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.outline,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _initializeAR();
+              },
+              child: Text(
+                l10n.commonRetry,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -21,6 +21,7 @@ import '../settings_screen.dart';
 import '../activity/saved_items_screen.dart';
 import 'profile_screen_methods.dart';
 import '../activity/view_history_screen.dart';
+import '../collab/invites_inbox_screen.dart';
 import '../../models/achievements.dart';
 import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
@@ -300,6 +301,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                                       ),
                                       onPressed: () => _shareProfile(),
                                       tooltip: 'Share',
+                                    ),
+                                    const SizedBox(width: 8),
+                                    TopBarIcon(
+                                      icon: Icon(
+                                        Icons.inbox_outlined,
+                                        color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                        size: isSmallScreen ? 22 : 24,
+                                      ),
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                                        );
+                                      },
+                                      tooltip: 'Invites',
                                     ),
                                     const SizedBox(width: 8),
                                     TopBarIcon(
@@ -1941,6 +1957,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       final web3Provider = Provider.of<Web3Provider>(context, listen: false);
       if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
         await profileProvider.loadProfile(web3Provider.walletAddress);
+        // Refresh artist data after profile edit
+        setState(() {
+          _artistDataRequested = false;
+          _artistDataLoaded = false;
+        });
+        await _maybeLoadArtistData(force: true);
       }
     }
   }

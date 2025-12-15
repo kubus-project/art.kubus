@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/profile_provider.dart';
@@ -885,13 +887,14 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   bool _validateCurrentStep() {
+    final l10n = AppLocalizations.of(context)!;
     switch (_currentStep) {
       case 0:
         return _formKey.currentState?.validate() ?? false;
       case 1:
         if (_startDate == null || _endDate == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select start and end dates')),
+            SnackBar(content: Text(l10n.eventCreatorSelectStartEndDatesToast)),
           );
           return false;
         }
@@ -899,7 +902,7 @@ class _EventCreatorState extends State<EventCreator>
       case 2:
         if (_capacityController.text.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter event capacity')),
+            SnackBar(content: Text(l10n.eventCreatorEnterCapacityToast)),
           );
           return false;
         }
@@ -912,6 +915,8 @@ class _EventCreatorState extends State<EventCreator>
   void _createEvent() async {
     if (!_validateCurrentStep()) return;
 
+    final l10n = AppLocalizations.of(context)!;
+
     final provider = context.read<InstitutionProvider>();
     final institutions = provider.institutions;
     final institutionId = (_institutionId != null && _institutionId!.isNotEmpty)
@@ -920,7 +925,7 @@ class _EventCreatorState extends State<EventCreator>
 
     if (institutionId == null || institutionId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No institution available for this event')),
+        SnackBar(content: Text(l10n.eventCreatorNoInstitutionAvailableToast)),
       );
       return;
     }
@@ -928,7 +933,7 @@ class _EventCreatorState extends State<EventCreator>
     final institution = provider.getInstitutionById(institutionId);
     if (institution == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selected institution not found')),
+        SnackBar(content: Text(l10n.eventCreatorSelectedInstitutionNotFoundToast)),
       );
       return;
     }
@@ -937,7 +942,7 @@ class _EventCreatorState extends State<EventCreator>
     final endDate = _endDate;
     if (startDate == null || endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select start and end dates')),
+        SnackBar(content: Text(l10n.eventCreatorSelectStartEndDatesToast)),
       );
       return;
     }
@@ -949,7 +954,7 @@ class _EventCreatorState extends State<EventCreator>
     final endAt = DateTime(endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
     if (!endAt.isAfter(startAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('End time must be after start time')),
+        SnackBar(content: Text(l10n.eventCreatorEndTimeAfterStartToast)),
       );
       return;
     }
@@ -1000,18 +1005,19 @@ class _EventCreatorState extends State<EventCreator>
       }
 
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           title: Text(
-            _isEditing ? 'Event updated' : 'Event created',
+            _isEditing ? l10n.eventCreatorEventUpdatedTitle : l10n.eventCreatorEventCreatedTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           content: Text(
             _isEditing
-                ? 'Your event has been updated successfully.'
-                : 'Your event has been created successfully.',
+                ? l10n.eventCreatorEventUpdatedBody
+                : l10n.eventCreatorEventCreatedBody,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
           ),
           actions: [
@@ -1024,15 +1030,18 @@ class _EventCreatorState extends State<EventCreator>
                   _resetForm();
                 }
               },
-              child: Text(_isEditing ? 'Done' : 'Create Another'),
+              child: Text(_isEditing ? l10n.commonDone : l10n.eventCreatorCreateAnotherButton),
             ),
           ],
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('EventCreator: Failed to save event: $e');
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save event: $e')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.eventCreatorSaveFailedToast)),
       );
     }
   }

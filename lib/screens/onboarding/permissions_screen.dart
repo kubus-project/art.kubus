@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../widgets/inline_loading.dart';
 import '../../services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,85 +38,74 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Future<void> _checkExistingPermissions() async {
-    // Check if all permissions are already granted; wrap calls in try/catch
     bool locationGranted = false;
     bool cameraGranted = false;
     bool notificationsGranted = false;
     bool storageGranted = false;
 
     try {
-      // Only query permission status for the pages that apply on this platform
-      for (final page in _pages) {
-        switch (page.permissionType) {
-          case PermissionType.location:
-            final locationStatus = await Permission.location.status;
-            locationGranted = locationStatus.isGranted;
-            break;
-          case PermissionType.camera:
-            final cameraStatus = await Permission.camera.status;
-            cameraGranted = cameraStatus.isGranted;
-            break;
-          case PermissionType.notifications:
-            final notificationStatus = await Permission.notification.status;
-            notificationsGranted = notificationStatus.isGranted;
-            break;
-          case PermissionType.storage:
-            if (kIsWeb) {
-              // Storage/photo permission is irrelevant on web - treat as granted
-              storageGranted = true;
-            } else {
-              final storageStatus = await Permission.photos.status;
-              storageGranted = storageStatus.isGranted;
-            }
-            break;
-        }
+      final locationStatus = await Permission.location.status;
+      locationGranted = locationStatus.isGranted;
+
+      final cameraStatus = await Permission.camera.status;
+      cameraGranted = cameraStatus.isGranted;
+
+      final notificationStatus = await Permission.notification.status;
+      notificationsGranted = notificationStatus.isGranted;
+
+      if (kIsWeb) {
+        storageGranted = true;
+      } else {
+        final storageStatus = await Permission.photos.status;
+        storageGranted = storageStatus.isGranted;
       }
     } catch (e, st) {
-      debugPrint('PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
-      // Keep defaults (false) on failures
+      if (kDebugMode) {
+        debugPrint('PermissionsScreen._checkExistingPermissions: permission status check failed: $e\n$st');
+      }
       locationGranted = false;
       cameraGranted = false;
       notificationsGranted = false;
       storageGranted = false;
     }
-    // Update the state for UI rendering
-    if (mounted) {
-      setState(() {
-        _locationGranted = locationGranted;
-        _cameraGranted = cameraGranted;
-        _notificationsGranted = notificationsGranted;
-        _storageGranted = storageGranted;
-        _isCheckingPermissions = false;
-      });
-    }
 
-    // If all visible (platform-specific) permissions are granted, complete onboarding and go to main app
-    if (_pages.every((p) => _isPermissionGranted(p.permissionType))) {
-      if (mounted) {
-        _completeOnboarding();
-      }
-      return;
-    }
+    if (!mounted) return;
 
     setState(() {
+      _locationGranted = locationGranted;
+      _cameraGranted = cameraGranted;
+      _notificationsGranted = notificationsGranted;
+      _storageGranted = storageGranted;
       _isCheckingPermissions = false;
     });
+
+    final requiredPermissions = <PermissionType>[
+      PermissionType.location,
+      PermissionType.camera,
+      PermissionType.notifications,
+      if (!kIsWeb) PermissionType.storage,
+    ];
+
+    if (requiredPermissions.every(_isPermissionGranted)) {
+      _completeOnboarding();
+    }
   }
 
   List<PermissionPage> get _allPages {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final base = scheme.primary;
 
     return [
     PermissionPage(
-      title: 'Location Access',
-      subtitle: 'Discover Art Near You',
-      description: 'We use your location to show AR artworks placed in your area. Find hidden art pieces, discover local artists, and explore galleries nearby.',
+      title: l10n.permissionsLocationTitle,
+      subtitle: l10n.permissionsLocationSubtitle,
+      description: l10n.permissionsLocationDescription,
       benefits: [
-        'Find AR artworks near you',
-        'Discover local galleries and exhibitions',
-        'Get notified about nearby art events',
-        'Track your art exploration journey',
+        l10n.permissionsLocationBenefit1,
+        l10n.permissionsLocationBenefit2,
+        l10n.permissionsLocationBenefit3,
+        l10n.permissionsLocationBenefit4,
       ],
       iconData: Icons.location_on_outlined,
       gradient: LinearGradient(
@@ -124,14 +114,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       permissionType: PermissionType.location,
     ),
     PermissionPage(
-      title: 'Camera Access',
-      subtitle: 'Experience AR Magic',
-      description: 'The camera is essential for viewing AR artworks in your space. Place, interact with, and photograph stunning 3D art installations anywhere.',
+      title: l10n.permissionsCameraTitle,
+      subtitle: l10n.permissionsCameraSubtitle,
+      description: l10n.permissionsCameraDescription,
       benefits: [
-        'View AR artworks in real-world',
-        'Place virtual sculptures in your space',
-        'Take photos of AR art to share',
-        'Scan QR codes to unlock content',
+        l10n.permissionsCameraBenefit1,
+        l10n.permissionsCameraBenefit2,
+        l10n.permissionsCameraBenefit3,
+        l10n.permissionsCameraBenefit4,
       ],
       iconData: Icons.camera_alt_outlined,
       gradient: LinearGradient(
@@ -140,14 +130,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       permissionType: PermissionType.camera,
     ),
     PermissionPage(
-      title: 'Notifications',
-      subtitle: 'Stay Connected to Art',
-      description: 'Get notified about new artworks, achievement unlocks, NFT sales, and community updates. Never miss important moments.',
+      title: l10n.permissionsNotificationsTitle,
+      subtitle: l10n.permissionsNotificationsSubtitle,
+      description: l10n.permissionsNotificationsDescription,
       benefits: [
-        'New artwork discoveries',
-        'Achievement & reward notifications',
-        'NFT sale confirmations',
-        'Community event reminders',
+        l10n.permissionsNotificationsBenefit1,
+        l10n.permissionsNotificationsBenefit2,
+        l10n.permissionsNotificationsBenefit3,
+        l10n.permissionsNotificationsBenefit4,
       ],
       iconData: Icons.notifications_outlined,
       gradient: LinearGradient(
@@ -156,14 +146,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       permissionType: PermissionType.notifications,
     ),
     PermissionPage(
-      title: 'Photo Library Access',
-      subtitle: 'Save Your Creations',
-      description: 'Save AR screenshots, download artwork images, and keep your collection in your photo library. Your art memories, always accessible.',
+      title: l10n.permissionsPhotosTitle,
+      subtitle: l10n.permissionsPhotosSubtitle,
+      description: l10n.permissionsPhotosDescription,
       benefits: [
-        'Save AR screenshots to your photos',
-        'Download artwork images',
-        'Export your creations to share',
-        'Keep your art collection accessible',
+        l10n.permissionsPhotosBenefit1,
+        l10n.permissionsPhotosBenefit2,
+        l10n.permissionsPhotosBenefit3,
+        l10n.permissionsPhotosBenefit4,
       ],
       iconData: Icons.photo_library_outlined,
       gradient: LinearGradient(
@@ -187,6 +177,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // Redirect to desktop permissions if on desktop
     if (DesktopBreakpoints.isDesktop(context)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -214,7 +205,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               SizedBox(width: 56, height: 56, child: InlineLoading(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary, tileSize: 6.0)),
               SizedBox(height: 24),
               Text(
-                'Checking permissions...',
+                l10n.permissionsChecking,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -254,6 +245,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Widget _buildHeader([bool isSmallScreen = false]) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
       child: Row(
@@ -268,7 +260,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               ),
               SizedBox(width: isSmallScreen ? 8 : 12),
               Text(
-                'art.kubus',
+                l10n.appTitle,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 18 : 20,
                   fontWeight: FontWeight.bold,
@@ -281,7 +273,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           TextButton(
             onPressed: _completeOnboarding,
             child: Text(
-              'Skip All',
+              l10n.permissionsSkipAll,
               style: GoogleFonts.inter(
                 fontSize: isSmallScreen ? 14 : 16,
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -294,6 +286,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Widget _buildPage(PermissionPage page, [bool isSmallScreen = false]) {
+    final l10n = AppLocalizations.of(context)!;
     final isGranted = _isPermissionGranted(page.permissionType);
     
     return LayoutBuilder(
@@ -395,7 +388,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'What you can do:',
+                          l10n.permissionsBenefitsTitle,
                           style: GoogleFonts.inter(
                             fontSize: isVerySmallScreen ? 14 : 16,
                             fontWeight: FontWeight.bold,
@@ -457,7 +450,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'Your privacy is protected. We never share your data.',
+                            l10n.permissionsPrivacyNote,
                             style: GoogleFonts.inter(
                               fontSize: isVerySmallScreen ? 12 : 13,
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -477,6 +470,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   }
 
   Widget _buildBottomSection([bool isSmallScreen = false]) {
+    final l10n = AppLocalizations.of(context)!;
     final currentPermission = _pages[_currentPage].permissionType;
     final isGranted = _isPermissionGranted(currentPermission);
     final isLastPage = _currentPage == _pages.length - 1;
@@ -521,7 +515,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        'Permission Granted',
+                        l10n.permissionsGrantedLabel,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -549,8 +543,8 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   ),
                   child: Text(
                     isGranted 
-                        ? (isLastPage ? 'Get Started' : 'Next Permission')
-                        : 'Grant Permission',
+                        ? (isLastPage ? l10n.permissionsGetStarted : l10n.permissionsNextPermission)
+                        : l10n.permissionsGrantPermission,
                     style: GoogleFonts.inter(
                       fontSize: effectiveSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.w600,
@@ -563,7 +557,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               TextButton(
                 onPressed: isLastPage ? _completeOnboarding : _nextPage,
                 child: Text(
-                  isLastPage ? 'Skip for Now' : 'Skip This Permission',
+                  isLastPage ? l10n.commonSkipForNow : l10n.permissionsSkipThisPermission,
                   style: GoogleFonts.inter(
                     fontSize: effectiveSmallScreen ? 14 : 16,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -639,12 +633,15 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
         break;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     PermissionStatus status;
     try {
       status = await permission.request();
     } catch (e, st) {
-      debugPrint('PermissionsScreen._requestPermission: permission.request failed: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('PermissionsScreen._requestPermission: permission.request failed: $e\n$st');
+      }
       status = PermissionStatus.denied;
     }
     if (!mounted) return;
@@ -655,7 +652,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       try {
         nowGranted = await pn.requestPermission();
       } catch (e, st) {
-        debugPrint('PermissionsScreen._requestPermission: web notification request failed: $e\n$st');
+        if (kDebugMode) {
+          debugPrint('PermissionsScreen._requestPermission: web notification request failed: $e\n$st');
+        }
         nowGranted = false;
       }
     } else {
@@ -679,12 +678,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       }
     });
 
-    if (status.isGranted) {
+    if (nowGranted) {
       // Show success feedback
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            '${_getPermissionName(type)} permission granted!',
+            l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
             style: GoogleFonts.inter(),
           ),
           backgroundColor: Colors.green,
@@ -697,7 +696,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       );
 
       // Auto-advance after a short delay
-            await Future.delayed(const Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
       if (_currentPage < _pages.length - 1) {
         _nextPage();
       }
@@ -707,33 +706,34 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     }
   }
 
-  String _getPermissionName(PermissionType type) {
+  String _getPermissionName(AppLocalizations l10n, PermissionType type) {
     switch (type) {
       case PermissionType.location:
-        return 'Location';
+        return l10n.permissionsLocationTitle;
       case PermissionType.camera:
-        return 'Camera';
+        return l10n.permissionsCameraTitle;
       case PermissionType.notifications:
-        return 'Notification';
+        return l10n.permissionsNotificationsTitle;
       case PermissionType.storage:
-        return 'Storage';
+        return l10n.permissionsPhotosTitle;
     }
   }
 
   void _showSettingsDialog(PermissionType type) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Permission Required',
+          l10n.permissionsPermissionRequiredTitle,
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         content: Text(
-          'To enable ${_getPermissionName(type).toLowerCase()} access, please open Settings and grant the permission.',
+          l10n.permissionsOpenSettingsDialogContent(_getPermissionName(l10n, type)),
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -742,7 +742,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -754,7 +754,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
               openAppSettings();
             },
             child: Text(
-              'Open Settings',
+              l10n.permissionsOpenSettings,
               style: GoogleFonts.inter(
                 color: Colors.white,
               ),

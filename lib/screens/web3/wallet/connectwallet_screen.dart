@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../../services/event_bus.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -115,6 +116,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -130,7 +132,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               onPressed: () => Navigator.of(context).pop(),
             ),
         title: Text(
-          _getStepTitle(),
+          _getStepTitle(l10n),
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -150,18 +152,18 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  String _getStepTitle() {
+  String _getStepTitle(AppLocalizations l10n) {
     switch (_currentStep) {
       case 0:
-        return 'Sign in to art.kubus';
+        return l10n.authSignInTitle;
       case 1:
-        return 'Secure wallet access';
+        return l10n.connectWalletSecureAccessTitle;
       case 2:
-        return 'Secure wallet access';
+        return l10n.connectWalletSecureAccessTitle;
       case 3:
-        return 'Secure wallet access';
+        return l10n.connectWalletSecureAccessTitle;
       default:
-        return 'Sign in to art.kubus';
+        return l10n.authSignInTitle;
     }
   }
 
@@ -183,6 +185,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Widget _buildChooseOptionView() {
+    final l10n = AppLocalizations.of(context)!;
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenHeight < 700 || screenWidth < 360;
@@ -221,7 +224,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Sign in securely',
+                        l10n.connectWalletChooseTitle,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 22 : 24,
                           fontWeight: FontWeight.w800,
@@ -231,7 +234,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Keep your keys on-device and choose what suits you: connect a wallet, sign in with email/Google, or register. No seed phrases are stored.',
+                        l10n.connectWalletChooseDescription,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 13 : 14,
                           color: colorScheme.onSurface.withValues(alpha: 0.85),
@@ -245,22 +248,22 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 SizedBox(height: isSmallScreen ? 16 : 24),
                 _buildActionButton(
                   icon: Icons.qr_code_scanner,
-                  label: 'WalletConnect',
-                  description: 'Connect with Phantom, Solflare, or other wallets (no gas fee)',
+                  label: l10n.connectWalletOptionWalletConnectTitle,
+                  description: l10n.connectWalletOptionWalletConnectDescription,
                   onTap: () => setState(() => _currentStep = 3),
                   isSmallScreen: isSmallScreen,
                 ),
                 _buildActionButton(
                   icon: Icons.login,
-                  label: 'Sign in',
-                  description: 'Use email/Google or existing wallet account',
+                  label: l10n.connectWalletOptionSignInTitle,
+                  description: l10n.connectWalletOptionSignInDescription,
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SignInScreen())),
                   isSmallScreen: isSmallScreen,
                 ),
                 _buildActionButton(
                   icon: Icons.person_add_alt,
-                  label: 'Register',
-                  description: 'Create a new account (keeps your keys self-custodied)',
+                  label: l10n.connectWalletOptionRegisterTitle,
+                  description: l10n.connectWalletOptionRegisterDescription,
                   onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
                   isSmallScreen: isSmallScreen,
                 ),
@@ -268,7 +271,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 GestureDetector(
                   onTap: () => _showWeb3Guide(),
                   child: Text(
-                    'How does this hybrid wallet work?',
+                    l10n.connectWalletHybridHelpLink,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: accent,
@@ -411,47 +414,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     );
   }
 
-  /* // Mock wallet connection method - REMOVED (use settings toggle instead)
-  Future<void> _connectMockWallet() async {
-    final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-    
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      await Future.delayed(const Duration(seconds: 1));
-      await web3Provider.connectWallet(isRealConnection: false);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Mock wallet connected successfully!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to connect: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-  */ // End of removed mock wallet connection
-
   // Connect wallet with mnemonic phrase view
   Widget _buildConnectWithMnemonicView(Web3Provider web3Provider) {
+    final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
     
@@ -481,7 +446,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     ),
                     SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
-                      'Import Wallet',
+                      l10n.connectWalletImportTitle,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 22 : 26,
                         fontWeight: FontWeight.bold,
@@ -493,7 +458,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
-                'Enter your 12-word recovery phrase to import your Solana wallet',
+                l10n.connectWalletImportDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -507,7 +472,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 controller: _mnemonicController,
                 maxLines: isSmallScreen ? 3 : 4,
                 decoration: InputDecoration(
-                  hintText: 'Enter your 12-word recovery phrase separated by spaces',
+                  hintText: l10n.connectWalletImportHint,
                   hintStyle: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 12 : 13,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
@@ -549,7 +514,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
-                        'Never share your recovery phrase with anyone. art.kubus will never ask for it.',
+                        l10n.connectWalletImportWarning,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 11 : 12,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -586,7 +551,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                           ),
                         )
                       : Text(
-                          'Import Wallet',
+                          l10n.connectWalletImportButton,
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 16 : 17,
                             fontWeight: FontWeight.w700,
@@ -604,12 +569,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Future<void> _importWalletFromMnemonic(Web3Provider web3Provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final mnemonic = _mnemonicController.text.trim();
     
     if (mnemonic.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: const Text('Please enter your recovery phrase'),
+          content: Text(l10n.connectWalletImportEmptyMnemonicError),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -620,9 +587,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     // Validate mnemonic format (12 words)
     final words = mnemonic.split(' ').where((w) => w.isNotEmpty).toList();
     if (words.length != 12) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: Text('Invalid recovery phrase. Expected 12 words, got ${words.length}'),
+          content: Text(l10n.connectWalletImportInvalidMnemonicWordCountError(words.length)),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -636,7 +603,6 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     
     try {
       final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-      final messenger = ScaffoldMessenger.of(context);
       final navigator = Navigator.of(context);
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
@@ -725,7 +691,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text('Wallet imported successfully!\nAddress: ${address.substring(0, 8)}...'),
+            content: Text(l10n.connectWalletImportSuccessToast(address.substring(0, 8))),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -733,13 +699,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         navigator.pop();
       }
     } catch (e) {
+      debugPrint('connectwallet: import wallet failed: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to import wallet: ${e.toString()}'),
+            content: Text(l10n.connectWalletImportFailedToast),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -751,6 +718,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
   // Create new wallet view - generates mnemonic
   Widget _buildCreateNewWalletView(Web3Provider web3Provider) {
+    final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 700;
@@ -781,7 +749,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     ),
                     SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
-                      'Create New Wallet',
+                      l10n.connectWalletCreateTitle,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 22 : 26,
                         fontWeight: FontWeight.bold,
@@ -793,7 +761,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
-                'Generate a new Solana wallet with a 12-word recovery phrase',
+                l10n.connectWalletCreateDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -818,7 +786,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                         Icon(Icons.info_outline, color: Colors.green, size: isSmallScreen ? 20 : 22),
                         SizedBox(width: isSmallScreen ? 10 : 12),
                         Text(
-                          'What you\'ll receive:',
+                          l10n.connectWalletCreateInfoTitle,
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 14 : 15,
                             fontWeight: FontWeight.w600,
@@ -829,7 +797,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     ),
                     SizedBox(height: isSmallScreen ? 10 : 12),
                     Text(
-                      '• A new Solana wallet address\n• A 12-word recovery phrase\n• Full ownership and control\n\nYou\'ll need to write down and confirm your recovery phrase before proceeding.',
+                      l10n.connectWalletCreateInfoBody,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -856,7 +824,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
-                        'Keep your recovery phrase safe! It\'s the only way to recover your wallet. Never share it with anyone.',
+                        l10n.connectWalletCreateWarning,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 11 : 12,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -893,7 +861,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                           ),
                         )
                       : Text(
-                          'Generate Wallet',
+                          l10n.connectWalletCreateGenerateButton,
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 16 : 17,
                             fontWeight: FontWeight.w700,
@@ -908,7 +876,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 children: [
                   Flexible(
                     child: Text(
-                      'Already have a wallet? ',
+                      l10n.connectWalletCreateAlreadyHaveWalletPrefix,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -918,7 +886,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   GestureDetector(
                     onTap: () => setState(() => _currentStep = 1),
                     child: Text(
-                      'Import it here',
+                      l10n.connectWalletCreateAlreadyHaveWalletLink,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Colors.blue,
@@ -939,6 +907,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
   // WalletConnect view - scan QR or paste URI
   Widget _buildWalletConnectView(Web3Provider web3Provider) {
+    final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360 || screenHeight < 700;
@@ -969,7 +938,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     ),
                     SizedBox(height: isSmallScreen ? 14 : 18),
                     Text(
-                      'Connect with WalletConnect',
+                      l10n.connectWalletWalletConnectTitle,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 22 : 26,
                         fontWeight: FontWeight.bold,
@@ -981,7 +950,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
-                'Connect your existing Solana wallet like Phantom or Solflare using WalletConnect',
+                l10n.connectWalletWalletConnectDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1006,7 +975,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                         Icon(Icons.check_circle, color: Colors.blue, size: isSmallScreen ? 20 : 22),
                         SizedBox(width: isSmallScreen ? 10 : 12),
                         Text(
-                          'Supported Wallets:',
+                          l10n.connectWalletWalletConnectSupportedTitle,
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 14 : 15,
                             fontWeight: FontWeight.w600,
@@ -1017,7 +986,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     ),
                     SizedBox(height: isSmallScreen ? 10 : 12),
                     Text(
-                      '• Phantom Wallet\n• Solflare\n• Backpack\n• Any WalletConnect-compatible Solana wallet',
+                      l10n.connectWalletWalletConnectSupportedList,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1031,7 +1000,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             
               // Instructions
               Text(
-                'How to connect:',
+                l10n.connectWalletWalletConnectHowToTitle,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   fontWeight: FontWeight.w600,
@@ -1039,9 +1008,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
               ),
               SizedBox(height: isSmallScreen ? 10 : 12),
-              _buildInstructionStep('1', 'Open your Solana wallet app'),
-              _buildInstructionStep('2', 'Tap on WalletConnect or scan QR code'),
-              _buildInstructionStep('3', 'Scan the QR code or paste the connection URI below'),
+              _buildInstructionStep('1', l10n.connectWalletWalletConnectStep1),
+              _buildInstructionStep('2', l10n.connectWalletWalletConnectStep2),
+              _buildInstructionStep('3', l10n.connectWalletWalletConnectStep3),
               SizedBox(height: isSmallScreen ? 16 : 20),
             
               // Quick connect without typing
@@ -1067,7 +1036,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                         )
                       : const Icon(Icons.flash_on_rounded, color: Colors.white, size: 22),
                   label: Text(
-                    _isLoading ? 'Connecting...' : 'Quick connect (paste/scan)',
+                    _isLoading ? l10n.connectWalletWalletConnectConnectingLabel : l10n.connectWalletWalletConnectQuickConnectLabel,
                     style: GoogleFonts.inter(
                       fontSize: isSmallScreen ? 15 : 17,
                       fontWeight: FontWeight.w700,
@@ -1083,7 +1052,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 controller: _wcUriController,
                 maxLines: isSmallScreen ? 2 : 3,
                 decoration: InputDecoration(
-                  hintText: 'Paste WalletConnect URI here\n(e.g., wc:abc123...)',
+                  hintText: l10n.connectWalletWalletConnectUriHint,
                   hintStyle: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 11 : 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
@@ -1137,7 +1106,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                     SizedBox(width: isSmallScreen ? 10 : 12),
                     Expanded(
                       child: Text(
-                        'Your wallet remains secure on your device. We never have access to your private keys.',
+                        l10n.connectWalletWalletConnectSecurityNote,
                         style: GoogleFonts.inter(
                           fontSize: isSmallScreen ? 11 : 12,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -1168,7 +1137,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                             ),
                             icon: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 20),
                             label: Text(
-                              'Scan QR',
+                              l10n.connectWalletWalletConnectScanQrButton,
                               style: GoogleFonts.inter(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -1197,7 +1166,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                                     child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                                   )
                                 : Text(
-                                    'Connect',
+                                    l10n.connectWalletWalletConnectConnectButton,
                                     style: GoogleFonts.inter(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600,
@@ -1223,7 +1192,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                             ),
                             icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
                             label: Text(
-                              'Scan QR',
+                              l10n.connectWalletWalletConnectScanQrButton,
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -1251,7 +1220,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                                     child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                                   )
                                 : Text(
-                                    'Connect',
+                                    l10n.connectWalletWalletConnectConnectButton,
                                     style: GoogleFonts.inter(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w600,
@@ -1268,7 +1237,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 children: [
                   Flexible(
                     child: Text(
-                      'Don\'t have a wallet? ',
+                      l10n.connectWalletWalletConnectNoWalletPrefix,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1278,7 +1247,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   GestureDetector(
                     onTap: () => setState(() => _currentStep = 2),
                     child: Text(
-                      'Create one here',
+                      l10n.connectWalletWalletConnectNoWalletLink,
                       style: GoogleFonts.inter(
                         fontSize: isSmallScreen ? 12 : 13,
                         color: Colors.green,
@@ -1339,13 +1308,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Future<void> _scanQRCode(Web3Provider web3Provider) async {
+    final l10n = AppLocalizations.of(context)!;
     final result = await Navigator.push<String>(
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
           appBar: AppBar(
             title: Text(
-              'Scan WalletConnect QR Code',
+              l10n.connectWalletWalletConnectScanQrTitle,
               style: GoogleFonts.inter(),
             ),
             backgroundColor: Colors.black,
@@ -1385,7 +1355,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       borderRadius: BorderRadius.circular(24),
                     ),
                     child: Text(
-                      'Position QR code within frame',
+                      l10n.connectWalletWalletConnectScanQrHint,
                       style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 14,
@@ -1428,12 +1398,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Future<void> _connectWithWalletConnect(Web3Provider web3Provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final uri = _wcUriController.text.trim();
     
     if (uri.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: const Text('Please enter a WalletConnect URI'),
+          content: Text(l10n.connectWalletWalletConnectUriRequiredToast),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -1442,9 +1414,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
     }
     
     if (!uri.startsWith('wc:')) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
-          content: const Text('Invalid WalletConnect URI format'),
+          content: Text(l10n.connectWalletWalletConnectInvalidUriToast),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -1463,9 +1435,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: const Text('Create or import a wallet before using WalletConnect'),
+            content: Text(l10n.connectWalletWalletConnectNeedsLocalWalletToast),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1486,13 +1458,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       // Set up callbacks
       wcService.onConnected = (address) async {
         if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
           final messenger = ScaffoldMessenger.of(context);
           final navigator = Navigator.of(context);
           final chatProvider = Provider.of<ChatProvider>(context, listen: false);
           final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
           messenger.showSnackBar(
             SnackBar(
-              content: Text('Connected to $address'),
+              content: Text(l10n.connectWalletWalletConnectConnectedToast(address)),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1576,13 +1549,15 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       };
       
       wcService.onError = (error) {
+        debugPrint('connectwallet: walletconnect error: $error');
         if (mounted) {
           setState(() {
             _isLoading = false;
           });
-          ScaffoldMessenger.of(context).showSnackBar(
+          final l10n = AppLocalizations.of(context)!;
+          messenger.showSnackBar(
             SnackBar(
-              content: Text('Connection error: $error'),
+              content: Text(l10n.connectWalletWalletConnectConnectionErrorToast),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1594,9 +1569,9 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       await wcService.pair(uri);
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: const Text('Waiting for wallet approval...'),
+            content: Text(l10n.connectWalletWalletConnectWaitingApprovalToast),
             backgroundColor: Colors.blue,
             behavior: SnackBarBehavior.floating,
             duration: const Duration(seconds: 2),
@@ -1604,13 +1579,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         );
       }
     } catch (e) {
+      debugPrint('connectwallet: walletconnect failed: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to connect: ${e.toString()}'),
+            content: Text(l10n.connectWalletWalletConnectFailedToast),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1620,6 +1596,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Future<void> _generateNewWallet(Web3Provider web3Provider) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     setState(() {
       _isLoading = true;
     });
@@ -1629,8 +1609,6 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       // Capture providers and UI state before any awaits to avoid use_build_context_synchronously
       final chatProvider = Provider.of<ChatProvider>(context, listen: false);
       final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-      final messenger = ScaffoldMessenger.of(context);
-      final navigator = Navigator.of(context);
 
       final result = await walletProvider.createWallet();
       
@@ -1697,7 +1675,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
           } catch (_) {}
           messenger.showSnackBar(
             SnackBar(
-              content: const Text('Wallet created and profile set up successfully!'),
+              content: Text(l10n.connectWalletCreateSuccessToast),
               backgroundColor: Colors.green,
               behavior: SnackBarBehavior.floating,
             ),
@@ -1706,13 +1684,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
         }
       }
     } catch (e) {
-        if (mounted) {
-          setState(() {
+      debugPrint('connectwallet: create wallet failed: $e');
+      if (mounted) {
+        setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
-            content: Text('Failed to create wallet: ${e.toString()}'),
+            content: Text(l10n.connectWalletCreateFailedToast),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),
@@ -1722,8 +1701,10 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Future<void> _showMnemonicDialog(String mnemonic, String address) async {
+    final l10n = AppLocalizations.of(context)!;
     final TextEditingController confirmController = TextEditingController();
     bool confirmed = false;
+    final shortAddress = '${address.substring(0, 8)}...${address.substring(address.length - 6)}';
     
     await showDialog(
       context: context,
@@ -1731,7 +1712,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: Text(
-            'Save Your Recovery Phrase',
+            l10n.connectWalletMnemonicDialogTitle,
             style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: SingleChildScrollView(
@@ -1752,7 +1733,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Write this down and keep it safe!',
+                          l10n.connectWalletMnemonicDialogWarning,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1782,7 +1763,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Confirm by typing your recovery phrase:',
+                  l10n.connectWalletMnemonicDialogConfirmPrompt,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -1793,7 +1774,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   controller: confirmController,
                   maxLines: 3,
                   decoration: InputDecoration(
-                    hintText: 'Paste or type your recovery phrase',
+                    hintText: l10n.connectWalletMnemonicDialogConfirmHint,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -1806,7 +1787,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Your wallet address: ${address.substring(0, 8)}...${address.substring(address.length - 6)}',
+                  l10n.connectWalletMnemonicDialogAddressLabel(shortAddress),
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1819,7 +1800,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: GoogleFonts.inter(color: Colors.grey),
               ),
             ),
@@ -1835,7 +1816,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 disabledBackgroundColor: Colors.grey.withValues(alpha: 0.3),
               ),
               child: Text(
-                'I\'ve Saved It',
+                l10n.connectWalletMnemonicDialogConfirmButton,
                 style: GoogleFonts.inter(
                   color: confirmed ? Colors.white : Colors.grey,
                 ),
@@ -1848,6 +1829,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
   }
 
   Widget _buildConnectedView(Web3Provider web3Provider) {
+    final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
     
@@ -1871,7 +1853,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             ),
             SizedBox(height: isSmallScreen ? 28 : 32),
             Text(
-              'Wallet Connected!',
+              l10n.connectWalletConnectedTitle,
               style: GoogleFonts.inter(
                 fontSize: isSmallScreen ? 26 : 30,
                 fontWeight: FontWeight.bold,
@@ -1883,7 +1865,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text(
-                'Your wallet is now connected to art.kubus. You can now explore AR art, trade NFTs, and participate in the ecosystem.',
+                l10n.connectWalletConnectedDescription,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1905,7 +1887,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                   ),
                 ),
                 child: Text(
-                  'Start Exploring',
+                  l10n.connectWalletConnectedStartExploringButton,
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 17 : 18,
                     fontWeight: FontWeight.w700,
@@ -1921,7 +1903,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
                 Provider.of<WalletProvider>(context, listen: false).disconnectWallet();
               },
               child: Text(
-                'Disconnect Wallet',
+                l10n.connectWalletConnectedDisconnectButton,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 15,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1942,13 +1924,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
 
   void _showWeb3Guide() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          'What is a Web3 Wallet?',
+          l10n.connectWalletWeb3GuideTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -1960,14 +1943,14 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'A Web3 wallet is your gateway to the decentralized internet:',
+                l10n.connectWalletWeb3GuideDescription,
                 style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               ),
               const SizedBox(height: 16),
-              _buildFeaturePoint(Icons.lock, 'Secure', 'Your keys, your crypto'),
-              _buildFeaturePoint(Icons.palette, 'NFTs', 'Store and trade digital art'),
-              _buildFeaturePoint(Icons.how_to_vote, 'Governance', 'Vote on platform decisions'),
-              _buildFeaturePoint(Icons.account_balance_wallet, 'DeFi', 'Access decentralized finance'),
+              _buildFeaturePoint(Icons.lock, l10n.connectWalletWeb3GuideFeatureSecureTitle, l10n.connectWalletWeb3GuideFeatureSecureDescription),
+              _buildFeaturePoint(Icons.palette, l10n.connectWalletWeb3GuideFeatureNftsTitle, l10n.connectWalletWeb3GuideFeatureNftsDescription),
+              _buildFeaturePoint(Icons.how_to_vote, l10n.connectWalletWeb3GuideFeatureGovernanceTitle, l10n.connectWalletWeb3GuideFeatureGovernanceDescription),
+              _buildFeaturePoint(Icons.account_balance_wallet, l10n.connectWalletWeb3GuideFeatureDefiTitle, l10n.connectWalletWeb3GuideFeatureDefiDescription),
             ],
           ),
         ),
@@ -1978,7 +1961,7 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
               backgroundColor: Theme.of(context).colorScheme.primary,
             ),
             child: Text(
-              'Got it!',
+              l10n.connectWalletWeb3GuideGotItButton,
               style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
             ),
           ),

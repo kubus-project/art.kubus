@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/collab_provider.dart';
+import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
+import '../desktop_shell.dart';
+import '../../collab/invites_inbox_screen.dart';
 import '../../web3/artist/artist_studio.dart';
 import '../../web3/artist/artwork_creator.dart';
 import '../../web3/artist/artwork_gallery.dart';
 import '../../web3/artist/artist_analytics.dart';
+import '../../events/exhibition_list_screen.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
 /// Left: Mobile artist studio view
@@ -105,6 +111,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
@@ -112,7 +119,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode
           ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+          : scheme.surface,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -155,18 +162,31 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    // Compute approval status for gating quick actions
+    final profileProvider = context.watch<ProfileProvider>();
+    final daoProvider = context.watch<DAOProvider>();
+    final wallet = _resolveWalletAddress(listen: true);
+    final review = _artistReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
+    final reviewStatus = review?.status.toLowerCase() ?? '';
+    final reviewIsArtist = review?.isArtistApplication ?? false;
+    final isApprovedArtist = hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
+
     return Container(
-      color: Theme.of(context).colorScheme.surface,
+      color: scheme.surface,
       child: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           // Header
           Text(
-            'Studio Overview',
+            l10n.desktopArtistStudioOverviewTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 24),
@@ -177,59 +197,126 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
           // Quick actions
           Text(
-            'Quick Actions',
+            l10n.desktopArtistStudioQuickActionsTitle,
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
-          _buildQuickActionTile(
-            'Create Artwork',
-            'Upload and mint new art',
-            Icons.add_photo_alternate_outlined,
-            themeProvider.accentColor,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ArtworkCreator()),
-              );
-            },
-          ),
-          _buildQuickActionTile(
-            'My Gallery',
-            'View all artworks',
-            Icons.collections_outlined,
-            const Color(0xFF4ECDC4),
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ArtworkGallery()),
-              );
-            },
-          ),
-          _buildQuickActionTile(
-            'Analytics',
-            'View performance stats',
-            Icons.analytics_outlined,
-            const Color(0xFFFF6B6B),
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ArtistAnalytics()),
-              );
-            },
-          ),
+          if (AppConfig.isFeatureEnabled('collabInvites'))
+            Consumer<CollabProvider>(
+              builder: (context, collabProvider, _) {
+                final pending = collabProvider.pendingInviteCount;
+                final badge = pending > 0
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: scheme.error,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          pending > 99 ? '99+' : pending.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onError,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: scheme.onSurface.withValues(alpha: 0.4),
+                      );
+
+                return _buildQuickActionTile(
+                  'Invites',
+                  pending > 0 ? 'You have pending collaboration invites' : 'View collaboration invites',
+                  Icons.group_add_outlined,
+                  scheme.primary,
+                  () {
+                    DesktopShellScope.of(context)?.pushScreen(
+                      DesktopSubScreen(
+                        title: 'Collaboration Invites',
+                        child: const InvitesInboxScreen(),
+                      ),
+                    );
+                  },
+                  trailing: badge,
+                );
+              },
+            ),
+          if (isApprovedArtist)
+            _buildQuickActionTile(
+              l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+              l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
+              Icons.add_photo_alternate_outlined,
+              const Color(0xFF4ECDC4), // Teal
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+                    child: const ArtworkCreator(),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedArtist)
+            _buildQuickActionTile(
+              l10n.desktopArtistStudioQuickActionMyGalleryTitle,
+              l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
+              Icons.collections_outlined,
+              scheme.secondary,
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
+                    child: const ArtworkGallery(),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedArtist && AppConfig.isFeatureEnabled('exhibitions'))
+            _buildQuickActionTile(
+              'My Exhibitions',
+              'View exhibitions you collaborate on',
+              Icons.collections_bookmark_outlined,
+              const Color(0xFF9C27B0), // Purple for exhibitions
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'My Exhibitions',
+                    child: const ExhibitionListScreen(embedded: true, canCreate: true),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedArtist)
+            _buildQuickActionTile(
+              l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+              l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
+              Icons.analytics_outlined,
+              scheme.tertiary,
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n.desktopArtistStudioQuickActionAnalyticsTitle,
+                    child: const ArtistAnalytics(),
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 24),
 
           // Stats
           Text(
-            'Studio Statistics',
+            l10n.desktopArtistStudioStatisticsTitle,
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -238,11 +325,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
           // Recent activity
           Text(
-            'Recent Activity',
+            l10n.desktopArtistStudioRecentActivityTitle,
             style: GoogleFonts.inter(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: scheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -253,35 +340,37 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }
 
   Widget _buildVerificationStatusCard(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final wallet = _resolveWalletAddress();
     final status = _artistReview?.status.toLowerCase() ?? '';
     final isApproved = status == 'approved';
     final isPending = status == 'pending';
     final isRejected = status == 'rejected';
 
-    Color statusColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
-    String statusText = 'Not Applied';
-    String statusDescription = 'Apply for artist verification';
+    String statusText = l10n.desktopArtistStudioVerificationNotAppliedTitle;
+    String statusDescription = l10n.desktopArtistStudioVerificationNotAppliedDescription;
 
     if (_reviewLoading) {
-      statusText = 'Loading...';
-      statusDescription = 'Checking verification status';
+      statusText = l10n.desktopArtistStudioVerificationLoadingTitle;
+      statusDescription = l10n.desktopArtistStudioVerificationLoadingDescription;
     } else if (isApproved) {
-      statusColor = Colors.green;
+      statusColor = scheme.primary;
       statusIcon = Icons.verified;
-      statusText = 'Verified Artist';
-      statusDescription = 'Your studio is verified';
+      statusText = l10n.desktopArtistStudioVerificationApprovedTitle;
+      statusDescription = l10n.desktopArtistStudioVerificationApprovedDescription;
     } else if (isPending) {
-      statusColor = Colors.orange;
+      statusColor = scheme.tertiary;
       statusIcon = Icons.pending;
-      statusText = 'Pending Review';
-      statusDescription = 'Application under review';
+      statusText = l10n.desktopArtistStudioVerificationPendingTitle;
+      statusDescription = l10n.desktopArtistStudioVerificationPendingDescription;
     } else if (isRejected) {
-      statusColor = Colors.red;
+      statusColor = scheme.error;
       statusIcon = Icons.cancel;
-      statusText = 'Application Rejected';
-      statusDescription = 'Please resubmit with improvements';
+      statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
+      statusDescription = l10n.desktopArtistStudioVerificationRejectedDescription;
     }
 
     return DesktopCard(
@@ -309,7 +398,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: scheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -317,7 +406,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       statusDescription,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: scheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -335,14 +424,14 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
-                  foregroundColor: Colors.white,
+                  foregroundColor: scheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child: Text(
-                  'Apply for Verification',
+                  l10n.desktopArtistStudioApplyForVerificationButton,
                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -359,6 +448,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     IconData icon,
     Color color,
     VoidCallback onTap,
+    {Widget? trailing}
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -410,11 +500,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
+                trailing ??
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
               ],
             ),
           ),
@@ -424,25 +515,27 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }
 
   Widget _buildStatsGrid(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         Row(
           children: [
             Expanded(
               child: _buildStatCard(
-                'Artworks',
+                l10n.desktopArtistStudioStatArtworks,
                 '0',
                 Icons.collections_outlined,
-                themeProvider.accentColor,
+                const Color(0xFF4ECDC4), // Teal
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Views',
+                l10n.desktopArtistStudioStatViews,
                 '0',
                 Icons.visibility_outlined,
-                const Color(0xFF4ECDC4),
+                scheme.secondary,
               ),
             ),
           ],
@@ -452,19 +545,19 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           children: [
             Expanded(
               child: _buildStatCard(
-                'Likes',
+                l10n.desktopArtistStudioStatLikes,
                 '0',
                 Icons.favorite_outline,
-                const Color(0xFFFF6B6B),
+                scheme.tertiary,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
-                'Sales',
+                l10n.desktopArtistStudioStatSales,
                 '0 KUB8',
                 Icons.attach_money,
-                Colors.green,
+                scheme.primary,
               ),
             ),
           ],
@@ -509,6 +602,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }
 
   Widget _buildRecentActivity(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -524,7 +618,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'No recent activity',
+            l10n.desktopArtistStudioNoRecentActivityLabel,
             style: GoogleFonts.inter(
               fontSize: 14,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),

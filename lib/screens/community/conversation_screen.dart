@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'dart:io' as io;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
 import 'dart:async';
 import 'dart:math' as math;
 import '../../models/conversation.dart';
@@ -630,16 +631,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     /// Simple time-ago formatter used in chat bubbles and tooltips.
     String _formatTimeAgo(DateTime dt) {
+      final l10n = AppLocalizations.of(context)!;
       final now = DateTime.now();
       final diff = now.difference(dt);
-      if (diff.inSeconds < 60) return 'just now';
-      if (diff.inMinutes < 60) return '${diff.inMinutes}m';
-      if (diff.inHours < 24) return '${diff.inHours}h';
-      if (diff.inDays < 7) return '${diff.inDays}d';
+      if (diff.inSeconds < 60) return l10n.commonTimeAgoJustNow;
+      if (diff.inMinutes < 60) return l10n.commonTimeAgoMinutes(diff.inMinutes);
+      if (diff.inHours < 24) return l10n.commonTimeAgoHours(diff.inHours);
+      if (diff.inDays < 7) return l10n.commonTimeAgoDays(diff.inDays);
       return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
     }
 
   Future<void> _send() async {
+    final l10n = AppLocalizations.of(context)!;
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     _controller.clear();
@@ -653,7 +656,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       PushNotificationService().showCommunityInteractionNotification(
         postId: widget.conversation.id,
         type: 'message',
-        userName: 'You',
+        userName: l10n.commonYou,
         comment: text,
       );
     } catch (_) {}
@@ -827,8 +830,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildReplyPreview() {
     if (_replyingTo == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
     final isMe = _replyingTo!.senderWallet == (Provider.of<ProfileProvider>(context, listen: false).currentUser?.walletAddress ?? '');
-    final senderName = isMe ? 'You' : (_displayNameCache[_replyingTo!.senderWallet] ?? _replyingTo!.senderWallet);
+    final senderName = isMe ? l10n.commonYou : (_displayNameCache[_replyingTo!.senderWallet] ?? _replyingTo!.senderWallet);
     
     return Container(
       padding: const EdgeInsets.all(8),
@@ -845,7 +849,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Replying to $senderName',
+                  l10n.messagesReplyingToLabel(senderName),
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.primary,
@@ -927,6 +931,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   void _showMessageOptions(ChatMessage message) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (context) => SafeArea(
@@ -950,7 +955,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.reply),
-              title: const Text('Reply'),
+              title: Text(l10n.commonReply),
               onTap: () {
                 Navigator.pop(context);
                 setState(() => _replyingTo = message);
@@ -965,7 +970,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
             // Add copy option
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('Copy Text'),
+              title: Text(l10n.commonCopy),
               onTap: () {
                 Navigator.pop(context);
                 // Clipboard implementation would go here
@@ -1020,12 +1025,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildHeaderTitle() {
+    final l10n = AppLocalizations.of(context)!;
     final isGroup = widget.conversation.isGroup;
     final title = widget.conversation.title?.trim().isNotEmpty == true
         ? widget.conversation.title!.trim()
         : _conversationMembers.isNotEmpty
             ? _displayNameCache[_conversationMembers.first] ?? _conversationMembers.first
-            : 'Conversation';
+        : l10n.messagesFallbackConversationTitle;
 
     Widget avatar;
     if (isGroup) {
@@ -1082,17 +1088,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   String _headerInitials() {
+    final l10n = AppLocalizations.of(context)!;
     final name = widget.conversation.title?.trim().isNotEmpty == true
         ? widget.conversation.title!.trim()
         : _conversationMembers.isNotEmpty
             ? _displayNameCache[_conversationMembers.first] ?? _conversationMembers.first
-            : 'Conversation';
+            : l10n.messagesFallbackConversationTitle;
     final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     final initials = parts.map((p) => p[0]).take(2).join().toUpperCase();
-    return initials.isNotEmpty ? initials : 'C';
+    return initials.isNotEmpty ? initials : l10n.messagesFallbackConversationInitial;
   }
 
   List<Widget> _buildHeaderActions() {
+    final l10n = AppLocalizations.of(context)!;
+    final scaffold = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     return [
       PopupMenuButton<String>(
         onSelected: (value) async {
@@ -1165,9 +1175,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 final newConversation = await _chatProvider.addMember(widget.conversation.id, identifier.trim());
                 if (!mounted) return;
                   if (newConversation != null && newConversation.id != widget.conversation.id) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Created a new group chat for added members.')));
+                    scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesCreatedNewGroupChatToast)));
                     if (!mounted) return;
-                    final navigator = Navigator.of(context);
                     await navigator.pushReplacement(
                       MaterialPageRoute(builder: (_) => ConversationScreen(conversation: newConversation)),
                     );
@@ -1190,9 +1199,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 
                 // Show loading indicator
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Uploading avatar...')),
-                );
+                scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesUploadingAvatarToast)));
                 
                 await _chatProvider.uploadConversationAvatar(
                   widget.conversation.id,
@@ -1210,16 +1217,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 await _load();
                 
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Avatar updated successfully')),
-                );
+                scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesAvatarUpdatedToast)));
                 setState(() {}); // Force rebuild with new avatar
               } catch (e) {
                 debugPrint('ConversationScreen: change group avatar failed: $e');
+                if (kDebugMode) {
+                  debugPrint('ConversationScreen: change group avatar exception: $e');
+                }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to update avatar: $e')),
-                );
+                scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesUpdateAvatarFailedToast)));
               }
               break;
             case 'messages_overlay':
@@ -1227,7 +1233,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
               showGeneralDialog(
                 context: context,
                 barrierDismissible: true,
-                barrierLabel: 'Messages',
+                barrierLabel: l10n.messagesTitle,
                 barrierColor: Colors.black54,
                 transitionDuration: const Duration(milliseconds: 300),
                 pageBuilder: (ctx, a1, a2) => const MessagesScreen(),
@@ -1243,10 +1249,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
           }
         },
         itemBuilder: (ctx) => [
-          const PopupMenuItem(value: 'members', child: Text('Members')),
-          const PopupMenuItem(value: 'add_member', child: Text('Add member')),
-          const PopupMenuItem(value: 'rename', child: Text('Rename conversation')),
-          const PopupMenuItem(value: 'change_group_avatar', child: Text('Change group avatar')),
+          PopupMenuItem(value: 'members', child: Text(l10n.commonMembers)),
+          PopupMenuItem(value: 'add_member', child: Text(l10n.messagesMenuAddMember)),
+          PopupMenuItem(value: 'rename', child: Text(l10n.messagesMenuRenameConversation)),
+          PopupMenuItem(value: 'change_group_avatar', child: Text(l10n.messagesMenuChangeGroupAvatar)),
         ],
         icon: const Icon(Icons.more_vert),
       ),
@@ -1520,8 +1526,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildAttachmentBubble(Map<String, dynamic> attachment, bool isMe) {
+    final l10n = AppLocalizations.of(context)!;
     final url = (attachment['url'] ?? attachment['remoteUrl'] ?? '').toString();
-    final fileName = (attachment['filename'] ?? attachment['name'] ?? 'Attachment').toString();
+    final fileName = (attachment['filename'] ?? attachment['name'] ?? l10n.messagesAttachmentDefaultFilename).toString();
     final contentType = (attachment['contentType'] ?? attachment['content_type'] ?? '').toString().toLowerCase();
     final sizeLabel = attachment['size']?.toString();
     
@@ -1575,7 +1582,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                         children: [
                           Icon(Icons.broken_image, size: 48, color: Theme.of(context).colorScheme.error),
                           const SizedBox(height: 8),
-                          Text('Failed to load image', style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer)),
+                          Text(l10n.messagesAttachmentFailedToLoadImage, style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer)),
                           Text(fileName, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onErrorContainer)),
                         ],
                       ),
@@ -1643,7 +1650,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           ),
                         ),
                       Text(
-                        'Video',
+                        l10n.messagesAttachmentVideoLabel,
                         style: TextStyle(
                           fontSize: 12,
                           color: Theme.of(context).colorScheme.primary,
@@ -1667,7 +1674,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   }
                 },
                 icon: const Icon(Icons.play_arrow, size: 20),
-                label: const Text('Play Video'),
+                label: Text(l10n.messagesAttachmentPlayVideoButton),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -1731,7 +1738,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 }
               },
               icon: const Icon(Icons.download, size: 20),
-              label: const Text('Download'),
+              label: Text(l10n.messagesAttachmentDownloadButton),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -1744,6 +1751,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessageInput() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         _buildReplyPreview(),
@@ -1762,8 +1770,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
               Expanded(
                 child: TextField(
                   controller: _controller,
-                  decoration: const InputDecoration(
-                    hintText: 'Type a message...',
+                  decoration: InputDecoration(
+                    hintText: l10n.messagesTypeMessageHint,
                     border: InputBorder.none,
                   ),
                   onSubmitted: (_) => _send(),
@@ -1963,8 +1971,9 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Add member by username'),
+      title: Text(l10n.messagesAddMemberDialogTitle),
       content: Builder(
         builder: (dialogCtx) {
           try {
@@ -1975,7 +1984,7 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                 children: [
                   TextField(
                   controller: _controller,
-                  decoration: const InputDecoration(labelText: 'Username or wallet'),
+                  decoration: InputDecoration(labelText: l10n.messagesAddMemberIdentifierLabel),
                   onChanged: (value) {
                     _debounce?.cancel();
                     final currentValue = value;
@@ -2061,11 +2070,11 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Failed to open dialog', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.messagesAddMemberDialogLoadFailedTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text(e.toString(), maxLines: 6, overflow: TextOverflow.ellipsis),
+                  Text(l10n.messagesAddMemberDialogLoadFailedBody, maxLines: 6, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 12),
-                  ElevatedButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: const Text('Close')),
+                  ElevatedButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text(l10n.commonClose)),
                 ],
               ),
             );
@@ -2073,8 +2082,8 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
         },
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
-        TextButton(onPressed: () => Navigator.of(context).pop(_controller.text.trim()), child: const Text('Add')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonCancel)),
+        TextButton(onPressed: () => Navigator.of(context).pop(_controller.text.trim()), child: Text(l10n.commonAdd)),
       ],
     );
   }
@@ -2089,8 +2098,9 @@ class MembersDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Conversation Members'),
+      title: Text(l10n.messagesConversationMembersTitle),
       content: SizedBox(
         width: 360,
         child: ListView.builder(
@@ -2108,7 +2118,7 @@ class MembersDialog extends StatelessWidget {
             return ListTile(
               leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: wallet, allowFabricatedFallback: false),
               title: Text(displayName),
-              subtitle: Text(role.isNotEmpty ? role : wallet.isNotEmpty ? wallet : 'Member'),
+              subtitle: Text(role.isNotEmpty ? role : wallet.isNotEmpty ? wallet : l10n.messagesMemberLabel),
               trailing: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (choice) async {
@@ -2119,12 +2129,12 @@ class MembersDialog extends StatelessWidget {
                         final action = await showDialog<String?>(
                           context: context,
                           builder: (c) => AlertDialog(
-                            title: const Text('Member options'),
-                            content: Text('Choose an action for $displayName'),
+                            title: Text(l10n.messagesMemberOptionsTitle),
+                            content: Text(l10n.messagesMemberOptionsBody(displayName)),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(c).pop('transfer'), child: const Text('Transfer ownership')),
-                              TextButton(onPressed: () => Navigator.of(c).pop('remove'), child: const Text('Remove member')),
-                              TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Cancel')),
+                              TextButton(onPressed: () => Navigator.of(c).pop('transfer'), child: Text(l10n.messagesTransferOwnershipAction)),
+                              TextButton(onPressed: () => Navigator.of(c).pop('remove'), child: Text(l10n.messagesRemoveMemberAction)),
+                              TextButton(onPressed: () => Navigator.of(c).pop(), child: Text(l10n.commonCancel)),
                             ],
                           ),
                         );
@@ -2141,11 +2151,11 @@ class MembersDialog extends StatelessWidget {
                           final confirmed = await showDialog<bool>(
                             context: context,
                             builder: (c) => AlertDialog(
-                              title: const Text('Transfer ownership'),
-                              content: Text('Transfer conversation ownership to $displayName ($wallet)?'),
+                              title: Text(l10n.messagesTransferOwnershipTitle),
+                              content: Text(l10n.messagesTransferOwnershipBody(displayName, wallet)),
                               actions: [
-                                TextButton(onPressed: () => Navigator.of(c).pop(false), child: const Text('Cancel')),
-                                TextButton(onPressed: () => Navigator.of(c).pop(true), child: const Text('Transfer')),
+                                TextButton(onPressed: () => Navigator.of(c).pop(false), child: Text(l10n.commonCancel)),
+                                TextButton(onPressed: () => Navigator.of(c).pop(true), child: Text(l10n.messagesTransferOwnershipAction)),
                               ],
                             ),
                           );
@@ -2157,11 +2167,18 @@ class MembersDialog extends StatelessWidget {
                               final scaffold = ScaffoldMessenger.of(context);
                               await chatProvider.transferOwnership(conversationId, wallet);
                               if (!context.mounted) return;
-                              scaffold.showSnackBar(const SnackBar(content: Text('Ownership transferred')));
+                              scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesOwnershipTransferredToast)));
                               // Close members dialog to surface updated ownership state
                               navigator.pop();
                             } catch (e) {
-                              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Transfer failed: $e')));
+                              if (kDebugMode) {
+                                debugPrint('MembersDialog: transfer ownership failed: $e');
+                              }
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(l10n.messagesTransferFailedToast)),
+                                );
+                              }
                             }
                           }
                         }
@@ -2172,7 +2189,7 @@ class MembersDialog extends StatelessWidget {
                   }
                 },
                 itemBuilder: (menuCtx) => [
-                  const PopupMenuItem(value: 'manage', child: Text('Manage member')),
+                  PopupMenuItem(value: 'manage', child: Text(l10n.messagesManageMemberAction)),
                 ],
               ),
             );
@@ -2180,7 +2197,7 @@ class MembersDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Close')),
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonClose)),
       ],
     );
   }
@@ -2212,13 +2229,14 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Rename Conversation'),
+      title: Text(l10n.messagesRenameConversationTitle),
       content: TextField(
         controller: _controller,
-        decoration: const InputDecoration(
-          hintText: 'Enter new title',
-          labelText: 'Title',
+        decoration: InputDecoration(
+          hintText: l10n.messagesRenameConversationHint,
+          labelText: l10n.messagesRenameConversationFieldLabel,
         ),
         autofocus: true,
         onSubmitted: (value) {
@@ -2230,7 +2248,7 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          child: Text(l10n.commonCancel),
         ),
         TextButton(
           onPressed: () {
@@ -2239,7 +2257,7 @@ class _RenameConversationDialogState extends State<_RenameConversationDialog> {
               Navigator.of(context).pop(text);
             }
           },
-          child: const Text('Rename'),
+          child: Text(l10n.commonRename),
         ),
       ],
     );

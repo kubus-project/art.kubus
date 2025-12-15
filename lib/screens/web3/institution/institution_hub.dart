@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import 'event_creator.dart';
 import 'event_manager.dart';
 import 'institution_analytics.dart';
 import '../../../providers/dao_provider.dart';
+import '../../../providers/collab_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../config/config.dart';
 import '../../../models/dao.dart';
+import '../../../models/user_persona.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../collab/invites_inbox_screen.dart';
+import '../../events/exhibition_list_screen.dart';
 
 class InstitutionHub extends StatefulWidget {
   const InstitutionHub({super.key});
@@ -25,6 +31,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   bool _reviewLoading = false;
   bool _hasFetchedReviewForWallet = false;
   String _lastReviewWallet = '';
+  bool _hasSetInitialTabByPersona = false;
   final TextEditingController _organizationController = TextEditingController();
   final TextEditingController _contactController = TextEditingController();
   final TextEditingController _missionController = TextEditingController();
@@ -43,6 +50,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
     super.didChangeDependencies();
     final wallet = _resolveWalletAddress(listen: true);
     final walletChanged = wallet != _lastReviewWallet;
+    final persona = context.watch<ProfileProvider>().userPersona;
+    if (!_hasSetInitialTabByPersona && persona != null) {
+      final desiredIndex = persona == UserPersona.institution ? 1 : 0;
+      if (_selectedIndex != desiredIndex) {
+        setState(() => _selectedIndex = desiredIndex);
+      }
+      _hasSetInitialTabByPersona = true;
+    }
+
     if (!walletChanged && _hasFetchedReviewForWallet) return;
     if (wallet.isNotEmpty) {
       _loadInstitutionReviewStatus(forceRefresh: true);
@@ -50,7 +66,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   Future<void> _checkOnboarding() async {
-    if (await isOnboardingNeeded(InstitutionHubOnboardingData.featureName)) {
+    if (await isOnboardingNeeded(InstitutionHubOnboardingData.featureKey)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showOnboarding();
       });
@@ -58,15 +74,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
   }
 
   void _showOnboarding() {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Web3OnboardingScreen(
-          featureName: InstitutionHubOnboardingData.featureName,
-          pages: InstitutionHubOnboardingData.pages,
-          onComplete: () {
-            Navigator.pop(context);
-          },
+          featureKey: InstitutionHubOnboardingData.featureKey,
+          featureTitle: InstitutionHubOnboardingData.featureTitle(l10n),
+          pages: InstitutionHubOnboardingData.pages(l10n),
+          onComplete: () {},
         ),
       ),
     );
@@ -148,6 +164,8 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
     final pages = <Widget>[
       const EventManager(),
+      if (AppConfig.isFeatureEnabled('exhibitions'))
+        const ExhibitionListScreen(embedded: true, canCreate: true),
       const EventCreator(),
       const InstitutionAnalytics(),
     ];
@@ -171,6 +189,47 @@ class _InstitutionHubState extends State<InstitutionHub> {
             icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showOnboarding,
           ),
+          if (AppConfig.isFeatureEnabled('collabInvites'))
+            Consumer<CollabProvider>(
+              builder: (context, collabProvider, _) {
+                final pendingCount = collabProvider.pendingInviteCount;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      tooltip: 'Invites',
+                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onPrimary),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                        );
+                      },
+                    ),
+                    if (pendingCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
+                          ),
+                          child: Text(
+                            pendingCount > 99 ? '99+' : pendingCount.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onError,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           IconButton(
             icon: Icon(Icons.notifications, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showNotifications,
@@ -183,7 +242,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
             SliverToBoxAdapter(
               child: Column(
                 children: [
-                  _buildInstitutionHeader(),
+                  _buildInstitutionHeader(isApprovedInstitution: isApprovedInstitution),
                   _buildInstitutionApplicationCard(
                     review,
                     isApprovedInstitution,
@@ -213,8 +272,16 @@ class _InstitutionHubState extends State<InstitutionHub> {
     );
   }
 
-  Widget _buildInstitutionHeader() {
+  Widget _buildInstitutionHeader({required bool isApprovedInstitution}) {
     final scheme = Theme.of(context).colorScheme;
+    final persona = context.watch<ProfileProvider>().userPersona;
+    final subtitle = switch (persona) {
+      UserPersona.institution => 'Host events, exhibitions, and AR experiences for your visitors',
+      UserPersona.creator => 'Collaborate with institutions and curate exhibitions',
+      UserPersona.lover => 'Discover exhibitions and events curated by institutions',
+      null => 'Host events, exhibitions, and AR experiences for your visitors',
+    };
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -259,7 +326,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Host events, exhibitions, and AR experiences for your visitors',
+                  subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: scheme.onPrimary.withValues(alpha: 0.9),
@@ -267,6 +334,50 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (isApprovedInstitution) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (AppConfig.isFeatureEnabled('events'))
+                        OutlinedButton.icon(
+                          // "Create" tab index depends on exhibitions feature
+                          onPressed: () => setState(() => _selectedIndex = AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1),
+                          icon: Icon(Icons.add, size: 16, color: scheme.onPrimary),
+                          label: Text(
+                            'Create event',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onPrimary,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: scheme.onPrimary.withValues(alpha: 0.35)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                      if (AppConfig.isFeatureEnabled('exhibitions'))
+                        OutlinedButton.icon(
+                          onPressed: () => setState(() => _selectedIndex = 1),
+                          icon: Icon(Icons.collections_bookmark_outlined, size: 16, color: scheme.onPrimary),
+                          label: Text(
+                            'Exhibitions',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onPrimary,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: scheme.onPrimary.withValues(alpha: 0.35)),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
@@ -473,8 +584,10 @@ class _InstitutionHubState extends State<InstitutionHub> {
       child: Row(
         children: [
           Expanded(child: _buildTabButton('Events', Icons.event, 0, enabled)),
-          Expanded(child: _buildTabButton('Create', Icons.add_box, 1, enabled)),
-          Expanded(child: _buildTabButton('Analytics', Icons.analytics, 2, enabled)),
+          if (AppConfig.isFeatureEnabled('exhibitions'))
+            Expanded(child: _buildTabButton('Exhibitions', Icons.collections_bookmark, 1, enabled)),
+          Expanded(child: _buildTabButton('Create', Icons.add_box, AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1, enabled)),
+          Expanded(child: _buildTabButton('Analytics', Icons.analytics, AppConfig.isFeatureEnabled('exhibitions') ? 3 : 2, enabled)),
         ],
       ),
     );

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter/foundation.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:solana/solana.dart' show Ed25519HDPublicKey;
 import '../../../providers/themeprovider.dart';
@@ -59,6 +61,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -69,7 +72,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Send Token',
+          l10n.sendTokenTitle,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -90,8 +93,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                   ? _scanQRCode 
                   : () => _showUnsupportedFeature(context, platformProvider),
                 tooltip: platformProvider.supportsQRScanning 
-                  ? 'Scan QR Code' 
-                  : 'QR Scanner not available on this platform',
+                  ? l10n.sendTokenScanQrTooltip
+                  : l10n.sendTokenQrScannerUnavailableTooltip,
               );
             },
           ),
@@ -135,6 +138,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   Widget _buildTokenSelector() {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, child) {
         final tokens = walletProvider.tokens
@@ -162,7 +166,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Select Token',
+              l10n.sendTokenSelectTokenTitle,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -214,7 +218,9 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Bal. ${token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2)}',
+                              l10n.receiveTokenBalanceLabel(
+                                token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2),
+                              ),
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -235,11 +241,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   Widget _buildAddressInput() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recipient Address',
+          l10n.sendTokenRecipientAddressTitle,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -262,7 +269,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary),
             onChanged: _validateAddress,
             decoration: InputDecoration(
-              hintText: 'Enter recipient address',
+              hintText: l10n.sendTokenRecipientAddressHint,
               hintStyle: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
@@ -279,8 +286,8 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                       ? _scanQRCode 
                       : () => _showUnsupportedFeature(context, platformProvider),
                     tooltip: platformProvider.supportsQRScanning 
-                      ? 'Scan QR Code' 
-                      : 'QR Scanner not available',
+                      ? l10n.sendTokenScanQrTooltip
+                      : l10n.sendTokenQrScannerUnavailableTooltip,
                   );
                 },
               ),
@@ -302,6 +309,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   Widget _buildAmountInput() {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -309,7 +317,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Amount',
+              l10n.sendTokenAmountTitle,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -328,7 +336,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                   ),
                 ),
                 child: Text(
-                  'MAX',
+                  l10n.sendTokenMaxButton,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -389,7 +397,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         ],
         const SizedBox(height: 12),
         Text(
-          'Available: ${_getTokenBalance(_selectedToken)} $_selectedToken',
+          l10n.sendTokenAvailableLabel(_getTokenBalance(_selectedToken), _selectedToken),
           style: GoogleFonts.inter(
             fontSize: 14,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -400,6 +408,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   Widget _buildTransactionSummary() {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final amount = double.tryParse(_amountController.text) ?? 0.0;
     final usdValue = _calculateUSDValue(amount);
@@ -417,7 +426,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Transaction Summary',
+            l10n.sendTokenTransactionSummaryTitle,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -425,29 +434,29 @@ class _SendTokenScreenState extends State<SendTokenScreen>
             ),
           ),
           const SizedBox(height: 16),
-          _buildSummaryRow('Amount', '${amount.toStringAsFixed(4)} $_selectedToken'),
+          _buildSummaryRow(l10n.sendTokenSummaryAmountLabel, '${amount.toStringAsFixed(4)} $_selectedToken'),
           if (projectFee > 0) ...[
             const SizedBox(height: 8),
             _buildSummaryRow(
-              'Kubus fees (~${_projectFeePercent.toStringAsFixed(1)}%)',
+              l10n.sendTokenSummaryFeesLabel(_projectFeePercent.toStringAsFixed(1)),
               '${projectFee.toStringAsFixed(4)} $_selectedToken',
             ),
           ],
           const SizedBox(height: 8),
           _buildSummaryRow(
-            'Estimated token debit',
+            l10n.sendTokenSummaryEstimatedDebitLabel,
             '${totalTokenDebit.toStringAsFixed(4)} $_selectedToken',
             isTotal: true,
           ),
           const SizedBox(height: 12),
           Divider(color: theme.colorScheme.onSurface.withValues(alpha: 0.2)),
           const SizedBox(height: 12),
-          _buildSummaryRow('USD value', '\$${usdValue.toStringAsFixed(2)}'),
+          _buildSummaryRow(l10n.sendTokenSummaryUsdValueLabel, '\$${usdValue.toStringAsFixed(2)}'),
           const SizedBox(height: 8),
-          _buildSummaryRow('Network fee', '${_estimatedGas.toStringAsFixed(6)} SOL'),
+          _buildSummaryRow(l10n.sendTokenSummaryNetworkFeeLabel, '${_estimatedGas.toStringAsFixed(6)} SOL'),
           const SizedBox(height: 10),
           Text(
-            'Network fees are paid in SOL. Keep a small SOL balance for gas.',
+            l10n.sendTokenNetworkFeeNote,
             style: GoogleFonts.inter(
               fontSize: 12,
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -483,6 +492,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   Widget _buildTokenSelectorEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
@@ -497,7 +507,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Connect or create a wallet to select tokens for sending.',
+              l10n.sendTokenNoTokensMessage,
               style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),
@@ -564,6 +574,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   Widget _buildSendButton() {
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
         final isValid = _addressController.text.isNotEmpty &&
             _amountController.text.isNotEmpty &&
             _addressError.isEmpty &&
@@ -594,7 +605,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
                     ),
                   )
                 : Text(
-                    'Send $_selectedToken',
+                    l10n.sendTokenButtonLabel(_selectedToken),
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -609,11 +620,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
 
   void _validateAddress(String value) {
     final trimmed = value.trim();
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       if (trimmed.isEmpty) {
-        _addressError = 'Address is required';
+        _addressError = l10n.sendTokenAddressRequiredError;
       } else if (!_isValidSolanaAddress(trimmed)) {
-        _addressError = 'Enter a valid Solana address';
+        _addressError = l10n.sendTokenAddressInvalidError;
       } else {
         _addressError = '';
       }
@@ -621,16 +633,17 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   void _validateAmount(String value) {
+    final l10n = AppLocalizations.of(context)!;
     final amount = double.tryParse(value);
     final balance = double.tryParse(_getTokenBalance(_selectedToken).replaceAll(',', '')) ?? 0.0;
     
     setState(() {
       if (value.isEmpty) {
-        _amountError = 'Amount is required';
+        _amountError = l10n.sendTokenAmountRequiredError;
       } else if (amount == null || amount <= 0) {
-        _amountError = 'Amount must be greater than 0';
+        _amountError = l10n.sendTokenAmountGreaterThanZeroError;
       } else if (amount > balance) {
-        _amountError = 'Insufficient balance';
+        _amountError = l10n.sendTokenInsufficientBalanceError;
       } else {
         _amountError = '';
       }
@@ -639,13 +652,14 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   void _setMaxAmount() {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final token = walletProvider.getTokenBySymbol(_selectedToken);
     final balance = token?.balance ?? double.tryParse(_getTokenBalance(_selectedToken)) ?? 0.0;
     if (balance <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('No balance available for this token'),
+          content: Text(l10n.sendTokenNoBalanceToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -657,7 +671,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     if (maxSendable <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Unable to compute max amount. Keep some balance for fees.'),
+          content: Text(l10n.sendTokenMaxAmountComputeFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -706,21 +720,25 @@ class _SendTokenScreenState extends State<SendTokenScreen>
     }
   }
 
-  String _mapSendError(Object error) {
+  String _mapSendError(AppLocalizations l10n, Object error) {
+    if (kDebugMode) {
+      debugPrint('SendTokenScreen: send error: $error');
+    }
+
     final message = error.toString();
     if (message.contains('Insufficient balance')) {
-      return 'Insufficient balance after protocol fees. Reduce the amount or top up your wallet.';
+      return l10n.sendTokenInsufficientAfterFeesToast;
     }
     if (message.contains('keypair')) {
-      return 'No wallet keypair available. Reconnect or re-import your wallet.';
+      return l10n.sendTokenNoKeypairToast;
     }
     if (message.contains('valid Solana address')) {
-      return 'Enter a valid Solana address before sending.';
+      return l10n.sendTokenInvalidAddressBeforeSendToast;
     }
     if (message.contains('Connect wallet')) {
-      return 'Connect your wallet before sending tokens.';
+      return l10n.sendTokenConnectWalletBeforeSendToast;
     }
-    return message.replaceFirst('Exception: ', '');
+    return l10n.sendTokenSendFailedToast;
   }
 
   void _estimateGasFee() {
@@ -747,14 +765,21 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   void _showUnsupportedFeature(BuildContext context, PlatformProvider platformProvider) {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(platformProvider.getUnsupportedFeatureMessage('QR Code scanning')),
+        content: Text(_qrScannerUnsupportedMessage(l10n, platformProvider)),
         behavior: SnackBarBehavior.floating,
         backgroundColor: Theme.of(context).colorScheme.tertiary,
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  String _qrScannerUnsupportedMessage(AppLocalizations l10n, PlatformProvider platformProvider) {
+    if (platformProvider.isWeb) return l10n.sendTokenQrScannerUnsupportedWeb;
+    if (platformProvider.isDesktop) return l10n.sendTokenQrScannerUnsupportedDesktop;
+    return l10n.sendTokenQrScannerUnsupportedPlatform;
   }
 
   String _formatScannedAmount(double amount) {
@@ -766,6 +791,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   void _scanQRCode() async {
+    final l10n = AppLocalizations.of(context)!;
     final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     
@@ -796,7 +822,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Unable to read QR code payload.'),
+            content: Text(l10n.sendTokenQrUnreadableToast),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -808,7 +834,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       if (address == null || address.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('QR code did not include a valid address.'),
+            content: Text(l10n.sendTokenQrInvalidAddressToast),
             behavior: SnackBarBehavior.floating,
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -838,12 +864,12 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       }
       _estimateGasFee();
 
-      final snackSegments = <String>['Address scanned'];
+      final snackSegments = <String>[l10n.sendTokenQrScannedAddressLabel];
       if (detectedToken != null) {
-        snackSegments.add('Token: ${detectedToken.symbol}');
+        snackSegments.add(l10n.sendTokenQrScannedTokenLabel(detectedToken.symbol));
       }
       if (amountText != null) {
-        snackSegments.add('Amount: $amountText');
+        snackSegments.add(l10n.sendTokenQrScannedAmountLabel(amountText));
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -854,10 +880,13 @@ class _SendTokenScreenState extends State<SendTokenScreen>
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('SendTokenScreen: QR scan error: $e');
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error scanning QR code: $e'),
+          content: Text(l10n.sendTokenQrScanErrorToast),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
@@ -866,6 +895,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
   }
 
   Future<void> _sendTransaction() async {
+    final l10n = AppLocalizations.of(context)!;
     FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
 
@@ -875,10 +905,10 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       final toAddress = _addressController.text.trim();
 
       if (amount <= 0) {
-        throw Exception('Enter an amount greater than zero');
+        throw Exception('invalid_amount');
       }
       if (!_isValidSolanaAddress(toAddress)) {
-        throw Exception('Please provide a valid Solana address');
+        throw Exception('invalid_address');
       }
 
       await walletProvider.sendTransaction(
@@ -892,7 +922,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Sent ${amount.toStringAsFixed(4)} $_selectedToken successfully'),
+          content: Text(l10n.sendTokenSendSuccessToast(amount.toStringAsFixed(4), _selectedToken)),
           backgroundColor: Theme.of(context).colorScheme.tertiary,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
@@ -903,7 +933,7 @@ class _SendTokenScreenState extends State<SendTokenScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_mapSendError(e)),
+          content: Text(_mapSendError(l10n, e)),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),

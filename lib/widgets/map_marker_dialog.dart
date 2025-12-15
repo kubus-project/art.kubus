@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -42,6 +43,7 @@ class MapMarkerDialog extends StatefulWidget {
   final LatLng? mapCenter;
   final VoidCallback? onUseMapCenter;
   final MarkerSubjectType initialSubjectType;
+  final Set<MarkerSubjectType>? allowedSubjectTypes;
   final Set<String> blockedArtworkIds;
   final bool useSheet;
 
@@ -54,6 +56,7 @@ class MapMarkerDialog extends StatefulWidget {
     this.mapCenter,
     this.onUseMapCenter,
     this.initialSubjectType = MarkerSubjectType.artwork,
+    this.allowedSubjectTypes,
     this.blockedArtworkIds = const {},
     this.useSheet = false,
   });
@@ -67,6 +70,7 @@ class MapMarkerDialog extends StatefulWidget {
     LatLng? mapCenter,
     VoidCallback? onUseMapCenter,
     MarkerSubjectType initialSubjectType = MarkerSubjectType.artwork,
+    Set<MarkerSubjectType>? allowedSubjectTypes,
     Set<String> blockedArtworkIds = const {},
     bool useSheet = false,
   }) {
@@ -96,6 +100,7 @@ class MapMarkerDialog extends StatefulWidget {
                   mapCenter: mapCenter,
                   onUseMapCenter: onUseMapCenter,
                   initialSubjectType: initialSubjectType,
+                  allowedSubjectTypes: allowedSubjectTypes,
                   blockedArtworkIds: blockedArtworkIds,
                   useSheet: true,
                 ),
@@ -117,6 +122,7 @@ class MapMarkerDialog extends StatefulWidget {
         mapCenter: mapCenter,
         onUseMapCenter: onUseMapCenter,
         initialSubjectType: initialSubjectType,
+        allowedSubjectTypes: allowedSubjectTypes,
         blockedArtworkIds: blockedArtworkIds,
       ),
     );
@@ -130,6 +136,8 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
   late MarkerSubjectData _subjectData;
   late Map<MarkerSubjectType, List<MarkerSubjectOption>> _subjectOptionsByType;
   late List<Artwork> _arEnabledArtworks;
+
+  late final Set<MarkerSubjectType> _allowedTypes;
 
   late MarkerSubjectType _selectedSubjectType;
   MarkerSubjectOption? _selectedSubject;
@@ -150,12 +158,15 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
   @override
   void initState() {
     super.initState();
+    _allowedTypes = widget.allowedSubjectTypes ?? Set<MarkerSubjectType>.from(MarkerSubjectType.values);
     _subjectData = widget.subjectData;
     _subjectOptionsByType = _buildOptions(_subjectData);
-    _arEnabledArtworks =
-        _subjectData.artworks.where(artworkSupportsAR).toList();
+    _arEnabledArtworks = _subjectData.artworks
+      .where(artworkSupportsAR)
+      .where((art) => !widget.blockedArtworkIds.contains(art.id))
+      .toList();
 
-    _selectedSubjectType = widget.initialSubjectType;
+    _selectedSubjectType = _resolveInitialSubjectType(widget.initialSubjectType);
     _selectedSubject = _subjectOptionsByType[_selectedSubjectType]?.isNotEmpty == true
         ? _subjectOptionsByType[_selectedSubjectType]!.first
         : null;
@@ -189,6 +200,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
   ) {
     return {
       for (final type in MarkerSubjectType.values)
+        if (_allowedTypes.contains(type))
         type: buildSubjectOptions(
           type: type,
           artworks: type == MarkerSubjectType.artwork
@@ -196,6 +208,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                   .where((art) => !widget.blockedArtworkIds.contains(art.id))
                   .toList()
               : data.artworks,
+          exhibitions: data.exhibitions,
           institutions: data.institutions,
           events: data.events,
           delegates: data.delegates,
@@ -205,19 +218,28 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
 
   bool _subjectSelectionRequired(MarkerSubjectType type) =>
       type != MarkerSubjectType.misc;
-  bool _arAssetRequired(MarkerSubjectType type) =>
+  bool _showOptionalArAsset(MarkerSubjectType type) =>
       type != MarkerSubjectType.artwork && type != MarkerSubjectType.misc;
+
+  MarkerSubjectType _resolveInitialSubjectType(MarkerSubjectType requested) {
+    if (_allowedTypes.contains(requested)) {
+      return requested;
+    }
+    for (final type in MarkerSubjectType.values) {
+      if (_allowedTypes.contains(type)) return type;
+    }
+    return MarkerSubjectType.artwork;
+  }
 
   Artwork? _resolveDefaultAsset(
     MarkerSubjectType type,
     MarkerSubjectOption? option,
   ) {
+    // For artwork markers, link the selected artwork even if it's not AR-enabled.
     if (type == MarkerSubjectType.artwork) {
-      return findArtworkById(_arEnabledArtworks, option?.id);
+      return findArtworkById(_subjectData.artworks, option?.id);
     }
-    if (_arAssetRequired(type) && _arEnabledArtworks.isNotEmpty) {
-      return _arEnabledArtworks.first;
-    }
+    // For other subjects, an AR-linked artwork is optional.
     return null;
   }
 
@@ -242,14 +264,13 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
           _selectedSubject = currentOptions.isNotEmpty ? currentOptions.first : null;
         }
 
-        if (_arAssetRequired(_selectedSubjectType)) {
-          if (_selectedArAsset == null ||
-              !_arEnabledArtworks.any((art) => art.id == _selectedArAsset!.id)) {
-            _selectedArAsset =
-                _resolveDefaultAsset(_selectedSubjectType, _selectedSubject);
-          }
+        if (_selectedSubjectType == MarkerSubjectType.artwork) {
+          _selectedArAsset = _resolveDefaultAsset(_selectedSubjectType, _selectedSubject);
         } else {
-          _selectedArAsset = null;
+          if (_selectedArAsset != null &&
+              !_arEnabledArtworks.any((art) => art.id == _selectedArAsset!.id)) {
+            _selectedArAsset = null;
+          }
         }
       }
     } finally {
@@ -271,9 +292,6 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
       final options = _subjectOptionsByType[_selectedSubjectType] ?? [];
       _selectedSubject = options.isNotEmpty ? options.first : null;
       _selectedArAsset = _resolveDefaultAsset(_selectedSubjectType, _selectedSubject);
-      if (!_arAssetRequired(_selectedSubjectType)) {
-        _selectedArAsset = null;
-      }
     });
   }
 
@@ -282,6 +300,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final media = MediaQuery.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final maxHeight = media.size.height * (widget.useSheet ? 0.9 : 0.75);
     final viewInsets = media.viewInsets.bottom;
 
@@ -302,7 +321,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                   Icon(Icons.add_location_alt, color: scheme.primary),
                   const SizedBox(width: 10),
                   Text(
-                    'Create marker',
+                    l10n.mapMarkerDialogTitle,
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w700,
                       color: scheme.onSurface,
@@ -317,7 +336,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.refresh),
-                    tooltip: 'Refresh subjects',
+                    tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
                     onPressed: _refreshing ? null : () => _scheduleRefresh(force: true),
                   ),
                   IconButton(
@@ -344,7 +363,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
           Icon(Icons.add_location_alt, color: scheme.primary),
           const SizedBox(width: 10),
           Text(
-            'Create marker',
+            l10n.mapMarkerDialogTitle,
             style: GoogleFonts.inter(
               fontWeight: FontWeight.w700,
               color: scheme.onSurface,
@@ -359,7 +378,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.refresh),
-            tooltip: 'Refresh subjects',
+              tooltip: l10n.mapMarkerDialogRefreshSubjectsTooltip,
             onPressed: _refreshing ? null : () => _scheduleRefresh(force: true),
           ),
         ],
@@ -370,6 +389,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
   }
 
   Widget _buildFormContent(ColorScheme scheme, double maxHeight, double viewInsets) {
+    final l10n = AppLocalizations.of(context)!;
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
       child: SingleChildScrollView(
@@ -381,7 +401,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Attach an existing subject and AR asset to this location.',
+                l10n.mapMarkerDialogAttachHint,
                 style: GoogleFonts.outfit(
                   fontSize: 14,
                   color: scheme.onSurface.withValues(alpha: 0.7),
@@ -392,7 +412,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 isExpanded: true,
                 initialValue: _selectedSubjectType,
                 decoration: InputDecoration(
-                  labelText: 'Subject Type',
+                  labelText: l10n.mapMarkerDialogSubjectTypeLabel,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -400,10 +420,11 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
                 items: MarkerSubjectType.values
+                    .where(_allowedTypes.contains)
                     .map(
                       (type) => DropdownMenuItem<MarkerSubjectType>(
                         value: type,
-                        child: Text(type.label),
+                        child: Text(_subjectTypeLabel(l10n, type)),
                       ),
                     )
                     .toList(),
@@ -420,7 +441,9 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                     isExpanded: true,
                     initialValue: _selectedSubject,
                     decoration: InputDecoration(
-                      labelText: '${_selectedSubjectType.label} *',
+                      labelText: l10n.mapMarkerDialogSubjectRequiredLabel(
+                        _subjectTypeLabel(l10n, _selectedSubjectType),
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -454,10 +477,10 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                           _titleController.text = value.title;
                           _descriptionController.text = value.subtitle.isNotEmpty
                               ? value.subtitle
-                              : 'Marker for ${value.title}';
+                              : l10n.mapMarkerDialogMarkerForTitle(value.title);
                           if (_selectedSubjectType == MarkerSubjectType.artwork) {
                             _selectedArAsset =
-                                findArtworkById(_arEnabledArtworks, value.id);
+                                findArtworkById(_subjectData.artworks, value.id);
                           }
                         });
                       }
@@ -466,17 +489,19 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 else
                   _hintBox(
                     scheme,
-                    'No ${_selectedSubjectType.label.toLowerCase()}s available. Create one first.',
+                    l10n.mapMarkerDialogNoSubjectsAvailable(
+                      _subjectTypeLabel(l10n, _selectedSubjectType),
+                    ),
                   )
               else
                 _hintBox(
                   scheme,
-                  'Misc markers do not need a linked subject. Provide a custom title and description below.',
+                  l10n.mapMarkerDialogMiscHint,
                 ),
               const SizedBox(height: 14),
-              if (_arAssetRequired(_selectedSubjectType)) ...[
+              if (_showOptionalArAsset(_selectedSubjectType)) ...[
                 Text(
-                  'Linked AR Asset',
+                  l10n.mapMarkerDialogLinkedArAssetTitle,
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -487,7 +512,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 if (_arEnabledArtworks.isEmpty)
                   _hintBox(
                     scheme,
-                    'No AR-enabled artworks available. Create one first.',
+                    l10n.mapMarkerDialogNoArEnabledArtworksHint,
                   )
                 else
                   DropdownButtonFormField<Artwork>(
@@ -517,17 +542,17 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: 'Marker Title *',
+                  labelText: l10n.mapMarkerDialogMarkerTitleLabel,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a title';
+                    return l10n.mapMarkerDialogEnterTitleError;
                   }
                   if (value.trim().length < 3) {
-                    return 'Title must be at least 3 characters';
+                    return l10n.mapMarkerDialogTitleMinLengthError(3);
                   }
                   return null;
                 },
@@ -537,17 +562,17 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 controller: _descriptionController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  labelText: 'Description *',
+                  labelText: l10n.mapMarkerDialogDescriptionLabel,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Please enter a description';
+                    return l10n.mapMarkerDialogEnterDescriptionError;
                   }
                   if (value.trim().length < 10) {
-                    return 'Description must be at least 10 characters';
+                    return l10n.mapMarkerDialogDescriptionMinLengthError(10);
                   }
                   return null;
                 },
@@ -556,7 +581,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
               TextFormField(
                 controller: _categoryController,
                 decoration: InputDecoration(
-                  labelText: 'Category',
+                  labelText: l10n.mapMarkerDialogCategoryLabel,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -567,7 +592,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 isExpanded: true,
                 initialValue: _selectedMarkerType,
                 decoration: InputDecoration(
-                  labelText: 'Marker Layer',
+                  labelText: l10n.mapMarkerDialogMarkerLayerLabel,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -577,7 +602,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                 items: ArtMarkerType.values
                     .map((type) => DropdownMenuItem<ArtMarkerType>(
                           value: type,
-                          child: Text(_describeMarkerType(type)),
+                          child: Text(_describeMarkerType(l10n, type)),
                         ))
                     .toList(),
                 onChanged: (value) {
@@ -589,10 +614,10 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text('Public marker',
+                title: Text(l10n.mapMarkerDialogPublicMarkerTitle,
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
                 subtitle: Text(
-                  'Visible to all explorers on the map',
+                  l10n.mapMarkerDialogPublicMarkerSubtitle,
                   style: GoogleFonts.outfit(fontSize: 12),
                 ),
                 value: _isPublic,
@@ -606,7 +631,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                       child: TextFormField(
                         controller: _latController,
                         decoration: InputDecoration(
-                          labelText: 'Latitude *',
+                          labelText: l10n.mapMarkerDialogLatitudeLabel,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -616,7 +641,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                         validator: (value) {
                           final parsed = double.tryParse(value ?? '');
                           if (parsed == null || parsed.abs() > 90) {
-                            return 'Enter a valid latitude';
+                            return l10n.mapMarkerDialogValidLatitudeError;
                           }
                           return null;
                         },
@@ -627,7 +652,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                       child: TextFormField(
                         controller: _lngController,
                         decoration: InputDecoration(
-                          labelText: 'Longitude *',
+                          labelText: l10n.mapMarkerDialogLongitudeLabel,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -637,7 +662,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                         validator: (value) {
                           final parsed = double.tryParse(value ?? '');
                           if (parsed == null || parsed.abs() > 180) {
-                            return 'Enter a valid longitude';
+                            return l10n.mapMarkerDialogValidLongitudeError;
                           }
                           return null;
                         },
@@ -659,7 +684,7 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
                         });
                       },
                       icon: const Icon(Icons.my_location),
-                      label: const Text('Use map center'),
+                      label: Text(l10n.mapMarkerDialogUseMapCenterButton),
                     ),
                   ),
               ],
@@ -671,33 +696,35 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
   }
 
   Row _buildActionsRow(ColorScheme scheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         TextButton(
           onPressed: () => Navigator.of(context).maybePop(),
-          child: Text('Cancel', style: GoogleFonts.outfit()),
+          child: Text(l10n.commonCancel, style: GoogleFonts.outfit()),
         ),
         const SizedBox(width: 8),
         ElevatedButton.icon(
           onPressed: _submit,
           icon: const Icon(Icons.add_location_alt),
-          label: Text('Create Marker', style: GoogleFonts.outfit()),
+          label: Text(l10n.mapMarkerDialogCreateButton, style: GoogleFonts.outfit()),
         ),
       ],
     );
   }
 
   List<Widget> _buildDialogActions(ColorScheme scheme) {
+    final l10n = AppLocalizations.of(context)!;
     return [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: Text('Cancel', style: GoogleFonts.outfit()),
+        child: Text(l10n.commonCancel, style: GoogleFonts.outfit()),
       ),
       ElevatedButton.icon(
         onPressed: _submit,
         icon: const Icon(Icons.add_location_alt),
-        label: Text('Create Marker', style: GoogleFonts.outfit()),
+        label: Text(l10n.mapMarkerDialogCreateButton, style: GoogleFonts.outfit()),
       ),
     ];
   }
@@ -718,16 +745,11 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
   }
 
   void _submit() {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     if (_subjectSelectionRequired(_selectedSubjectType) && _selectedSubject == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select a subject to continue')),
-      );
-      return;
-    }
-    if (_arAssetRequired(_selectedSubjectType) && _selectedArAsset == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select an AR-enabled artwork to link')),
+        SnackBar(content: Text(l10n.mapMarkerDialogSelectSubjectToast)),
       );
       return;
     }
@@ -756,22 +778,39 @@ class _MapMarkerDialogState extends State<MapMarkerDialog> {
     );
   }
 
-  String _describeMarkerType(ArtMarkerType type) {
+  String _subjectTypeLabel(AppLocalizations l10n, MarkerSubjectType type) {
+    switch (type) {
+      case MarkerSubjectType.artwork:
+        return l10n.mapMarkerSubjectTypeArtwork;
+      case MarkerSubjectType.exhibition:
+        return l10n.mapMarkerSubjectTypeExhibition;
+      case MarkerSubjectType.institution:
+        return l10n.mapMarkerSubjectTypeInstitution;
+      case MarkerSubjectType.event:
+        return l10n.mapMarkerSubjectTypeEvent;
+      case MarkerSubjectType.group:
+        return l10n.mapMarkerSubjectTypeGroup;
+      case MarkerSubjectType.misc:
+        return l10n.mapMarkerSubjectTypeMisc;
+    }
+  }
+
+  String _describeMarkerType(AppLocalizations l10n, ArtMarkerType type) {
     switch (type) {
       case ArtMarkerType.artwork:
-        return 'Artwork';
+        return l10n.mapMarkerLayerArtwork;
       case ArtMarkerType.institution:
-        return 'Institution';
+        return l10n.mapMarkerLayerInstitution;
       case ArtMarkerType.event:
-        return 'Event';
+        return l10n.mapMarkerLayerEvent;
       case ArtMarkerType.residency:
-        return 'Residency';
+        return l10n.mapMarkerLayerResidency;
       case ArtMarkerType.drop:
-        return 'Drop/Reward';
+        return l10n.mapMarkerLayerDropReward;
       case ArtMarkerType.experience:
-        return 'AR Experience';
+        return l10n.mapMarkerLayerArExperience;
       case ArtMarkerType.other:
-        return 'Other';
+        return l10n.mapMarkerLayerOther;
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
@@ -9,13 +10,15 @@ import '../../desktop/desktop_shell.dart';
 import '../../desktop/onboarding/desktop_web3_onboarding.dart' show DesktopWeb3OnboardingScreen, Web3OnboardingPage;
 
 class Web3OnboardingScreen extends StatefulWidget {
-  final String featureName;
+  final String featureKey;
+  final String featureTitle;
   final List<OnboardingPage> pages;
   final VoidCallback onComplete;
 
   const Web3OnboardingScreen({
     super.key,
-    required this.featureName,
+    required this.featureKey,
+    required this.featureTitle,
     required this.pages,
     required this.onComplete,
   });
@@ -93,11 +96,11 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
 
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('${widget.featureName}_onboarding_completed', true);
-    widget.onComplete();
+    await prefs.setBool('${widget.featureKey}_onboarding_completed', true);
     if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
+    widget.onComplete();
   }
 
   @override
@@ -120,7 +123,8 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (context) => DesktopWeb3OnboardingScreen(
-                featureName: widget.featureName,
+                featureKey: widget.featureKey,
+                featureTitle: widget.featureTitle,
                 pages: desktopPages,
                 onComplete: widget.onComplete,
               ),
@@ -169,6 +173,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
@@ -182,7 +187,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
             children: [
               Flexible(
                 child: Text(
-                  widget.featureName,
+                  widget.featureTitle,
                   style: GoogleFonts.inter(
                     fontSize: isWideScreen ? 28 : isTablet ? 26 : isSmallScreen ? 20 : 24,
                     fontWeight: FontWeight.bold,
@@ -194,7 +199,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
               TextButton(
                 onPressed: _skipOnboarding,
                 child: Text(
-                  'Skip',
+                  l10n.commonSkip,
                   style: GoogleFonts.inter(
                     fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -305,6 +310,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
   }
 
   Widget _buildBottomNavigation() {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 400;
@@ -354,7 +360,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                           ),
                         ),
                         child: Text(
-                          'Back',
+                          l10n.commonBack,
                           style: GoogleFonts.inter(
                             fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
@@ -379,7 +385,7 @@ class _Web3OnboardingScreenState extends State<Web3OnboardingScreen>
                         elevation: 0,
                       ),
                       child: Text(
-                        _currentPage == widget.pages.length - 1 ? 'Get Started' : 'Next',
+                        _currentPage == widget.pages.length - 1 ? l10n.commonGetStarted : l10n.commonNext,
                         style: GoogleFonts.inter(
                           fontSize: isWideScreen ? 18 : isTablet ? 17 : isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
@@ -414,7 +420,7 @@ class OnboardingPage {
 }
 
 // Utility function to check if onboarding is needed
-Future<bool> isOnboardingNeeded(String featureName) async {
+Future<bool> isOnboardingNeeded(String featureKey) async {
   final prefs = await SharedPreferences.getInstance();
   
   // Check user preference for skipping Web3 onboarding (defaults to config setting)
@@ -433,10 +439,7 @@ Future<bool> isOnboardingNeeded(String featureName) async {
   }
   
   // Otherwise, check if this specific feature onboarding was completed
-  return !(prefs.getBool('${featureName}_onboarding_completed') ?? false);
+  return !(prefs.getBool('${featureKey}_onboarding_completed') ?? false);
 }
-
-
-
 
 

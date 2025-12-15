@@ -1,0 +1,2722 @@
+{
+  "@@locale": "sl",
+  "appTitle": "art.kubus",
+  "commonCancel": "Prekliči",
+  "commonClose": "Zapri",
+  "commonContinue": "Nadaljuj",
+  "commonSkip": "Preskoči",
+  "commonSkipForNow": "Preskoči za zdaj",
+  "commonBack": "Nazaj",
+  "commonNext": "Naprej",
+  "commonSave": "Shrani",
+  "commonCopy": "Kopiraj",
+  "commonDelete": "Izbriši",
+  "commonDone": "Končano",
+  "commonEdit": "Uredi",
+  "commonRename": "Preimenuj",
+  "commonCreate": "Ustvari",
+  "commonGotIt": "Razumem",
+  "commonInstall": "Namesti",
+  "commonNavigate": "Navigiraj",
+  "commonReplace": "Zamenjaj",
+  "commonSearch": "Išči",
+  "commonNotifications": "Obvestila",
+  "commonShare": "Deli",
+  "commonGroup": "Skupina",
+  "commonImage": "Slika",
+  "commonVideo": "Video",
+  "commonMembers": "Člani",
+  "commonAdd": "Dodaj",
+  "commonUpload": "Naloži",
+  "commonViewInAr": "Ogled v AR",
+  "commonViewAll": "Prikaži vse",
+  "commonProceed": "Nadaljuj",
+  "commonGetStarted": "Začnimo",
+  "commonWorking": "V teku…",
+  "commonEmail": "E-pošta",
+  "commonPassword": "Geslo",
+  "commonUsernameOptional": "Uporabniško ime (neobvezno)",
+  "commonUnlock": "Odkleni",
+  "commonPinLabel": "PIN",
+  "personaOnboardingTitle": "Kako želiš uporabljati art.kubus?",
+  "personaOnboardingSubtitle": "Izberi, zakaj si tukaj. To vpliva le na to, kaj izpostavimo — ne na dostop.",
+  "personaOptionLoverTitle": "Ljubitelj umetnosti",
+  "personaOptionLoverSubtitle": "Odkrij bližnja dela, razstave in dogajanje v skupnosti.",
+  "personaOptionCreatorTitle": "Umetnik / kolektiv",
+  "personaOptionCreatorSubtitle": "Ustvarjaj dela in razstave ter sodeluj z drugimi.",
+  "personaOptionInstitutionTitle": "Institucija / galerija",
+  "personaOptionInstitutionSubtitle": "Organiziraj dogodke in razstave, upravljaj sodelavce in deli program.",
+  "exhibitionCreatorAppBarTitle": "Ustvari razstavo",
+  "exhibitionCreatorDisabledAppBarTitle": "Razstava",
+  "exhibitionCreatorDisabledMessage": "Razstave so trenutno onemogočene.",
+  "exhibitionCreatorBasicsTitle": "Osnove",
+  "exhibitionCreatorTitleLabel": "Naslov",
+  "exhibitionCreatorTitleValidation": "Vnesite naslov.",
+  "exhibitionCreatorDescriptionLabel": "Opis (neobvezno)",
+  "exhibitionCreatorLocationLabel": "Ime lokacije (neobvezno)",
+  "exhibitionCreatorScheduleTitle": "Termin",
+  "exhibitionCreatorStartsLabel": "Začetek",
+  "exhibitionCreatorEndsLabel": "Konec",
+  "exhibitionCreatorNotSetLabel": "Ni nastavljeno",
+  "exhibitionCreatorPublishTitle": "Objavi",
+  "exhibitionCreatorPublishVisible": "Vidno vsem",
+  "exhibitionCreatorPublishDraft": "Shrani kot osnutek",
+  "exhibitionCreatorEndDateAfterStartError": "Datum konca mora biti po začetku.",
+  "exhibitionCreatorCreateFailed": "Ustvarjanje razstave ni uspelo.",
+  "exhibitionCreatorCreateFailedWithError": "Ustvarjanje razstave ni uspelo: {error}",
+  "@exhibitionCreatorCreateFailedWithError": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "lockAppLockedTitle": "Aplikacija je zaklenjena",
+  "lockAppLockedDescription": "Overite se za dostop do funkcij denarnice.",
+  "lockEnterPinTitle": "Vnesite PIN za odklep",
+  "lockAppUnlockedToast": "Aplikacija odklenjena",
+  "lockAuthenticationFailedToast": "Overitev ni uspela",
+  "authSignInTitle": "Prijava v art.kubus",
+  "authSignInSubtitle": "in začnite raziskovati, ustvarjati ter se povezovati z drugimi ustvarjalci.",
+  "authRegisterTitle": "Ustvarite račun",
+  "authRegisterSubtitle": "Ustvarite profil in se pridružite skupnosti.",
+  "authHighlightSignInMethods": "Prijava z denarnico, e-pošto ali Googlom",
+  "authHighlightNoFees": "Za prijavo ni potrebna provizija",
+  "authHighlightControl": "Nadzor ostane pri vas",
+  "authHighlightOnboardingOptions": "Začetek z denarnico ali e-pošto",
+  "authHighlightKeysLocal": "Ključi ostanejo na vaši napravi",
+  "authHighlightOptionalWeb3": "Neobvezne Web3 funkcije",
+  "authSignedInProfileRefreshSoon": "Prijava je uspela. Profil se bo kmalu osvežil.",
+  "authAccountCreatedProfileLoading": "Račun je ustvarjen. Profil se nalaga v ozadju.",
+  "authEmailSignInDisabled": "Prijava z e-pošto je onemogočena.",
+  "authEmailRegistrationDisabled": "Registracija z e-pošto je onemogočena.",
+  "authGoogleSignInDisabled": "Prijava z Googlom je onemogočena.",
+  "authWalletConnectionDisabled": "Povezava denarnice je trenutno onemogočena.",
+  "authEnterValidEmailPassword": "Vnesite veljavno e-pošto in geslo (vsaj 8 znakov).",
+  "authEmailSignInFailed": "Prijava z e-pošto ni uspela. Poskusite znova.",
+  "authRegistrationFailed": "Registracija ni uspela. Poskusite znova.",
+  "authGoogleSignInFailed": "Prijava z Googlom ni uspela. Poskusite znova.",
+  "authGoogleRateLimitedRetryIn": "Prijava z Googlom je začasno omejena. Poskusite znova čez ~{duration}.",
+  "@authGoogleRateLimitedRetryIn": {
+    "placeholders": {
+      "duration": {}
+    }
+  },
+  "authConnectWalletButton": "Poveži denarnico",
+  "authConnectWalletModalTitle": "Poveži denarnico",
+  "authConnectWalletModalDescriptionSignIn": "V denarnici boste potrdili podpis. Za prijavo ni potrebna provizija.",
+  "authConnectWalletModalDescriptionRegister": "V denarnici boste potrdili podpis. Za dokončanje registracije ni potrebna provizija.",
+  "authWalletOptionWalletConnect": "WalletConnect",
+  "authWalletOptionOtherWallets": "Druge denarnice",
+  "authOrLogInWithEmailOrUsername": "Ali se prijavite z e-pošto ali uporabniškim imenom",
+  "authOrUseEmail": "Ali uporabite e-pošto",
+  "authNeedAccountRegister": "Nimate računa? Registracija",
+  "authHaveAccountSignIn": "Že imate račun? Prijava",
+  "authSignInWithEmail": "Prijava z e-pošto",
+  "authContinueWithEmail": "Nadaljuj z e-pošto",
+  "onboardingWelcomeTitle": "Dobrodošli v art.kubus",
+  "onboardingWelcomeSubtitle": "Razstava in skupnost na enem mestu",
+  "onboardingWelcomeDescription": "Odkrijte umetnine, raziskujte kraje in se povežite z ustvarjalci. XR in Web3 sta neobvezni plasti — osnovna izkušnja deluje tudi brez njiju.",
+  "onboardingExploreTitle": "Raziskujte umetnine",
+  "onboardingExploreSubtitle": "Poiščite umetnost v bližini",
+  "onboardingExploreDescription": "Z zemljevidom odkrijte umetnine in označevalce v okolici. Vsaka lokacija lahko pripoveduje zgodbo.",
+  "onboardingCreateTitle": "Ustvarjajte in delite",
+  "onboardingCreateSubtitle": "Izrazite svojo ustvarjalnost",
+  "onboardingCreateDescription": "Ustvarite AR izkušnje in jih delite s skupnostjo, ko boste pripravljeni.",
+  "onboardingCommunityTitle": "Pridružite se skupnosti",
+  "onboardingCommunitySubtitle": "Sodelovanje je privzeto",
+  "onboardingCommunityDescription": "Sledite umetnikom, pošiljajte sporočila in sodelujte pri projektih — kjer je smiselno, je sodelovanje privzeto.",
+  "onboardingCollectiblesTitle": "Zbirateljski predmeti (neobvezno)",
+  "onboardingCollectiblesSubtitle": "Dokazi obiska in zbirateljski predmeti",
+  "onboardingCollectiblesDescription": "Po želji povežite denarnico za zbiranje zbirateljskih predmetov (NFT) in digitalnih dokazov obiska (POAP). Aplikacija ostane uporabna tudi brez Web3.",
+  "onboardingGrantPermissions": "Dovoli dostop",
+  "onboardingSkipPermissions": "Preskoči dovoljenja",
+  "permissionsChecking": "Preverjam dovoljenja…",
+  "permissionsSkipAll": "Preskoči vse",
+  "permissionsBenefitsTitle": "Kaj lahko počnete:",
+  "permissionsPrivacyNote": "Vaša zasebnost je zaščitena. Vaših podatkov ne delimo.",
+  "permissionsGrantedLabel": "Dovoljenje odobreno",
+  "permissionsGetStarted": "Začnimo",
+  "permissionsNextPermission": "Naslednje dovoljenje",
+  "permissionsGrantPermission": "Dovoli",
+  "permissionsSkipThisPermission": "Preskoči to dovoljenje",
+  "permissionsPermissionGrantedToast": "Dovoljenje odobreno: {permission}",
+  "@permissionsPermissionGrantedToast": {
+    "placeholders": {
+      "permission": {}
+    }
+  },
+  "permissionsPermissionRequiredTitle": "Potrebno dovoljenje",
+  "permissionsOpenSettingsDialogContent": "Za omogočitev {permission} odprite Nastavitve in odobrite dovoljenje.",
+  "@permissionsOpenSettingsDialogContent": {
+    "placeholders": {
+      "permission": {}
+    }
+  },
+  "permissionsOpenSettings": "Odpri nastavitve",
+  "permissionsLocationTitle": "Dostop do lokacije",
+  "permissionsLocationSubtitle": "Odkrijte umetnost v bližini",
+  "permissionsLocationDescription": "Lokacijo uporabljamo za prikaz umetnin in označevalcev v vaši bližini. Odkrijte lokalne ustvarjalce in razstave.",
+  "permissionsLocationBenefit1": "Poiščite umetnine v bližini",
+  "permissionsLocationBenefit2": "Odkrijte lokalne galerije in razstave",
+  "permissionsLocationBenefit3": "Prejemajte obvestila o dogodkih v bližini",
+  "permissionsLocationBenefit4": "Spremljajte svoje raziskovanje",
+  "permissionsCameraTitle": "Dostop do kamere",
+  "permissionsCameraSubtitle": "Doživite AR",
+  "permissionsCameraDescription": "Kamera je ključna za ogled AR umetnin v vašem prostoru. Postavljajte, sodelujte in shranite svojo izkušnjo.",
+  "permissionsCameraBenefit1": "Oglejte si AR umetnine v resničnem svetu",
+  "permissionsCameraBenefit2": "Postavite virtualne skulpture v svoj prostor",
+  "permissionsCameraBenefit3": "Ustvarite fotografije za deljenje",
+  "permissionsCameraBenefit4": "Skenirajte QR kode za odklep vsebine",
+  "permissionsNotificationsTitle": "Obvestila",
+  "permissionsNotificationsSubtitle": "Ostanite povezani",
+  "permissionsNotificationsDescription": "Prejemajte obvestila o novih umetninah, napredku, zbirateljskih predmetih (NFT), digitalnih dokazih obiska (POAP) in dogajanju v skupnosti.",
+  "permissionsNotificationsBenefit1": "Obvestila o novih umetninah",
+  "permissionsNotificationsBenefit2": "Napredek in nagrade",
+  "permissionsNotificationsBenefit3": "Posodobitve o zbirateljskih predmetih (NFT)",
+  "permissionsNotificationsBenefit4": "Opomniki o dogodkih v skupnosti",
+  "permissionsPhotosTitle": "Dostop do shrambe",
+  "permissionsPhotosSubtitle": "Shranjujte svoje stvaritve",
+  "permissionsPhotosDescription": "Shranjujte AR posnetke zaslona in prenose v fototeko, da lahko ohranite spomine in jih delite.",
+  "permissionsPhotosBenefit1": "Shranjujte AR posnetke zaslona med fotografije",
+  "permissionsPhotosBenefit2": "Prenesite slike umetnin",
+  "permissionsPhotosBenefit3": "Izvozite stvaritve za deljenje",
+  "permissionsPhotosBenefit4": "Ohranite zbirko dostopno",
+  "settingsTitle": "Nastavitve",
+  "settingsLanguageTitle": "Jezik",
+  "settingsLanguageDescription": "Izberite jezik aplikacije",
+  "languageSlovenian": "Slovenščina",
+  "languageEnglish": "Angleščina",
+  "commonOn": "Vklopljeno",
+  "commonOff": "Izklopljeno",
+  "commonEnabled": "Omogočeno",
+  "commonDisabled": "Onemogočeno",
+  "commonAvailable": "Na voljo",
+  "commonNotAvailable": "Ni na voljo",
+  "settingsGuestUserName": "Gost",
+  "desktopSettingsProfileSectionSubtitle": "Posodobite podatke profila, ki so vidni drugim uporabnikom",
+  "desktopSettingsDisplayNameLabel": "Prikazno ime",
+  "desktopSettingsDisplayNameHint": "Vnesite svoje ime",
+  "desktopSettingsUsernameLabel": "Uporabniško ime",
+  "desktopSettingsUsernameHint": "@username",
+  "desktopSettingsBioLabel": "Opis",
+  "desktopSettingsBioHint": "Povejte nam nekaj o sebi",
+  "desktopSettingsWebsiteLabel": "Spletna stran",
+  "desktopSettingsWebsiteHint": "https://",
+  "desktopSettingsLocationLabel": "Lokacija",
+  "desktopSettingsLocationHint": "Mesto, država",
+
+  "desktopSettingsWalletSectionSubtitle": "Upravljajte povezavo denarnice in nastavitve Web3",
+  "desktopSettingsViewWalletButton": "Ogled denarnice",
+  "desktopSettingsSecuritySectionTitle": "Varnost",
+  "desktopSettingsDisconnectWalletTileTitle": "Odklopi denarnico",
+  "desktopSettingsDisconnectWalletTileSubtitle": "Odjavite se iz funkcij Web3",
+  "desktopSettingsDisconnectWalletDialogTitle": "Odklopi denarnico",
+  "desktopSettingsDisconnectWalletDialogBody": "Odklopim denarnico s te naprave? Kadarkoli jo lahko znova povežete.",
+  "desktopSettingsWalletDisconnectedToast": "Denarnica je odklopljena",
+  "desktopSettingsDisconnectButton": "Odklopi",
+  "desktopSettingsExportingDataToast": "Izvažam podatke…",
+
+  "desktopSettingsPlatformSubtitle": "Preverite, katere zmožnosti so na voljo na tej napravi",
+  "desktopSettingsAppearanceSubtitle": "Prilagodite videz aplikacije",
+
+  "desktopSettingsShowFriendsTitle": "Prikaži prijatelje",
+  "desktopSettingsShowFriendsSubtitle": "Na profilu prikaži seznam prijateljev",
+  "desktopSettingsShowAchievementsTitle": "Prikaži dosežke",
+  "desktopSettingsShowAchievementsSubtitle": "Na profilu prikaži dosežke",
+  "desktopSettingsAllowMessagesTitle": "Dovoli sporočila",
+  "desktopSettingsAllowMessagesSubtitle": "Dovoli drugim, da vam pošljejo sporočilo",
+
+  "desktopSettingsDangerZoneSubtitle": "Nepovratna dejanja, ki zahtevajo previdnost",
+
+  "desktopSettingsAchievementsTitle": "Dosežki in nagrade",
+  "desktopSettingsAchievementsSubtitle": "Spremljajte napredek in zbirajte KUB8 točke",
+  "desktopSettingsAchievementsStatArtworksDiscovered": "Odkrite umetnine",
+  "desktopSettingsAchievementsStatArViews": "Ogledi AR",
+  "desktopSettingsAchievementsStatEventsAttended": "Obiskani dogodki",
+  "desktopSettingsAchievementsStatKub8PointsEarned": "Pridobljene KUB8 točke",
+  "desktopSettingsAchievementFirstDiscoveryTitle": "Prvo odkritje",
+  "desktopSettingsAchievementFirstDiscoveryDescription": "Odkrijte svojo prvo AR umetnino",
+  "desktopSettingsAchievementArtCollectorTitle": "Zbiralec umetnin",
+  "desktopSettingsAchievementArtCollectorDescription": "Oglejte si 10 AR umetnin",
+  "desktopSettingsAchievementCommunityMemberTitle": "Član skupnosti",
+  "desktopSettingsAchievementCommunityMemberDescription": "Pridružite se 3 skupinam",
+  "desktopSettingsAchievementEventExplorerTitle": "Raziskovalec dogodkov",
+  "desktopSettingsAchievementEventExplorerDescription": "Obiščite 5 umetniških dogodkov",
+  "desktopSettingsAchievementNftCreatorTitle": "Ustvarjalec NFT",
+  "desktopSettingsAchievementNftCreatorDescription": "Ustvarite svoj prvi NFT",
+
+  "desktopSettingsHelpSupportTitle": "Pomoč in podpora",
+  "desktopSettingsHelpSupportSubtitle": "Poiščite pomoč in odgovore na pogosta vprašanja",
+  "desktopSettingsFaqTileTitle": "Pogosta vprašanja",
+  "desktopSettingsFaqTileSubtitle": "Najpogostejša vprašanja",
+  "desktopSettingsContactSupportTileSubtitle": "Pomoč naše ekipe",
+  "desktopSettingsReportBugTileTitle": "Prijavi napako",
+  "desktopSettingsReportBugTileSubtitle": "Pomagajte izboljšati aplikacijo",
+  "desktopSettingsOpeningBugReportToast": "Odpiram obrazec za prijavo napake…",
+
+  "desktopSettingsAboutSubtitle": "AR umetniška platforma, ki povezuje umetnike in institucije",
+  "desktopSettingsFeaturesSectionTitle": "Funkcije",
+  "desktopSettingsFeatureArDiscoveryTitle": "Odkritje AR umetnosti",
+  "desktopSettingsFeatureArDiscoveryDescription": "Doživite umetnine v razširjeni resničnosti",
+  "desktopSettingsFeatureWeb3IntegrationTitle": "Integracija Web3",
+  "desktopSettingsFeatureWeb3IntegrationDescription": "Veriga Solana s KUB8 točkami",
+  "desktopSettingsFeatureNftMintingTitle": "Ustvarjanje NFT",
+  "desktopSettingsFeatureNftMintingDescription": "Ustvarjajte in trgujte z digitalnimi umetniškimi zbirateljskimi predmeti",
+  "desktopSettingsFeatureCommunityTitle": "Skupnost",
+  "desktopSettingsFeatureCommunityDescription": "Povežite se z umetniki in zbiratelji",
+  "desktopSettingsFeatureInstitutionsTitle": "Institucije",
+  "desktopSettingsFeatureInstitutionsDescription": "Sodelujte z galerijami in muzeji",
+  "desktopSettingsLegalSectionTitle": "Pravno",
+  "settingsNoWalletConnected": "Denarnica ni povezana",
+  "settingsAppearanceSectionTitle": "Videz",
+  "settingsThemeModeTitle": "Način teme",
+  "settingsThemeModeLight": "Svetla",
+  "settingsThemeModeDark": "Temna",
+  "settingsThemeModeSystem": "Sistemska",
+  "settingsAccentColorTitle": "Poudarjena barva",
+  "settingsPlatformFeaturesSectionTitle": "Funkcije platforme",
+  "settingsRunningOnPlatform": "Zagnano na {platform}",
+  "@settingsRunningOnPlatform": {
+    "placeholders": {
+      "platform": {}
+    }
+  },
+  "settingsAvailableFeaturesLabel": "Razpoložljive funkcije:",
+  "settingsDeveloperToolsSectionTitle": "Razvijalska orodja",
+  "settingsDeveloperResetOnboardingTitle": "Ponastavi uvod",
+  "settingsDeveloperResetOnboardingSubtitle": "Ponastavi stanje uvoda za testiranje",
+  "settingsDeveloperClearQuickActionsTitle": "Počisti hitre akcije",
+  "settingsDeveloperClearQuickActionsSubtitle": "Ponastavi nedavno obiskane zaslone",
+  "settingsDeveloperQuickActionsClearedToast": "Hitre akcije so počiščene",
+  "settingsCapabilityCamera": "Dostop do kamere (QR skener, AR)",
+  "settingsCapabilityAr": "Funkcije obogatene resničnosti",
+  "settingsCapabilityNfc": "NFC komunikacija",
+  "settingsCapabilityGps": "Lokacijske storitve",
+  "settingsCapabilityBiometrics": "Biometrično preverjanje",
+  "settingsCapabilityNotifications": "Potisna obvestila",
+  "settingsCapabilityFileSystem": "Dostop do datotečnega sistema",
+  "settingsCapabilityBluetooth": "Povezljivost Bluetooth",
+  "settingsCapabilityVibration": "Haptični odziv",
+  "settingsCapabilityOrientation": "Orientacija naprave",
+  "settingsCapabilityBackground": "Obdelava v ozadju",
+  "settingsProfileSectionTitle": "Nastavitve profila",
+  "settingsProfileVisibilityPublicLabel": "Javno",
+  "settingsProfileVisibilityPublicDescription": "Vaš profil lahko vidi vsak",
+  "settingsProfileVisibilityPrivateLabel": "Zasebno",
+  "settingsProfileVisibilityPrivateDescription": "Vaš profil lahko vidite samo vi",
+  "settingsProfileVisibilityFriendsOnlyLabel": "Samo prijatelji",
+  "settingsProfileVisibilityFriendsOnlyDescription": "Vaš profil lahko vidijo samo prijatelji",
+  "settingsProfileVisibilityTileTitle": "Vidnost profila",
+  "settingsCurrentlyValue": "Trenutno: {value}",
+  "@settingsCurrentlyValue": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "settingsPrivacySettingsTileTitle": "Nastavitve zasebnosti",
+  "settingsPrivacySummary": "Podatki: {dataState}, oglasi: {adsState}",
+  "@settingsPrivacySummary": {
+    "placeholders": {
+      "dataState": {},
+      "adsState": {}
+    }
+  },
+  "settingsSecuritySettingsTileTitle": "Varnostne nastavitve",
+  "settingsSecuritySummary": "2FA: {twoFactorStatus}, samodejno zaklepanje: {autoLockTime}",
+  "@settingsSecuritySummary": {
+    "placeholders": {
+      "twoFactorStatus": {},
+      "autoLockTime": {}
+    }
+  },
+  "settingsEditProfileTileTitle": "Uredi profil",
+  "settingsEditProfileTileSubtitle": "Posodobite uporabniško ime, opis in avatar",
+  "settingsAccountManagementTileTitle": "Upravljanje računa",
+  "settingsAccountSummary": "Vrsta: {accountType}, obvestila: {notificationsState}",
+  "@settingsAccountSummary": {
+    "placeholders": {
+      "accountType": {},
+      "notificationsState": {}
+    }
+  },
+  "settingsRoleSimulationTileTitle": "Simulacija vlog",
+  "settingsRoleSummary": "Umetnik: {artistStatus}, institucija: {institutionStatus}",
+  "@settingsRoleSummary": {
+    "placeholders": {
+      "artistStatus": {},
+      "institutionStatus": {}
+    }
+  },
+  "settingsRoleSimulationSheetTitle": "Simulacija vlog",
+  "settingsRoleSimulationSheetSubtitle": "Preklapljajte vloge za predogled postavitev profila lokalno. Spremembe veljajo samo na tej napravi.",
+  "settingsRoleArtistTitle": "Profil umetnika",
+  "settingsRoleArtistSubtitle": "Pokaži razdelke umetnika (umetnine, zbirke)",
+  "settingsRoleInstitutionTitle": "Profil institucije",
+  "settingsRoleInstitutionSubtitle": "Pokaži razdelke institucije (dogodki, zbirke)",
+  "settingsWalletSectionTitle": "Denarnica in Web3",
+  "settingsWalletConnectionTileTitle": "Povezava denarnice",
+  "settingsWalletConnectionConnected": "Povezano",
+  "settingsWalletConnectionNotConnected": "Ni povezano",
+  "settingsNetworkTileTitle": "Omrežje",
+  "settingsCurrentNetworkValue": "Trenutno: {network}",
+  "@settingsCurrentNetworkValue": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "settingsTransactionHistoryTileTitle": "Zgodovina transakcij",
+  "settingsTransactionHistoryTileSubtitle": "Ogled vseh transakcij",
+  "settingsBackupSettingsTileTitle": "Nastavitve varnostnega kopiranja",
+  "settingsAutoBackupSummary": "Samodejna varnostna kopija: {status}",
+  "@settingsAutoBackupSummary": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "settingsExportRecoveryPhraseTileTitle": "Izvozi obnovitveno frazo",
+  "settingsExportRecoveryPhraseTileSubtitle": "Varnostno kopirajte denarnico (občutljivo)",
+  "settingsImportWalletTileTitle": "Uvozi obstoječo denarnico (napredno)",
+  "settingsImportWalletTileSubtitle": "Uporabite obnovitveno frazo, ki jo že imate",
+  "settingsSecurityPrivacySectionTitle": "Varnost in zasebnost",
+  "settingsBiometricTileTitle": "Biometrično preverjanje",
+  "settingsBiometricTileSubtitle": "Uporabite prstni odtis ali prepoznavo obraza",
+  "settingsSetPinTileTitle": "Nastavi PIN aplikacije",
+  "settingsSetPinTileSubtitle": "Zaščitite aplikacijo s številčnim PIN-om",
+  "settingsAutoLockTileTitle": "Samodejno zaklepanje",
+  "settingsAutoLockTileSubtitle": "Zakleni aplikacijo po neaktivnosti",
+  "settingsPrivacyModeTileTitle": "Način zasebnosti",
+  "settingsPrivacyModeTileSubtitle": "Skrij občutljive informacije",
+  "settingsClearCacheTileTitle": "Počisti predpomnilnik",
+  "settingsClearCacheTileSubtitle": "Odstrani začasne datoteke",
+  "settingsDataAnalyticsSectionTitle": "Podatki in analitika",
+  "settingsAnalyticsTileTitle": "Analitika",
+  "settingsAnalyticsTileSubtitle": "Pomagajte izboljšati aplikacijo",
+  "settingsCrashReportingTileTitle": "Poročanje o zrušitvah",
+  "settingsCrashReportingTileSubtitle": "Samodejno pošlji poročila o zrušitvah",
+  "settingsSkipOnboardingTileTitle": "Preskoči uvod",
+  "settingsSkipOnboardingTileSubtitle": "Preskoči pozdravne zaslone za vračajoče uporabnike",
+  "settingsDataExportTileTitle": "Izvoz podatkov",
+  "settingsDataExportTileSubtitle": "Prenesite svoje podatke",
+  "settingsResetPermissionFlagsTileTitle": "Ponastavi zastavice dovoljenj",
+  "settingsResetPermissionFlagsTileSubtitle": "Počisti shranjene pozive za dovoljenja/storitve",
+  "settingsAboutSectionTitle": "O aplikaciji",
+  "settingsAboutVersionTileTitle": "Različica",
+  "settingsAboutTermsTileTitle": "Pogoji uporabe",
+  "settingsAboutTermsTileSubtitle": "Preberite pogoje",
+  "settingsAboutPrivacyTileTitle": "Pravilnik o zasebnosti",
+  "settingsAboutPrivacyTileSubtitle": "Preberite naš pravilnik",
+  "settingsAboutSupportTileTitle": "Podpora",
+  "settingsAboutSupportTileSubtitle": "Pomoč ali prijava težav",
+  "settingsAboutLicensesTileTitle": "Licence odprtokodnih komponent",
+  "settingsAboutLicensesTileSubtitle": "Ogled licenc tretjih oseb",
+  "settingsAboutRateTileTitle": "Oceni aplikacijo",
+  "settingsAboutRateTileSubtitle": "Ocenite nas v trgovini",
+  "settingsDangerZoneSectionTitle": "Nevarno območje",
+  "settingsLogoutTileTitle": "Odjava",
+  "settingsLogoutTileSubtitle": "Odklopi denarnico in počisti sejo",
+  "settingsResetAppTileTitle": "Ponastavi aplikacijo",
+  "settingsResetAppTileSubtitle": "Počisti vse podatke in nastavitve",
+  "settingsDeleteAccountTileTitle": "Izbriši račun",
+  "settingsDeleteAccountTileSubtitle": "Trajno izbrišite svoj račun",
+  "settingsSelectNetworkDialogTitle": "Izberite omrežje",
+  "settingsNetworkMainnetDescription": "Živo omrežje Solana",
+  "settingsNetworkDevnetDescription": "Razvojno omrežje za testiranje",
+  "settingsNetworkTestnetDescription": "Testno omrežje za razvoj",
+  "settingsSwitchedToNetworkToast": "Preklopljeno na {network}",
+  "@settingsSwitchedToNetworkToast": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "settingsConnectWalletFirstToast": "Najprej povežite denarnico",
+  "settingsBackupWalletDialogTitle": "Varnostna kopija denarnice",
+  "settingsBackupWalletDialogIntro": "To bo prikazalo vašo obnovitveno frazo.",
+  "settingsSecurityWarningTitle": "Varnostno opozorilo",
+  "settingsSecurityWarningBullets": "• Poskrbite, da ste na zasebnem mestu\n• Nikoli ne delite obnovitvene fraze\n• Zapišite jo in jo varno shranite",
+  "settingsConnectOrCreateWalletFirstToast": "Najprej povežite ali ustvarite denarnico.",
+  "settingsAutoLock10Seconds": "10 sekund",
+  "settingsAutoLock30Seconds": "30 sekund",
+  "settingsAutoLock1Minute": "1 minuta",
+  "settingsAutoLock5Minutes": "5 minut",
+  "settingsAutoLock15Minutes": "15 minut",
+  "settingsAutoLock30Minutes": "30 minut",
+  "settingsAutoLock1Hour": "1 ura",
+  "settingsAutoLock3Hours": "3 ure",
+  "settingsAutoLock6Hours": "6 ur",
+  "settingsAutoLock12Hours": "12 ur",
+  "settingsAutoLock1Day": "1 dan",
+  "settingsAutoLockNever": "Nikoli",
+  "settingsAutoLockTimerDialogTitle": "Časovnik samodejnega zaklepa",
+  "settingsAutoLockSetToToast": "Samodejni zaklep nastavljen na {value}",
+  "@settingsAutoLockSetToToast": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "settingsBiometricUnavailableToast": "Biometrično odklepanje na tej napravi ni na voljo.",
+  "settingsBiometricFailedToast": "Biometrično preverjanje ni uspelo.",
+  "settingsExportRecoveryPhraseDialogTitle": "Izvozi obnovitveno frazo",
+  "settingsExportRecoveryPhraseDialogBody": "Frazo si oglejte samo v zasebnosti. Nikoli je ne shranjujemo in vsak, ki jo ima, lahko premakne vaša sredstva.",
+  "settingsExportRecoveryPhraseDialogConfirm": "Potrdite, da ste pripravljeni, preden prikažemo besede.",
+  "settingsShowPhraseButton": "Prikaži frazo",
+  "settingsImportWalletDialogTitle": "Uvozi obstoječo denarnico",
+  "settingsImportWalletDialogBody": "Obnovitveno frazo vnesite le iz zaupanja vrednega vira. Med uvozom se izogibajte javnemu Wi‑Fi-ju in deljenju zaslona.",
+  "settingsImportWalletDialogConfirm": "Fraze nikoli ne shranjujemo. Vi ohranite popolno lastništvo svojih sredstev.",
+  "settingsSetPinDialogTitle": "Nastavi PIN aplikacije",
+  "settingsConfirmPinLabel": "Potrdi PIN",
+  "settingsPinClearedToast": "PIN je počiščen",
+  "settingsClearPinButton": "Počisti PIN",
+  "settingsPinMinLengthError": "PIN mora imeti vsaj 4 številke",
+  "settingsPinMismatchError": "PIN-a se ne ujemata",
+  "settingsPinSetSuccessToast": "PIN je uspešno nastavljen",
+  "settingsPinSetFailedToast": "PIN ni bilo mogoče nastaviti",
+  "settingsClearCacheDialogTitle": "Počisti predpomnilnik",
+  "settingsClearCacheDialogBody": "To bo počistilo začasne datoteke in lahko izboljša delovanje.",
+  "settingsCacheClearedToast": "Predpomnilnik je uspešno počiščen",
+  "settingsClearButton": "Počisti",
+  "settingsResetPermissionFlagsDialogTitle": "Ponastavi zastavice dovoljenj",
+  "settingsResetPermissionFlagsDialogBody": "To bo počistilo shranjene zastavice pozivov za dovoljenja in storitve. Uporabite, če želite ponovno sprožiti pozive za dovoljenja.",
+  "settingsPermissionFlagsResetToast": "Zastavice dovoljenj so ponastavljene",
+  "settingsResetButton": "Ponastavi",
+  "settingsExportDataDialogTitle": "Izvoz podatkov",
+  "settingsExportDataDialogBody": "To bo ustvarilo datoteko z vašimi podatki aplikacije (brez zasebnih ključev).",
+  "settingsDataExportedToast": "Podatki izvoženi: {count} kategorij",
+  "@settingsDataExportedToast": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "settingsExportButton": "Izvozi",
+  "settingsResetAppDialogTitle": "Ponastavi aplikacijo",
+  "settingsResetAppDialogBody": "To bo počistilo vse podatke in nastavitve. Denarnica bo odklopljena, ne pa izbrisana.",
+  "settingsAppResetSuccessToast": "Aplikacija je uspešno ponastavljena. Prosimo, ponovno jo zaženite.",
+  "settingsDeleteAccountDialogTitle": "Izbriši račun",
+  "settingsDeleteAccountDialogBody": "Odstranili bomo vaš profil in podatke skupnosti s strežnikov. Denarnica ostane vaša in bo še vedno delovala.",
+  "settingsFinalConfirmationTitle": "Končna potrditev",
+  "settingsDeleteAccountFinalConfirmationBody": "Ste popolnoma prepričani, da želite izbrisati račun? Tega dejanja ni mogoče razveljaviti.",
+  "settingsConfirmButton": "Potrdi",
+  "settingsDeleteAccountBackendFailedToast": "Brisanje na strežniku ni uspelo. Poskusite znova.",
+  "settingsAccountDeletedToast": "Račun je izbrisan. Vsi podatki so odstranjeni.",
+  "settingsDeleteForeverButton": "Izbriši za vedno",
+  "settingsEnableNotificationsInSystemToast": "Za prejemanje obvestil jih omogočite v sistemskih nastavitvah.",
+  "settingsLogoutDialogTitle": "Odjava",
+  "settingsLogoutDialogBody": "Odklopim denarnico in počistim sejo na tej napravi?",
+  "settingsLogoutButton": "Odjava",
+  "settingsTransactionHistoryDialogTitle": "Zgodovina transakcij",
+  "settingsRecentTransactionsTitle": "Nedavne transakcije",
+  "settingsNoTransactionsTitle": "Ni transakcij",
+  "settingsNoTransactionsDescription": "Vaša zgodovina transakcij se bo prikazala tukaj, ko boste začeli izvajati transakcije.",
+  "settingsTxReceivedLabel": "Prejeto",
+  "settingsTxSentLabel": "Poslano",
+  "settingsTxFromLabel": "Od",
+  "settingsTxToLabel": "Za",
+  "settingsTxFromToLabel": "{directionLabel}: {addressPrefix}...",
+  "@settingsTxFromToLabel": {
+    "placeholders": {
+      "directionLabel": {},
+      "addressPrefix": {}
+    }
+  },
+  "settingsAppVersionDialogTitle": "Različica aplikacije",
+  "settingsVersionValue": "Različica: {version}",
+  "@settingsVersionValue": {
+    "placeholders": {
+      "version": {}
+    }
+  },
+  "settingsBuildValue": "Build: {build}",
+  "@settingsBuildValue": {
+    "placeholders": {
+      "build": {}
+    }
+  },
+  "settingsAllRightsReserved": "Vse pravice pridržane.",
+  "settingsCopyright": "© {year} kubus",
+  "@settingsCopyright": {
+    "placeholders": {
+      "year": {}
+    }
+  },
+  "settingsTermsDialogTitle": "Pogoji uporabe",
+  "settingsTermsDialogBody": "Z uporabo art.kubus se strinjate s temi pogoji:\n\n1. Odgovorni ste za varnost svoje denarnice.\n2. Ne shranjujemo vaših zasebnih ključev ali obnovitvenih fraz.\n3. Vse transakcije so dokončne in nepovratne.\n4. Aplikacijo uporabljate na lastno odgovornost.\n5. Pridržujemo si pravico do posodobitve teh pogojev.\n\nZa celotne pogoje obiščite našo spletno stran.",
+  "settingsPrivacyPolicyDialogTitle": "Pravilnik o zasebnosti",
+  "settingsPrivacyPolicyDialogBody": "Vaša zasebnost nam je pomembna:\n\n• Osebnih podatkov ne zbiramo brez soglasja\n• Podatki denarnice so shranjeni lokalno na napravi\n• Lahko zbiramo anonimno statistiko uporabe\n• Podatkov ne delimo s tretjimi osebami\n• Analitiko lahko izključite v nastavitvah zasebnosti\n\nZa celoten pravilnik obiščite našo spletno stran.",
+  "settingsSupportDialogTitle": "Podpora",
+  "settingsSupportDialogBody": "Potrebujete pomoč? Izberite možnost:",
+  "settingsOpeningFaqToast": "Odpiram FAQ…",
+  "settingsViewFaqButton": "Ogled FAQ",
+  "settingsOpeningEmailClientToast": "Odpiram e‑poštni odjemalec…",
+  "settingsContactSupportButton": "Kontaktiraj podporo",
+  "settingsLicensesDialogTitle": "Licence odprtokodnih komponent",
+  "settingsLicensesDialogBody": "Ta aplikacija uporablja naslednje odprtokodne knjižnice:\n\n• Flutter SDK (BSD licenca)\n• Material Design Icons (Apache 2.0)\n• SharedPreferences (BSD licenca)\n• HTTP (BSD licenca)\n• Path Provider (BSD licenca)\n\nCelotna besedila licenc so na voljo v repozitoriju aplikacije.",
+  "settingsRateAppDialogTitle": "Oceni art.kubus",
+  "settingsRateAppDialogBodyTitle": "Uživate v aplikaciji?",
+  "settingsRateAppDialogBodySubtitle": "Prosimo, ocenite nas v trgovini z aplikacijami!",
+  "settingsMaybeLaterButton": "Mogoče pozneje",
+  "settingsOpeningAppStoreToast": "Odpiram trgovino…",
+  "settingsRateNowButton": "Oceni zdaj",
+  "settingsChangePasswordDialogTitle": "Spremeni geslo",
+  "settingsCurrentPasswordLabel": "Trenutno geslo",
+  "settingsNewPasswordLabel": "Novo geslo",
+  "settingsConfirmNewPasswordLabel": "Potrdi novo geslo",
+  "settingsPasswordUpdatedToast": "Geslo je uspešno posodobljeno",
+  "settingsUpdateButton": "Posodobi",
+  "settingsDeactivateAccountDialogTitle": "Deaktiviraj račun",
+  "settingsDeactivateAccountDialogBodyTitle": "Ste prepričani, da želite deaktivirati račun?",
+  "settingsDeactivateAccountDialogBodySubtitle": "Kasneje ga lahko ponovno aktivirate s prijavo.",
+  "settingsAccountDeactivatedToast": "Račun je deaktiviran",
+  "settingsDeactivateButton": "Deaktiviraj",
+  "settingsProfileVisibilityDialogTitle": "Vidnost profila",
+  "settingsProfileVisibilitySetToast": "Vidnost profila nastavljena na {value}",
+  "@settingsProfileVisibilitySetToast": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "settingsPrivacySettingsDialogTitle": "Nastavitve zasebnosti",
+  "settingsPrivacyDataCollectionTitle": "Zbiranje podatkov",
+  "settingsPrivacyDataCollectionSubtitle": "Dovoli zbiranje podatkov o uporabi",
+  "settingsPrivacyPersonalizedAdsTitle": "Personalizirani oglasi",
+  "settingsPrivacyPersonalizedAdsSubtitle": "Prikaži oglase glede na interese",
+  "settingsPrivacyLocationTrackingTitle": "Sledenje lokaciji",
+  "settingsPrivacyLocationTrackingSubtitle": "Dovoli funkcije na podlagi lokacije",
+  "settingsPrivacyDataRetentionTitle": "Hramba podatkov",
+  "settingsPrivacyDataRetentionSubtitle": "Kako dolgo hraniti vaše podatke",
+  "settingsRetention3Months": "3 mesece",
+  "settingsRetention6Months": "6 mesecev",
+  "settingsRetention1Year": "1 leto",
+  "settingsRetention2Years": "2 leti",
+  "settingsRetentionIndefinite": "Nedoločno",
+  "settingsPrivacySettingsUpdatedToast": "Nastavitve zasebnosti posodobljene",
+  "settingsSecuritySettingsDialogTitle": "Varnostne nastavitve",
+  "settingsChangePasswordTileTitle": "Spremeni geslo",
+  "settingsChangePasswordTileSubtitle": "Posodobite geslo računa",
+  "settingsTwoFactorTitle": "Dvostopenjska avtentikacija",
+  "settingsTwoFactorSubtitle": "Dodajte dodatno zaščito računu",
+  "settingsSessionTimeoutTitle": "Časovna omejitev seje",
+  "settingsSessionTimeoutSubtitle": "Samodejna odjava ob neaktivnosti",
+  "settingsAutoLockTimeTitle": "Čas samodejnega zaklepa",
+  "settingsAutoLockTimeSubtitle": "Zakleni aplikacijo po neaktivnosti",
+  "settingsLoginNotificationsTitle": "Obvestila o prijavi",
+  "settingsLoginNotificationsSubtitle": "Obvestila ob novih prijavah",
+  "settingsSecuritySettingsUpdatedToast": "Varnostne nastavitve posodobljene",
+  "settingsAccountManagementDialogTitle": "Upravljanje računa",
+  "settingsEmailNotificationsTitle": "E‑poštna obvestila",
+  "settingsEmailNotificationsSubtitle": "Prejemajte posodobitve prek e‑pošte",
+  "settingsPushNotificationsTitle": "Potisna obvestila",
+  "settingsPushNotificationsSubtitle": "Obvestila na napravi",
+  "settingsMarketingEmailsTitle": "Marketinška e‑pošta",
+  "settingsMarketingEmailsSubtitle": "Prejemajte promocijsko vsebino",
+  "settingsAccountTypeTitle": "Vrsta računa",
+  "settingsAccountTypeSubtitle": "Vaša trenutna raven članstva",
+  "settingsAccountTypeStandard": "Standard",
+  "settingsAccountTypePremium": "Premium",
+  "settingsAccountTypeEnterprise": "Enterprise",
+  "settingsPublicProfileTitle": "Javni profil",
+  "settingsPublicProfileSubtitle": "Dovoli drugim, da najdejo vaš profil",
+  "settingsDeactivateAccountTileTitle": "Deaktiviraj račun",
+  "settingsDeactivateAccountTileSubtitle": "Začasno onemogoči račun",
+  "settingsAccountSettingsUpdatedToast": "Nastavitve računa posodobljene",
+  "commonStepOfTotal": "{current} od {total}",
+  "@commonStepOfTotal": {
+    "placeholders": {
+      "current": {},
+      "total": {}
+    }
+  },
+  "web3OnboardingKeyFeaturesTitle": "Ključne funkcije:",
+  "web3FeatureWeb3Title": "Neobvezne funkcije z denarnico (Web3)",
+  "web3FeatureMarketplaceTitle": "Tržnica zbirateljskih predmetov (NFT)",
+  "web3FeatureArtistStudioTitle": "Umetniški studio",
+  "web3FeatureInstitutionHubTitle": "Središče za institucije",
+  "web3FeatureGovernanceTitle": "Skupnostno odločanje (DAO)",
+  "web3DaoP1Title": "Dobrodošli v skupnostnem odločanju",
+  "web3DaoP1Description": "Sodelujte pri skupnostnem odločanju za ekosistem art.kubus. Vaš glas pomaga oblikovati platformo.",
+  "web3DaoP1Feature1": "Glasujte o skupnostnih predlogih",
+  "web3DaoP1Feature2": "Ustvarite in oddajte predloge",
+  "web3DaoP1Feature3": "Za sodelovanje prejmite KUB8 točke",
+  "web3DaoP1Feature4": "Razpravljajte in sodelujte z drugimi",
+  "web3DaoP2Title": "Vaša glasovalna teža",
+  "web3DaoP2Description": "Vaša glasovalna teža lahko odraža vaš napredek v Sezoni 0 (KUB8 točke). Brez finančne vrednosti — gre za sodelovanje in priznanje.",
+  "web3DaoP2Feature1": "Glasovalna teža lahko sledi vašim KUB8 točkam",
+  "web3DaoP2Feature2": "Glasujte o aktivnih predlogih",
+  "web3DaoP2Feature3": "Spremljajte rezultate v živo",
+  "web3DaoP2Feature4": "Spremljajte zgodovino sodelovanja",
+  "web3DaoP3Title": "Ustvarite predloge",
+  "web3DaoP3Description": "Imate idejo za izboljšavo platforme? Oddajte predloge za funkcije, pravila ali skupnostne pobude.",
+  "web3DaoP3Feature1": "Napišite jasne predloge s kontekstom",
+  "web3DaoP3Feature2": "Izberite trajanje glasovanja in pogoje",
+  "web3DaoP3Feature3": "Zberite podporo skupnosti",
+  "web3DaoP3Feature4": "Spremljajte stanje in razpravo",
+  "web3DaoP4Title": "Pripravljeni na sodelovanje",
+  "web3DaoP4Description": "Vse je pripravljeno. Raziščite aktivne predloge ali ustvarite svojega, ko boste pripravljeni.",
+  "web3DaoP4Feature1": "Brskajte in glasujte o predlogih",
+  "web3DaoP4Feature2": "Preglejte zgodovino glasovanj",
+  "web3DaoP4Feature3": "Oglejte si aktivnost odločanja",
+  "web3DaoP4Feature4": "Sodelujte s skupnostjo",
+  "web3ArtistStudioP1Title": "Dobrodošli v umetniškem studiu",
+  "web3ArtistStudioP1Description": "Vaš delovni prostor za upravljanje umetnin, ustvarjanje AR označevalcev in spremljanje napredka.",
+  "web3ArtistStudioP1Feature1": "Upravljajte svojo zbirko umetnin",
+  "web3ArtistStudioP1Feature2": "Ustvarjajte interaktivne AR označevalce",
+  "web3ArtistStudioP1Feature3": "Spremljajte vpoglede v uspešnost",
+  "web3ArtistStudioP1Feature4": "Predstavite in delite s skupnostjo",
+  "web3ArtistStudioP2Title": "Galerija umetnin",
+  "web3ArtistStudioP2Description": "Predstavite svoje stvaritve in zbirateljske predmete (NFT). Naložite, organizirajte in prikažite svoje umetnine.",
+  "web3ArtistStudioP2Feature1": "Naložite in organizirajte umetnine",
+  "web3ArtistStudioP2Feature2": "Dodajte naslove in opise",
+  "web3ArtistStudioP2Feature3": "Izberite vidnost in razpoložljivost",
+  "web3ArtistStudioP2Feature4": "Spremljajte oglede in odziv",
+  "web3ArtistStudioP3Title": "Ustvarjalnik AR označevalcev",
+  "web3ArtistStudioP3Description": "Spremenite umetnine v AR izkušnje. Postavite označevalce v resničnih lokacijah, da jih drugi odkrijejo.",
+  "web3ArtistStudioP3Feature1": "Ustvarite geo-locirane označevalce",
+  "web3ArtistStudioP3Feature2": "Povežite umetnine z lokacijami",
+  "web3ArtistStudioP3Feature3": "Dodajte nagrade za odkritja (KUB8 točke)",
+  "web3ArtistStudioP3Feature4": "Spremljajte interakcije z označevalci",
+  "web3ArtistStudioP4Title": "Nadzorna plošča vpogledov",
+  "web3ArtistStudioP4Description": "Spremljajte uspešnost z vpogledi v oglede, odkritja in odziv skupnosti.",
+  "web3ArtistStudioP4Feature1": "Spremljajte uspešnost umetnin",
+  "web3ArtistStudioP4Feature2": "Spremljajte napredek KUB8 točk",
+  "web3ArtistStudioP4Feature3": "Oglejte si vzorce odkritij",
+  "web3ArtistStudioP4Feature4": "Izvozite poročila",
+  "web3ArtistStudioP5Title": "Začnite ustvarjati",
+  "web3ArtistStudioP5Description": "Vaš studio je pripravljen. Naložite prvo umetnino ali ustvarite AR označevalec in delite s skupnostjo.",
+  "web3ArtistStudioP5Feature1": "Naložite prvo umetnino",
+  "web3ArtistStudioP5Feature2": "Ustvarite prvi AR označevalec",
+  "web3ArtistStudioP5Feature3": "Raziščite stvaritve skupnosti",
+  "web3ArtistStudioP5Feature4": "Začnite zbirati KUB8 točke",
+  "web3InstitutionHubP1Title": "Dobrodošli v središču za institucije",
+  "web3InstitutionHubP1Description": "Upravljajte dogodke, razstave in izobraževalne programe. Povežite institucijo z umetniško skupnostjo.",
+  "web3InstitutionHubP1Feature1": "Ustvarjajte in upravljajte dogodke",
+  "web3InstitutionHubP1Feature2": "Gostite razstave",
+  "web3InstitutionHubP1Feature3": "Povežite se s skupnostjo",
+  "web3InstitutionHubP1Feature4": "Spremljajte doseg in odziv",
+  "web3InstitutionHubP2Title": "Upravljanje dogodkov",
+  "web3InstitutionHubP2Description": "Organizirajte razstave, delavnice in dogodke. Upravljajte urnik, prijave in obvestila.",
+  "web3InstitutionHubP2Feature1": "Načrtujte razstave in delavnice",
+  "web3InstitutionHubP2Feature2": "Upravljajte prijave",
+  "web3InstitutionHubP2Feature3": "Pošiljajte obvestila udeležencem",
+  "web3InstitutionHubP2Feature4": "Spremljajte obisk in odziv",
+  "web3InstitutionHubP3Title": "Orodja za ustvarjanje dogodkov",
+  "web3InstitutionHubP3Description": "Ustvarite strani dogodkov z opisi in mediji, da se ljudje lažje pridružijo.",
+  "web3InstitutionHubP3Feature1": "Oblikujte strani dogodkov z mediji",
+  "web3InstitutionHubP3Feature2": "Nastavite kapaciteto in prijavo",
+  "web3InstitutionHubP3Feature3": "Ustvarite promocijske materiale",
+  "web3InstitutionHubP3Feature4": "Povežite s koledarji",
+  "web3InstitutionHubP4Title": "Analitika in vpogledi",
+  "web3InstitutionHubP4Description": "Merite uspešnost z vpogledi v obisk, odziv in vpliv na skupnost.",
+  "web3InstitutionHubP4Feature1": "Spremljajte obisk in odziv",
+  "web3InstitutionHubP4Feature2": "Spremljajte zanimanje skupnosti",
+  "web3InstitutionHubP4Feature3": "Analizirajte povratne informacije",
+  "web3InstitutionHubP4Feature4": "Izvozite poročila",
+  "web3InstitutionHubP5Title": "Objavite svoje dogodke",
+  "web3InstitutionHubP5Description": "Ste pripravljeni na povezovanje s skupnostjo? Ustvarite prvi dogodek ali raziščite aktualne razstave.",
+  "web3InstitutionHubP5Feature1": "Ustvarite prvi dogodek",
+  "web3InstitutionHubP5Feature2": "Raziščite dogodke skupnosti",
+  "web3InstitutionHubP5Feature3": "Povežite se z drugimi institucijami",
+  "web3InstitutionHubP5Feature4": "Zgradite kulturno mrežo",
+  "web3MarketplaceP1Title": "Dobrodošli na tržnici",
+  "web3MarketplaceP1Description": "Odkrijte, kupite ali prodajte zbirateljske predmete (NFT). Povežite se z ustvarjalci in zbiratelji.",
+  "web3MarketplaceP1Feature1": "Brskajte po zbirateljskih predmetih",
+  "web3MarketplaceP1Feature2": "Kupujte in prodajajte varno",
+  "web3MarketplaceP1Feature3": "Odkrijte izpostavljene umetnine",
+  "web3MarketplaceP1Feature4": "Podprite ustvarjalce, ki jih spremljate",
+  "web3MarketplaceP2Title": "Odkrijte odlično umetnost",
+  "web3MarketplaceP2Description": "Raziščite kurirane zbirke in filtrirajte po kategoriji, redkosti in več.",
+  "web3MarketplaceP2Feature1": "Filtrirajte po kategoriji in redkosti",
+  "web3MarketplaceP2Feature2": "Oglejte si podrobnosti umetnin",
+  "web3MarketplaceP2Feature3": "Preverite izvor in avtentičnost",
+  "web3MarketplaceP2Feature4": "Shranjujte priljubljene na seznam želja",
+  "web3MarketplaceP3Title": "Objavite svoje stvaritve",
+  "web3MarketplaceP3Description": "Ustvarjalci lahko objavijo zbirateljske predmete (NFT). Dodajte podrobnosti ter nastavite ceno in razpoložljivost.",
+  "web3MarketplaceP3Feature1": "Naložite digitalno umetnino",
+  "web3MarketplaceP3Feature2": "Dodajte opise in oznake",
+  "web3MarketplaceP3Feature3": "Nastavite ceno in razpoložljivost",
+  "web3MarketplaceP3Feature4": "Spremljajte zanimanje in aktivnost",
+  "web3MarketplaceP4Title": "Začnite raziskovati",
+  "web3MarketplaceP4Description": "Pripravljeni ste. Raziščite zbirke, opravite prvi nakup ali objavite svoj prvi predmet.",
+  "web3MarketplaceP4Feature1": "Raziščite izpostavljene zbirke",
+  "web3MarketplaceP4Feature2": "Opravite prvi nakup",
+  "web3MarketplaceP4Feature3": "Objavite predmet za prodajo",
+  "web3MarketplaceP4Feature4": "Pridružite se ustvarjalni skupnosti",
+  "web3FeaturesP1Title": "Povežite denarnico (neobvezno)",
+  "web3FeaturesP1Description": "Povežite denarnico za neobvezne plasti, kot so zbirateljski predmeti (NFT) in digitalni dokazi obiska (POAP). Osnovna aplikacija deluje tudi brez tega.",
+  "web3FeaturesP1Feature1": "Prijava z denarnico (neobvezno)",
+  "web3FeaturesP1Feature2": "Zbirateljski predmeti (NFT) in digitalni dokazi obiska (POAP)",
+  "web3FeaturesP1Feature3": "Ključi ostanejo v vaši denarnici",
+  "web3FeaturesP1Feature4": "Povezavo lahko prekinete kadarkoli",
+  "web3FeaturesP2Title": "Tržnica zbirateljskih predmetov (NFT)",
+  "web3FeaturesP2Description": "V neobvezni tržnici brskajte, kupujte in prodajajte zbirateljske predmete (NFT).",
+  "web3FeaturesP2Feature1": "Brskajte po izpostavljenih izdajah",
+  "web3FeaturesP2Feature2": "Iščite po kategoriji in redkosti",
+  "web3FeaturesP2Feature3": "Oglejte si podrobnosti in izvor",
+  "web3FeaturesP2Feature4": "Kupujte in prodajajte varno",
+  "web3FeaturesP2Feature5": "Shranjujte priljubljene za pozneje",
+  "web3FeaturesP3Title": "Umetniški studio",
+  "web3FeaturesP3Description": "Ustvarjajte in upravljajte digitalne umetnine. Po želji objavite zbirateljske predmete (NFT) in jih delite s skupnostjo.",
+  "web3FeaturesP3Feature1": "Naložite in organizirajte umetnine",
+  "web3FeaturesP3Feature2": "Ustvarjajte AR označevalce",
+  "web3FeaturesP3Feature3": "Po želji objavite zbirateljske predmete (NFT)",
+  "web3FeaturesP3Feature4": "Spremljajte vpoglede in odziv",
+  "web3FeaturesP3Feature5": "Sodelujte z drugimi ustvarjalci",
+  "web3FeaturesP4Title": "Skupnostno odločanje (DAO)",
+  "web3FeaturesP4Description": "Glasujte o predlogih in skupaj usmerjajte platformo.",
+  "web3FeaturesP4Feature1": "Glasujte o predlogih",
+  "web3FeaturesP4Feature2": "Oddajte predloge izboljšav",
+  "web3FeaturesP4Feature3": "Za sodelovanje prejmite KUB8 točke",
+  "web3FeaturesP4Feature4": "Spremljajte razprave in rezultate",
+  "web3FeaturesP4Feature5": "Sooblikujte smernice skupnosti",
+  "web3FeaturesP5Title": "Središče za institucije",
+  "web3FeaturesP5Description": "Povežite se z galerijami in kulturnimi institucijami ter gostite dogodke in razstave.",
+  "web3FeaturesP5Feature1": "Povežite se s preverjenimi institucijami",
+  "web3FeaturesP5Feature2": "Gostite dogodke in razstave",
+  "web3FeaturesP5Feature3": "Skupaj kurirajte zbirke",
+  "web3FeaturesP5Feature4": "Orodja za profesionalno mreženje",
+  "web3FeaturesP5Feature5": "Orodja prilagojena institucijam",
+  "web3FeaturesP6Title": "KUB8 točke (Sezona 0)",
+  "web3FeaturesP6Description": "KUB8 točke so neprenosljive sezonske točke: napredek, ugled in odklenitve. Ne gre za valuto.",
+  "web3FeaturesP6Feature1": "Točke pridobivate z sodelovanjem in odkritji",
+  "web3FeaturesP6Feature2": "Spremljajte napredek skozi sezono",
+  "web3FeaturesP6Feature3": "Odklenite značke in priznanja",
+  "web3FeaturesP6Feature4": "Nagrade so dostop in priznanje",
+  "web3FeaturesP6Feature5": "Neprenosljive sezonske točke",
+  "commonApply": "Uveljavi",
+  "commonView": "Poglej",
+  "commonViewDetails": "Poglej podrobnosti",
+  "commonContinueExploring": "Nadaljuj z raziskovanjem",
+  "commonByArtist": "od {artist}",
+  "@commonByArtist": {
+    "placeholders": {
+      "artist": {}
+    }
+  },
+  "commonKub8PointsReward": "+{points} KUB8 točk",
+  "@commonKub8PointsReward": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "commonDistanceKm": "{value} km",
+  "@commonDistanceKm": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "commonDistanceM": "{value} m",
+  "@commonDistanceM": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+  "commonPercentComplete": "{percent}% dokončano",
+  "@commonPercentComplete": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+  "commonCollapse": "Skrči",
+  "commonExpand": "Razširi",
+  "mapNearbyRadiusTitle": "Radij bližine",
+  "mapNearbyRadiusTooltip": "Radij bližine ({radiusKm} km)",
+  "@mapNearbyRadiusTooltip": {
+    "placeholders": {
+      "radiusKm": {}
+    }
+  },
+  "mapArArtworkNearbyTitle": "AR umetnina v bližini!",
+  "mapArArtworkNearbySubtitle": "{name} · {distanceMeters} m stran",
+  "@mapArArtworkNearbySubtitle": {
+    "placeholders": {
+      "name": {},
+      "distanceMeters": {}
+    }
+  },
+  "mapFailedToLaunchAr": "AR ni bilo mogoče zagnati.",
+  "mapMarkerCreatedToast": "Označevalec je ustvarjen.",
+  "mapMarkerCreateFailedToast": "Označevalca ni bilo mogoče ustvariti. Poskusite znova.",
+  "mapMarkerCreateWalletRequired": "Povežite denarnico in ustvarite AR-pripravljeno umetnino, da postavite označevalec.",
+  "mapMarkerCreateNoArArtworks": "Za vašo denarnico ni AR-pripravljenih umetnin. Najprej ustvarite eno, nato postavite označevalec.",
+  "mapMarkerDialogTitle": "Ustvari označevalec",
+  "mapMarkerDialogRefreshSubjectsTooltip": "Osveži predmete",
+  "mapMarkerDialogAttachHint": "Na to lokacijo pripnite obstoječi predmet in AR sredstvo.",
+  "mapMarkerDialogSubjectTypeLabel": "Vrsta predmeta",
+  "mapMarkerDialogSubjectRequiredLabel": "{subject} *",
+  "@mapMarkerDialogSubjectRequiredLabel": {
+    "placeholders": {
+      "subject": {}
+    }
+  },
+  "mapMarkerDialogMarkerForTitle": "Označevalec za {title}",
+  "@mapMarkerDialogMarkerForTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "mapMarkerDialogNoSubjectsAvailable": "Ni na voljo: {subjectType}. Najprej ustvarite enega.",
+  "@mapMarkerDialogNoSubjectsAvailable": {
+    "placeholders": {
+      "subjectType": {}
+    }
+  },
+  "mapMarkerDialogMiscHint": "Označevalci »Razno« ne potrebujejo povezanega predmeta. Spodaj vnesite naslov in opis.",
+  "mapMarkerDialogLinkedArAssetTitle": "Povezano AR sredstvo",
+  "mapMarkerDialogNoArEnabledArtworksHint": "Ni AR-omogočenih umetnin. Najprej ustvarite eno.",
+  "mapMarkerDialogMarkerTitleLabel": "Naslov označevalca *",
+  "mapMarkerDialogDescriptionLabel": "Opis *",
+  "mapMarkerDialogCategoryLabel": "Kategorija",
+  "mapMarkerDialogMarkerLayerLabel": "Sloj označevalca",
+  "mapMarkerDialogPublicMarkerTitle": "Javni označevalec",
+  "mapMarkerDialogPublicMarkerSubtitle": "Viden vsem raziskovalcem na zemljevidu",
+  "mapMarkerDialogLatitudeLabel": "Zemljepisna širina *",
+  "mapMarkerDialogLongitudeLabel": "Zemljepisna dolžina *",
+  "mapMarkerDialogUseMapCenterButton": "Uporabi središče zemljevida",
+  "mapMarkerDialogCreateButton": "Ustvari označevalec",
+  "mapMarkerDialogSelectSubjectToast": "Za nadaljevanje izberite predmet",
+  "mapMarkerDialogSelectArArtworkToast": "Izberite AR-omogočeno umetnino za povezavo",
+  "mapMarkerDialogEnterTitleError": "Vnesite naslov",
+  "mapMarkerDialogTitleMinLengthError": "Naslov mora imeti vsaj {min} znake",
+  "@mapMarkerDialogTitleMinLengthError": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "mapMarkerDialogEnterDescriptionError": "Vnesite opis",
+  "mapMarkerDialogDescriptionMinLengthError": "Opis mora imeti vsaj {min} znakov",
+  "@mapMarkerDialogDescriptionMinLengthError": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "mapMarkerDialogValidLatitudeError": "Vnesite veljavno zemljepisno širino",
+  "mapMarkerDialogValidLongitudeError": "Vnesite veljavno zemljepisno dolžino",
+  "mapMarkerSubjectTypeArtwork": "Umetnina",
+  "mapMarkerSubjectTypeExhibition": "Razstava",
+  "mapMarkerSubjectTypeInstitution": "Institucija",
+  "mapMarkerSubjectTypeEvent": "Dogodek",
+  "mapMarkerSubjectTypeGroup": "Skupina",
+  "mapMarkerSubjectTypeMisc": "Razno",
+  "mapMarkerLayerArtwork": "Umetnina",
+  "mapMarkerLayerInstitution": "Institucija",
+  "mapMarkerLayerEvent": "Dogodek",
+  "mapMarkerLayerResidency": "Rezidenca",
+  "mapMarkerLayerDropReward": "Drop/Nagrada",
+  "mapMarkerLayerArExperience": "AR izkušnja",
+  "mapMarkerLayerOther": "Drugo",
+  "mapArtDiscoveredTitle": "Umetnina odkrita!",
+  "desktopMapTitleDiscover": "Odkrij",
+  "mapSearchHint": "Išči umetnine, umetnike, institucije…",
+  "mapClearSearchTooltip": "Počisti iskanje",
+  "mapHideFiltersTooltip": "Skrij filtre",
+  "mapShowFiltersTooltip": "Pokaži filtre",
+  "mapSearchMinCharsHint": "Za iskanje vnesite vsaj 2 znaka",
+  "mapNoSuggestions": "Ni predlogov",
+  "commonNoResultsFound": "Ni rezultatov",
+  "mapFiltersTitle": "Filtri",
+  "mapFilterAll": "Vse",
+  "mapFilterNearby": "V bližini",
+  "mapFilterAllNearby": "Vse v bližini",
+  "mapFilterWithin1Km": "Znotraj 1 km",
+  "mapFilterDiscovered": "Odkrito",
+  "mapFilterUndiscovered": "Neodkrito",
+  "mapFilterArEnabled": "AR pripravljeno",
+  "mapFilterFavorites": "Priljubljene",
+  "mapLayersTitle": "Sloji zemljevida",
+  "mapDiscoveryPathTitle": "Pot odkrivanja",
+  "mapShowListViewTooltip": "Prikaži seznam",
+  "mapShowGridViewTooltip": "Prikaži mrežo",
+  "mapSortResultsTooltip": "Razvrsti rezultate",
+  "mapCenterOnMeTooltip": "Središči na meni",
+  "mapAddMapMarkerTooltip": "Dodaj označevalec",
+  "mapNearbyArtTitle": "Umetnost v bližini",
+  "mapResultsDiscoveredLabel": "{count} rezultatov · {percent}% odkrito",
+  "@mapResultsDiscoveredLabel": {
+    "placeholders": {
+      "count": {},
+      "percent": {}
+    }
+  },
+  "mapEmptyNoArtworksTitle": "Ni umetnin v bližini",
+  "mapEmptyNoArtworksDescription": "Raziščite druga območja ali prilagodite filtre, da odkrijete umetnost v okolici.",
+  "mapEmptyZoomOutAction": "Oddalji",
+  "mapEmptyAdjustFiltersAction": "Prilagodi filtre",
+  "mapNoLinkedArtworkForMarker": "Za ta označevalec še ni povezane umetnine.",
+  "mapCreateMarkerHereTooltip": "Ustvari označevalnik tukaj",
+  "mapMarkerDuplicateToast": "Na tej lokaciji že obstaja označevalnik.",
+  "mapDistanceHere": "Tukaj",
+  "mapDistanceAwaySuffix": " stran",
+  "commonGetDirections": "Navodila za pot",
+  "desktopMapNoArAssetToast": "Za to umetnino ni na voljo AR sredstva.",
+  "desktopMapArtworkTypeTitle": "Vrsta umetnine",
+  "desktopMapArtworkTypeArArt": "AR umetnost",
+  "desktopMapArtworkTypeNfts": "NFT-ji",
+  "desktopMapArtworkTypeModels3d": "3D modeli",
+  "desktopMapArtworkTypeSculptures": "Skulpture",
+  "desktopMapSortByTitle": "Razvrsti po",
+  "desktopMapSortDistance": "Razdalja",
+  "desktopMapSortPopularity": "Priljubljenost",
+  "desktopMapSortNewest": "Najnovejše",
+  "desktopMapSortRating": "Ocena",
+  "desktopMapDiscoveriesCount": "{count, plural, one {# odkritje} two {# odkritji} few {# odkritja} other {# odkritij}}",
+  "@desktopMapDiscoveriesCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "mapMarkerTypeArtworks": "Umetnine",
+  "mapMarkerTypeInstitutions": "Institucije",
+  "mapMarkerTypeEvents": "Dogodki",
+  "mapMarkerTypeResidencies": "Rezidence",
+  "mapMarkerTypeDrops": "Izidi",
+  "mapMarkerTypeExperiences": "Izkušnje",
+  "mapMarkerTypeMisc": "Razno",
+  "mapSortNearest": "Najbližje",
+  "mapSortNewest": "Najnovejše",
+  "mapSortRarity": "Redkost",
+  "mapSortHighestRewards": "Največ nagrad",
+  "mapSortMostViewed": "Največ ogledov",
+  "mapArReadyChipLabel": "AR pripravljeno",
+  "mapAlreadyDiscoveredTooltip": "Že odkrito",
+  "mapMarkAsDiscoveredTooltip": "Označi kot odkrito",
+
+  "arWebFallbackFeature": "AR izkušnja",
+  "arWebFallbackDescription": "Funkcije razširjene resničnosti (AR) zahtevajo zmogljivosti na napravi. Prenesite aplikacijo art.kubus, da si ogledate digitalne umetnine v fizičnem prostoru s kamero telefona.",
+
+  "arModeScanName": "Skeniraj",
+  "arModePlaceName": "Postavi",
+  "arModeViewName": "Ogled",
+  "arModeCreateName": "Ustvari",
+  "arModeScanDescription": "Skenirajte AR označevalce za odkrivanje umetnin v okolici.",
+  "arModePlaceDescription": "Postavite digitalne umetnine v svoj prostor.",
+  "arModeViewDescription": "Oglejte si postavljene umetnine in se vrnite k njim.",
+  "arModeCreateDescription": "Ustvarjajte in preizkušajte AR postavitve.",
+
+  "arMarkerNearbyToast": "Označevalec v bližini: {name}",
+  "@arMarkerNearbyToast": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+
+  "arInitializingTitle": "Inicializiram AR…",
+  "arReadyStatus": "AR je pripravljen",
+  "arSettingUpStatus": "Pripravljam…",
+  "arNoArtworksYetTitle": "Še ni umetnin",
+  "arNoArtworksYetDescription": "Skenirajte označevalec ali postavite umetnino, da začnete z AR ogledom.",
+
+  "arModelLoadedToast": "AR model naložen",
+  "arModelLoadFailedToast": "AR modela ni bilo mogoče naložiti. Poskusite znova.",
+
+  "arPlacingTitle": "Postavljanje: {title}",
+  "@arPlacingTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "arPlacingInstruction": "Premaknite napravo, da najdete ravno površino.",
+
+  "arModePreviewTitle": "Način: {mode}",
+  "@arModePreviewTitle": {
+    "placeholders": {
+      "mode": {}
+    }
+  },
+
+  "arPlaceArtworkFailedToast": "Umetnine ni bilo mogoče postaviti. Poskusite znova.",
+
+  "arActionScan": "Skeniraj umetnino",
+  "arActionPlace": "Postavi umetnino sem",
+  "arActionView": "Ogled podrobnosti",
+  "arActionCreate": "Ustvari AR umetnino",
+
+  "arArtworkPlacedToast": "Umetnina je postavljena!",
+  "arNearbyArtworksTitle": "Umetnine v bližini",
+  "arSelectedArtworkToast": "Izbrano: {title}",
+  "@arSelectedArtworkToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "arSelectArtworkBeforePlacingToast": "Pred postavljanjem izberite ali ustvarite umetnino.",
+  "arNoPlacedArtworksToast": "Še ni postavljenih umetnin. Najprej postavite kakšno.",
+
+  "arPlacedArtworksTitle": "Postavljene umetnine ({count})",
+  "@arPlacedArtworksTitle": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "arArtworkRemovedToast": "Umetnina odstranjena",
+
+  "arLocationUnavailableToast": "Trenutna lokacija ni na voljo. Premaknite napravo za umerjanje AR sledenja.",
+  "arUnableToReadFileError": "Podatkov datoteke ni mogoče prebrati. Poskusite drugo datoteko.",
+  "arFileSelectionFailedError": "Izbira datoteke ni uspela. Poskusite znova.",
+  "arSelectSubjectBeforeMarkerToast": "Pred ustvarjanjem označevalca izberite vsebino.",
+  "arAttach3dModelError": "Pred nadaljevanjem priložite 3D model.",
+  "arSelectedArtworkUnavailableToast": "Izbrana umetnina ni več na voljo. Osvežite podatke in poskusite znova.",
+  "arUploadFailedToast": "Nalaganje ni uspelo. Poskusite znova.",
+  "arMarkerCreatedSwitchToPlaceToast": "AR vsebina je naložena in označevalec ustvarjen. Preklapljam na način Postavi.",
+  "arCreateMarkerFailedToast": "Označevalca AR ni bilo mogoče ustvariti. Poskusite znova.",
+
+  "arShareText": "Oglejte si to AR umetnino na art.kubus!\n\n\"{title}\"\n— {artist}\n\nDoživite jo v razširjeni resničnosti!",
+  "@arShareText": {
+    "placeholders": {
+      "title": {},
+      "artist": {}
+    }
+  },
+  "arShareSuccessToast": "Umetnina je deljena!",
+  "arShareFailedToast": "Deljenje ni uspelo. Poskusite znova.",
+
+  "commonActions": "Dejanja",
+  "commonCurrentlyOn": "Trenutno VKLOPLJENO",
+  "commonCurrentlyOff": "Trenutno IZKLOPLJENO",
+
+  "commonOk": "V redu",
+  "commonRetry": "Poskusi znova",
+
+  "commonJustNow": "Pravkar",
+  "commonMinutesAgo": "{minutes, plural, one{pred {minutes} minuto} two{pred {minutes} minutama} few{pred {minutes} minutami} other{pred {minutes} minutami}}",
+  "@commonMinutesAgo": {
+    "placeholders": {
+      "minutes": {}
+    }
+  },
+  "commonHoursAgo": "{hours, plural, one{pred {hours} uro} two{pred {hours} urama} few{pred {hours} urami} other{pred {hours} urami}}",
+  "@commonHoursAgo": {
+    "placeholders": {
+      "hours": {}
+    }
+  },
+  "commonDaysAgo": "{days, plural, one{pred {days} dnem} two{pred {days} dnevoma} few{pred {days} dnevi} other{pred {days} dnevi}}",
+  "@commonDaysAgo": {
+    "placeholders": {
+      "days": {}
+    }
+  },
+
+  "commonWeeksAgo": "{weeks, plural, one{pred {weeks} tednom} two{pred {weeks} tednoma} few{pred {weeks} tedni} other{pred {weeks} tedni}}",
+  "@commonWeeksAgo": {
+    "placeholders": {
+      "weeks": {}
+    }
+  },
+
+  "commonTba": "Kmalu",
+  "commonUntitled": "Brez naslova",
+  "commonDigital": "Digitalno",
+  "commonArtwork": "Umetnina",
+  "commonUndo": "Razveljavi",
+
+  "messagesTitle": "Sporočila",
+  "messagesEmptyNoConversationsTitle": "Ni pogovorov",
+  "messagesEmptyNoConversationsDescription": "Začnite pogovor z gumbom za klepet spodaj.",
+  "messagesEmptyStartChatAction": "Začni klepet",
+  "messagesFallbackGroupTitle": "Skupina",
+  "messagesFallbackConversationTitle": "Pogovor",
+  "messagesFallbackConversationInitial": "P",
+  "messagesCreateConversationTitle": "Ustvari pogovor",
+  "messagesCreateConversationTitleOptionalLabel": "Naslov (neobvezno)",
+  "messagesCreateConversationMembersLabel": "Člani (uporabniško ime ali denarnica)",
+  "messagesCreateConversationGroupAvatarOptionalLabel": "Avatar skupine (neobvezno)",
+  "messagesCreateConversationIsGroupLabel": "Skupina",
+
+  "messagesReplyingToLabel": "Odgovarjaš {name}",
+  "@messagesReplyingToLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "messagesCreatedNewGroupChatToast": "Ustvarjen je nov skupinski klepet.",
+  "messagesUploadingAvatarToast": "Nalaganje avatarja…",
+  "messagesAvatarUpdatedToast": "Avatar je posodobljen.",
+  "messagesUpdateAvatarFailedToast": "Avatarja trenutno ni mogoče posodobiti.",
+  "messagesMenuAddMember": "Dodaj člana",
+  "messagesMenuRenameConversation": "Preimenuj pogovor",
+  "messagesMenuChangeGroupAvatar": "Spremeni avatar skupine",
+  "messagesAttachmentDefaultFilename": "priloga",
+  "messagesAttachmentFailedToLoadImage": "Slike ni mogoče naložiti",
+  "messagesAttachmentVideoLabel": "Video",
+  "messagesAttachmentPlayVideoButton": "Predvajaj video",
+  "messagesAttachmentDownloadButton": "Prenesi",
+  "messagesTypeMessageHint": "Vpiši sporočilo…",
+  "messagesAddMemberDialogTitle": "Dodaj člana",
+  "messagesAddMemberIdentifierLabel": "Uporabniško ime ali denarnica",
+  "messagesAddMemberDialogLoadFailedTitle": "Uporabnika ni mogoče naložiti",
+  "messagesAddMemberDialogLoadFailedBody": "Uporabnika trenutno ni mogoče naložiti. Poskusite znova.",
+  "messagesConversationMembersTitle": "Člani pogovora",
+  "messagesMemberLabel": "Član",
+  "messagesMemberOptionsTitle": "Možnosti člana",
+  "messagesMemberOptionsBody": "Kaj želite narediti z {displayName}?",
+  "@messagesMemberOptionsBody": {
+    "placeholders": {
+      "displayName": {}
+    }
+  },
+  "messagesTransferOwnershipAction": "Prenesi lastništvo",
+  "messagesRemoveMemberAction": "Odstrani člana",
+  "messagesTransferOwnershipTitle": "Prenos lastništva",
+  "messagesTransferOwnershipBody": "Prenesem lastništvo na {displayName} ({wallet})?",
+  "@messagesTransferOwnershipBody": {
+    "placeholders": {
+      "displayName": {},
+      "wallet": {}
+    }
+  },
+  "messagesOwnershipTransferredToast": "Lastništvo je preneseno.",
+  "messagesTransferFailedToast": "Prenos ni uspel.",
+  "messagesManageMemberAction": "Upravljaj",
+  "messagesRenameConversationTitle": "Preimenuj pogovor",
+  "messagesRenameConversationHint": "Vnesi novo ime",
+  "messagesRenameConversationFieldLabel": "Ime pogovora",
+
+  "userProfileTitle": "Profil",
+  "userProfileNotFound": "Uporabnik ni najden",
+  "userProfileNotFoundDescription": "Ta profil je bil morda izbrisan ali ne obstaja.",
+  "userProfileShareTooltip": "Deli",
+  "userProfileMoreTooltip": "Več",
+  "userProfileSharedToast": "Profil deljen!",
+
+  "userProfileJoinedLabel": "Pridružil(-a) se {date}",
+  "@userProfileJoinedLabel": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+
+  "userProfileMessageButtonLabel": "Sporočilo",
+
+  "userProfileArtistPortfolioTitle": "Portfelj umetnika",
+  "userProfileInstitutionHighlightsDesktopSubtitle": "Izbrane razstave in programi",
+  "userProfileArtistPortfolioDesktopSubtitle": "Najnovejše umetnine in zbirke",
+  "userProfileNoCreatorContentTitle": "Ni vsebine",
+  "userProfileNoInstitutionContentDescription": "Za zdaj ni razstav ali programov za prikaz",
+  "userProfileNoArtistContentDescription": "Za zdaj ni umetnin ali zbirk za prikaz",
+
+  "userProfileFollowButton": "Sledi",
+  "userProfileFollowingButton": "Slediš",
+  "userProfileSignInToFollowToast": "Za sledenje ustvarjalcem se prijavite.",
+  "userProfileFollowUpdateFailedToast": "Stanja sledenja ni bilo mogoče posodobiti. Poskusite znova.",
+  "userProfileNowFollowingToast": "Sledite: {name}",
+  "@userProfileNowFollowingToast": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileUnfollowedToast": "Ne sledite več: {name}",
+  "@userProfileUnfollowedToast": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+
+  "userProfilePostsStatLabel": "Objave",
+  "userProfileFollowersStatLabel": "Sledilci",
+  "userProfileFollowingStatLabel": "Sledim",
+
+  "userProfileMessageLoginRequiredToast": "Za sporočanje se prijavite.",
+  "userProfileConversationOpenFailedToast": "Pogovora ni bilo mogoče odpreti.",
+  "userProfileConversationOpenGenericErrorToast": "Pogovora ni bilo mogoče odpreti. Poskusite znova.",
+
+  "userProfileAchievementsTitle": "Dosežki",
+  "userProfileAchievementsProgressLabel": "Odklenjenih {completed} od {total}",
+  "@userProfileAchievementsProgressLabel": {
+    "placeholders": {
+      "completed": {},
+      "total": {}
+    }
+  },
+  "userProfileAchievementsEmptyTitle": "{name} še nima odklenjenih dosežkov.",
+  "@userProfileAchievementsEmptyTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileAchievementsEmptyDescription": "Začnite raziskovati in odklenite dosežke",
+  "userProfileAchievementCompletedLabel": "Zaključeno",
+
+  "userProfilePostsTitle": "Objave",
+  "userProfileRecentActivitySubtitle": "Nedavna aktivnost uporabnika {name}",
+  "@userProfileRecentActivitySubtitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfilePostsLoadFailedTitle": "Objav ni bilo mogoče naložiti",
+  "userProfilePostsLoadFailedDescription": "Objav ni bilo mogoče naložiti.",
+  "userProfilePostsLoadMoreFailedDescription": "Dodatnih objav ni bilo mogoče naložiti.",
+  "userProfileNoPostsTitle": "Brez objav",
+  "userProfileNoPostsDescription": "{name} še ni delil(-a) objav.",
+  "@userProfileNoPostsDescription": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileNoMorePostsLabel": "Ni več objav",
+
+  "userProfileArtistHighlightsTitle": "Poudarki umetnika",
+  "userProfileArtistHighlightsSubtitle": "Najnovejše objave od {name}.",
+  "@userProfileArtistHighlightsSubtitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileInstitutionHighlightsTitle": "Poudarki institucije",
+  "userProfileInstitutionHighlightsSubtitle": "Programi in zbirke, ki jih kurira {name}.",
+  "@userProfileInstitutionHighlightsSubtitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+
+  "userProfileArtworksTitle": "Umetnine",
+  "userProfileCollectionsTitle": "Zbirke",
+  "userProfileEventsTitle": "Dogodki",
+  "userProfileEventsSubtitleFeaturing": "Prihajajoče izkušnje z {name}.",
+  "@userProfileEventsSubtitleFeaturing": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileNoUpcomingEventsYetLabel": "Za zdaj ni prihajajočih dogodkov od {name}.",
+  "@userProfileNoUpcomingEventsYetLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileNoArtworksYetLabel": "{name} še ni objavil(-a) nobene umetnine.",
+  "@userProfileNoArtworksYetLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileNoCollectionsYetLabel": "{name} še ni kuriral(-a) zbirk.",
+  "@userProfileNoCollectionsYetLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileNoItemsTitle": "Brez: {title}",
+  "@userProfileNoItemsTitle": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+
+  "userProfileLikesLabel": "{count, plural, one{{count} všeček} two{{count} všečka} few{{count} všečki} other{{count} všečkov}}",
+  "@userProfileLikesLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "userProfileArtworksCountLabel": "{count, plural, one{{count} umetnina} two{{count} umetnini} few{{count} umetnine} other{{count} umetnin}}",
+  "@userProfileArtworksCountLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "userProfileCuratedByLabel": "Kuratira {name}",
+  "@userProfileCuratedByLabel": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileCollectionFallbackTitle": "Zbirka",
+  "userProfileEventFallbackTitle": "Dogodek",
+
+  "userProfileMoreOptionsBlockUser": "Blokiraj uporabnika",
+  "userProfileMoreOptionsReportUser": "Prijavi uporabnika",
+  "userProfileMoreOptionsCopyLink": "Kopiraj povezavo do profila",
+  "userProfileLinkCopiedToast": "Povezava do profila kopirana",
+
+  "userProfileBlockDialogTitle": "Blokiraj {name}?",
+  "@userProfileBlockDialogTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileBlockDialogDescription": "Ne bo mogel(-la) videti vašega profila ali objav.",
+  "userProfileUnableToBlockToast": "Uporabnika ni mogoče blokirati.",
+  "userProfileBlockFailedToast": "Uporabnika ni bilo mogoče blokirati. Poskusite znova.",
+  "userProfileBlockedToast": "Blokiran(-a): {name}",
+  "@userProfileBlockedToast": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileBlockButtonLabel": "Blokiraj",
+
+  "userProfileReportDialogTitle": "Prijavi {name}",
+  "@userProfileReportDialogTitle": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "userProfileReportDialogQuestion": "Zakaj prijavljate tega uporabnika?",
+  "userProfileReportReasonSpam": "Neželena vsebina",
+  "userProfileReportReasonInappropriate": "Neprimerna vsebina",
+  "userProfileReportReasonHarassment": "Nadlegovanje",
+  "userProfileReportReasonOther": "Drugo",
+  "userProfileReportSubmittedToast": "Prijava poslana. Hvala za povratne informacije.",
+
+  "arDetailModelLabel": "Model",
+  "arDetailScaleLabel": "Merilo",
+  "arDetailPlacedLabel": "Postavljeno",
+
+  "arShareButtonLabel": "Deli",
+  "arLikeButtonLabel": "Všečkaj",
+  "arLikedButtonLabel": "Všečkano",
+  "arSaveButtonLabel": "Shrani",
+  "arSavedButtonLabel": "Shranjeno",
+
+  "arLikeAddedToast": "Dodano med všečke!",
+  "arLikeRemovedToast": "Odstranjeno iz všečkov",
+  "arSaveAddedToast": "Shranjeno v vašo zbirko!",
+  "arSaveRemovedToast": "Odstranjeno iz shranjenih",
+
+  "arNotSupportedTitle": "AR ni podprt",
+  "arNotSupportedMessage": "Vaša naprava ne podpira funkcij razširjene resničnosti (AR). AR zahteva ARCore (Android) ali ARKit (iOS).",
+  "arInitializationFailedTitle": "Inicializacija AR ni uspela",
+  "arInitializationFailedMessage": "AR ni bilo mogoče inicializirati. Preverite dovoljenja za kamero in poskusite znova.",
+
+  "commonRequired": "obvezno",
+
+  "commonFileSizeKb": "{value} KB",
+  "@commonFileSizeKb": {
+    "description": "Velikost datoteke v kilobajtih",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "commonFileSizeMb": "{value} MB",
+  "@commonFileSizeMb": {
+    "description": "Velikost datoteke v megabajtih",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+
+  "arCreateUploadTitle": "Naloži AR sredstvo",
+  "arCreateUploadSubtitle": "Povežite obstoječo umetnino, naložite 3D model (GLB/GLTF/USDZ) in obogatili bomo njen AR označevalnik.",
+  "arCreateSubjectTypeLabel": "Vrsta subjekta",
+  "arCreateSubjectLabel": "{subjectType} *",
+  "@arCreateSubjectLabel": {
+    "description": "Oznaka za spustni seznam subjekta, vključuje obvezno zvezdico",
+    "placeholders": {
+      "subjectType": {
+        "type": "String"
+      }
+    }
+  },
+  "arCreateDefaultDescription": "Označevalnik za {title}",
+  "@arCreateDefaultDescription": {
+    "description": "Privzet opis označevalnika, ko izbrani subjekt nima podnaslova",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "arCreateNoSubjectsAvailable": "Ni razpoložljivih {subjectTypeLower}. Najprej ustvarite enega v ustreznem modulu.",
+  "@arCreateNoSubjectsAvailable": {
+    "description": "Sporočilo, ko za izbrano vrsto subjekta ni na voljo nobenih elementov",
+    "placeholders": {
+      "subjectTypeLower": {
+        "type": "String"
+      }
+    }
+  },
+  "arCreateMarkerTitleLabel": "Naslov označevalnika *",
+  "arCreateTitleRequiredError": "Naslov je obvezen",
+  "arCreateTitleMinLengthError": "Naslov mora imeti vsaj 3 znake",
+  "arCreateDescriptionLabel": "Opis *",
+  "arCreateDescriptionRequiredError": "Opis je obvezen",
+  "arCreateDescriptionMinLengthError": "Opišite izkušnjo z vsaj 10 znaki",
+  "arCreateCategoryLabel": "Kategorija",
+  "arCreateAttach3dAssetTitle": "Priloži 3D sredstvo",
+  "arCreateSelectModelButton": "Izberi GLB / GLTF / USDZ",
+  "arCreateReplaceModelButton": "Zamenjaj model",
+  "arCreatePublicMarkerTitle": "Javni označevalnik",
+  "arCreatePublicMarkerSubtitle": "Viden bližnjim raziskovalcem",
+  "arCreateUploadingLabel": "Nalaganje…",
+  "arCreateUploadAndCreateButton": "Naloži in ustvari označevalnik",
+
+  "arSettingsTitle": "AR nastavitve",
+  "arScannerSettingsTitle": "Nastavitve skenerja",
+  "arFlashControlTitle": "Nadzor bliskavice",
+  "arFlashNotAvailableToast": "Bliskavica na tej napravi ni na voljo.",
+  "arScannerOverlayTitle": "Prekrivni prikaz skenerja",
+  "arScannerOverlaySubtitle": "Prikaži/skrij vodič skenerja",
+  "arScannerOverlayResetToast": "Prekrivni prikaz skenerja se po 3 sekundah samodejno ponastavi.",
+
+  "arDisplayTitle": "AR prikaz",
+  "arShowFeaturePointsTitle": "Pokaži točke sledenja",
+  "arShowFeaturePointsSubtitle": "Prikaži točke sledenja na površinah",
+  "arShowPlanesTitle": "Pokaži ravnine",
+  "arShowPlanesSubtitle": "Prikaži zaznane ravninske površine",
+  "arAutoDetectSurfacesTitle": "Samodejno zaznaj površine",
+  "arAutoDetectSurfacesSubtitle": "Samodejno zaznaj ravne površine",
+  "arDebugInfoTitle": "Podatki za odpravljanje napak",
+  "arDebugInfoSubtitle": "Prikaži tehnične informacije",
+
+  "arModelScaleLabel": "Merilo modela: {percent}%",
+  "@arModelScaleLabel": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+
+  "arClearAllArtworksTitle": "Počisti vse umetnine",
+  "arClearAllArtworksSubtitle": "Odstrani vse postavljene AR objekte",
+  "arAllArtworksClearedToast": "Vse umetnine so počiščene",
+  "arResetSessionTitle": "Ponastavi AR sejo",
+  "arResetSessionSubtitle": "Znova zaženi AR sledenje",
+  "arSessionResetToast": "AR seja ponastavljena",
+
+  "connectWalletSecureAccessTitle": "Varni dostop",
+
+  "connectWalletChooseTitle": "Povežite denarnico",
+  "connectWalletChooseDescription": "Izberite način povezave. Ustvarite novo denarnico, uvozite obstoječo ali uporabite WalletConnect.",
+  "connectWalletOptionWalletConnectTitle": "WalletConnect",
+  "connectWalletOptionWalletConnectDescription": "Povežite z QR kodo ali URI WalletConnect",
+  "connectWalletOptionSignInTitle": "Uvozi denarnico",
+  "connectWalletOptionSignInDescription": "Uporabite obstoječo obnovitveno frazo",
+  "connectWalletOptionRegisterTitle": "Ustvari novo denarnico",
+  "connectWalletOptionRegisterDescription": "Ustvarite novo denarnico na tej napravi",
+  "connectWalletHybridHelpLink": "Kaj je WalletConnect?",
+
+  "connectWalletImportTitle": "Uvozi denarnico",
+  "connectWalletImportDescription": "Vnesite 12-besedno obnovitveno frazo za uvoz denarnice z druge naprave.",
+  "connectWalletImportHint": "Vnesite 12 besed, ločenih s presledki",
+  "connectWalletImportWarning": "Nikoli ne delite obnovitvene fraze. Kdor jo ima, lahko upravlja vašo denarnico.",
+  "connectWalletImportButton": "Uvozi denarnico",
+  "connectWalletImportEmptyMnemonicError": "Vnesite obnovitveno frazo",
+  "connectWalletImportInvalidMnemonicWordCountError": "Pričakovano je 12 besed, vnesli ste {count}.",
+  "@connectWalletImportInvalidMnemonicWordCountError": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "connectWalletImportSuccessToast": "Denarnica uvožena: {prefix}…",
+  "@connectWalletImportSuccessToast": {
+    "placeholders": {
+      "prefix": {}
+    }
+  },
+  "connectWalletImportFailedToast": "Uvoz denarnice ni uspel. Poskusite znova.",
+
+  "connectWalletCreateTitle": "Ustvarite novo denarnico",
+  "connectWalletCreateDescription": "Ustvarili bomo novo denarnico na tej napravi. Obnovitveno frazo varno shranite.",
+  "connectWalletCreateInfoTitle": "Pomembno",
+  "connectWalletCreateInfoBody": "Zapišite obnovitveno frazo in jo shranite na varno. Ne moremo je obnoviti namesto vas.",
+  "connectWalletCreateWarning": "Z nadaljevanjem potrjujete, da razumete tveganja.",
+  "connectWalletCreateGenerateButton": "Ustvari denarnico",
+  "connectWalletCreateAlreadyHaveWalletPrefix": "Že imate denarnico?",
+  "connectWalletCreateAlreadyHaveWalletLink": "Uvozite jo",
+
+  "connectWalletCreateSuccessToast": "Denarnica je ustvarjena in profil je nastavljen.",
+  "connectWalletCreateFailedToast": "Ustvarjanje denarnice ni uspelo. Poskusite znova.",
+
+  "connectWalletMnemonicDialogTitle": "Shrani obnovitveno frazo",
+  "connectWalletMnemonicDialogWarning": "Zapišite in varno shranite!",
+  "connectWalletMnemonicDialogConfirmPrompt": "Potrdite z vnosom obnovitvene fraze:",
+  "connectWalletMnemonicDialogConfirmHint": "Prilepite ali vnesite obnovitveno frazo",
+  "connectWalletMnemonicDialogAddressLabel": "Naslov denarnice: {address}",
+  "@connectWalletMnemonicDialogAddressLabel": {
+    "placeholders": {
+      "address": {}
+    }
+  },
+  "connectWalletMnemonicDialogConfirmButton": "Shranjeno",
+
+  "connectWalletConnectedTitle": "Denarnica povezana",
+  "connectWalletConnectedDescription": "Denarnica je zdaj povezana z art.kubus. Lahko raziskujete AR umetnost, trgujete z NFT in sodelujete v ekosistemu.",
+  "connectWalletConnectedStartExploringButton": "Začni raziskovati",
+  "connectWalletConnectedDisconnectButton": "Odklopi denarnico",
+
+  "connectWalletWeb3GuideTitle": "Kaj je Web3 denarnica?",
+  "connectWalletWeb3GuideDescription": "Web3 denarnica je vaš prehod v decentraliziran internet:",
+  "connectWalletWeb3GuideFeatureSecureTitle": "Varno",
+  "connectWalletWeb3GuideFeatureSecureDescription": "Vaši ključi, vaša sredstva",
+  "connectWalletWeb3GuideFeatureNftsTitle": "NFT",
+  "connectWalletWeb3GuideFeatureNftsDescription": "Hranite in trgujte z digitalno umetnostjo",
+  "connectWalletWeb3GuideFeatureGovernanceTitle": "Upravljanje",
+  "connectWalletWeb3GuideFeatureGovernanceDescription": "Glasujte o odločitvah platforme",
+  "connectWalletWeb3GuideFeatureDefiTitle": "DeFi",
+  "connectWalletWeb3GuideFeatureDefiDescription": "Dostop do decentraliziranih financ",
+  "connectWalletWeb3GuideGotItButton": "Razumem!",
+
+  "connectWalletWalletConnectTitle": "Poveži z WalletConnect",
+  "connectWalletWalletConnectDescription": "WalletConnect omogoča povezavo vaše denarnice z art.kubus.",
+  "connectWalletWalletConnectSupportedTitle": "Podprte denarnice",
+  "connectWalletWalletConnectSupportedList": "Phantom, Solflare, Backpack in druge",
+  "connectWalletWalletConnectHowToTitle": "Kako deluje",
+  "connectWalletWalletConnectStep1": "V aplikaciji denarnice odprite WalletConnect",
+  "connectWalletWalletConnectStep2": "Skenirajte QR kodo ali prilepite URI",
+  "connectWalletWalletConnectStep3": "V denarnici potrdite povezavo",
+  "connectWalletWalletConnectConnectingLabel": "Povezujem…",
+  "connectWalletWalletConnectQuickConnectLabel": "Hitro poveži",
+  "connectWalletWalletConnectUriHint": "Prilepite URI WalletConnect (wc:...)",
+  "connectWalletWalletConnectSecurityNote": "Povezujte se samo z denarnicami, ki jim zaupate. Nikoli ne delite obnovitvene fraze.",
+  "connectWalletWalletConnectScanQrButton": "Skeniraj QR kodo",
+  "connectWalletWalletConnectConnectButton": "Poveži",
+  "connectWalletWalletConnectNoWalletPrefix": "Še nimate denarnice?",
+  "connectWalletWalletConnectNoWalletLink": "Ustvarite jo",
+
+  "connectWalletWalletConnectScanQrTitle": "Skeniraj WalletConnect QR kodo",
+  "connectWalletWalletConnectScanQrHint": "Postavite QR kodo v okvir",
+
+  "connectWalletWalletConnectUriRequiredToast": "Vnesite URI WalletConnect",
+  "connectWalletWalletConnectInvalidUriToast": "Neveljaven URI WalletConnect",
+  "connectWalletWalletConnectNeedsLocalWalletToast": "Pred uporabo WalletConnect ustvarite ali uvozite denarnico",
+  "connectWalletWalletConnectConnectedToast": "Povezano z {address}",
+  "@connectWalletWalletConnectConnectedToast": {
+    "placeholders": {
+      "address": {}
+    }
+  },
+  "connectWalletWalletConnectConnectionErrorToast": "Napaka pri povezavi. Poskusite znova.",
+  "connectWalletWalletConnectWaitingApprovalToast": "Čakam na potrditev v denarnici…",
+  "connectWalletWalletConnectFailedToast": "Povezava prek WalletConnect ni uspela",
+
+  "walletHomeTitle": "Moja denarnica",
+  "walletHomeLoadingLabel": "Nalaganje denarnice…",
+  "walletHomeNoWalletDescription": "Za začetek povežite denarnico.",
+  "walletHomeAlreadyConnectedToast": "Denarnica je že povezana.",
+  "walletHomeTotalBalanceLabel": "Skupno stanje",
+  "walletHomeAddressLabel": "Naslov: {address}",
+  "@walletHomeAddressLabel": {
+    "placeholders": {
+      "address": {}
+    }
+  },
+  "walletHomeAddressCopiedToast": "Naslov kopiran v odložišče!",
+  "walletHomeActionSend": "Pošlji",
+  "walletHomeActionReceive": "Prejmi",
+  "walletHomeActionSwap": "Zamenjaj",
+  "walletHomeActionNfts": "NFT",
+  "walletHomeYourTokensTitle": "Vaši žetoni",
+  "walletHomeRecentTransactionsTitle": "Nedavne transakcije",
+  "walletHomeTimeAgoDays": "pred {count} d",
+  "@walletHomeTimeAgoDays": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "walletHomeTimeAgoHours": "pred {count} h",
+  "@walletHomeTimeAgoHours": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "walletHomeTimeAgoMinutes": "pred {count} min",
+  "@walletHomeTimeAgoMinutes": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "walletHomeTxSwapLabel": "Zamenjano",
+  "walletHomeTxStakeLabel": "Zastavljeno",
+  "walletHomeTxUnstakeLabel": "Od-zastavljeno",
+  "walletHomeTxGovernanceVoteLabel": "Glasovanje (upravljanje)",
+
+  "receiveTokenTitle": "Prejmi žetone",
+  "receiveTokenSelectTokenTitle": "Izberite žeton za prejem",
+  "receiveTokenBalanceLabel": "Stanje: {amount}",
+  "@receiveTokenBalanceLabel": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "receiveTokenQrError": "Napaka QR\nUstvarjanje ni uspelo",
+  "receiveTokenQrRequiresWallet": "Ustvarite ali uvozite denarnico\nza ustvarjanje QR kode",
+  "receiveTokenScanToSend": "Skeniraj za pošiljanje {token}",
+  "@receiveTokenScanToSend": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "receiveTokenAnyoneCanSend": "Vsak lahko pošlje {token} na ta naslov",
+  "@receiveTokenAnyoneCanSend": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "receiveTokenFinishSetupToShare": "Dokončajte nastavitev denarnice za deljenje naslova",
+  "receiveTokenYourAddressTitle": "Vaš naslov za {token}",
+  "@receiveTokenYourAddressTitle": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "receiveTokenShareAddressTooltip": "Deli naslov",
+  "receiveTokenCopyAddressTooltip": "Kopiraj naslov",
+  "receiveTokenRequiresWalletToReceive": "Za prejem žetonov ustvarite ali uvozite denarnico",
+  "receiveTokenCopyAddressButton": "Kopiraj naslov",
+  "receiveTokenHowToReceiveTitle": "Kako prejeti {token}",
+  "@receiveTokenHowToReceiveTitle": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "receiveTokenStep1Title": "Delite svoj naslov",
+  "receiveTokenStep1Description": "Osebi, ki vam želi poslati {token}, pošljite naslov denarnice",
+  "@receiveTokenStep1Description": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "receiveTokenStep2Title": "Ali pokažite QR kodo",
+  "receiveTokenStep2Description": "Naj s svojo denarnico skenirajo zgornjo QR kodo",
+  "receiveTokenStep3Title": "Prejmite žetone",
+  "receiveTokenStep3Description": "Žetoni se bodo prikazali v denarnici, ko bo transakcija potrjena",
+  "receiveTokenWarningOnlySend": "Na ta naslov pošiljajte samo {token} in združljive žetone",
+  "@receiveTokenWarningOnlySend": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "receiveTokenNoWalletAddressToast": "Naslov denarnice še ni na voljo",
+  "receiveTokenShareText": "Pošljite {token} na {address}\n{payload}",
+  "@receiveTokenShareText": {
+    "placeholders": {
+      "token": {},
+      "address": {},
+      "payload": {}
+    }
+  },
+  "receiveTokenNoTokensMessage": "Za prikaz žetonov povežite ali uvozite denarnico.",
+
+  "sendTokenTitle": "Pošlji žeton",
+  "sendTokenScanQrTooltip": "Skeniraj QR kodo",
+  "sendTokenQrScannerUnavailableTooltip": "QR skener ni na voljo",
+  "sendTokenSelectTokenTitle": "Izberi žeton",
+  "sendTokenRecipientAddressTitle": "Naslov prejemnika",
+  "sendTokenRecipientAddressHint": "Vnesite naslov prejemnika",
+  "sendTokenAmountTitle": "Znesek",
+  "sendTokenMaxButton": "MAX",
+  "sendTokenAvailableLabel": "Na voljo: {amount} {token}",
+  "@sendTokenAvailableLabel": {
+    "placeholders": {
+      "amount": {},
+      "token": {}
+    }
+  },
+  "sendTokenTransactionSummaryTitle": "Povzetek transakcije",
+  "sendTokenSummaryAmountLabel": "Znesek",
+  "sendTokenSummaryFeesLabel": "Kubus provizije (~{percent}%)",
+  "@sendTokenSummaryFeesLabel": {
+    "placeholders": {
+      "percent": {}
+    }
+  },
+  "sendTokenSummaryEstimatedDebitLabel": "Ocenjen odtegljaj",
+  "sendTokenSummaryUsdValueLabel": "Vrednost v USD",
+  "sendTokenSummaryNetworkFeeLabel": "Omrežna provizija",
+  "sendTokenNetworkFeeNote": "Omrežne provizije se plačujejo v SOL. Imejte nekaj SOL za provizije.",
+  "sendTokenNoTokensMessage": "Povežite ali ustvarite denarnico, da izberete žetone za pošiljanje.",
+  "sendTokenButtonLabel": "Pošlji {token}",
+  "@sendTokenButtonLabel": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "sendTokenAddressRequiredError": "Naslov je obvezen",
+  "sendTokenAddressInvalidError": "Vnesite veljaven Solana naslov",
+  "sendTokenAmountRequiredError": "Znesek je obvezen",
+  "sendTokenAmountGreaterThanZeroError": "Znesek mora biti večji od 0",
+  "sendTokenInsufficientBalanceError": "Premalo sredstev",
+  "sendTokenNoBalanceToast": "Za ta žeton ni na voljo stanja",
+  "sendTokenMaxAmountComputeFailedToast": "Največjega zneska ni mogoče izračunati. Pustite nekaj sredstev za provizije.",
+
+  "sendTokenQrScannerUnsupportedWeb": "Skeniranje QR kod ni na voljo v spletnih brskalnikih. Za to funkcijo uporabite mobilno ali namizno aplikacijo.",
+  "sendTokenQrScannerUnsupportedDesktop": "Skeniranje QR kod ni na voljo na namiznih platformah. Za to funkcijo uporabite mobilno aplikacijo.",
+  "sendTokenQrScannerUnsupportedPlatform": "Skeniranje QR kod na tej platformi ni podprto.",
+
+  "sendTokenQrUnreadableToast": "Ni mogoče prebrati vsebine QR kode.",
+  "sendTokenQrInvalidAddressToast": "QR koda ne vsebuje veljavnega naslova.",
+  "sendTokenQrScannedAddressLabel": "Naslov skeniran",
+  "sendTokenQrScannedTokenLabel": "Žeton: {token}",
+  "@sendTokenQrScannedTokenLabel": {
+    "placeholders": {
+      "token": {}
+    }
+  },
+  "sendTokenQrScannedAmountLabel": "Znesek: {amount}",
+  "@sendTokenQrScannedAmountLabel": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "sendTokenQrScanErrorToast": "Napaka pri skeniranju QR kode. Poskusite znova.",
+
+  "sendTokenSendSuccessToast": "Uspešno poslano {amount} {token}",
+  "@sendTokenSendSuccessToast": {
+    "placeholders": {
+      "amount": {},
+      "token": {}
+    }
+  },
+  "sendTokenSendFailedToast": "Pošiljanje žetonov ni uspelo. Poskusite znova.",
+  "sendTokenInsufficientAfterFeesToast": "Premalo sredstev po protokolnih provizijah. Zmanjšajte znesek ali dopolnite denarnico.",
+  "sendTokenNoKeypairToast": "Ni na voljo ključnega para denarnice. Ponovno povežite ali znova uvozite denarnico.",
+  "sendTokenInvalidAddressBeforeSendToast": "Pred pošiljanjem vnesite veljaven Solana naslov.",
+  "sendTokenConnectWalletBeforeSendToast": "Pred pošiljanjem povežite denarnico.",
+
+  "qrScannerTitle": "Skeniraj QR kodo",
+  "qrScannerWebUnavailableTitle": "QR skener ni na voljo",
+  "qrScannerWebUnavailableDescription": "Skeniranje QR kod s kamero ni podprto v spletnih brskalnikih. Namesto tega prilepite ali vnesite naslov ročno.",
+  "qrScannerGoBackButton": "Nazaj",
+  "qrScannerPreparingCameraLabel": "Pripravljam kamero…",
+  "qrScannerPermissionNeededTitle": "Potrebno dovoljenje za kamero",
+  "qrScannerPermissionNeededDescription": "Omogočite dostop do kamere za varno skeniranje QR kod denarnice.",
+  "qrScannerOpenSettingsButton": "Odpri nastavitve",
+  "qrScannerGrantCameraAccessButton": "Dovoli dostop do kamere",
+  "qrScannerCameraErrorTitle": "Napaka kamere",
+  "qrScannerCameraErrorDescription": "Kamere ni mogoče zagnati. Preverite dovoljenja in poskusite znova.",
+  "qrScannerStatusAddressCapturedTitle": "Naslov zajet",
+  "qrScannerStatusUnsupportedQrTitle": "Nepodprta QR koda",
+  "qrScannerStatusUnsupportedQrDescription": "Ta QR koda ne vsebuje veljavnega Solana naslova.",
+  "qrScannerStatusReadyTitle": "Pripravljeno na skeniranje",
+  "qrScannerStatusReadyDescription": "Poravnajte QR kodo znotraj okvirja, da zajamete Solana naslov.",
+  "qrScannerMetaAmountLabel": "Znesek",
+  "qrScannerMetaMintLabel": "Mint",
+  "qrScannerInvalidQrToast": "Prosimo, skenirajte QR kodo Solana denarnice.",
+  "qrScannerTorchNotSupportedToast": "Vklop bliskavice na tej napravi ni podprt.",
+  "qrScannerSwitchCameraFailedToast": "Kamere ni mogoče zamenjati.",
+
+  "artworkNotFound": "Umetnina ni najdena",
+  "web3DashboardComingSoon": "Web3 nadzorna plošča – kmalu",
+  "artDetailLoadingTitle": "Nalaganje umetnine",
+  "artDetailTitle": "Umetnina",
+  "artDetailLoadFailedMessage": "Nalaganje podrobnosti umetnine ni uspelo. Poskusite znova.",
+
+  "eventCreatorSelectStartEndDatesToast": "Prosimo, izberite začetni in končni datum",
+  "eventCreatorEnterCapacityToast": "Prosimo, vnesite kapaciteto dogodka",
+  "eventCreatorNoInstitutionAvailableToast": "Za ta dogodek ni na voljo institucije",
+  "eventCreatorSelectedInstitutionNotFoundToast": "Izbrana institucija ni najdena",
+  "eventCreatorEndTimeAfterStartToast": "Končni čas mora biti po začetnem času",
+
+  "eventCreatorEventUpdatedTitle": "Dogodek posodobljen",
+  "eventCreatorEventCreatedTitle": "Dogodek ustvarjen",
+  "eventCreatorEventUpdatedBody": "Vaš dogodek je bil uspešno posodobljen.",
+  "eventCreatorEventCreatedBody": "Vaš dogodek je bil uspešno ustvarjen.",
+  "eventCreatorCreateAnotherButton": "Ustvari še enega",
+  "eventCreatorSaveFailedToast": "Shranjevanje dogodka ni uspelo. Poskusite znova.",
+
+  "activityNavigationUnableToOpenToast": "Trenutno ni mogoče odpreti te dejavnosti.",
+
+  "navigationUnableToNavigateToScreen": "Ni mogoče odpreti zaslona »{screenName}«.",
+  "@navigationUnableToNavigateToScreen": {
+    "placeholders": {
+      "screenName": {}
+    }
+  },
+
+  "arMarkerScannerDefaultArtworkTitle": "AR umetnina",
+  "arMarkerScannerInvalidQrFormatToast": "Neveljavna oblika QR kode",
+  "arMarkerScannerMissingModelUrlToast": "QR kodi manjka povezava do modela",
+  "arMarkerScannerByArtist": "Avtor: {artist}",
+  "@arMarkerScannerByArtist": {
+    "placeholders": {
+      "artist": {}
+    }
+  },
+  "arMarkerScannerLaunchViewerPrompt": "Zaženem AR pregledovalnik?",
+  "arMarkerScannerLaunchFailedInstallPrompt": "AR pregledovalnika ni mogoče zagnati. Namestim Google ARCore?",
+  "arMarkerScannerProcessingFailedToast": "Obdelava QR kode ni uspela. Poskusite znova.",
+  "arMarkerScannerProcessingQrLabel": "Obdelujem QR kodo…",
+  "arMarkerScannerPointCameraLabel": "Usmerite kamero v QR kodo za odkrivanje AR umetnin",
+  "arMarkerScannerLaunchingViewerLabel": "Zaganjam AR pregledovalnik…",
+
+  "arArtworkCardLaunchFailedToast": "Zagon AR ni uspel. Poskusite znova.",
+  "arArtworkCardUnavailableLabel": "AR ni na voljo",
+  "arArtworkCardGetCloserLabel": "Približajte se",
+
+  "artistGalleryTitle": "Vaša galerija",
+  "artistGalleryArtworkCount": "{count, plural, =1{1 umetnina} =2{2 umetnini} few{{count} umetnine} other{{count} umetnin}}",
+  "@artistGalleryArtworkCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "artistGalleryStatActiveLabel": "Aktivno",
+  "artistGalleryStatViewsLabel": "Ogledi",
+  "artistGalleryStatLikesLabel": "Všečki",
+  "artistGalleryFilterAll": "Vse",
+  "artistGalleryFilterActive": "Aktivno",
+  "artistGalleryFilterDraft": "Osnutki",
+  "artistGalleryFilterSold": "Prodano",
+  "artistGallerySortByTitle": "Razvrsti po",
+  "artistGallerySortNewest": "Najnovejše",
+  "artistGallerySortOldest": "Najstarejše",
+  "artistGallerySortMostViews": "Največ ogledov",
+  "artistGallerySortMostLikes": "Največ všečkov",
+  "artistGallerySearchTitle": "Išči umetnine",
+  "artistGallerySearchHint": "Vnesite naslov umetnine…",
+  "artistGalleryCreateNewTitle": "Ustvari novo umetnino",
+  "artistGalleryCreateNewDescription": "Pojdite na zavihek Ustvari, da naložite in ustvarite novo umetnino.",
+  "artistGalleryGoToCreateButton": "Pojdi na Ustvari",
+  "artistGalleryEmptyTitle": "Še ni umetnin",
+  "artistGalleryEmptyDescription": "Ustvarite svojo prvo umetnino, da začnete.",
+  "artistGalleryCreateArtworkButton": "Ustvari umetnino",
+  "artistGalleryEditingToast": "Urejanje: {title}",
+  "@artistGalleryEditingToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGallerySharingToast": "Deljenje: {title}",
+  "@artistGallerySharingToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryDeletedToast": "\"{title}\" izbrisana",
+  "@artistGalleryDeletedToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryDeleteArtworkTitle": "Izbriši umetnino",
+  "artistGalleryDeleteConfirmBody": "Ali ste prepričani, da želite izbrisati \"{title}\"? Tega dejanja ni mogoče razveljaviti.",
+  "@artistGalleryDeleteConfirmBody": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+
+  "artistCreatorCreateArtworkButton": "Ustvari umetnino",
+  "artistCreatorCoverSelectedToast": "Naslovna slika izbrana",
+  "artistCreatorPickImageFailedToast": "Izbira slike ni uspela. Poskusite znova.",
+  "artistCreatorModelSelectedToast": "3D model izbran",
+  "artistCreatorPickModelFailedToast": "Izbira 3D modela ni uspela. Poskusite znova.",
+  "artistCreatorSelectImageToast": "Prosimo, izberite sliko",
+  "artistCreatorConnectWalletToPublishToast": "Povežite denarnico za objavo umetnine.",
+  "artistCreatorSelectCoverImageToast": "Prosimo, izberite naslovno sliko.",
+  "artistCreatorUploadModelToEnableArToast": "Naložite 3D model za omogočanje AR.",
+  "artistCreatorEnterLatLngOrDisableToast": "Vnesite tako zemljepisno širino kot dolžino ali izklopite koordinate.",
+  "artistCreatorInvalidCoordinatesToast": "Koordinate morajo biti veljavne vrednosti zemljepisne širine/dolžine.",
+  "artistCreatorCoverUrlMissingToast": "Nalaganje je uspelo, vendar manjka povezava do naslovne slike.",
+  "artistCreatorSubmittedPendingToast": "Umetnina je poslana. Odgovor strežnika še čaka.",
+  "artistCreatorSuccessTitle": "Uspeh!",
+  "artistCreatorSuccessBody": "Vaša umetnina je bila uspešno ustvarjena!",
+  "artistCreatorViewGalleryButton": "Prikaži galerijo",
+  "artistCreatorCreateFailedToast": "Ustvarjanje umetnine ni uspelo. Poskusite znova.",
+  "artistCreatorHelpTitle": "Ustvarjanje AR označevalca",
+  "artistCreatorHelpBody": "Sledite 4-koraknemu postopku za ustvarjanje AR umetnine:\n\n1. Naloži: Izberite sliko umetnine\n2. Podrobnosti: Vnesite naslov, opis in ceno\n3. Nastavitve: Nastavite lokacijo in funkcije\n4. Pregled: Potrdite in objavite umetnino",
+
+  "artistStudioTitle": "Umetniški studio",
+  "artistStudioHeaderWelcome": "Dobrodošli v vašem studiu",
+  "artistStudioHeaderSubtitle": "Ustvarite AR označevalce za svojo umetnino in jih delite s svetom",
+
+  "artistStudioInstitutionRoleActiveTitle": "Aktivna vloga institucije",
+  "artistStudioInstitutionReviewInProgressTitle": "Pregled institucije v teku",
+  "artistStudioInstitutionRoleActiveDescription": "Institucijski računi lahko vidijo razstave in dogodke, vendar ne morejo vzdrževati umetniških prijav. Za ustvarjanje umetnin uporabite ločeno umetniško denarnico.",
+  "artistStudioInstitutionReviewInProgressDescription": "Imate odprto prijavo za institucijo. Pred preklopom na umetniški pregled jo zaključite ali umaknite.",
+
+  "artistStudioCrossRoleInstitutionBadgeActiveTitle": "Značka institucije je aktivna",
+  "artistStudioCrossRoleInstitutionBadgeActiveDescription": "Institucijski računi odklenejo kuratorstvo in orodja za dogodke. Če potrebujete ustvarjalna orodja, uporabite ločeno umetniško denarnico.",
+  "artistStudioCrossRoleInstitutionReviewInProgressTitle": "Pregled institucije v teku",
+  "artistStudioCrossRoleInstitutionReviewInProgressDescription": "Trenutno imate odprto prijavo za institucijo. Pred prijavo kot umetnik dokončajte postopek ali zahtevajte ponastavitev pregleda.",
+  "artistStudioCrossRoleConflictTitle": "Zaznan konflikt vlog",
+  "artistStudioCrossRoleConflictDescription": "Za to denarnico smo zaznali obstoječ institucijski zapis. Pred prijavo kot umetnik ga počistite v nastavitvah.",
+
+  "artistStudioDaoCardTitle": "Umetniška prijava (DAO)",
+  "artistStudioDaoCardSubtitle": "Predstavite svojo prakso v pregled DAO. Prihodnje izdaje bodo odobritve usmerjale neposredno skozi upravljanje.",
+  "artistStudioDaoStatusApproved": "ODOBRENO",
+  "artistStudioDaoStatusPending": "V OBRAVNAVI",
+  "artistStudioDaoStatusRejected": "ZAVRNJENO",
+  "artistStudioDaoStatusNotApplied": "NI PRIJAVE",
+  "artistStudioStatusSyncedFromDao": "Stanje sinhronizirano iz DAO",
+  "artistStudioReviewPendingInfo": "Vaša prijava je v čakalni vrsti za pregled DAO. Po odločitvi vas bomo obvestili.",
+  "artistStudioReviewApprovedInfo": "Čestitamo! Pregledovalci DAO so vas odobrili.",
+  "artistStudioReviewRejectedInfo": "Vaša zadnja prijava je bila zavrnjena. Lahko jo ponovno oddate z dopolnitvami.",
+  "artistStudioConnectWalletToSubmitForDaoReview": "Povežite denarnico za oddajo v pregled DAO.",
+
+  "artistStudioCtaConnectWalletToApply": "Povežite denarnico za prijavo",
+  "artistStudioCtaApprovedByDao": "Odobreno s strani DAO",
+  "artistStudioCtaPendingDaoReview": "V pregledu DAO",
+  "artistStudioCtaResubmitForReview": "Ponovno oddaj v pregled",
+  "artistStudioCtaApplyForDaoReview": "Prijavi za pregled DAO",
+
+  "artistStudioTabGallery": "Galerija",
+  "artistStudioTabCreate": "Ustvari",
+  "artistStudioTabAnalytics": "Analitika",
+  "artistStudioUnlocksAfterDaoApprovalToast": "Umetniški studio se odklene po odobritvi DAO.",
+
+  "artistStudioSeparateWalletsTip": "Namig: Uporabite ločene denarnice za vloge umetnika in institucije, da se izognete konfliktom pri pregledih DAO.",
+  "artistStudioLockedTitle": "Umetniški studio je zaklenjen",
+  "artistStudioLockedDescription": "Prijavite se v pregled DAO, da odklenete galerijo, orodja za ustvarjanje in analitiko.",
+  "artistStudioSettingsTitle": "Nastavitve studia",
+
+  "artistStudioApplicationModalTitle": "Umetniška prijava",
+  "artistStudioApplicationModalSubtitle": "Delite kratek vpogled v svojo prakso. Prijave se usmerijo v čakalno vrsto za pregled DAO.",
+  "artistStudioApplicationFieldPortfolioLabel": "Portfelj ali spletna stran",
+  "artistStudioApplicationFieldMediumLabel": "Glavni medij ali fokus",
+  "artistStudioApplicationFieldStatementLabel": "Umetniška izjava",
+  "artistStudioApplicationValidationPortfolio": "Prosimo, navedite povezavo do svojega dela",
+  "artistStudioApplicationValidationMedium": "Povejte DAO, kaj ustvarjate",
+  "artistStudioApplicationValidationStatementMinChars": "Delite vsaj {min} znakov o svojem delu",
+  "@artistStudioApplicationValidationStatementMinChars": {
+    "placeholders": {
+      "min": {}
+    }
+  },
+  "artistStudioApplicationWalletRequiredToast": "Pred oddajo v DAO povežite denarnico.",
+  "artistStudioApplicationReviewTitle": "Umetniška prijava",
+  "artistStudioApplicationSubmittedToast": "Prijava je poslana pregledovalcem DAO.",
+  "artistStudioApplicationUnableToSubmitToast": "Trenutno ni mogoče oddati prijave.",
+  "artistStudioApplicationSubmissionFailedToast": "Oddaja ni uspela. Poskusite znova.",
+  "artistStudioApplicationSubmitButton": "Oddaj prijavo",
+
+  "desktopArtistStudioOverviewTitle": "Pregled studia",
+  "desktopArtistStudioQuickActionsTitle": "Hitre akcije",
+  "desktopArtistStudioQuickActionCreateArtworkTitle": "Ustvari umetnino",
+  "desktopArtistStudioQuickActionCreateArtworkSubtitle": "Naložite in izdajte novo umetnino",
+  "desktopArtistStudioQuickActionMyGalleryTitle": "Moja galerija",
+  "desktopArtistStudioQuickActionMyGallerySubtitle": "Prikaži vse umetnine",
+  "desktopArtistStudioQuickActionAnalyticsTitle": "Analitika",
+  "desktopArtistStudioQuickActionAnalyticsSubtitle": "Oglejte si statistiko uspešnosti",
+  "desktopArtistStudioStatisticsTitle": "Statistika studia",
+  "desktopArtistStudioRecentActivityTitle": "Nedavna dejavnost",
+  "desktopArtistStudioNoRecentActivityLabel": "Ni nedavne dejavnosti",
+
+  "desktopArtistStudioVerificationNotAppliedTitle": "Ni prijave",
+  "desktopArtistStudioVerificationNotAppliedDescription": "Prijavite se za preverjanje umetnika",
+  "desktopArtistStudioVerificationLoadingTitle": "Nalagam…",
+  "desktopArtistStudioVerificationLoadingDescription": "Preverjam stanje preverjanja",
+  "desktopArtistStudioVerificationApprovedTitle": "Preverjen umetnik",
+  "desktopArtistStudioVerificationApprovedDescription": "Vaš studio je preverjen",
+  "desktopArtistStudioVerificationPendingTitle": "Pregled v teku",
+  "desktopArtistStudioVerificationPendingDescription": "Prijava je v pregledu",
+  "desktopArtistStudioVerificationRejectedTitle": "Prijava zavrnjena",
+  "desktopArtistStudioVerificationRejectedDescription": "Ponovno oddajte z izboljšavami",
+  "desktopArtistStudioApplyForVerificationButton": "Prijavi za preverjanje",
+
+  "desktopArtistStudioStatArtworks": "Umetnine",
+  "desktopArtistStudioStatViews": "Ogledi",
+  "desktopArtistStudioStatLikes": "Všečki",
+  "desktopArtistStudioStatSales": "Prodaje",
+
+  "commonRemove": "Odstrani",
+  "commonNotAvailableShort": "N/A",
+
+  "marketplaceNetworkLabel": "Omrežje: {network}",
+  "@marketplaceNetworkLabel": {
+    "placeholders": {
+      "network": {}
+    }
+  },
+  "marketplaceWalletLabel": "Denarnica: {wallet}",
+  "@marketplaceWalletLabel": {
+    "placeholders": {
+      "wallet": {}
+    }
+  },
+  "marketplaceConnectWalletTitle": "Povežite denarnico",
+  "marketplaceConnectWalletDescription": "Povežite Solana denarnico za ogled svojih NFT-jev.",
+  "marketplaceEmptyCollectionTitle": "V vaši zbirki ni NFT-jev",
+  "marketplaceEmptyCollectionDescription": "Izdajte NFT-je iz AR umetnin in jih zbirajte tukaj.",
+  "marketplaceExploreArArtButton": "Raziščite AR umetnost",
+  "marketplaceListForSaleButton": "Objavi za prodajo",
+  "marketplaceListForSaleSuccessToast": "NFT je uspešno objavljen za prodajo!",
+  "marketplaceListForSaleFailedToast": "NFT trenutno ni mogoče objaviti za prodajo.",
+  "marketplaceRemoveFromSaleTitle": "Odstrani iz prodaje",
+  "marketplaceRemoveFromSaleConfirmBody": "Želite odstraniti ta NFT s tržnice?",
+  "marketplaceRemoveFromSaleSuccessToast": "NFT je odstranjen iz prodaje.",
+  "marketplaceMintConnectWalletTitle": "Potrebna je denarnica",
+  "marketplaceMintConnectWalletDescription": "Povežite denarnico za izdajo NFT-jev iz AR umetnin.",
+  "marketplaceMintSuccessTitle": "Izdaja je uspela!",
+  "marketplaceMintSuccessDescription": "NFT je uspešno izdan! Ogledate si ga lahko v svoji denarnici.",
+  "marketplaceViewInWalletButton": "Ogled v denarnici",
+  "marketplaceMintFailedTitle": "Izdaja ni uspela",
+  "marketplaceMintFailedDescription": "NFT-ja trenutno ni mogoče izdati. Poskusite znova.",
+
+  "daoModerationApproveLabel": "Odobri",
+  "daoModerationRejectLabel": "Zavrni",
+  "daoModerationSetPendingLabel": "Nastavi kot čakajoče",
+  "daoModerationDecisionDialogTitle": "{decision} prijavo?",
+  "@daoModerationDecisionDialogTitle": {
+    "placeholders": {
+      "decision": {}
+    }
+  },
+  "daoModerationDecisionDialogDescription": "Po želji dodajte opombe pregledovalca za prijavitelja.",
+  "daoModerationReviewerNotesLabel": "Opombe pregledovalca (neobvezno)",
+  "daoModerationDisabledToast": "Moderacija pregledov je onemogočena.",
+  "daoModerationWalletRequiredToast": "Za moderiranje prijav povežite denarnico.",
+  "daoModerationSelfNotAllowedToast": "Svoje prijave ne morete moderirati.",
+  "daoModerationSubmissionApprovedToast": "Prijava odobrena",
+  "daoModerationSubmissionUpdatedToast": "Prijava posodobljena",
+  "daoModerationNoChangesSavedToast": "Spremembe niso shranjene",
+  "daoModerationUpdateFailedToast": "Pregleda trenutno ni mogoče posodobiti.",
+
+  "daoReviewDetailsVotingDisabledForApplicant": "Glasovanje za profil prijavitelja je onemogočeno.",
+  "daoReviewDetailsVotingDisabledForSubmission": "Glasovanje za to prijavo je onemogočeno.",
+  "daoReviewDetailsVotingManagedByDao": "Odločitve o pregledu upravlja DAO postopek.",
+  "daoReviewQueueTitle": "Čakalna vrsta za pregled DAO",
+  "daoReviewVotingHandledByDaoHelper": "Glasovanje poteka neposredno prek DAO; za odločanje uporabite predloge.",
+  "daoReviewCannotVoteOwnSubmissionHelper": "O svoji prijavi ne morete glasovati",
+  "daoReviewVotingDisabledSubmissionHelper": "Glasovanje za to prijavo je onemogočeno",
+  "daoReviewVotingOpensAfterReviewHelper": "Glasovanje se odpre po pregledu",
+  "daoReviewDecisionRecordedHelper": "Odločitev zabeležena: {status}",
+  "@daoReviewDecisionRecordedHelper": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "daoReviewMediumNotProvided": "Medij ni naveden",
+  "daoReviewViewDetailsButton": "Ogled podrobnosti",
+  "daoReviewDetailsDialogTitle": "Pregled prijave",
+  "daoReviewDetailsPortfolioLabel": "Portfelj: {url}",
+  "@daoReviewDetailsPortfolioLabel": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "daoReviewDetailsMediumLabel": "Medij: {medium}",
+  "@daoReviewDetailsMediumLabel": {
+    "placeholders": {
+      "medium": {}
+    }
+  },
+  "daoReviewDetailsStatusLabel": "Status: {status}",
+  "@daoReviewDetailsStatusLabel": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "daoReviewDetailsReviewerNotesLabel": "Opombe pregledovalca:",
+
+  "daoProposalCategoryLabel": "Kategorija",
+  "daoCategoryPlatformUpdate": "Posodobitev platforme",
+  "daoCategoryNewFeature": "Nova funkcija",
+  "daoCategoryPolicyChange": "Sprememba pravil",
+  "daoCategoryTreasuryAllocation": "Dodelitev zakladnice",
+  "daoCategoryCommunityInitiative": "Pobuda skupnosti",
+  "daoCategoryTechnicalImprovement": "Tehnična izboljšava",
+
+  "daoProposalRequirementsTitle": "Zahteve za predlog",
+  "daoProposalRequirementWalletConnected": "Za oddajo je potrebna povezava denarnice",
+  "daoProposalRequirementClearlyDefined": "Predlog mora biti jasno opredeljen",
+  "daoProposalRequirementVotingPeriod": "Obdobje glasovanja: 3–14 dni",
+  "daoProposalRequirementQuorumTargets": "Cilji kvoruma so določeni z nastavitvami DAO",
+
+  "daoProposalFillRequiredFieldsToast": "Prosimo, izpolnite vsa obvezna polja",
+  "daoProposalWalletRequiredToast": "Za oddajo predlogov povežite denarnico.",
+  "daoProposalSubmittedToast": "Predlog je oddan v DAO",
+  "daoProposalSubmitFailedToast": "Predloga trenutno ni mogoče oddati.",
+
+  "daoQuorumReached": "Kvorum dosežen",
+  "daoQuorumPending": "Kvorum ni dosežen",
+
+  "daoVoteWalletRequiredToast": "Pred glasovanjem povežite denarnico",
+  "daoVoteSubmittedYesToast": "Glas ZA oddan",
+  "daoVoteSubmittedNoToast": "Glas PROTI oddan",
+  "daoVoteSubmitFailedToast": "Glasu trenutno ni mogoče oddati.",
+  "daoVoteYesButton": "Glasuj ZA",
+  "daoVoteNoButton": "Glasuj PROTI",
+  "daoProposalVotesYesLabel": "Za: {count}",
+  "@daoProposalVotesYesLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "daoProposalVotesNoLabel": "Proti: {count}",
+  "@daoProposalVotesNoLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "daoProposalVotesAbstainLabel": "Vzdržan: {count}",
+  "@daoProposalVotesAbstainLabel": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+
+  "daoVotingHistoryUnknownProposal": "Neznan predlog",
+  "daoVoteChoiceYes": "Za",
+  "daoVoteChoiceNo": "Proti",
+  "daoVoteChoiceAbstain": "Vzdržan",
+  "daoVotingResultPassing": "Sprejet",
+  "daoVotingResultNotPassing": "Ni sprejet",
+  "daoVotingHistoryYourPowerLabel": "Vaša moč: {power}",
+  "@daoVotingHistoryYourPowerLabel": {
+    "placeholders": {
+      "power": {}
+    }
+  },
+  "daoVotingHistoryEmptyTitle": "Zaenkrat še ni zgodovine glasovanja",
+  "daoVotingHistoryEmptyDescription": "Oddajte svoj prvi glas pri aktivnem predlogu",
+
+  "daoActiveProposalsEmptyTitle": "Ni aktivnih predlogov",
+  "daoActiveProposalsEmptyDescription": "Oddajte predlog ali pregled, da se upravljanje premakne naprej.",
+
+  "daoTreasuryTitle": "Zakladnica DAO",
+  "daoTreasurySubtitle": "Sredstva skupnosti za razvoj platforme",
+  "daoTreasuryInflowLabel": "Priliv",
+  "daoTreasuryOutflowLabel": "Odliv",
+  "daoTreasuryProposalsLabel": "Predlogi",
+
+  "daoRecentTransactionsTitle": "Nedavne transakcije",
+  "daoRecentTransactionsEmptyTitle": "Ni nedavnih transakcij",
+  "daoRecentTransactionsEmptyDescription": "",
+
+  "commonTimeAgoDays": "pred {count} d",
+  "@commonTimeAgoDays": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "commonTimeAgoHours": "pred {count} h",
+  "@commonTimeAgoHours": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "commonTimeAgoMinutes": "pred {count} min",
+  "@commonTimeAgoMinutes": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+
+  "daoTreasuryProposalsEmptyTitle": "Zaenkrat še ni predlogov zakladnice",
+  "daoTreasuryProposalsEmptyDescription": "Ustvarite zahtevek zakladnice za dodelitev KUB8 pobudam.",
+  "daoTreasuryProposalsTitle": "Predlogi zakladnice",
+  "daoCreateProposalButton": "Ustvari predlog",
+
+  "daoVoteDelegationTitle": "Delegiranje glasovanja",
+  "daoVoteDelegationSubtitle": "Delegirajte svojo glasovalno moč zaupanja vrednim članom skupnosti",
+  "daoTopDelegatesTitle": "Najboljši delegati",
+  "daoTopDelegatesEmptyTitle": "Zaenkrat ni delegatov",
+  "daoTopDelegatesEmptyDescription": "Zaenkrat ni registriranih delegatov.",
+  "daoDelegateActiveLabel": "Aktiven",
+  "daoTapToDelegateHint": "Tapnite za delegiranje",
+
+  "daoDelegationActionsTitle": "Dejanja delegiranja",
+  "daoDelegationActionsSubtitle": "Izberite, kako uporabiti svojo glasovalno moč",
+  "daoDelegateToTrustedMembersButton": "Delegiraj zaupanja vrednim članom",
+  "daoSelfDelegateButton": "Samodelegiraj",
+  "daoRevokeButton": "Prekliči",
+
+  "daoDelegateVotingPowerDialogTitle": "Delegiraj glasovalno moč",
+  "daoDelegateVotingPowerDialogBody": "Ali res želite delegirati svojo glasovalno moč {votingPower} delegatu {delegateName}?",
+  "@daoDelegateVotingPowerDialogBody": {
+    "placeholders": {
+      "votingPower": {},
+      "delegateName": {}
+    }
+  },
+  "daoDelegationBenefitsTitle": "Prednosti delegiranja",
+  "daoDelegationBenefitsBody": "• Delegat bo glasoval v vašem imenu\n• Delegiranje lahko kadarkoli prekličete\n• Vaša glasovalna moč ostane vaša",
+  "daoConfirmDelegationButton": "Potrdi delegiranje",
+
+  "daoDelegationSuccessToast": "Glasovalna moč je uspešno delegirana delegatu {delegateName}",
+  "@daoDelegationSuccessToast": {
+    "placeholders": {
+      "delegateName": {}
+    }
+  },
+  "daoViewDelegationDetailsAction": "Ogled podrobnosti",
+
+  "daoDelegationActiveTitle": "Delegiranje je aktivno",
+  "daoDelegationDetailDelegateLabel": "Delegat",
+  "daoDelegationDetailVotingPowerLabel": "Glasovalna moč",
+  "daoDelegationDetailStatusLabel": "Status",
+  "daoDelegationDetailStartedLabel": "Začetek",
+  "daoDelegationStatusActive": "Aktivno",
+  "daoDelegationStartedJustNow": "Pravkar",
+  "daoRevokeDelegationButton": "Prekliči delegiranje",
+  "daoDelegationRevokedToast": "Delegiranje je uspešno preklicano",
+  "daoSelfDelegationEnabledToast": "Samodelegiranje omogočeno",
+
+  "commonPost": "Objava",
+  "commonComments": "Komentarji",
+  "commonLikes": "Všečki",
+  "commonReply": "Odgovori",
+  "commonSend": "Pošlji",
+  "commonYou": "Ti",
+  "commonUnknown": "Neznano",
+  "commonUnnamed": "Brez imena",
+
+  "commonOwner": "Lastnik",
+  "commonJoined": "Pridružen",
+  "commonJoin": "Pridruži se",
+  "commonPublic": "Javno",
+  "commonPrivate": "Zasebno",
+  "commonRefresh": "Osveži",
+  "commonMembersCount": "{count, plural, one{{count} član} two{{count} člana} few{{count} člani} other{{count} članov}}",
+  "@commonMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "commonCommentsCount": "{count, plural, one{{count} komentar} two{{count} komentarja} few{{count} komentarji} other{{count} komentarjev}}",
+  "@commonCommentsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "commonDistanceKmAway": "{value} km stran",
+  "@commonDistanceKmAway": {
+    "placeholders": {
+      "value": {}
+    }
+  },
+
+  "commonTimeAgoWeeks": "pred {count} ted.",
+  "@commonTimeAgoWeeks": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "commonTimeAgoJustNow": "Pravkar",
+
+  "postDetailLoadPostFailedMessage": "Objave ni bilo mogoče naložiti.",
+  "postDetailPostLikedToast": "Objava je všečkana",
+  "postDetailLikeRemovedToast": "Všeček odstranjen",
+  "postDetailUndoLikeFailedToast": "Všečka ni bilo mogoče razveljaviti.",
+  "postDetailUpdateLikeFailedToast": "Všečka ni bilo mogoče posodobiti.",
+  "postDetailRetryLikeFailedToast": "Ponovni poskus ni uspel.",
+
+  "postDetailCommentAddedToast": "Komentar dodan",
+  "postDetailAddCommentFailedToast": "Komentarja ni bilo mogoče dodati.",
+  "postDetailUpdateCommentLikeFailedToast": "Všečka ni bilo mogoče posodobiti.",
+
+  "postDetailLoadLikesFailedMessage": "Všečkov ni bilo mogoče naložiti.",
+  "postDetailNoLikesTitle": "Še ni všečkov",
+  "postDetailNoLikesDescription": "Bodi prvi, ki všečka to",
+
+  "postDetailSharePostTitle": "Deli objavo",
+  "postDetailSearchProfilesHint": "Išči profile…",
+  "postDetailCopyLink": "Kopiraj povezavo",
+  "postDetailLinkCopiedToast": "Povezava kopirana v odložišče",
+  "postDetailShareViaEllipsis": "Deli prek…",
+  "postDetailNoProfilesFoundTitle": "Profilov ni bilo mogoče najti",
+  "postDetailNoProfilesFoundDescription": "Poskusi z drugim iskalnim izrazom",
+  "postDetailShareDmDefaultMessage": "Oglej si to objavo!",
+  "postDetailShareSuccessToast": "Objava deljena z @{username}",
+  "@postDetailShareSuccessToast": {
+    "placeholders": {
+      "username": {}
+    }
+  },
+  "postDetailShareFailedToast": "Deljenje ni uspelo.",
+
+  "postDetailRepostTitle": "Ponovno objavi",
+  "postDetailRepostButton": "Ponovno objavi",
+  "postDetailRepostSuccessToast": "Ponovno objavljeno!",
+  "postDetailRepostWithCommentSuccessToast": "Ponovno objavljeno s komentarjem!",
+  "postDetailRepostFailedToast": "Ponovna objava ni uspela.",
+  "postDetailRepostThoughtsHint": "Dodaj svoje misli (neobvezno)…",
+  "postDetailRepostingLabel": "Ponovno objavljaš:",
+
+  "postDetailNoCommentsTitle": "Še ni komentarjev",
+  "postDetailNoCommentsDescription": "Bodi prvi, ki začne pogovor",
+  "postDetailReplyingToLabel": "Odgovarjaš uporabniku {author}",
+  "@postDetailReplyingToLabel": {
+    "placeholders": {
+      "author": {}
+    }
+  },
+  "postDetailWriteCommentHint": "Napiši komentar…",
+
+  "communityGroupsRefreshFailedToast": "Skupin ni bilo mogoče osvežiti.",
+  "communityGroupMembershipUpdateFailedToast": "Članstva ni bilo mogoče posodobiti.",
+  "communityGroupNoDescription": "Opis ni na voljo.",
+  "communityGroupLatestPostLabel": "Zadnja objava",
+  "communityOpenGroupFeedButton": "Odpri vir skupine",
+
+  "communityLocationEnableServicesToast": "Vključite lokacijske storitve, da lahko priložite lokacijo.",
+  "communityLocationPermissionRequiredToast": "Za to dejanje je potrebno dovoljenje za lokacijo.",
+  "communityLocationUnableToDetermineToast": "Lokacije ni mogoče določiti.",
+  "communityLocationUnableToAccessToast": "Do lokacije ni mogoče dostopati.",
+
+  "communityArtFeedLocationPermissionRequiredError": "Za umetniški vir je potrebno dovoljenje za lokacijo.",
+  "communityArtFeedLoadFailedError": "Umetniškega vira ni mogoče naložiti.",
+  "communityArtFeedLoadFailedToast": "Umetniškega vira trenutno ni mogoče naložiti.",
+
+  "communityFollowingFeedUnavailableToast": "Vir Spremljam ni na voljo. Poskusite znova pozneje.",
+  "communityDiscoverFeedUnavailableToast": "Vir Odkrij ni na voljo. Poskusite znova pozneje.",
+
+  "communityScreenTitle": "Poveži se",
+  "communityFollowingTab": "Spremljam",
+  "communityDiscoverTab": "Odkrij",
+  "communityGroupsTab": "Skupine",
+  "communityArtTab": "Umetnost",
+
+  "communityFeedEmptyTitle": "Še ni objav",
+  "communityFeedEmptyDescription": "Spremljajte ustvarjalce, da boste tukaj videli njihove objave.",
+  "communityDiscoverEmptyTitle": "Za zdaj ni nič za odkriti",
+  "communityDiscoverEmptyDescription": "Kmalu preverite znova za nove objave.",
+  "communityNewPostsBanner": "Pokaži {count, plural, =1{1 novo objavo} other{{count} novih objav}}",
+  "@communityNewPostsBanner": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+
+  "communityGroupsEmptyTitle": "Še ni skupin",
+  "communityGroupsEmptyDescription": "Ustvarite skupino ali se pridružite obstoječi, da začnete sodelovati.",
+  "communityGroupsEmptySearchDescription": "Ni skupin za \"{query}\".",
+  "@communityGroupsEmptySearchDescription": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "communityGroupsEndOfDirectory": "Konec imenika",
+  "communityGroupsSearchHint": "Išči skupine",
+  "communityClearSearchTooltip": "Počisti iskanje",
+
+  "communityFabNewPost": "Nova objava",
+  "communityFabCreateGroup": "Ustvari skupino",
+  "communityFabGroupPost": "Objava v skupini",
+  "communityFabArtDrop": "Art drop",
+  "communityFabPostReview": "Ocena umetnine",
+
+  "communityCreateGroupTitle": "Ustvari skupino",
+  "communityCreateGroupNameLabel": "Ime skupine",
+  "communityCreateGroupNameHint": "npr. Ljubljana creators",
+  "communityCreateGroupDescriptionLabel": "Opis",
+  "communityCreateGroupDescriptionHint": "O čem je ta skupina?",
+  "communityCreateGroupPublicLabel": "Javna skupina",
+  "communityCreateGroupPublicHint": "Vsak se lahko pridruži in vidi objave.",
+  "communityCreateGroupPrivateHint": "Člani se pridružijo z vabilom.",
+  "communityCreateGroupButton": "Ustvari skupino",
+  "communityCreateGroupFailedToast": "Skupine trenutno ni mogoče ustvariti.",
+  "communityGroupCreatedToast": "Skupina \"{name}\" je ustvarjena.",
+  "@communityGroupCreatedToast": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+
+  "communityViewPostButton": "Odpri objavo",
+
+  "communitySearchTypeProfiles": "Profili",
+  "communitySearchTypeArtworks": "Umetnine",
+  "communitySearchTypeInstitutions": "Institucije",
+  "communitySearchTypeScreens": "Zasloni",
+  "communitySearchTypePosts": "Objave",
+  "communitySearchHintProfiles": "Išči ljudi…",
+  "communitySearchHintArtworks": "Išči umetnine…",
+  "communitySearchHintInstitutions": "Išči institucije…",
+  "communitySearchHintScreens": "Išči zaslone…",
+  "communitySearchHintPosts": "Išči objave…",
+  "communitySearchEmptyStartTyping": "Začnite tipkati za iskanje",
+  "communitySearchEmptyNoResults": "Ni rezultatov",
+
+  "communitySearchSheetHintTags": "Išči oznake…",
+  "communitySearchSheetHintProfiles": "Išči uporabnike po imenu ali @uporabniškem…",
+  "communitySearchSheetHintArtworks": "Išči umetnine…",
+  "communitySearchSheetHintDefault": "Išči…",
+
+  "communityComposerTitle": "Sestavi",
+  "communityComposerTextHint": "Deli, kaj ustvarjaš, odkrivaš ali aktiviraš…",
+  "communityComposerTargetGroupLabel": "Ciljna skupina",
+  "communityComposerGroupOptionalHelper": "Neobvezno • Pridruži se skupini za dostop do kuratorskih klepetov.",
+  "communityComposerPostingInGroupHelper": "Objavljaš v {groupName}. Tapni za spremembo ali odstranitev.",
+  "@communityComposerPostingInGroupHelper": {
+    "placeholders": {
+      "groupName": {}
+    }
+  },
+  "communityComposerRemoveGroupTooltip": "Odstrani skupino",
+
+  "communityComposerLinkArtworkTitle": "Poveži umetnino",
+  "communityComposerLinkArtworkDescription": "Izberi umetnino, ki jo želiš priložiti objavi.",
+  "communityComposerArtworkAttachedDescription": "Priložena umetnina: {title}",
+  "@communityComposerArtworkAttachedDescription": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "communityComposerRemoveArtworkTooltip": "Odstrani umetnino",
+  "communityComposerAttachCurrentLocationButton": "Priloži trenutno lokacijo",
+  "communityComposerAttachedLocationLabel": "Priložena lokacija",
+  "communityComposerRemoveLocationTooltip": "Odstrani lokacijo",
+
+  "communityBookmarkAddedToast": "Objava shranjena!",
+  "communityBookmarkRemovedToast": "Zaznamek odstranjen!",
+  "communityBookmarkUpdateFailedToast": "Zaznamka ni bilo mogoče posodobiti.",
+
+  "communityComposerCategoryPostLabel": "Objava",
+  "communityComposerCategoryPostDescription": "Deli posodobitev s skupnostjo",
+  "communityComposerCategoryArtDropLabel": "Art drop",
+  "communityComposerCategoryArtDropDescription": "Deli novo umetnino ali kolekcijo",
+  "communityComposerCategoryArtReviewLabel": "Ocena umetnine",
+  "communityComposerCategoryArtReviewDescription": "Deli oceno ali kritiko",
+  "communityComposerCategoryEventLabel": "Dogodek",
+  "communityComposerCategoryEventDescription": "Napovej dogodek ali srečanje",
+  "communityComposerCategoryQuestionLabel": "Vprašanje",
+  "communityComposerCategoryQuestionDescription": "Vprašaj skupnost",
+
+  "communityGroupFeedEmptyTitle": "Še ni objav v tej skupini",
+  "communityGroupFeedEmptyDescription": "Bodi prvi, ki začne pogovor.",
+  "communityGroupFeedShareText": "Oglej si objavo uporabnika {authorName} v skupini {groupName} na art.kubus.",
+  "@communityGroupFeedShareText": {
+    "placeholders": {
+      "authorName": {},
+      "groupName": {}
+    }
+  },
+
+  "communityArtFeedHeaderTitle": "Umetniški vir",
+  "communityArtFeedRadiusSubtitle": "Radij: {radius}",
+  "@communityArtFeedRadiusSubtitle": {
+    "placeholders": {
+      "radius": {}
+    }
+  },
+  "communityArtFeedCenterSubtitle": "Središče: {lat}, {lng}",
+  "@communityArtFeedCenterSubtitle": {
+    "placeholders": {
+      "lat": {},
+      "lng": {}
+    }
+  },
+  "communityArtFeedEnablePreciseLocationHint": "Omogočite natančno lokacijo za boljše rezultate.",
+  "communityArtFeedLocationNeededTitle": "Potrebna je lokacija",
+  "communityArtFeedLocationNeededDescription": "Omogočite lokacijo za ogled aktivacij v bližini.",
+  "communityArtFeedNoNearbyActivationsTitle": "Ni aktivacij v bližini",
+  "communityArtFeedNoNearbyActivationsDescription": "Poskusite osvežiti lokacijo ali povečati radij.",
+  "communityArtFeedRefreshLocationButton": "Osveži lokacijo",
+  "communityArtFeedAboutTitle": "O umetniškem viru",
+  "communityArtFeedAboutBody": "Umetniški vir prikazuje lokacijske aktivacije, ki jih delijo člani skupnosti v vaši bližini.",
+  "communityArtFeedAboutButton": "O tem",
+  "communityArtFeedShareText": "Oglejte si aktivacijo uporabnika {authorName} na art.kubus.",
+  "@communityArtFeedShareText": {
+    "placeholders": {
+      "authorName": {}
+    }
+  },
+
+  "communityNameThisPlaceTitle": "Poimenuj ta kraj",
+  "communityNamePlaceHint": "npr. Mestni park",
+
+  "communityConnectWalletFirstToast": "Najprej povežite denarnico.",
+  "communityUnableToAuthenticateToast": "Overitev ni uspela. Poskusite znova.",
+  "communityComposerAddContentToast": "Dodajte besedilo, sliko ali video.",
+  "communityComposerSharedInGroupToast": "Objavljeno v {groupName}",
+  "@communityComposerSharedInGroupToast": {
+    "placeholders": {
+      "groupName": {}
+    }
+  },
+  "communityGroupFallbackName": "tej skupini",
+  "communityComposerPostCreatedToast": "Objava ustvarjena",
+  "communityComposerCreatePostFailedToast": "Objave ni bilo mogoče ustvariti.",
+  "communityToggleLikeFailedToast": "Všečka ni bilo mogoče posodobiti.",
+
+  "communityPostLikesTitle": "Všečki objave",
+  "communityCommentLikesTitle": "Všečki komentarja",
+
+  "communityReplyingToCommentLabel": "Odgovarjate…",
+  "communityCommentAuthRequiredToast": "Za komentiranje se prijavite.",
+
+  "communityRepostsLoadFailedMessage": "Ponovnih objav ni bilo mogoče naložiti.",
+  "communityNoRepostsTitle": "Še ni ponovnih objav",
+  "communityNoRepostsDescription": "Bodi prvi, ki ponovno objavi to",
+
+  "communityUnrepostAction": "Prekliči ponovno objavo",
+  "communityUnrepostTitle": "Odstranim ponovno objavo?",
+  "communityUnrepostConfirmBody": "Želite odstraniti svojo ponovno objavo te objave?",
+  "communityRepostRemovedToast": "Ponovna objava odstranjena",
+  "communityUnrepostFailedToast": "Ponovne objave ni bilo mogoče odstraniti.",
+
+  "commonSomethingWentWrong": "Nekaj je šlo narobe.",
+
+  "commonGreetingMorning": "Dobro jutro",
+  "commonGreetingAfternoon": "Dober dan",
+  "commonGreetingEvening": "Dober večer",
+
+  "commonWeekdayMonShort": "Pon",
+  "commonWeekdayTueShort": "Tor",
+  "commonWeekdayWedShort": "Sre",
+  "commonWeekdayThuShort": "Čet",
+  "commonWeekdayFriShort": "Pet",
+  "commonWeekdaySatShort": "Sob",
+  "commonWeekdaySunShort": "Ned",
+
+  "commonIosLabel": "iOS",
+  "commonAndroidLabel": "Android",
+
+  "downloadAppCouldNotOpenStoreToast": "Trgovine ni bilo mogoče odpreti. Obiščite: {url}",
+  "@downloadAppCouldNotOpenStoreToast": {
+    "placeholders": {
+      "url": {}
+    }
+  },
+  "downloadAppDefaultFeatureName": "AR funkcije",
+  "downloadAppExperienceInArTitle": "Doživite {featureName} v AR",
+  "@downloadAppExperienceInArTitle": {
+    "placeholders": {
+      "featureName": {}
+    }
+  },
+  "downloadAppDefaultDescription": "Za najboljšo AR izkušnjo uporabite mobilno aplikacijo.",
+  "downloadAppFeatureViewInAr": "Ogled umetnin v AR",
+  "downloadAppFeatureScanArtworks": "Skenirajte umetnine",
+  "downloadAppFeatureInteractive3d": "Interaktivni 3D modeli",
+  "downloadAppFeatureLocationDiscovery": "Odkrijte glede na lokacijo",
+  "downloadAppDownloadForLabel": "Prenesi za:",
+  "downloadAppScanQrTitle": "Skenirajte QR kodo",
+  "downloadAppScanQrSubtitle": "Odprite to stran na telefonu za prenos aplikacije.",
+  "downloadAppContinueBrowsingButton": "Nadaljuj brskanje",
+
+  "homeDefaultDisplayName": "prijatelj",
+  "homeWelcomeSubtitle": "Ste pripravljeni danes odkriti novo umetnost?",
+  "homeExploreWeb3Button": "Razišči Web3",
+
+  "homeQuickActionsTitle": "Hitra dejanja",
+  "homeRecentlyUsedLabel": "Nedavno uporabljeno",
+  "homeQuickActionsEmptyDescription": "Bližnjice se bodo prikazale tukaj, ko boste uporabljali aplikacijo.",
+
+  "homeYourStatsTitle": "Vaša statistika",
+  "homeNoStatsAvailableTitle": "Še ni statistike",
+  "homeNoStatsAvailableDescription": "Pozneje preverite svojo statistiko aktivnosti.",
+
+  "homeStatArtworks": "Umetnine",
+  "homeStatFollowers": "Sledilci",
+  "homeStatViews": "Ogledi",
+
+  "homeStatsDialogTitle": "Podrobnosti za {statName}",
+  "@homeStatsDialogTitle": {
+    "placeholders": {
+      "statName": {}
+    }
+  },
+  "homeStatsTrendTitle": "Trend za {statName}",
+  "@homeStatsTrendTitle": {
+    "placeholders": {
+      "statName": {}
+    }
+  },
+  "homeViewAdvancedButton": "Napredno",
+  "homeRecentMilestonesTitle": "Nedavni mejniki",
+  "homeStatsNoMilestonesYet": "Še ni mejnikov",
+
+  "homeStatsMilestoneArtworks1": "Prva ustvarjena umetnina",
+  "homeStatsMilestoneArtworks2": "5 ustvarjenih umetnin",
+  "homeStatsMilestoneArtworks3": "10 ustvarjenih umetnin",
+  "homeStatsMilestoneFollowers1": "Prvi sledilec",
+  "homeStatsMilestoneFollowers2": "10 sledilcev",
+  "homeStatsMilestoneFollowers3": "50 sledilcev",
+  "homeStatsMilestoneViews1": "100 ogledov",
+  "homeStatsMilestoneViews2": "500 ogledov",
+  "homeStatsMilestoneViews3": "1.000 ogledov",
+
+  "homeRecentActivityTitle": "Nedavna aktivnost",
+  "homeNoRecentActivityTitle": "Ni nedavne aktivnosti",
+  "homeNoRecentActivityDescription": "Vaša nedavna dejanja se bodo prikazala tukaj.",
+  "homeUnableToLoadActivityTitle": "Aktivnosti ni mogoče naložiti",
+
+  "homeFeaturedArtworksTitle": "Izbrane umetnine",
+  "homeNoFeaturedArtworksTitle": "Ni izbranih umetnin",
+  "homeNoFeaturedArtworksDescription": "Kmalu se vrnite po skrbno izbrane predloge.",
+
+  "homeActivityTitle": "Aktivnost",
+
+  "homeMarkAllReadButton": "Označi vse kot prebrano",
+  "homeUnableToLoadNotificationsTitle": "Obvestil ni mogoče naložiti",
+  "homeNoNotificationsTitle": "Ni obvestil",
+  "homeAllCaughtUpDescription": "Vse je pregledano.",
+
+  "homeMockNotificationNewArtworkTitle": "Dodana nova umetnina",
+  "homeMockNotificationNewArtworkBody": "V galerijo je bila dodana nova umetnina.",
+  "homeMockNotificationCommunityTitle": "Posodobitev skupnosti",
+  "homeMockNotificationCommunityBody": "V skupnosti vas čakajo nove objave.",
+  "homeMockNotificationRewardsTitle": "Na voljo so nagrade",
+  "homeMockNotificationRewardsBody": "Na voljo imate nove nagrade za prevzem.",
+
+  "commonExplore": "Razišči",
+
+  "commonNoSuggestions": "Ni predlogov",
+  "commonArShort": "AR",
+
+  "desktopHomeWelcomeFallbackName": "Dobrodošli v art.kubus",
+  "desktopHomeDiscoverArtTitle": "Odkrijte umetnost okoli sebe",
+  "desktopHomeDiscoverArtDescription": "Raziskujte poglobljena dela v obogateni resničnosti, povežite se z ustvarjalci in zaslužite žetone KUB8 za odkrivanje umetnosti.",
+  "desktopHomeYourActivityTitle": "Vaša aktivnost",
+  "desktopHomeYourActivitySubtitle": "Spremljajte svoj napredek in sodelovanje",
+  "desktopHomeStatArtworksDiscovered": "Odkrita dela",
+  "desktopHomeStatArSessions": "AR seje",
+  "desktopHomeStatNftsCollected": "Zbrani NFT-ji",
+  "desktopHomeStatKub8Earned": "Prisluženi KUB8",
+  "desktopHomeQuickActionsSubtitle": "Na podlagi vaših nedavnih obiskov",
+  "desktopHomeQuickActionsEmptySubtitle": "Začnite raziskovati, da se tu prikažejo nedavni zasloni",
+  "desktopHomeQuickActionsEmptyTitle": "Za zdaj ni nedavnih obiskov",
+  "desktopHomeQuickActionsEmptyDescription": "Pojdite na različne zaslone in prikazali se bodo tukaj za hiter dostop. Kartice izginejo po 24 urah neaktivnosti.",
+  "desktopHomeFeaturedArtworksSubtitle": "Odkrijte priljubljeno AR umetnost",
+  "desktopHomeWeb3HubTitle": "Web3 središče",
+  "desktopHomeWeb3HubSubtitle": "Dostop do decentraliziranih funkcij",
+  "desktopHomeTrendingArtTitle": "Priljubljena umetnost",
+  "desktopHomeTrendingArtLoadFailed": "Priljubljene umetnosti ni mogoče naložiti.",
+  "desktopHomeTrendingArtEmpty": "Priljubljena dela se bodo prikazala tukaj",
+  "desktopHomeTopCreatorsTitle": "Naj ustvarjalci",
+  "desktopHomeTopCreatorsLoadFailed": "Ustvarjalcev ni mogoče naložiti.",
+  "desktopHomeTopCreatorsEmpty": "Naj ustvarjalci se bodo prikazali tukaj",
+  "desktopHomeCreatorFallbackName": "Ustvarjalec",
+  "desktopHomePostsCount": "{count, plural, one{1 objava} two{2 objavi} few{{count} objave} other{{count} objav}}",
+  "@desktopHomePostsCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "desktopHomePlatformStatsTitle": "Statistika platforme",
+  "desktopHomePlatformStatsLoadFailed": "Statistike skupnosti ni mogoče naložiti.",
+  "desktopHomePlatformStatsTotalArtworks": "Skupaj del",
+  "desktopHomePlatformStatsArEnabled": "AR omogočeno",
+  "desktopHomePlatformStatsCommunityPosts": "Objave skupnosti",
+  "desktopHomePlatformStatsActiveGroups": "Aktivne skupine",
+  "desktopHomeUnreadNotificationsLabel": "neprebrana obvestila",
+
+  "homeWeb3SectionTitle": "Web3",
+  "homeAccountRequiredLabel": "Potrebna denarnica",
+  "homeWeb3DaoTitle": "DAO",
+  "homeWeb3DaoSubtitle": "Upravljanje in glasovanje",
+  "homeWeb3ArtistTitle": "Umetniški studio",
+  "homeWeb3ArtistSubtitle": "Mintanje in upravljanje",
+  "homeWeb3InstitutionTitle": "Institucije",
+  "homeWeb3InstitutionSubtitle": "Dogodki in zbirke",
+  "homeWeb3MarketplaceTitle": "Tržnica",
+  "homeWeb3MarketplaceSubtitle": "Odkrij in trguj",
+
+  "homeMockNotificationFriendRequestTitle": "Nova prošnja za prijateljstvo",
+  "homeMockNotificationFriendRequestBody": "Nekdo vam je poslal prošnjo za prijateljstvo.",
+  "homeMockNotificationFeaturedTitle": "Danes izpostavljeno",
+  "homeMockNotificationFeaturedBody": "Oglejte si današnjo izbrano umetnino.",
+
+  "commonReset": "Ponastavi",
+
+  "onboardingResetToolTitle": "Orodje za ponastavitev uvajanja",
+  "onboardingResetDialogTitle": "Ponastavi uvajanje",
+  "onboardingResetDialogBody": "To bo ponastavilo vse zastavice uvajanja. Aplikacija bo ob naslednjem zagonu prikazala uvajalne zaslone.\n\nNadaljujem?",
+  "onboardingResetSnackBarMessage": "Stanje uvajanja je ponastavljeno! Znova zaženite aplikacijo, da se prikaže uvajanje.",
+  "onboardingResetDeveloperToolTitle": "Razvijalsko orodje",
+  "onboardingResetDeveloperToolDescription": "To orodje prikazuje trenutno stanje uvajanja in omogoča ponastavitev za testiranje.",
+  "onboardingResetCurrentStateTitle": "Trenutno stanje uvajanja",
+  "onboardingResetConfigSettingsTitle": "Nastavitve konfiguracije",
+  "onboardingResetButtonLabel": "Ponastavi stanje uvajanja",
+  "onboardingResetHowToTestTitle": "Kako testirati",
+  "onboardingResetHowToTestSteps": "1. Tapnite »Ponastavi stanje uvajanja«\n2. Znova zaženite aplikacijo (zaprite in ponovno odprite)\n3. Uvajanje se mora prikazati ob zagonu",
+
+  "season0BannerTitle": "Sezona 0, Ljubljana (beta)",
+  "season0BannerTap": "Več o programu lansiranja",
+  "season0ScreenTitle": "Sezona 0",
+  "season0ScreenSubtitle": "Beta zagon v Ljubljani",
+  "season0ScreenDescription": "Pridružite se ustanovnemu programu art.kubus v Ljubljani. Prijavite se kot umetnik ali institucija in soustvarjajte prvo sezono platforme.",
+  "season0ApplyArtistCta": "Prijava kot umetnik",
+  "season0ApplyArtistSubtitle": "Pridruži se kot ustvarjalec ali kolektiv",
+  "season0ApplyInstitutionCta": "Prijava kot institucija",
+  "season0ApplyInstitutionSubtitle": "Registriraj svojo galerijo ali prostor",
+  "season0NewsletterCta": "Naroči se na novice",
+  "season0NewsletterSubtitle": "Prejemaj novice o napredku in dogodkih",
+  "season0PointsLabel": "KUB8 točke",
+  "season0PointsTooltip": "Izvenveržni žetoni napredka",
+  "season0OnChainNote": "Veržne funkcije so na voljo v Labs"
+}

@@ -47,6 +47,7 @@ class ArtMarker {
 
   // Metadata
   final Map<String, dynamic>? metadata;
+  final List<ExhibitionSummaryDto> exhibitionSummaries;
   final List<String> tags;
   final DateTime createdAt;
   final String createdBy;
@@ -76,6 +77,7 @@ class ArtMarker {
     this.enablePhysics = false,
     this.enableInteraction = true,
     this.metadata,
+    this.exhibitionSummaries = const <ExhibitionSummaryDto>[],
     this.tags = const [],
     required this.createdAt,
     required this.createdBy,
@@ -186,6 +188,7 @@ class ArtMarker {
       'enablePhysics': enablePhysics,
       'enableInteraction': enableInteraction,
       'metadata': metadata,
+      'exhibitionSummaries': exhibitionSummaries.map((e) => e.toJson()).toList(growable: false),
       'tags': tags,
       'category': category,
       'createdAt': createdAt.toIso8601String(),
@@ -201,6 +204,7 @@ class ArtMarker {
   /// Create from Map (from storage/API)
   factory ArtMarker.fromMap(Map<String, dynamic> map) {
     final metadata = _normalizeMetadata(map['metadata']);
+    final exhibitionSummaries = _parseExhibitionSummaries(map, metadata);
     final markerType = _parseMarkerType(
       map['markerType'] ?? map['type'] ?? map['category'],
       metadata,
@@ -230,6 +234,7 @@ class ArtMarker {
       enablePhysics: _parseBool(map['enablePhysics'], false),
       enableInteraction: _parseBool(map['enableInteraction'], true),
       metadata: metadata,
+      exhibitionSummaries: exhibitionSummaries,
       tags: List<String>.from(map['tags'] ?? const []),
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
       createdBy: map['createdBy']?.toString() ?? 'system',
@@ -260,6 +265,7 @@ class ArtMarker {
     bool? enablePhysics,
     bool? enableInteraction,
     Map<String, dynamic>? metadata,
+    List<ExhibitionSummaryDto>? exhibitionSummaries,
     List<String>? tags,
     DateTime? createdAt,
     String? createdBy,
@@ -287,6 +293,7 @@ class ArtMarker {
       enablePhysics: enablePhysics ?? this.enablePhysics,
       enableInteraction: enableInteraction ?? this.enableInteraction,
       metadata: metadata ?? this.metadata,
+      exhibitionSummaries: exhibitionSummaries ?? this.exhibitionSummaries,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       createdBy: createdBy ?? this.createdBy,
@@ -399,4 +406,68 @@ class ArtMarker {
     }
     return metadata;
   }
+
+  ExhibitionSummaryDto? get primaryExhibitionSummary {
+    if (exhibitionSummaries.isEmpty) return null;
+    return exhibitionSummaries.first;
+  }
+}
+
+/// Lightweight summary for exhibition linkage on markers.
+///
+/// This is intentionally small to avoid coupling map marker payloads to the
+/// full Exhibition model.
+class ExhibitionSummaryDto {
+  final String id;
+  final String? title;
+
+  const ExhibitionSummaryDto({
+    required this.id,
+    this.title,
+  });
+
+  factory ExhibitionSummaryDto.fromJson(Map<String, dynamic> json) {
+    return ExhibitionSummaryDto(
+      id: (json['id'] ?? json['exhibitionId'] ?? json['exhibition_id'] ?? '').toString(),
+      title: (json['title'] ?? json['name'] ?? json['label'])?.toString(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      if (title != null) 'title': title,
+    };
+  }
+}
+
+List<ExhibitionSummaryDto> _parseExhibitionSummaries(
+  Map<String, dynamic> map,
+  Map<String, dynamic>? normalizedMetadata,
+) {
+  dynamic raw = map['exhibitionSummaries'] ?? map['exhibition_summaries'];
+
+  if (raw == null && normalizedMetadata != null) {
+    raw = normalizedMetadata['exhibitionSummaries'] ??
+        normalizedMetadata['exhibition_summaries'] ??
+        normalizedMetadata['exhibitions'];
+  }
+
+  if (raw is List) {
+    return raw
+        .whereType<Map>()
+      .map((e) => Map<String, dynamic>.from(e))
+        .map(ExhibitionSummaryDto.fromJson)
+        .where((e) => e.id.trim().isNotEmpty)
+        .toList(growable: false);
+  }
+
+  // Support single-object shape.
+  if (raw is Map) {
+    final dto = ExhibitionSummaryDto.fromJson(Map<String, dynamic>.from(raw));
+    if (dto.id.trim().isEmpty) return const <ExhibitionSummaryDto>[];
+    return <ExhibitionSummaryDto>[dto];
+  }
+
+  return const <ExhibitionSummaryDto>[];
 }

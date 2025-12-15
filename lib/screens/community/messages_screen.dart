@@ -19,6 +19,7 @@ import 'package:file_picker/file_picker.dart';
 import '../../services/event_bus.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -424,10 +425,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(context).pop()),
-        title: const Text('Messages'),
+        title: Text(l10n.messagesTitle),
       ),
       body: Consumer<ChatProvider>(
         builder: (context, cp, _) {
@@ -438,10 +440,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
                 child: EmptyStateCard(
                   icon: Icons.chat_bubble_outline,
-                  title: 'No conversations',
-                  description: 'Start a conversation using the chat button below.',
+                  title: l10n.messagesEmptyNoConversationsTitle,
+                  description: l10n.messagesEmptyNoConversationsDescription,
                   showAction: true,
-                  actionLabel: 'Start a chat',
+                  actionLabel: l10n.messagesEmptyStartChatAction,
                   onAction: () async {
                     final result = await showDialog<Map<String, dynamic>>(context: context, builder: (ctx) => _CreateConversationDialog());
                     if (!mounted) return;
@@ -522,12 +524,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   leading = AvatarWidget(avatarUrl: sanitizedFallback, wallet: otherWallet, radius: 20, isLoading: isLoading, allowFabricatedFallback: false);
                 } else {
                   // No wallet available: render initials locally to avoid network call
-                  final name = c.title ?? (c.isGroup ? 'Group' : c.title ?? 'Conversation');
+                  final name = c.title ?? (c.isGroup ? l10n.messagesFallbackGroupTitle : c.title ?? l10n.messagesFallbackConversationTitle);
                   final parts = name.trim().split(RegExp(r'\s+'));
                   final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
                   final isLoading = (_conversationNames[c.id] == null || _conversationNames[c.id]!.isEmpty) && (_convToWalletList[c.id]?.isNotEmpty ?? false);
                   leading = Stack(alignment: Alignment.center, children: [
-                    CircleAvatar(child: Text(initials.isNotEmpty ? initials : 'C')),
+                    CircleAvatar(child: Text(initials.isNotEmpty ? initials : l10n.messagesFallbackConversationInitial)),
                     if (isLoading) SizedBox(width: 20, height: 20, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: 4.0, duration: Duration(milliseconds: 700)))
                   ]);
                 }
@@ -549,16 +551,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     if (persisted != null && persisted.name.isNotEmpty) titleText = persisted.name;
                   }
                 }
-                if (titleText.isEmpty) titleText = c.isGroup ? 'Group' : (_conversationNames[c.id] ?? 'Conversation');
+                if (titleText.isEmpty) {
+                  titleText = c.isGroup
+                      ? l10n.messagesFallbackGroupTitle
+                      : (_conversationNames[c.id] ?? l10n.messagesFallbackConversationTitle);
+                }
               }
               Widget titleWidget;
-              if ((titleText.isEmpty || titleText == 'Conversation') && _convToWalletList[c.id]?.isNotEmpty == true) {
+              if ((titleText.isEmpty || titleText == l10n.messagesFallbackConversationTitle) && _convToWalletList[c.id]?.isNotEmpty == true) {
                 final first = memberWallets.isNotEmpty ? memberWallets.first : '';
                 final cached = cp.getCachedUser(first);
                 if (cached == null && (_conversationNames[c.id] == null || _conversationNames[c.id]!.isEmpty)) {
                   titleWidget = SizedBox(height: 16, width: 120, child: InlineLoading(expand: true, borderRadius: BorderRadius.circular(6), tileSize: 6.0));
                 } else {
-                  titleWidget = Text(titleText.isNotEmpty ? titleText : 'Conversation');
+                  titleWidget = Text(titleText.isNotEmpty ? titleText : l10n.messagesFallbackConversationTitle);
                 }
               } else {
                 titleWidget = Text(titleText);
@@ -659,7 +665,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     }
                   }
 
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   ConversationNavigator.openConversationWithPreload(
                     context,
                     c,
@@ -803,14 +809,21 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('Create Conversation'),
+      title: Text(l10n.messagesCreateConversationTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title (optional)')),
+          TextField(
+            controller: _title,
+            decoration: InputDecoration(labelText: l10n.messagesCreateConversationTitleOptionalLabel),
+          ),
           Wrap(children: _memberList.map((m) => Chip(label: Text(m), onDeleted: () => setState(() => _memberList.remove(m)))).toList()),
-          TextField(controller: _members, decoration: const InputDecoration(labelText: 'Members (username or wallet)'), onChanged: (v) async {
+          TextField(
+            controller: _members,
+            decoration: InputDecoration(labelText: l10n.messagesCreateConversationMembersLabel),
+            onChanged: (v) async {
             if (v.trim().isEmpty) {
               setState(() => _memberSuggestions.clear());
               return;
@@ -846,7 +859,8 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             } catch (e) {
               debugPrint('CreateConversationDialog: profile search error: $e');
             }
-          }),
+          },
+          ),
               if (_memberSuggestions.isNotEmpty) SizedBox(
                 height: 200,
                 child: ListView.builder(
@@ -868,7 +882,7 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
                 ),
               ),
           Row(children: [
-            ElevatedButton.icon(icon: Icon(Icons.upload_file), label: Text('Group avatar (optional)'), onPressed: () async {
+            ElevatedButton.icon(icon: Icon(Icons.upload_file), label: Text(l10n.messagesCreateConversationGroupAvatarOptionalLabel), onPressed: () async {
                 try {
                   final result = await FilePicker.platform.pickFiles(withData: true);
                   if (!mounted) return;
@@ -881,12 +895,12 @@ class _CreateConversationDialogState extends State<_CreateConversationDialog> {
             const SizedBox(width: 8),
             if (_avatarBytes != null) CircleAvatar(backgroundImage: MemoryImage(_avatarBytes!))
           ]),
-          SwitchListTile(value: _isGroup, onChanged: (v) => setState(() => _isGroup = v), title: const Text('Group')),
+          SwitchListTile(value: _isGroup, onChanged: (v) => setState(() => _isGroup = v), title: Text(l10n.messagesCreateConversationIsGroupLabel)),
         ],
       ),
       actions: [
-        TextButton(child: const Text('Cancel'), onPressed: () => Navigator.of(context).pop()),
-        TextButton(child: const Text('Create'), onPressed: () async {
+        TextButton(child: Text(l10n.commonCancel), onPressed: () => Navigator.of(context).pop()),
+        TextButton(child: Text(l10n.commonCreate), onPressed: () async {
           final manualMembers = _members.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
           final members = [..._memberList, ...manualMembers];
           final cp = Provider.of<ChatProvider>(context, listen: false);

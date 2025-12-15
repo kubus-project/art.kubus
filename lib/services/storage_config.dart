@@ -11,6 +11,14 @@ class StorageConfig {
     'https://dweb.link/ipfs/',
   ];
 
+  // Optional overrides via --dart-define for dev/staging builds.
+  // - IPFS_GATEWAY: single gateway base URL
+  // - IPFS_GATEWAYS: comma-separated list of gateway base URLs
+  static final String _envIpfsGateway =
+      const String.fromEnvironment('IPFS_GATEWAY', defaultValue: '');
+  static final String _envIpfsGateways =
+      const String.fromEnvironment('IPFS_GATEWAYS', defaultValue: '');
+
   // Allow overriding the upload backend via --dart-define to keep dev/staging builds off prod.
   static final String _envHttpBackend =
       const String.fromEnvironment('STORAGE_HTTP_BACKEND', defaultValue: '');
@@ -19,9 +27,9 @@ class StorageConfig {
   static final String defaultHttpBackend = _normalizeBaseUrl(
     _envHttpBackend.isNotEmpty
         ? _envHttpBackend
-        : (ApiKeys.backendUrl.isNotEmpty
-            ? ApiKeys.backendUrl
-            : AppConfig.baseApiUrl),
+      : (AppConfig.baseApiUrl.isNotEmpty
+        ? AppConfig.baseApiUrl
+        : ApiKeys.backendUrl),
   );
 
   // Custom backend URL (can be overridden at runtime)
@@ -31,7 +39,22 @@ class StorageConfig {
   static String get pinataApiUrl => ApiKeys.ipfsApiUrl;
   static String get pinataApiKey => ApiKeys.pinataApiKey;
   static String get pinataSecretKey => ApiKeys.pinataSecretKey;
-  static String get ipfsGateway => ApiKeys.ipfsGateway;
+
+  static List<String> get activeIpfsGateways {
+    final single = _selectGateway(_envIpfsGateway);
+    if (single.trim().isNotEmpty) return [single.trim()];
+
+    final csv = _envIpfsGateways.trim();
+    if (csv.isNotEmpty) {
+      return csv
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList(growable: false);
+    }
+
+    return ipfsGateways;
+  }
 
   /// Resolve storage URLs by handling IPFS CIDs and backend-relative paths.
   /// Falls back to the configured HTTP backend for relative paths.
@@ -78,11 +101,8 @@ class StorageConfig {
   }
 
   static String _ipfsGatewayFor(String cid) {
-    final gateway = _selectGateway(
-      ipfsGateway.isNotEmpty
-          ? ipfsGateway
-          : (ipfsGateways.isNotEmpty ? ipfsGateways.first : 'https://ipfs.io/ipfs/'),
-    );
+    final gateways = activeIpfsGateways;
+    final gateway = gateways.isNotEmpty ? gateways.first : '';
     final normalizedGateway = _normalizeGateway(gateway);
     return '$normalizedGateway$cid';
   }

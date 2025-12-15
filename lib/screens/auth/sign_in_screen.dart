@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,6 +40,7 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
+    final l10n = AppLocalizations.of(context)!;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
@@ -73,7 +75,7 @@ class _SignInScreenState extends State<SignInScreen> {
       debugPrint('SignInScreen: profile load skipped/failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Signed in, but profile will refresh shortly.')),
+          SnackBar(content: Text(l10n.authSignedInProfileRefreshSoon)),
         );
       }
     }
@@ -159,14 +161,15 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   Future<void> _submitEmail() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableEmailAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Email sign-in is disabled.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailSignInDisabled)));
       return;
     }
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     if (email.isEmpty || password.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid email and an 8+ character password.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEnterValidEmailPassword)));
       return;
     }
     setState(() => _isEmailSubmitting = true);
@@ -176,15 +179,16 @@ class _SignInScreenState extends State<SignInScreen> {
       await _handleAuthSuccess(result);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Email auth failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authEmailSignInFailed)));
     } finally {
       if (mounted) setState(() => _isEmailSubmitting = false);
     }
   }
 
   Future<void> _signInWithGoogle() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableGoogleAuth) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Google sign-in is disabled.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInDisabled)));
       return;
     }
 
@@ -202,7 +206,7 @@ class _SignInScreenState extends State<SignInScreen> {
           final friendly = mins > 0 ? '${mins}m ${secs}s' : '${secs}s';
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Google sign-in is temporarily rate limited. Retry in ~$friendly.')),
+            SnackBar(content: Text(l10n.authGoogleRateLimitedRetryIn(friendly))),
           );
           return;
         }
@@ -231,15 +235,16 @@ class _SignInScreenState extends State<SignInScreen> {
       await _handleAuthSuccess(result);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Google sign-in failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
     } finally {
       if (mounted) setState(() => _isGoogleSubmitting = false);
     }
   }
 
   void _showConnectWalletModal() {
+    final l10n = AppLocalizations.of(context)!;
     if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Wallet connection is disabled right now.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.authWalletConnectionDisabled)));
       return;
     }
     final isDesktop = MediaQuery.of(context).size.width >= DesktopBreakpoints.medium;
@@ -254,6 +259,7 @@ class _SignInScreenState extends State<SignInScreen> {
       ),
       builder: (ctx) {
         final colorScheme = Theme.of(ctx).colorScheme;
+        final sheetL10n = AppLocalizations.of(ctx)!;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -261,17 +267,17 @@ class _SignInScreenState extends State<SignInScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Connect a wallet', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+                Text(sheetL10n.authConnectWalletModalTitle, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
                 const SizedBox(height: 12),
-                Text('You will be asked to approve a signature in your wallet app. No gas fee is needed to log in.', style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                Text(sheetL10n.authConnectWalletModalDescriptionSignIn, style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.7))),
                 const SizedBox(height: 24),
                 const SizedBox(height: 16),
-                _walletOptionButton(ctx, 'WalletConnect', Icons.qr_code_2_outlined, () {
+                _walletOptionButton(ctx, sheetL10n.authWalletOptionWalletConnect, Icons.qr_code_2_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 3)));
                 }),
                 const SizedBox(height: 16),
-                _walletOptionButton(ctx, 'Other wallets', Icons.apps_outlined, () {
+                _walletOptionButton(ctx, sheetL10n.authWalletOptionOtherWallets, Icons.apps_outlined, () {
                   Navigator.of(ctx).pop();
                   Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 0)));
                 }),
@@ -303,6 +309,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final enableWallet = AppConfig.enableWeb3 && AppConfig.enableWalletConnect;
     final enableEmail = AppConfig.enableEmailAuth;
     final enableGoogle = AppConfig.enableGoogleAuth;
@@ -318,12 +325,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (isDesktop) {
       return DesktopAuthShell(
-        title: 'Sign in to art.kubus',
-        subtitle: 'and start exploring, creating, and connecting with other artists.',
-        highlights: const [
-          'Wallet, email, or Google sign-in',
-          'No gas needed to authenticate',
-          'Ownership stays with you',
+        title: l10n.authSignInTitle,
+        subtitle: l10n.authSignInSubtitle,
+        highlights: [
+          l10n.authHighlightSignInMethods,
+          l10n.authHighlightNoFees,
+          l10n.authHighlightControl,
         ],
         icon: GradientIconCard(
           start: const Color(0xFF0EA5E9),
@@ -342,7 +349,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: TextButton(
             onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp())),
             child: Text(
-              'Skip for now',
+              l10n.commonSkipForNow,
               style: GoogleFonts.inter(
                 color: colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
@@ -370,7 +377,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       const AppLogo(width: 48, height: 48),
                       TextButton(
                         onPressed: () => Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp())),
-                        child: Text('Skip for now', style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
+                        child: Text(l10n.commonSkipForNow, style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
                       ),
                     ],
                   ),
@@ -392,6 +399,7 @@ class _SignInScreenState extends State<SignInScreen> {
     required bool enableGoogle,
     required bool isDesktop,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -411,10 +419,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   radius: 20,
                 ),
                 const SizedBox(height: 12),
-                Text('Sign in to art.kubus', style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
+                Text(l10n.authSignInTitle, style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w800, color: colorScheme.onSurface)),
                 const SizedBox(height: 8),
                 Text(
-                  'and start exploring, creating, and connecting with other artists.',
+                  l10n.authSignInSubtitle,
                   style: GoogleFonts.inter(fontSize: 14, color: colorScheme.onSurface.withValues(alpha: 0.85)),
                   textAlign: TextAlign.center,
                 ),
@@ -433,7 +441,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             onPressed: _showConnectWalletModal,
             icon: Icon(Icons.account_balance_wallet_outlined, size: 24, color: colorScheme.onPrimary),
-            label: Text('Connect wallet', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
+            label: Text(l10n.authConnectWalletButton, style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w700, color: colorScheme.onPrimary)),
           ),
         if (enableWallet) const SizedBox(height: 16),
         Container(
@@ -447,7 +455,7 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text('Or log in with your email or username', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
+              Text(l10n.authOrLogInWithEmailOrUsername, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onSurface)),
               const SizedBox(height: 12),
               if (enableEmail) _buildEmailForm(colorScheme),
               if (enableGoogle) ...[
@@ -461,7 +469,7 @@ class _SignInScreenState extends State<SignInScreen> {
               const SizedBox(height: 12),
               TextButton(
                 onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RegisterScreen())),
-                child: Text('Need an account? Register', style: GoogleFonts.inter(color: colorScheme.primary, fontWeight: FontWeight.w700)),
+                child: Text(l10n.authNeedAccountRegister, style: GoogleFonts.inter(color: colorScheme.primary, fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -477,8 +485,8 @@ class _SignInScreenState extends State<SignInScreen> {
         TextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(
-            labelText: 'Email',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.commonEmail,
             border: OutlineInputBorder(),
           ),
         ),
@@ -486,8 +494,8 @@ class _SignInScreenState extends State<SignInScreen> {
         TextField(
           controller: _passwordController,
           obscureText: true,
-          decoration: const InputDecoration(
-            labelText: 'Password',
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context)!.commonPassword,
             border: OutlineInputBorder(),
           ),
         ),
@@ -506,7 +514,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ? const SizedBox(width: 20, height: 20, child: InlineLoading(width: 20, height: 20, tileSize: 5))
               : Icon(Icons.login_rounded, color: colorScheme.onPrimary, size: 22),
           label: Text(
-            _isEmailSubmitting ? 'Working...' : 'Sign in with email',
+            _isEmailSubmitting ? AppLocalizations.of(context)!.commonWorking : AppLocalizations.of(context)!.authSignInWithEmail,
             style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: colorScheme.onPrimary),
           ),
         ),
