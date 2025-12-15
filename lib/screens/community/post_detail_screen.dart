@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../services/backend_api_service.dart';
@@ -79,27 +81,33 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           walletAddress: _currentWalletAddress(),
         );
       } catch (_) {}
+      if (!mounted) return;
       setState(() {
         _post = post;
         _loading = false;
       });
     } catch (e) {
-      debugPrint('Error fetching post: $e');
+      if (kDebugMode) {
+        debugPrint('PostDetailScreen: error fetching post: $e');
+      }
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       setState(() {
-        _error = 'Failed to load post';
+        _error = l10n.postDetailLoadPostFailedMessage;
         _loading = false;
       });
     }
   }
 
   String _timeAgo(DateTime timestamp) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final diff = now.difference(timestamp);
-    if (diff.inDays > 7) return '${(diff.inDays / 7).floor()}w ago';
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return 'Just now';
+    if (diff.inDays > 7) return l10n.commonTimeAgoWeeks((diff.inDays / 7).floor());
+    if (diff.inDays > 0) return l10n.commonTimeAgoDays(diff.inDays);
+    if (diff.inHours > 0) return l10n.commonTimeAgoHours(diff.inHours);
+    if (diff.inMinutes > 0) return l10n.commonTimeAgoMinutes(diff.inMinutes);
+    return l10n.commonTimeAgoJustNow;
   }
 
   List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10}) {
@@ -125,6 +133,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Future<void> _toggleLike() async {
     if (_post == null) return;
+    final l10n = AppLocalizations.of(context)!;
     try {
       await CommunityService.togglePostLike(
         _post!,
@@ -138,9 +147,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_post!.isLiked ? 'Post liked' : 'Like removed'),
+          content: Text(_post!.isLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
           action: SnackBarAction(
-            label: 'Undo',
+            label: l10n.commonUndo,
             textColor: accent,
             onPressed: () async {
               try {
@@ -151,14 +160,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (kDebugMode) {
+                  debugPrint('PostDetailScreen: undo like failed: $e');
+                }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to undo like: $e')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.postDetailUndoLikeFailedToast)));
               }
             },
           ),
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PostDetailScreen: toggle like failed: $e');
+      }
       // On failure ensure rollback and show retry option
       try {
         if (mounted) setState(() {});
@@ -166,9 +181,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to update like: $e'),
+          content: Text(l10n.postDetailUpdateLikeFailedToast),
           action: SnackBarAction(
-            label: 'Retry',
+            label: l10n.commonRetry,
             textColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
             onPressed: () async {
               try {
@@ -179,8 +194,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 if (!mounted) return;
                 setState(() {});
               } catch (e) {
+                if (kDebugMode) {
+                  debugPrint('PostDetailScreen: retry like failed: $e');
+                }
                 if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Retry failed: $e')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.postDetailRetryLikeFailedToast)));
               }
             },
           ),
@@ -191,6 +209,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Future<void> _submitComment() async {
     if (_post == null) return;
+    final l10n = AppLocalizations.of(context)!;
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
     _commentController.clear();
@@ -200,7 +219,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _replyToAuthorName = null;
     if (_commentFocusNode.hasFocus) _commentFocusNode.unfocus();
 
-    String authorName = 'You';
+    String authorName = l10n.commonYou;
     String? authorAvatar;
     try {
       final profileResp = await BackendApiService().getMyProfile();
@@ -228,9 +247,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Comment added'),
+          content: Text(l10n.postDetailCommentAddedToast),
           action: SnackBarAction(
-            label: 'Undo',
+            label: l10n.commonUndo,
             textColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
             onPressed: () async {
               try {
@@ -245,14 +264,18 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PostDetailScreen: add comment failed: $e');
+      }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add comment: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.postDetailAddCommentFailedToast)));
     }
   }
 
   void _showCommentLikes(String commentId) {
     if (!mounted) return;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final future = BackendApiService().getCommentLikes(commentId);
 
     showModalBottomSheet(
@@ -273,7 +296,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Likes', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text(l10n.commonLikes, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                     IconButton(icon: const Icon(Icons.close), color: theme.colorScheme.onSurface, onPressed: () => Navigator.of(sheetContext).pop()),
                   ],
                 ),
@@ -286,7 +309,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       return const Center(child: CircularProgressIndicator());
                     }
                     if (snapshot.hasError) {
-                      return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('Failed to load likes', style: GoogleFonts.inter(color: theme.colorScheme.onSurface))));
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(l10n.postDetailLoadLikesFailedMessage, style: GoogleFonts.inter(color: theme.colorScheme.onSurface)),
+                        ),
+                      );
                     }
                     final likes = snapshot.data ?? <CommunityLikeUser>[];
                     if (likes.isEmpty) {
@@ -295,8 +323,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         padding: const EdgeInsets.all(24),
                         child: EmptyStateCard(
                           icon: Icons.favorite_border,
-                          title: 'No likes yet',
-                          description: 'Be the first to like this',
+                          title: l10n.postDetailNoLikesTitle,
+                          description: l10n.postDetailNoLikesDescription,
                         ),
                       ),
                     );
@@ -314,7 +342,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: AvatarWidget(wallet: user.walletAddress ?? user.userId, avatarUrl: user.avatarUrl, radius: 20, enableProfileNavigation: true),
-                          title: Text(user.displayName.isNotEmpty ? user.displayName : 'Unnamed', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                          title: Text(user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                           subtitle: subtitleParts.isNotEmpty ? Text(subtitleParts.join(' • '), style: GoogleFonts.inter(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6))) : null,
                         );
                       },
@@ -332,6 +360,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   void _showShareModal() {
     if (_post == null || !mounted) return;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final searchController = TextEditingController();
     List<Map<String, dynamic>> searchResults = [];
     bool isSearching = false;
@@ -355,7 +384,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Share Post', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text(l10n.postDetailSharePostTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                     IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
                   ],
                 ),
@@ -365,7 +394,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: TextField(
                   controller: searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search for profiles...',
+                    hintText: l10n.postDetailSearchProfilesHint,
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     filled: true,
@@ -397,7 +426,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   children: [
                     ListTile(
                       leading: Icon(Icons.link, color: theme.colorScheme.primary),
-                      title: Text('Copy Link', style: GoogleFonts.inter()),
+                      title: Text(l10n.postDetailCopyLink, style: GoogleFonts.inter()),
                       onTap: () async {
                         final sheetNavigator = Navigator.of(sheetContext);
                         final messenger = ScaffoldMessenger.of(context);
@@ -410,13 +439,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         if (!mounted) return;
                         sheetNavigator.pop();
                         messenger.showSnackBar(
-                          const SnackBar(content: Text('Link copied to clipboard')),
+                          SnackBar(content: Text(l10n.postDetailLinkCopiedToast)),
                         );
                       },
                     ),
                     ListTile(
                       leading: Icon(Icons.share, color: theme.colorScheme.primary),
-                      title: Text('Share via...', style: GoogleFonts.inter()),
+                      title: Text(l10n.postDetailShareViaEllipsis, style: GoogleFonts.inter()),
                       onTap: () async {
                         Navigator.pop(sheetContext);
                         final shareText = '${_post!.content}\\n\\n- ${_post!.authorName} on app.kubus\\n\\nhttps://app.kubus.site/post/${_post!.id}';
@@ -437,8 +466,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 padding: const EdgeInsets.all(24),
                                 child: EmptyStateCard(
                                   icon: Icons.search_off,
-                                  title: 'No profiles found',
-                                  description: 'Try a different search term',
+                                  title: l10n.postDetailNoProfilesFoundTitle,
+                                  description: l10n.postDetailNoProfilesFoundDescription,
                                 ),
                               ),
                             )
@@ -448,12 +477,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               itemBuilder: (ctx, idx) {
                                 final profile = searchResults[idx];
                                 final walletAddr = profile['wallet_address'] ?? profile['walletAddress'] ?? profile['wallet'] ?? profile['walletAddr'];
-                                final username = profile['username'] ?? walletAddr ?? 'unknown';
+                                final username = profile['username'] ?? walletAddr ?? l10n.commonUnknown;
                                 final display = profile['displayName'] ?? profile['display_name'] ?? username;
                                 final avatar = profile['avatar'] ?? profile['avatar_url'];
                                 return ListTile(
                                   leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
-                                  title: Text(display ?? 'Unnamed', style: GoogleFonts.inter()),
+                                  title: Text(display ?? l10n.commonUnnamed, style: GoogleFonts.inter()),
                                   subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
                                   onTap: () async {
                                     Navigator.pop(sheetContext);
@@ -463,17 +492,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                       await BackendApiService().sharePostViaDM(
                                         postId: _post!.id,
                                         recipientWallet: (walletAddr ?? username).toString(),
-                                        message: 'Check out this post!',
+                                        message: l10n.postDetailShareDmDefaultMessage,
                                       );
 
                                       if (!mounted) return;
                                       messenger.showSnackBar(
-                                        SnackBar(content: Text('Shared post with @$username')),
+                                        SnackBar(content: Text(l10n.postDetailShareSuccessToast(username.toString()))),
                                       );
                                     } catch (e) {
+                                      if (kDebugMode) {
+                                        debugPrint('PostDetailScreen: share via DM failed: $e');
+                                      }
                                       if (!mounted) return;
                                       messenger.showSnackBar(
-                                        SnackBar(content: Text('Failed to share: $e')),
+                                        SnackBar(content: Text(l10n.postDetailShareFailedToast)),
                                       );
                                     }
                                   },
@@ -514,10 +546,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Repost', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
+                    Text(AppLocalizations.of(context)!.postDetailRepostTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
                     Row(
                       children: [
-                        TextButton(onPressed: () => Navigator.pop(sheetContext), child: Text('Cancel', style: GoogleFonts.inter())),
+                        TextButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: Text(AppLocalizations.of(context)!.commonCancel, style: GoogleFonts.inter()),
+                        ),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
@@ -537,17 +572,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                 if (!mounted) return;
                               }
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text(content.isEmpty ? 'Reposted!' : 'Reposted with comment!')),
+                                SnackBar(
+                                  content: Text(
+                                    content.isEmpty
+                                        ? AppLocalizations.of(context)!.postDetailRepostSuccessToast
+                                        : AppLocalizations.of(context)!.postDetailRepostWithCommentSuccessToast,
+                                  ),
+                                ),
                               );
                         } catch (e) {
+                              if (kDebugMode) {
+                                debugPrint('PostDetailScreen: repost failed: $e');
+                              }
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Failed to repost: $e')),
+                                  SnackBar(content: Text(AppLocalizations.of(context)!.postDetailRepostFailedToast)),
                                 );
                               }
                             }
                           },
-                          child: Text('Repost', style: GoogleFonts.inter()),
+                          child: Text(AppLocalizations.of(context)!.postDetailRepostButton, style: GoogleFonts.inter()),
                         ),
                       ],
                     ),
@@ -565,14 +609,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         controller: repostContentController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: 'Add your thoughts (optional)...',
+                          hintText: AppLocalizations.of(context)!.postDetailRepostThoughtsHint,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           filled: true,
                           fillColor: theme.colorScheme.primaryContainer,
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text('Reposting:', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
+                      Text(
+                        AppLocalizations.of(context)!.postDetailRepostingLabel,
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+                      ),
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(12),
@@ -1236,6 +1283,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -1243,7 +1291,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
         ),
-        title: Text('Post', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text(l10n.commonPost, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -1278,21 +1326,21 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           ),
                           _buildDetailAction(
                             icon: Icons.share,
-                            label: 'Share',
+                            label: l10n.commonShare,
                             onTap: () => _showShareModal(),
                           ),
                         ],
                       ),
                       const SizedBox(height: 24),
-                      Text('Comments', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+                      Text(l10n.commonComments, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
                       if (_post!.comments.isEmpty)
                         Padding(
                           padding: const EdgeInsets.symmetric(vertical: 8.0),
                           child: EmptyStateCard(
                             icon: Icons.comment_bank_outlined,
-                            title: 'No comments yet',
-                            description: 'Be the first to start the conversation',
+                            title: l10n.postDetailNoCommentsTitle,
+                            description: l10n.postDetailNoCommentsDescription,
                           ),
                         )
                       else
@@ -1335,13 +1383,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                               try {
                                                 await CommunityService.toggleCommentLike(c, _post!.id);
                                               } catch (e) {
+                                                if (kDebugMode) {
+                                                  debugPrint('PostDetailScreen: toggle comment like failed: $e');
+                                                }
                                                 // rollback
                                                 if (!mounted) return;
                                                 setState(() {
                                                   c.isLiked = prevLiked;
                                                   c.likeCount = prevCount;
                                                 });
-                                                messenger.showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+                                                messenger.showSnackBar(SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)));
                                               }
                                             },
                                           ),
@@ -1365,7 +1416,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                               _commentController.selection = TextSelection.fromPosition(TextPosition(offset: _commentController.text.length));
                                               FocusScope.of(context).requestFocus(_commentFocusNode);
                                             },
-                                            child: Text('Reply', style: GoogleFonts.inter(fontSize: 12)),
+                                            child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
                                           ),
                                         ],
                                       ),
@@ -1414,12 +1465,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                             try {
                                                               await CommunityService.toggleCommentLike(r, _post!.id);
                                                             } catch (e) {
+                                                              if (kDebugMode) {
+                                                                debugPrint('PostDetailScreen: toggle reply like failed: $e');
+                                                              }
                                                               if (!mounted) return;
                                                               setState(() {
                                                                 r.isLiked = prevLiked;
                                                                 r.likeCount = prevCount;
                                                               });
-                                                              messenger.showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+                                                              messenger.showSnackBar(SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)));
                                                             }
                                                           },
                                                         ),
@@ -1442,7 +1496,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                             _commentController.selection = TextSelection.fromPosition(TextPosition(offset: _commentController.text.length));
                                                             FocusScope.of(context).requestFocus(_commentFocusNode);
                                                           },
-                                                          child: Text('Reply', style: GoogleFonts.inter(fontSize: 12)),
+                                                          child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
                                                         ),
                                                       ],
                                                     ),
@@ -1466,7 +1520,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: Row(
                             children: [
-                              Expanded(child: Text('Replying to $_replyToAuthorName', style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)))),
+                              Expanded(
+                                child: Text(
+                                  l10n.postDetailReplyingToLabel(_replyToAuthorName!),
+                                  style: GoogleFonts.inter(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+                                ),
+                              ),
                               IconButton(icon: const Icon(Icons.close), onPressed: () { setState(() { _replyToAuthorName = null; _replyToCommentId = null; _commentController.clear(); }); }),
                             ],
                           ),
@@ -1478,14 +1537,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                               controller: _commentController,
                               focusNode: _commentFocusNode,
                               decoration: InputDecoration(
-                                hintText: 'Write a comment...',
+                                hintText: l10n.postDetailWriteCommentHint,
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                                 isDense: true,
                               ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          ElevatedButton(onPressed: _submitComment, child: const Text('Send')),
+                          ElevatedButton(onPressed: _submitComment, child: Text(l10n.commonSend)),
                         ],
                       ),
                     ],

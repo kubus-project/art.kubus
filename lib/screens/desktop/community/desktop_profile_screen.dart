@@ -29,6 +29,8 @@ import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/art_detail_screen.dart';
+import '../../collab/invites_inbox_screen.dart';
+import '../../activity/view_history_screen.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -161,10 +163,25 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const SizedBox(height: 24),
                     _buildStatsCards(themeProvider, profileProvider, isLarge),
                     const SizedBox(height: 24),
-                    if (isArtist || isInstitution) ...[
-                      _buildCreatorHighlights(themeProvider, isArtist, isInstitution),
+                    if (isArtist) ...[
+                      _buildArtistPortfolioSection(themeProvider),
+                      const SizedBox(height: 24),
+                      _buildArtistCollectionsSection(themeProvider),
+                      const SizedBox(height: 24),
+                      _buildArtistEventsSection(themeProvider),
+                      const SizedBox(height: 24),
+                    ] else if (isInstitution) ...[
+                      _buildInstitutionEventsSection(themeProvider),
+                      const SizedBox(height: 24),
+                      _buildInstitutionCollectionsSection(themeProvider),
                       const SizedBox(height: 24),
                     ],
+                    if (!isArtist && !isInstitution) ...[
+                      _buildViewedArtworksSection(themeProvider),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildPerformanceStatsSection(themeProvider),
+                    const SizedBox(height: 24),
                     _buildAchievementsSection(themeProvider),
                     const SizedBox(height: 24),
                     _buildPostsSection(themeProvider),
@@ -225,6 +242,18 @@ class _ProfileScreenState extends State<ProfileScreen>
               label: 'Share Profile',
               icon: Icons.share_outlined,
               onPressed: _shareProfile,
+              isPrimary: false,
+            ),
+            const SizedBox(width: 12),
+            DesktopActionButton(
+              label: 'Invites',
+              icon: Icons.inbox_outlined,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                );
+              },
               isPrimary: false,
             ),
             const SizedBox(width: 12),
@@ -427,6 +456,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                      // Social links
+                      if (user?.social.isNotEmpty == true) ...[
+                        const SizedBox(height: 16),
+                        _buildSocialLinks(user!.social, themeProvider),
+                      ],
                     ],
                   ),
                 ),
@@ -487,16 +521,21 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildCreatorHighlights(ThemeProvider themeProvider, bool isArtist, bool isInstitution) {
+  Widget _buildArtistPortfolioSection(ThemeProvider themeProvider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         DesktopSectionHeader(
-          title: isInstitution ? 'Institution Highlights' : 'Artist Highlights',
-          subtitle: isInstitution
-              ? 'Your featured exhibitions and programs'
-              : 'Your latest artworks and collections',
-          icon: isInstitution ? Icons.business : Icons.palette,
+          title: 'Portfolio',
+          subtitle: 'Your artworks and creative works',
+          icon: Icons.palette,
+          action: _artistArtworks.isNotEmpty
+              ? TextButton.icon(
+                  onPressed: () => ProfileScreenMethods.showArtworks(context),
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  label: const Text('View All'),
+                )
+              : null,
         ),
         const SizedBox(height: 16),
         if (_artistDataLoading && !_artistDataLoaded)
@@ -507,37 +546,630 @@ class _ProfileScreenState extends State<ProfileScreen>
               child: const CircularProgressIndicator(),
             ),
           )
-        else if (_artistArtworks.isEmpty && _artistCollections.isEmpty && _artistEvents.isEmpty)
+        else if (_artistArtworks.isEmpty)
           DesktopCard(
             child: EmptyStateCard(
               icon: Icons.image_outlined,
-              title: 'No content yet',
-              description: isInstitution
-                  ? 'Create exhibitions and events to showcase them here'
-                  : 'Upload artworks and create collections to display them here',
+              title: 'No artworks yet',
+              description: 'Upload your first artwork to showcase your creative work here.',
             ),
           )
         else
           SizedBox(
-            height: 240,
-            child: ListView(
+            height: 280,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              children: [
-                ..._artistArtworks.map((artwork) => _buildShowcaseCard(
-                      imageUrl: _extractImageUrl(artwork, ['imageUrl', 'image']),
-                      title: artwork['title'] ?? 'Untitled',
-                      subtitle: artwork['category'] ?? 'Artwork',
-                      artworkId: (artwork['id'] ?? artwork['artwork_id'])?.toString(),
-                    )),
-                ..._artistCollections.map((collection) => _buildShowcaseCard(
-                      imageUrl: _extractImageUrl(collection, ['thumbnailUrl', 'coverImage']),
-                      title: collection['name'] ?? 'Collection',
-                      subtitle: '${collection['artworksCount'] ?? 0} artworks',
-                    )),
-              ],
+              itemCount: _artistArtworks.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) => _buildArtworkShowcaseCard(_artistArtworks[index]),
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildArtistCollectionsSection(ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: 'Collections',
+          subtitle: 'Curated sets of your work',
+          icon: Icons.collections_outlined,
+          action: _artistCollections.isNotEmpty
+              ? TextButton.icon(
+                  onPressed: () => ProfileScreenMethods.showCollections(context),
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  label: const Text('View All'),
+                )
+              : null,
+        ),
+        const SizedBox(height: 16),
+        if (_artistDataLoading && !_artistDataLoaded)
+          DesktopCard(
+            child: Container(
+              height: 180,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          )
+        else if (_artistCollections.isEmpty)
+          DesktopCard(
+            child: EmptyStateCard(
+              icon: Icons.collections_outlined,
+              title: 'No collections yet',
+              description: 'Create collections to organize and curate your work.',
+            ),
+          )
+        else
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _artistCollections.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) => _buildCollectionShowcaseCard(_artistCollections[index]),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildArtistEventsSection(ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: 'Events & Exhibitions',
+          subtitle: 'Your upcoming and past events',
+          icon: Icons.event,
+        ),
+        const SizedBox(height: 16),
+        if (_artistDataLoading && !_artistDataLoaded)
+          DesktopCard(
+            child: Container(
+              height: 180,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          )
+        else if (_artistEvents.isEmpty)
+          DesktopCard(
+            child: EmptyStateCard(
+              icon: Icons.event_outlined,
+              title: 'No events yet',
+              description: 'Plan exhibitions, workshops, or meetups to engage with collectors.',
+            ),
+          )
+        else
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _artistEvents.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) => _buildEventShowcaseCard(_artistEvents[index]),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildInstitutionEventsSection(ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: 'Exhibitions & Programs',
+          subtitle: 'Your featured exhibitions and events',
+          icon: Icons.museum,
+        ),
+        const SizedBox(height: 16),
+        if (_artistDataLoading && !_artistDataLoaded)
+          DesktopCard(
+            child: Container(
+              height: 200,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          )
+        else if (_artistEvents.isEmpty)
+          DesktopCard(
+            child: EmptyStateCard(
+              icon: Icons.museum_outlined,
+              title: 'No exhibitions yet',
+              description: 'Create exhibitions and programs to showcase your institutional activities.',
+            ),
+          )
+        else
+          SizedBox(
+            height: 260,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _artistEvents.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) => _buildEventShowcaseCard(_artistEvents[index], isInstitution: true),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildInstitutionCollectionsSection(ThemeProvider themeProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DesktopSectionHeader(
+          title: 'Permanent Collection',
+          subtitle: 'Featured works in your collection',
+          icon: Icons.account_balance,
+          action: _artistCollections.isNotEmpty
+              ? TextButton.icon(
+                  onPressed: () => ProfileScreenMethods.showCollections(context),
+                  icon: const Icon(Icons.arrow_forward, size: 18),
+                  label: const Text('View All'),
+                )
+              : null,
+        ),
+        const SizedBox(height: 16),
+        if (_artistDataLoading && !_artistDataLoaded)
+          DesktopCard(
+            child: Container(
+              height: 180,
+              alignment: Alignment.center,
+              child: const CircularProgressIndicator(),
+            ),
+          )
+        else if (_artistCollections.isEmpty)
+          DesktopCard(
+            child: EmptyStateCard(
+              icon: Icons.collections_outlined,
+              title: 'No collections yet',
+              description: 'Curate collections to highlight your institutional holdings.',
+            ),
+          )
+        else
+          SizedBox(
+            height: 220,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _artistCollections.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              itemBuilder: (context, index) => _buildCollectionShowcaseCard(_artistCollections[index]),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildViewedArtworksSection(ThemeProvider themeProvider) {
+    return Consumer<ArtworkProvider>(
+      builder: (context, artworkProvider, _) {
+        final viewHistory = artworkProvider.viewHistoryEntries.take(10).toList();
+        
+        // Build list of artworks from view history
+        final viewedArtworks = <Map<String, dynamic>>[];
+        for (final entry in viewHistory) {
+          final artwork = artworkProvider.getArtworkById(entry.artworkId);
+          if (artwork != null) {
+            viewedArtworks.add({
+              'id': artwork.id,
+              'title': artwork.title,
+              'imageUrl': artwork.imageUrl,
+              'artist': artwork.artist,
+              'category': artwork.category,
+            });
+          }
+        }
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DesktopSectionHeader(
+              title: 'Recently Viewed',
+              subtitle: 'Artworks you\'ve discovered',
+              icon: Icons.history,
+              action: viewHistory.isNotEmpty
+                  ? TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ViewHistoryScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      label: const Text('View History'),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            if (viewedArtworks.isEmpty)
+              DesktopCard(
+                child: EmptyStateCard(
+                  icon: Icons.visibility_outlined,
+                  title: 'No viewed artworks yet',
+                  description: 'Explore the map to discover artworks and build your viewing history.',
+                ),
+              )
+            else
+              SizedBox(
+                height: 240,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: viewedArtworks.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final artwork = viewedArtworks[index];
+                    return _buildShowcaseCard(
+                      imageUrl: artwork['imageUrl']?.toString(),
+                      title: artwork['title']?.toString() ?? 'Untitled',
+                      subtitle: artwork['artist']?.toString() ?? 'Unknown artist',
+                      artworkId: artwork['id']?.toString(),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPerformanceStatsSection(ThemeProvider themeProvider) {
+    return Consumer2<ProfileProvider, ArtworkProvider>(
+      builder: (context, profileProvider, artworkProvider, _) {
+        final stats = profileProvider.currentUser?.stats;
+        final viewHistory = artworkProvider.viewHistoryEntries;
+        final viewedCount = viewHistory.length;
+        final discoveries = stats?.artworksDiscovered ?? 0;
+        final created = stats?.artworksCreated ?? 0;
+        final nftsOwned = stats?.nftsOwned ?? 0;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            DesktopSectionHeader(
+              title: 'Performance',
+              subtitle: 'Your activity and engagement metrics',
+              icon: Icons.analytics_outlined,
+            ),
+            const SizedBox(height: 16),
+            DesktopGrid(
+              minCrossAxisCount: 2,
+              maxCrossAxisCount: 4,
+              childAspectRatio: 2.0,
+              children: [
+                _buildPerformanceStatCard(
+                  'Artworks Viewed',
+                  _formatStatCount(viewedCount),
+                  Icons.visibility_outlined,
+                  themeProvider,
+                ),
+                _buildPerformanceStatCard(
+                  'Discoveries',
+                  _formatStatCount(discoveries),
+                  Icons.explore_outlined,
+                  themeProvider,
+                ),
+                _buildPerformanceStatCard(
+                  'Created',
+                  _formatStatCount(created),
+                  Icons.create_outlined,
+                  themeProvider,
+                ),
+                _buildPerformanceStatCard(
+                  'NFTs Owned',
+                  _formatStatCount(nftsOwned),
+                  Icons.token_outlined,
+                  themeProvider,
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPerformanceStatCard(String label, String value, IconData icon, ThemeProvider themeProvider) {
+    return DesktopCard(
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: themeProvider.accentColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: themeProvider.accentColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildArtworkShowcaseCard(Map<String, dynamic> data) {
+    final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
+    final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
+    final category = (data['category'] ?? data['medium'] ?? 'Artwork').toString();
+    final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+    final likesCount = data['likesCount'] ?? data['likes'] ?? 0;
+    
+    return GestureDetector(
+      onTap: artworkId != null ? () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: artworkId)),
+        );
+      } : null,
+      child: MouseRegion(
+        cursor: artworkId != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        child: SizedBox(
+          width: 220,
+          child: DesktopCard(
+            padding: EdgeInsets.zero,
+            enableHover: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  child: imageUrl != null
+                      ? Image.network(
+                          _normalizeMediaUrl(imageUrl) ?? '',
+                          height: 160,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _buildPlaceholderImage(160, Icons.image_outlined),
+                        )
+                      : _buildPlaceholderImage(160, Icons.image_outlined),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        category,
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.favorite_border,
+                            size: 14,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$likesCount',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollectionShowcaseCard(Map<String, dynamic> data) {
+    final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
+    final title = (data['name'] ?? 'Collection').toString();
+    final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
+    final description = (data['description'] ?? '').toString();
+    
+    return SizedBox(
+      width: 200,
+      child: DesktopCard(
+        padding: EdgeInsets.zero,
+        enableHover: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: imageUrl != null
+                  ? Image.network(
+                      _normalizeMediaUrl(imageUrl) ?? '',
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(120, Icons.collections_outlined),
+                    )
+                  : _buildPlaceholderImage(120, Icons.collections_outlined),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$count artworks',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventShowcaseCard(Map<String, dynamic> data, {bool isInstitution = false}) {
+    final imageUrl = _extractImageUrl(data, ['coverUrl', 'bannerUrl', 'image']);
+    final title = (data['title'] ?? 'Event').toString();
+    final location = (data['locationName'] ?? data['location'] ?? 'TBA').toString();
+    final startDate = data['startsAt'] ?? data['startDate'] ?? data['start_date'];
+    final dateLabel = _formatEventDate(startDate);
+    
+    return SizedBox(
+      width: isInstitution ? 260 : 220,
+      child: DesktopCard(
+        padding: EdgeInsets.zero,
+        enableHover: true,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: imageUrl != null
+                  ? Image.network(
+                      _normalizeMediaUrl(imageUrl) ?? '',
+                      height: isInstitution ? 140 : 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(isInstitution ? 140 : 120, Icons.event),
+                    )
+                  : _buildPlaceholderImage(isInstitution ? 140 : 120, Icons.event),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today,
+                        size: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        dateLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on,
+                        size: 12,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          location,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderImage(double height, IconData icon) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primaryContainer,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      child: Center(child: Icon(icon, size: 48, color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.4))),
     );
   }
 
@@ -551,9 +1183,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       } : null,
-      child: Container(
+      child: SizedBox(
         width: 200,
-        margin: const EdgeInsets.only(right: 16),
         child: DesktopCard(
           padding: EdgeInsets.zero,
           child: Column(
@@ -1056,6 +1687,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       final web3Provider = Provider.of<Web3Provider>(context, listen: false);
       if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
         await profileProvider.loadProfile(web3Provider.walletAddress);
+        // Refresh artist data after profile edit
+        setState(() {
+          _artistDataRequested = false;
+          _artistDataLoaded = false;
+        });
+        await _maybeLoadArtistData(force: true);
       }
     }
   }
@@ -1098,5 +1735,89 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (difference.inHours > 0) return '${difference.inHours}h ago';
     if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
     return 'Just now';
+  }
+
+  String _formatStatCount(int count) {
+    if (count >= 1000000) return '${(count / 1000000).toStringAsFixed(1)}M';
+    if (count >= 1000) return '${(count / 1000).toStringAsFixed(1)}K';
+    return count.toString();
+  }
+
+  String _formatEventDate(dynamic dateValue) {
+    if (dateValue == null) return 'TBA';
+    try {
+      DateTime date;
+      if (dateValue is DateTime) {
+        date = dateValue;
+      } else {
+        date = DateTime.parse(dateValue.toString());
+      }
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    } catch (_) {
+      return 'TBA';
+    }
+  }
+
+  Widget _buildSocialLinks(Map<String, String> social, ThemeProvider themeProvider) {
+    final links = <Widget>[];
+    
+    if (social['twitter']?.isNotEmpty == true) {
+      links.add(_buildSocialChip(
+        icon: Icons.alternate_email,
+        label: '@${social['twitter']}',
+        color: const Color(0xFF1DA1F2),
+      ));
+    }
+    if (social['instagram']?.isNotEmpty == true) {
+      links.add(_buildSocialChip(
+        icon: Icons.camera_alt_outlined,
+        label: '@${social['instagram']}',
+        color: const Color(0xFFE4405F),
+      ));
+    }
+    if (social['website']?.isNotEmpty == true) {
+      final website = social['website']!;
+      final displayUrl = website.replaceAll(RegExp(r'^https?://'), '').replaceAll(RegExp(r'/$'), '');
+      links.add(_buildSocialChip(
+        icon: Icons.language,
+        label: displayUrl,
+        color: themeProvider.accentColor,
+      ));
+    }
+    
+    if (links.isEmpty) return const SizedBox.shrink();
+    
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: links,
+    );
+  }
+
+  Widget _buildSocialChip({required IconData icon, required String label, required Color color}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

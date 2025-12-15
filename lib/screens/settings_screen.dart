@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,6 +28,7 @@ import '../widgets/empty_state_card.dart';
 import 'web3/wallet/mnemonic_reveal_screen.dart';
 import '../utils/app_animations.dart';
 import '../../config/config.dart';
+import '../providers/locale_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,23 +44,25 @@ class _SettingsScreenState extends State<SettingsScreen>
   late Animation<Offset> _slideAnimation;
   bool _didAnimateEntrance = false;
 
-  static const List<_ProfileVisibilityOption> _profileVisibilityOptions = [
-    _ProfileVisibilityOption(
-      value: 'Public',
-      label: 'Public',
-      description: 'Anyone can see your profile',
-    ),
-    _ProfileVisibilityOption(
-      value: 'Private',
-      label: 'Private',
-      description: 'Only you can see your profile',
-    ),
-    _ProfileVisibilityOption(
-      value: 'Friends Only',
-      label: 'Friends Only',
-      description: 'Only friends can see your profile',
-    ),
-  ];
+  List<_ProfileVisibilityOption> _profileVisibilityOptions(AppLocalizations l10n) {
+    return [
+      _ProfileVisibilityOption(
+        value: 'Public',
+        label: l10n.settingsProfileVisibilityPublicLabel,
+        description: l10n.settingsProfileVisibilityPublicDescription,
+      ),
+      _ProfileVisibilityOption(
+        value: 'Private',
+        label: l10n.settingsProfileVisibilityPrivateLabel,
+        description: l10n.settingsProfileVisibilityPrivateDescription,
+      ),
+      _ProfileVisibilityOption(
+        value: 'Friends Only',
+        label: l10n.settingsProfileVisibilityFriendsOnlyLabel,
+        description: l10n.settingsProfileVisibilityFriendsOnlyDescription,
+      ),
+    ];
+  }
 
   // Profile settings state
   String _profileVisibility = 'Public';
@@ -147,6 +153,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -159,28 +166,30 @@ class _SettingsScreenState extends State<SettingsScreen>
                 position: _slideAnimation,
                 child: CustomScrollView(
                   slivers: [
-                    _buildAppBar(),
+                    _buildAppBar(l10n),
                     SliverPadding(
                       padding: const EdgeInsets.all(24),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
-                          _buildUserSection(),
+                          _buildUserSection(l10n),
                           const SizedBox(height: 32),
-                          _buildThemeSection(),
+                          _buildThemeSection(l10n),
                           const SizedBox(height: 24),
-                          _buildPlatformCapabilitiesSection(),
+                          _buildLanguageSection(l10n),
                           const SizedBox(height: 24),
-                          _buildProfileSection(),
+                          _buildPlatformCapabilitiesSection(l10n),
                           const SizedBox(height: 24),
-                          _buildWalletSection(),
+                          _buildProfileSection(l10n),
                           const SizedBox(height: 24),
-                          _buildSecuritySection(),
+                          _buildWalletSection(l10n),
                           const SizedBox(height: 24),
-                          _buildPrivacySection(),
+                          _buildSecuritySection(l10n),
                           const SizedBox(height: 24),
-                          _buildAboutSection(),
+                          _buildPrivacySection(l10n),
                           const SizedBox(height: 24),
-                          _buildDangerZone(),
+                          _buildAboutSection(l10n),
+                          const SizedBox(height: 24),
+                          _buildDangerZone(l10n),
                           const SizedBox(height: 40),
                         ]),
                       ),
@@ -195,14 +204,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(AppLocalizations l10n) {
     return SliverAppBar(
       floating: true,
       snap: true,
       backgroundColor: Colors.transparent,
       elevation: 0,
       title: Text(
-        'Settings',
+        l10n.settingsTitle,
         style: GoogleFonts.inter(
           fontSize: 28,
           fontWeight: FontWeight.bold,
@@ -219,7 +228,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildUserSection() {
+  Widget _buildUserSection(AppLocalizations l10n) {
     final web3Provider = Provider.of<Web3Provider>(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
@@ -269,7 +278,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      profileProvider.currentUser?.displayName ?? 'Guest User',
+                      profileProvider.currentUser?.displayName ?? l10n.settingsGuestUserName,
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -286,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ] else ...[
                       Text(
-                        'No wallet connected',
+                        l10n.settingsNoWalletConnected,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: Colors.white.withValues(alpha: 0.8),
@@ -388,21 +397,89 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildThemeSection() {
+  Widget _buildThemeSection(AppLocalizations l10n) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     
     return _buildSection(
-      'Appearance',
+      l10n.settingsAppearanceSectionTitle,
       Icons.palette,
       [
-        _buildThemeModeTile(themeProvider),
+        _buildThemeModeTile(l10n, themeProvider),
         const SizedBox(height: 12),
-        _buildAccentColorTile(themeProvider),
+        _buildAccentColorTile(l10n, themeProvider),
       ],
     );
   }
 
-  Widget _buildThemeModeTile(ThemeProvider themeProvider) {
+  Widget _buildLanguageSection(AppLocalizations l10n) {
+    final localeProvider = context.watch<LocaleProvider>();
+
+    return _buildSection(
+      l10n.settingsLanguageTitle,
+      Icons.language,
+      [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outline,
+            ),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.settingsLanguageTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      l10n.settingsLanguageDescription,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: localeProvider.languageCode,
+                  items: [
+                    DropdownMenuItem(
+                      value: 'sl',
+                      child: Text(l10n.languageSlovenian),
+                    ),
+                    DropdownMenuItem(
+                      value: 'en',
+                      child: Text(l10n.languageEnglish),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    if (value == null) return;
+                    unawaited(localeProvider.setLanguageCode(value));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildThemeModeTile(AppLocalizations l10n, ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -424,7 +501,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               const SizedBox(width: 12),
               Text(
-                'Theme Mode',
+                l10n.settingsThemeModeTitle,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -443,7 +520,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 return Column(
                   children: [
                     _buildThemeOption(
-                      'Light',
+                      l10n.settingsThemeModeLight,
                       Icons.light_mode,
                       ThemeMode.light,
                       themeProvider,
@@ -451,7 +528,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                     const SizedBox(height: 8),
                     _buildThemeOption(
-                      'Dark',
+                      l10n.settingsThemeModeDark,
                       Icons.dark_mode,
                       ThemeMode.dark,
                       themeProvider,
@@ -459,7 +536,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     ),
                     const SizedBox(height: 8),
                     _buildThemeOption(
-                      'System',
+                      l10n.settingsThemeModeSystem,
                       Icons.auto_mode,
                       ThemeMode.system,
                       themeProvider,
@@ -473,7 +550,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   children: [
                     Expanded(
                       child: _buildThemeOption(
-                        'Light',
+                        l10n.settingsThemeModeLight,
                         Icons.light_mode,
                         ThemeMode.light,
                         themeProvider,
@@ -482,7 +559,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: _buildThemeOption(
-                        'Dark',
+                        l10n.settingsThemeModeDark,
                         Icons.dark_mode,
                         ThemeMode.dark,
                         themeProvider,
@@ -491,7 +568,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: _buildThemeOption(
-                        'System',
+                        l10n.settingsThemeModeSystem,
                         Icons.auto_mode,
                         ThemeMode.system,
                         themeProvider,
@@ -581,7 +658,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildAccentColorTile(ThemeProvider themeProvider) {
+  Widget _buildAccentColorTile(AppLocalizations l10n, ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -603,7 +680,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               const SizedBox(width: 12),
               Text(
-                'Accent Color',
+                l10n.settingsAccentColorTitle,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -649,11 +726,11 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildPlatformCapabilitiesSection() {
+  Widget _buildPlatformCapabilitiesSection(AppLocalizations l10n) {
     return Consumer<PlatformProvider>(
       builder: (context, platformProvider, child) {
         return _buildSection(
-          'Platform Features',
+          l10n.settingsPlatformFeaturesSectionTitle,
           Icons.devices,
           [
             Container(
@@ -677,7 +754,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Running on ${platformProvider.currentPlatform.toString().split('.').last}',
+                        l10n.settingsRunningOnPlatform(
+                          platformProvider.currentPlatform.toString().split('.').last,
+                        ),
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -688,7 +767,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Available Features:',
+                    l10n.settingsAvailableFeaturesLabel,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -709,7 +788,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
-                              _getCapabilityDisplayName(entry.key),
+                              _getCapabilityDisplayName(l10n, entry.key),
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 color: entry.value ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
@@ -727,12 +806,12 @@ class _SettingsScreenState extends State<SettingsScreen>
             if (kDebugMode) const SizedBox(height: 24),
             if (kDebugMode)
               _buildSection(
-                'Developer Tools',
+                l10n.settingsDeveloperToolsSectionTitle,
                 Icons.developer_mode,
                 [
                   _buildSettingsTile(
-                    'Reset Onboarding',
-                    'Reset onboarding state for testing',
+                    l10n.settingsDeveloperResetOnboardingTitle,
+                    l10n.settingsDeveloperResetOnboardingSubtitle,
                     Icons.refresh,
                     onTap: () {
                       Navigator.push(
@@ -744,15 +823,15 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                   ),
                   _buildSettingsTile(
-                    'Clear Quick Actions',
-                    'Reset recently visited screens',
+                    l10n.settingsDeveloperClearQuickActionsTitle,
+                    l10n.settingsDeveloperClearQuickActionsSubtitle,
                     Icons.clear_all,
                     onTap: () async {
                       final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
                       await navigationProvider.clearVisitData();
                       if (!context.mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Quick actions cleared')),
+                        SnackBar(content: Text(l10n.settingsDeveloperQuickActionsClearedToast)),
                       );
                     },
                   ),
@@ -765,69 +844,78 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  String _getCapabilityDisplayName(PlatformCapability capability) {
+  String _getCapabilityDisplayName(AppLocalizations l10n, PlatformCapability capability) {
     switch (capability) {
       case PlatformCapability.camera:
-        return 'Camera Access (QR Scanner, AR)';
+        return l10n.settingsCapabilityCamera;
       case PlatformCapability.ar:
-        return 'Augmented Reality Features';
+        return l10n.settingsCapabilityAr;
       case PlatformCapability.nfc:
-        return 'NFC Communication';
+        return l10n.settingsCapabilityNfc;
       case PlatformCapability.gps:
-        return 'Location Services';
+        return l10n.settingsCapabilityGps;
       case PlatformCapability.biometrics:
-        return 'Biometric Authentication';
+        return l10n.settingsCapabilityBiometrics;
       case PlatformCapability.notifications:
-        return 'Push Notifications';
+        return l10n.settingsCapabilityNotifications;
       case PlatformCapability.fileSystem:
-        return 'File System Access';
+        return l10n.settingsCapabilityFileSystem;
       case PlatformCapability.bluetooth:
-        return 'Bluetooth Connectivity';
+        return l10n.settingsCapabilityBluetooth;
       case PlatformCapability.vibration:
-        return 'Haptic Feedback';
+        return l10n.settingsCapabilityVibration;
       case PlatformCapability.orientation:
-        return 'Device Orientation';
+        return l10n.settingsCapabilityOrientation;
       case PlatformCapability.background:
-        return 'Background Processing';
+        return l10n.settingsCapabilityBackground;
     }
   }
 
-  Widget _buildProfileSection() {
+  Widget _buildProfileSection(AppLocalizations l10n) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final artistRole = profileProvider.currentUser?.isArtist ?? false;
     final institutionRole = profileProvider.currentUser?.isInstitution ?? false;
-    final roleSummary = 'Artist: ${artistRole ? "On" : "Off"}, Institution: ${institutionRole ? "On" : "Off"}';
+    final roleSummary = l10n.settingsRoleSummary(
+      artistRole ? l10n.commonOn : l10n.commonOff,
+      institutionRole ? l10n.commonOn : l10n.commonOff,
+    );
     return _buildSection(
-      'Profile Settings',
+      l10n.settingsProfileSectionTitle,
       Icons.person_outline,
       [
         _buildSettingsTile(
-          'Profile Visibility',
-          'Currently: $_profileVisibility',
+          l10n.settingsProfileVisibilityTileTitle,
+          l10n.settingsCurrentlyValue(_profileVisibility),
           Icons.visibility,
           onTap: () {
             _showProfileVisibilityDialog();
           },
         ),
         _buildSettingsTile(
-          'Privacy Settings',
-          'Data: ${_dataCollection ? "Enabled" : "Disabled"}, Ads: ${_personalizedAds ? "Enabled" : "Disabled"}',
+          l10n.settingsPrivacySettingsTileTitle,
+          l10n.settingsPrivacySummary(
+            _dataCollection ? l10n.commonEnabled : l10n.commonDisabled,
+            _personalizedAds ? l10n.commonEnabled : l10n.commonDisabled,
+          ),
           Icons.privacy_tip,
           onTap: () {
             _showPrivacySettingsDialog();
           },
         ),
         _buildSettingsTile(
-          'Security Settings',
-          '2FA: ${_twoFactorAuth ? "Enabled" : "Disabled"}, Auto-lock: $_autoLockTime',
+          l10n.settingsSecuritySettingsTileTitle,
+          l10n.settingsSecuritySummary(
+            _twoFactorAuth ? l10n.commonEnabled : l10n.commonDisabled,
+            _autoLockTime,
+          ),
           Icons.security,
           onTap: () {
             _showSecuritySettingsDialog();
           },
         ),
         _buildSettingsTile(
-          'Edit Profile',
-          'Update your username, bio, and avatar',
+          l10n.settingsEditProfileTileTitle,
+          l10n.settingsEditProfileTileSubtitle,
           Icons.person_outline,
           onTap: () async {
             final result = await Navigator.push(
@@ -847,15 +935,18 @@ class _SettingsScreenState extends State<SettingsScreen>
           },
         ),
         _buildSettingsTile(
-          'Account Management',
-          'Type: $_accountType, Notifications: ${_emailNotifications ? "On" : "Off"}',
+          l10n.settingsAccountManagementTileTitle,
+          l10n.settingsAccountSummary(
+            _accountType,
+            _emailNotifications ? l10n.commonOn : l10n.commonOff,
+          ),
           Icons.manage_accounts,
           onTap: () {
             _showAccountManagementDialog();
           },
         ),
         _buildSettingsTile(
-          'Role Simulation',
+          l10n.settingsRoleSimulationTileTitle,
           roleSummary,
           Icons.workspace_premium,
           onTap: _showRoleSimulationSheet,
@@ -865,6 +956,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showRoleSimulationSheet() {
+    final l10n = AppLocalizations.of(context)!;
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     final initialArtist = profileProvider.currentUser?.isArtist ?? false;
     final initialInstitution = profileProvider.currentUser?.isInstitution ?? false;
@@ -902,7 +994,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Role Simulation',
+                  l10n.settingsRoleSimulationSheetTitle,
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -911,7 +1003,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Toggle roles to preview profile layouts locally. Changes are local to this device.',
+                  l10n.settingsRoleSimulationSheetSubtitle,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -919,8 +1011,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
                 const SizedBox(height: 16),
                 SwitchListTile(
-                  title: Text('Artist profile', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Show artist sections (artworks, collections)', style: GoogleFonts.inter(fontSize: 13)),
+                  title: Text(l10n.settingsRoleArtistTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text(l10n.settingsRoleArtistSubtitle, style: GoogleFonts.inter(fontSize: 13)),
                   value: artist,
                   activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                   onChanged: (val) {
@@ -929,8 +1021,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                   },
                 ),
                 SwitchListTile(
-                  title: Text('Institution profile', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
-                  subtitle: Text('Show institution sections (events, collections)', style: GoogleFonts.inter(fontSize: 13)),
+                  title: Text(l10n.settingsRoleInstitutionTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
+                  subtitle: Text(l10n.settingsRoleInstitutionSubtitle, style: GoogleFonts.inter(fontSize: 13)),
                   value: institution,
                   activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
                   onChanged: (val) {
@@ -944,7 +1036,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   children: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Close', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+                      child: Text(l10n.commonClose, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
                     ),
                   ],
                 ),
@@ -956,16 +1048,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildWalletSection() {
+  Widget _buildWalletSection(AppLocalizations l10n) {
     final web3Provider = Provider.of<Web3Provider>(context);
-    
     return _buildSection(
-      'Wallet & Web3',
+      l10n.settingsWalletSectionTitle,
       Icons.account_balance_wallet,
       [
         _buildSettingsTile(
-          'Wallet Connection',
-          web3Provider.isConnected ? 'Connected' : 'Not Connected',
+          l10n.settingsWalletConnectionTileTitle,
+          web3Provider.isConnected ? l10n.settingsWalletConnectionConnected : l10n.settingsWalletConnectionNotConnected,
           Icons.link,
           onTap: () {
             if (web3Provider.isConnected) {
@@ -980,32 +1071,32 @@ class _SettingsScreenState extends State<SettingsScreen>
               : Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
         ),
         _buildSettingsTile(
-          'Network',
-          'Current: $_networkSelection',
+          l10n.settingsNetworkTileTitle,
+          l10n.settingsCurrentNetworkValue(_networkSelection),
           Icons.network_check,
           onTap: () => _showNetworkDialog(),
         ),
         _buildSettingsTile(
-          'Transaction History',
-          'View all transactions',
+          l10n.settingsTransactionHistoryTileTitle,
+          l10n.settingsTransactionHistoryTileSubtitle,
           Icons.history,
           onTap: () => _showTransactionHistoryDialog(),
         ),
         _buildSettingsTile(
-          'Backup Settings',
-          'Auto-backup: ${_autoBackup ? "Enabled" : "Disabled"}',
+          l10n.settingsBackupSettingsTileTitle,
+          l10n.settingsAutoBackupSummary(_autoBackup ? l10n.commonEnabled : l10n.commonDisabled),
           Icons.backup,
           onTap: () => _showBackupDialog(),
         ),
         _buildSettingsTile(
-          'Export recovery phrase',
-          'Back up your wallet (sensitive)',
+          l10n.settingsExportRecoveryPhraseTileTitle,
+          l10n.settingsExportRecoveryPhraseTileSubtitle,
           Icons.warning_amber_rounded,
           onTap: _showRecoveryWarningDialog,
         ),
         _buildSettingsTile(
-          'Import existing wallet (advanced)',
-          'Use a recovery phrase you already have',
+          l10n.settingsImportWalletTileTitle,
+          l10n.settingsImportWalletTileSubtitle,
           Icons.upload_file,
           onTap: _showImportWarningDialog,
         ),
@@ -1013,14 +1104,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSecuritySection() {
+  Widget _buildSecuritySection(AppLocalizations l10n) {
     return _buildSection(
-      'Security & Privacy',
+      l10n.settingsSecurityPrivacySectionTitle,
       Icons.security,
       [
         _buildSettingsTile(
-          'Biometric Authentication',
-          'Use fingerprint or face unlock',
+          l10n.settingsBiometricTileTitle,
+          l10n.settingsBiometricTileSubtitle,
           Icons.fingerprint,
           trailing: Switch(
             value: _biometricAuth,
@@ -1031,20 +1122,20 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         _buildSettingsTile(
-          'Set App PIN',
-          'Protect the app with a numeric PIN',
+          l10n.settingsSetPinTileTitle,
+          l10n.settingsSetPinTileSubtitle,
           Icons.pin,
           onTap: () => _showSetPinDialog(),
         ),
         _buildSettingsTile(
-          'Auto-lock',
-          'Lock app after inactivity',
+          l10n.settingsAutoLockTileTitle,
+          l10n.settingsAutoLockTileSubtitle,
           Icons.lock_clock,
           onTap: () => _showAutoLockDialog(),
         ),
         _buildSettingsTile(
-          'Privacy Mode',
-          'Hide sensitive information',
+          l10n.settingsPrivacyModeTileTitle,
+          l10n.settingsPrivacyModeTileSubtitle,
           Icons.visibility_off,
           trailing: Switch(
             value: _privacyMode,
@@ -1058,8 +1149,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         _buildSettingsTile(
-          'Clear Cache',
-          'Remove temporary files',
+          l10n.settingsClearCacheTileTitle,
+          l10n.settingsClearCacheTileSubtitle,
           Icons.clear_all,
           onTap: () => _showClearCacheDialog(),
         ),
@@ -1067,15 +1158,15 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildPrivacySection() {
+  Widget _buildPrivacySection(AppLocalizations l10n) {
     return _buildSection(
-      'Data & Analytics',
+      l10n.settingsDataAnalyticsSectionTitle,
       Icons.analytics,
       [
         // Mock Data toggle removed - backend controls via USE_MOCK_DATA env variable
         _buildSettingsTile(
-          'Analytics',
-          'Help improve the app',
+          l10n.settingsAnalyticsTileTitle,
+          l10n.settingsAnalyticsTileSubtitle,
           Icons.analytics,
           trailing: Switch(
             value: _analytics,
@@ -1089,8 +1180,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         _buildSettingsTile(
-          'Crash Reporting',
-          'Send crash reports automatically',
+          l10n.settingsCrashReportingTileTitle,
+          l10n.settingsCrashReportingTileSubtitle,
           Icons.bug_report,
           trailing: Switch(
             value: _crashReporting,
@@ -1104,8 +1195,8 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         _buildSettingsTile(
-          'Skip Onboarding',
-          'Skip welcome screens for returning users',
+          l10n.settingsSkipOnboardingTileTitle,
+          l10n.settingsSkipOnboardingTileSubtitle,
           Icons.fast_forward,
           trailing: Switch(
             value: _skipOnboardingForReturningUsers,
@@ -1119,14 +1210,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         _buildSettingsTile(
-          'Data Export',
-          'Download your data',
+          l10n.settingsDataExportTileTitle,
+          l10n.settingsDataExportTileSubtitle,
           Icons.download,
           onTap: () => _showDataExportDialog(),
         ),
         _buildSettingsTile(
-          'Reset Permission Flags',
-          'Clear saved permission/service prompts',
+          l10n.settingsResetPermissionFlagsTileTitle,
+          l10n.settingsResetPermissionFlagsTileSubtitle,
           Icons.location_off,
           onTap: () => _showResetPermissionFlagsDialog(),
         ),
@@ -1134,44 +1225,44 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildAboutSection() {
+  Widget _buildAboutSection(AppLocalizations l10n) {
     return _buildSection(
-      'About',
+      l10n.settingsAboutSectionTitle,
       Icons.info,
       [
         _buildSettingsTile(
-          'Version',
+          l10n.settingsAboutVersionTileTitle,
           AppInfo.version,
           Icons.app_registration,
           onTap: () => _showVersionDialog(),
         ),
         _buildSettingsTile(
-          'Terms of Service',
-          'Read our terms',
+          l10n.settingsAboutTermsTileTitle,
+          l10n.settingsAboutTermsTileSubtitle,
           Icons.description,
           onTap: () => _showTermsDialog(),
         ),
         _buildSettingsTile(
-          'Privacy Policy',
-          'Read our privacy policy',
+          l10n.settingsAboutPrivacyTileTitle,
+          l10n.settingsAboutPrivacyTileSubtitle,
           Icons.privacy_tip,
           onTap: () => _showPrivacyPolicyDialog(),
         ),
         _buildSettingsTile(
-          'Support',
-          'Get help or report issues',
+          l10n.settingsAboutSupportTileTitle,
+          l10n.settingsAboutSupportTileSubtitle,
           Icons.help,
           onTap: () => _showSupportDialog(),
         ),
         _buildSettingsTile(
-          'Open Source Licenses',
-          'View third-party licenses',
+          l10n.settingsAboutLicensesTileTitle,
+          l10n.settingsAboutLicensesTileSubtitle,
           Icons.code,
           onTap: () => _showLicensesDialog(),
         ),
         _buildSettingsTile(
-          'Rate App',
-          'Rate us on the app store',
+          l10n.settingsAboutRateTileTitle,
+          l10n.settingsAboutRateTileSubtitle,
           Icons.star,
           onTap: () => _showRateAppDialog(),
         ),
@@ -1179,28 +1270,28 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildDangerZone() {
+  Widget _buildDangerZone(AppLocalizations l10n) {
     return _buildSection(
-      'Danger Zone',
+      l10n.settingsDangerZoneSectionTitle,
       Icons.warning,
       [
         _buildSettingsTile(
-          'Log Out',
-          'Disconnect wallet and clear session',
+          l10n.settingsLogoutTileTitle,
+          l10n.settingsLogoutTileSubtitle,
           Icons.logout,
           onTap: _handleLogout,
           isDestructive: true,
         ),
         _buildSettingsTile(
-          'Reset App',
-          'Clear all data and settings',
+          l10n.settingsResetAppTileTitle,
+          l10n.settingsResetAppTileSubtitle,
           Icons.refresh,
           onTap: () => _showResetDialog(),
           isDestructive: true,
         ),
         _buildSettingsTile(
-          'Delete Account',
-          'Permanently delete your account',
+          l10n.settingsDeleteAccountTileTitle,
+          l10n.settingsDeleteAccountTileSubtitle,
           Icons.delete_forever,
           onTap: () => _showDeleteAccountDialog(),
           isDestructive: true,
@@ -1296,6 +1387,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Dialog methods
   void _showNetworkDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final currentNetwork = web3Provider.currentNetwork.toLowerCase();
@@ -1305,7 +1397,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Select Network',
+          l10n.settingsSelectNetworkDialogTitle,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -1317,7 +1409,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             _buildNetworkOption(
               'Mainnet',
-              'Live Solana network',
+              l10n.settingsNetworkMainnetDescription,
               currentNetwork == 'mainnet',
               () async {
                 final navigator = Navigator.of(context);
@@ -1331,14 +1423,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showSnackBar(
-                  const SnackBar(content: Text('Switched to Mainnet')),
+                  SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Mainnet'))),
                 );
               },
             ),
             const SizedBox(height: 8),
             _buildNetworkOption(
               'Devnet',
-              'Development network for testing',
+              l10n.settingsNetworkDevnetDescription,
               currentNetwork == 'devnet',
               () async {
                 final navigator = Navigator.of(context);
@@ -1352,14 +1444,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showSnackBar(
-                  const SnackBar(content: Text('Switched to Devnet')),
+                  SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Devnet'))),
                 );
               },
             ),
             const SizedBox(height: 8),
             _buildNetworkOption(
               'Testnet',
-              'Test network for development',
+              l10n.settingsNetworkTestnetDescription,
               currentNetwork == 'testnet',
               () async {
                 final navigator = Navigator.of(context);
@@ -1373,7 +1465,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 await _saveAllSettings();
                 if (!mounted) return;
                 messenger.showSnackBar(
-                  const SnackBar(content: Text('Switched to Testnet')),
+                  SnackBar(content: Text(l10n.settingsSwitchedToNetworkToast('Testnet'))),
                 );
               },
             ),
@@ -1383,7 +1475,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -1450,12 +1542,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showBackupDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
     if (!web3Provider.isConnected) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please connect your wallet first')),
+        SnackBar(content: Text(l10n.settingsConnectWalletFirstToast)),
       );
       return;
     }
@@ -1473,7 +1566,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(width: 8),
             Text(
-              'Backup Wallet',
+              l10n.settingsBackupWalletDialogTitle,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1487,7 +1580,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'This will show your recovery phrase.',
+              l10n.settingsBackupWalletDialogIntro,
               style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1513,7 +1606,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        'Security Warning',
+                        l10n.settingsSecurityWarningTitle,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
@@ -1524,7 +1617,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '• Make sure you\'re in a private place\n• Never share your recovery phrase\n• Write it down and store it safely',
+                    l10n.settingsSecurityWarningBullets,
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Theme.of(context).colorScheme.error,
@@ -1539,7 +1632,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -1554,7 +1647,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               _navigateToRecoveryReveal(walletProvider);
             },
             child: Text(
-              'Continue',
+              l10n.commonContinue,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onPrimary,
                 fontWeight: FontWeight.w600,
@@ -1567,30 +1660,32 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _navigateToRecoveryReveal(WalletProvider walletProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final hasWallet = walletProvider.wallet != null || (walletProvider.currentWalletAddress ?? '').isNotEmpty;
     if (!hasWallet) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Connect or create a wallet first.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsConnectOrCreateWalletFirstToast)));
       return;
     }
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
   }
 
   void _showAutoLockDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
 
     final options = <Map<String, dynamic>>[
-      {'label': '10 seconds', 'seconds': 10},
-      {'label': '30 seconds', 'seconds': 30},
-      {'label': '1 minute', 'seconds': 60},
-      {'label': '5 minutes', 'seconds': 5 * 60},
-      {'label': '15 minutes', 'seconds': 15 * 60},
-      {'label': '30 minutes', 'seconds': 30 * 60},
-      {'label': '1 hour', 'seconds': 60 * 60},
-      {'label': '3 hours', 'seconds': 3 * 60 * 60},
-      {'label': '6 hours', 'seconds': 6 * 60 * 60},
-      {'label': '12 hours', 'seconds': 12 * 60 * 60},
-      {'label': '1 day', 'seconds': 24 * 60 * 60},
-      {'label': 'Never', 'seconds': 0},
+      {'label': '10 seconds', 'seconds': 10, 'display': l10n.settingsAutoLock10Seconds},
+      {'label': '30 seconds', 'seconds': 30, 'display': l10n.settingsAutoLock30Seconds},
+      {'label': '1 minute', 'seconds': 60, 'display': l10n.settingsAutoLock1Minute},
+      {'label': '5 minutes', 'seconds': 5 * 60, 'display': l10n.settingsAutoLock5Minutes},
+      {'label': '15 minutes', 'seconds': 15 * 60, 'display': l10n.settingsAutoLock15Minutes},
+      {'label': '30 minutes', 'seconds': 30 * 60, 'display': l10n.settingsAutoLock30Minutes},
+      {'label': '1 hour', 'seconds': 60 * 60, 'display': l10n.settingsAutoLock1Hour},
+      {'label': '3 hours', 'seconds': 3 * 60 * 60, 'display': l10n.settingsAutoLock3Hours},
+      {'label': '6 hours', 'seconds': 6 * 60 * 60, 'display': l10n.settingsAutoLock6Hours},
+      {'label': '12 hours', 'seconds': 12 * 60 * 60, 'display': l10n.settingsAutoLock12Hours},
+      {'label': '1 day', 'seconds': 24 * 60 * 60, 'display': l10n.settingsAutoLock1Day},
+      {'label': 'Never', 'seconds': 0, 'display': l10n.settingsAutoLockNever},
     ];
 
     showDialog(
@@ -1598,7 +1693,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Auto-lock Timer',
+          l10n.settingsAutoLockTimerDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -1609,10 +1704,11 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: options.map((opt) {
             final label = opt['label'] as String;
             final seconds = opt['seconds'] as int;
+            final displayLabel = opt['display'] as String;
             final isSelected = _autoLockTime == label;
             return ListTile(
               title: Text(
-                label,
+                displayLabel,
                 style: GoogleFonts.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
@@ -1634,7 +1730,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showSnackBar(
-                  SnackBar(content: Text('Auto-lock set to $label')),
+                  SnackBar(content: Text(l10n.settingsAutoLockSetToToast(displayLabel))),
                 );
               },
             );
@@ -1645,13 +1741,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _toggleBiometric(bool value) async {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     if (value) {
       final canUse = await walletProvider.canUseBiometrics();
       if (!canUse) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Biometric unlock not available on this device.')),
+            SnackBar(content: Text(l10n.settingsBiometricUnavailableToast)),
           );
         }
         setState(() => _biometricAuth = false);
@@ -1663,7 +1760,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       if (!ok) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Biometric authentication failed.')),
+            SnackBar(content: Text(l10n.settingsBiometricFailedToast)),
           );
         }
         setState(() => _biometricAuth = false);
@@ -1676,6 +1773,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showRecoveryWarningDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1684,7 +1782,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Icon(Icons.shield_outlined, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
-            Text('Export recovery phrase', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            Text(l10n.settingsExportRecoveryPhraseDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -1692,7 +1790,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Only view your phrase in private. We never store it, and anyone with it can move your assets.',
+              l10n.settingsExportRecoveryPhraseDialogBody,
               style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)),
             ),
             const SizedBox(height: 12),
@@ -1702,7 +1800,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Confirm you are ready before revealing the words.',
+                    l10n.settingsExportRecoveryPhraseDialogConfirm,
                     style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                   ),
                 ),
@@ -1711,13 +1809,13 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonCancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const MnemonicRevealScreen()));
             },
-            child: const Text('Show phrase'),
+            child: Text(l10n.settingsShowPhraseButton),
           ),
         ],
       ),
@@ -1725,6 +1823,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showImportWarningDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1733,7 +1832,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Icon(Icons.report_gmailerrorred, color: Theme.of(context).colorScheme.error),
             const SizedBox(width: 8),
-            Text('Import existing wallet', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+            Text(l10n.settingsImportWalletDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
           ],
         ),
         content: Column(
@@ -1741,7 +1840,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Only paste a recovery phrase from a trusted source. Avoid public Wi-Fi and screensharing while importing.',
+              l10n.settingsImportWalletDialogBody,
               style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)),
             ),
             const SizedBox(height: 12),
@@ -1751,7 +1850,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'We never store your seed phrase. You keep full ownership of your assets.',
+                    l10n.settingsImportWalletDialogConfirm,
                     style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
                   ),
                 ),
@@ -1760,13 +1859,13 @@ class _SettingsScreenState extends State<SettingsScreen>
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonCancel)),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectWallet(initialStep: 1)));
             },
-            child: const Text('Proceed'),
+            child: Text(l10n.commonProceed),
           ),
         ],
       ),
@@ -1774,6 +1873,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showSetPinDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
     final pinController = TextEditingController();
     final confirmController = TextEditingController();
@@ -1783,7 +1883,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Set App PIN',
+          l10n.settingsSetPinDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -1797,7 +1897,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               obscureText: true,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: 'PIN',
+                labelText: l10n.commonPinLabel,
               ),
             ),
             const SizedBox(height: 8),
@@ -1806,7 +1906,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               obscureText: true,
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
-                labelText: 'Confirm PIN',
+                labelText: l10n.settingsConfirmPinLabel,
               ),
             ),
           ],
@@ -1814,7 +1914,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
+            child: Text(l10n.commonCancel, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.outline)),
           ),
           TextButton(
             onPressed: () async {
@@ -1824,9 +1924,9 @@ class _SettingsScreenState extends State<SettingsScreen>
               await walletProvider.clearPin();
               if (!mounted) return;
               navigator.pop();
-              messenger.showSnackBar(const SnackBar(content: Text('PIN cleared')));
+              messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinClearedToast)));
             },
-            child: Text('Clear PIN', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error)),
+            child: Text(l10n.settingsClearPinButton, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor),
@@ -1836,24 +1936,24 @@ class _SettingsScreenState extends State<SettingsScreen>
               final pin = pinController.text.trim();
               final confirm = confirmController.text.trim();
               if (pin.length < 4 || confirm.length < 4) {
-                messenger.showSnackBar(const SnackBar(content: Text('PIN must be at least 4 digits')));
+                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinMinLengthError)));
                 return;
               }
               if (pin != confirm) {
-                messenger.showSnackBar(const SnackBar(content: Text('PINs do not match')));
+                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinMismatchError)));
                 return;
               }
               try {
                 await walletProvider.setPin(pin);
                 if (!mounted) return;
                 navigator.pop();
-                messenger.showSnackBar(const SnackBar(content: Text('PIN set successfully')));
+                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinSetSuccessToast)));
               } catch (e) {
                 if (!mounted) return;
-                messenger.showSnackBar(const SnackBar(content: Text('Failed to set PIN')));
+                messenger.showSnackBar(SnackBar(content: Text(l10n.settingsPinSetFailedToast)));
               }
             },
-            child: Text('Save', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+            child: Text(l10n.commonSave, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -1861,19 +1961,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showClearCacheDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Clear Cache',
+          l10n.settingsClearCacheDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'This will clear temporary files and may improve performance.',
+          l10n.settingsClearCacheDialogBody,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -1882,7 +1983,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -1902,10 +2003,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               if (!mounted) return;
               navigator.pop();
               messenger.showSnackBar(
-                const SnackBar(content: Text('Cache cleared successfully')),
+                SnackBar(content: Text(l10n.settingsCacheClearedToast)),
               );
             },
-            child: const Text('Clear'),
+            child: Text(l10n.settingsClearButton),
           ),
         ],
       ),
@@ -1913,19 +2014,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showResetPermissionFlagsDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
-          'Reset Permission Flags',
+          l10n.settingsResetPermissionFlagsDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'This will clear the app\'s stored permission and service request flags. Use this to re-trigger permission prompts if needed.',
+          l10n.settingsResetPermissionFlagsDialogBody,
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
@@ -1933,7 +2035,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text('Cancel', style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.outline)),
+            child: Text(l10n.commonCancel, style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.outline)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -1944,10 +2046,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               await _resetPermissionFlags();
               if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Permission flags reset')),
+                SnackBar(content: Text(l10n.settingsPermissionFlagsResetToast)),
               );
             },
-            child: Text('Reset', style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onPrimary)),
+            child: Text(l10n.settingsResetButton, style: GoogleFonts.inter(color: Theme.of(dialogContext).colorScheme.onPrimary)),
           ),
         ],
       ),
@@ -1963,19 +2065,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showDataExportDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Export Data',
+          l10n.settingsExportDataDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'This will create a file with your app data (excluding private keys).',
+          l10n.settingsExportDataDialogBody,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -1984,7 +2087,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2018,10 +2121,10 @@ class _SettingsScreenState extends State<SettingsScreen>
               if (!mounted) return;
               navigator.pop();
               messenger.showSnackBar(
-                SnackBar(content: Text('Data exported: ${exportData.length} categories')),
+                SnackBar(content: Text(l10n.settingsDataExportedToast(exportData.length))),
               );
             },
-            child: const Text('Export'),
+            child: Text(l10n.settingsExportButton),
           ),
         ],
       ),
@@ -2029,19 +2132,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showResetDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Reset App',
+          l10n.settingsResetAppDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'This will clear all app data and settings. Your wallet will be disconnected but not deleted.',
+          l10n.settingsResetAppDialogBody,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
           ),
@@ -2050,7 +2154,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2078,14 +2182,14 @@ class _SettingsScreenState extends State<SettingsScreen>
               if (!mounted) return;
               navigator.pop();
               messenger.showSnackBar(
-                const SnackBar(
-                  content: Text('App reset successfully. Please restart the app.'),
-                  duration: Duration(seconds: 3),
+                SnackBar(
+                  content: Text(l10n.settingsAppResetSuccessToast),
+                  duration: const Duration(seconds: 3),
                 ),
               );
               _restartToOnboarding();
             },
-            child: const Text('Reset'),
+            child: Text(l10n.settingsResetButton),
           ),
         ],
       ),
@@ -2093,19 +2197,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showDeleteAccountDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
-          'Delete Account',
+          l10n.settingsDeleteAccountDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'We will remove your profile and community data from our servers. Your wallet stays yours and will remain functional.',
+          l10n.settingsDeleteAccountDialogBody,
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
@@ -2114,7 +2219,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(dialogContext).colorScheme.outline,
               ),
@@ -2135,14 +2240,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 builder: (confirmContext) => AlertDialog(
                   backgroundColor: Theme.of(confirmContext).colorScheme.surface,
                   title: Text(
-                    'Final Confirmation',
+                    l10n.settingsFinalConfirmationTitle,
                     style: GoogleFonts.inter(
                       color: Theme.of(confirmContext).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   content: Text(
-                    'Are you absolutely sure you want to delete your account? This action cannot be undone.',
+                    l10n.settingsDeleteAccountFinalConfirmationBody,
                     style: GoogleFonts.inter(
                       color: Theme.of(confirmContext).colorScheme.onSurface,
                     ),
@@ -2150,12 +2255,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, false),
-                      child: Text('Cancel', style: GoogleFonts.inter()),
+                      child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(confirmContext, true),
                       child: Text(
-                        'Confirm',
+                        l10n.settingsConfirmButton,
                         style: GoogleFonts.inter(color: Theme.of(confirmContext).colorScheme.error),
                       ),
                     ),
@@ -2176,8 +2281,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                       profileProvider.currentUser?.walletAddress;
                   await BackendApiService().deleteMyAccountData(walletAddress: wallet);
                 } catch (e) {
+                  debugPrint('SettingsScreen: backend deletion failed: $e');
                   messenger.showSnackBar(
-                    SnackBar(content: Text('Backend deletion failed: $e')),
+                    SnackBar(content: Text(l10n.settingsDeleteAccountBackendFailedToast)),
                   );
                 }
 
@@ -2191,9 +2297,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 dialogNavigator.pop();
                 messenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('Account deleted. All data has been removed.'),
-                    duration: Duration(seconds: 3),
+                  SnackBar(
+                    content: Text(l10n.settingsAccountDeletedToast),
+                    duration: const Duration(seconds: 3),
                   ),
                 );
                 _restartToOnboarding();
@@ -2202,7 +2308,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                 dialogNavigator.pop();
               }
             },
-            child: const Text('Delete Forever'),
+            child: Text(l10n.settingsDeleteForeverButton),
           ),
         ],
       ),
@@ -2276,6 +2382,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _togglePushNotifications(bool value) async {
+    final l10n = AppLocalizations.of(context)!;
     final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
     if (value) {
       final granted = await PushNotificationService().requestPermission();
@@ -2283,9 +2390,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         if (mounted) {
           setState(() => _pushNotifications = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Enable notifications in system settings to receive alerts.'),
-            ),
+            SnackBar(content: Text(l10n.settingsEnableNotificationsInSystemToast)),
           );
         }
         await _saveAllSettings();
@@ -2302,19 +2407,20 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Future<void> _handleLogout() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: Theme.of(dialogContext).colorScheme.surface,
         title: Text(
-          'Log Out',
+          l10n.settingsLogoutDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'Disconnect your wallet and clear your session on this device?',
+          l10n.settingsLogoutDialogBody,
           style: GoogleFonts.inter(
             color: Theme.of(dialogContext).colorScheme.onSurface,
           ),
@@ -2323,7 +2429,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(dialogContext).colorScheme.outline,
               ),
@@ -2335,7 +2441,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               foregroundColor: Theme.of(dialogContext).colorScheme.onError,
             ),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Log Out'),
+            child: Text(l10n.settingsLogoutButton),
           ),
         ],
       ),
@@ -2412,6 +2518,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Wallet dialog methods
   void _showTransactionHistoryDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final web3Provider = Provider.of<Web3Provider>(context, listen: false);
     
     showDialog(
@@ -2419,7 +2526,7 @@ class _SettingsScreenState extends State<SettingsScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Transaction History',
+          l10n.settingsTransactionHistoryDialogTitle,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -2433,7 +2540,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ? Column(
                 children: [
                   Text(
-                    'Recent Transactions',
+                    l10n.settingsRecentTransactionsTitle,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -2454,8 +2561,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             : Center(
                 child: EmptyStateCard(
                   icon: Icons.receipt_long,
-                  title: 'No Transactions Found',
-                  description: 'Your transaction history will appear here when you start making transactions.',
+                  title: l10n.settingsNoTransactionsTitle,
+                  description: l10n.settingsNoTransactionsDescription,
                 ),
               ),
         ),
@@ -2463,7 +2570,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              l10n.commonClose,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2475,12 +2582,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildWalletTransactionItem(WalletTransaction tx) {
+    final l10n = AppLocalizations.of(context)!;
     final isIncoming = tx.type == TransactionType.receive;
     final amount = tx.amount;
     final token = tx.token;
     final timestamp = tx.timestamp.toString();
-    final from = tx.fromAddress ?? 'Unknown';
-    final to = tx.toAddress ?? 'Unknown';
+    final from = tx.fromAddress ?? l10n.commonUnknown;
+    final to = tx.toAddress ?? l10n.commonUnknown;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -2515,7 +2623,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isIncoming ? 'Received' : 'Sent',
+                  isIncoming ? l10n.settingsTxReceivedLabel : l10n.settingsTxSentLabel,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -2523,7 +2631,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                   ),
                 ),
                 Text(
-                  '${isIncoming ? 'From' : 'To'}: ${(isIncoming ? from : to).substring(0, 8)}...',
+                  l10n.settingsTxFromToLabel(
+                    isIncoming ? l10n.settingsTxFromLabel : l10n.settingsTxToLabel,
+                    (isIncoming ? from : to).substring(0, 8),
+                  ),
                   style: GoogleFonts.inter(
                     fontSize: 10,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -2555,12 +2666,13 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // About dialog methods
   void _showVersionDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'App Version',
+          l10n.settingsAppVersionDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2579,13 +2691,13 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'Version: ${AppInfo.version}',
+              l10n.settingsVersionValue(AppInfo.version),
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             Text(
-              'Build: ${AppInfo.buildNumber}',
+              l10n.settingsBuildValue(AppInfo.buildNumber),
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -2598,7 +2710,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ),
             Text(
-              'All rights reserved.',
+              l10n.settingsAllRightsReserved,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -2609,7 +2721,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              l10n.commonClose,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2621,12 +2733,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showTermsDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Terms of Service',
+          l10n.settingsTermsDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2634,13 +2747,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         content: SingleChildScrollView(
           child: Text(
-            'By using ART.KUBUS, you agree to these terms:\n\n'
-            '1. You are responsible for maintaining the security of your wallet.\n'
-            '2. We do not store your private keys or seed phrases.\n'
-            '3. All transactions are final and irreversible.\n'
-            '4. Use the app at your own risk.\n'
-            '5. We reserve the right to update these terms.\n\n'
-            'For the complete terms, visit our website.',
+            l10n.settingsTermsDialogBody,
             style: GoogleFonts.inter(
               height: 1.5,
               color: Theme.of(context).colorScheme.onSurface,
@@ -2651,7 +2758,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              l10n.commonClose,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2663,12 +2770,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showPrivacyPolicyDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Privacy Policy',
+          l10n.settingsPrivacyPolicyDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2676,13 +2784,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         content: SingleChildScrollView(
           child: Text(
-            'Your privacy is important to us:\n\n'
-            '• We do not collect personal data without consent\n'
-            '• Your wallet data is stored locally on your device\n'
-            '• We may collect anonymous usage statistics\n'
-            '• We do not share your data with third parties\n'
-            '• You can disable analytics in Privacy settings\n\n'
-            'For our complete privacy policy, visit our website.',
+            l10n.settingsPrivacyPolicyDialogBody,
             style: GoogleFonts.inter(
               height: 1.5,
               color: Theme.of(context).colorScheme.onSurface,
@@ -2693,7 +2795,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              l10n.commonClose,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2705,12 +2807,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showSupportDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Support',
+          l10n.settingsSupportDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2720,7 +2823,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Need help? Choose an option:',
+              l10n.settingsSupportDialogBody,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -2734,11 +2837,11 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening FAQ...')),
+                  SnackBar(content: Text(l10n.settingsOpeningFaqToast)),
                 );
               },
               icon: const Icon(Icons.help_outline),
-              label: const Text('View FAQ'),
+              label: Text(l10n.settingsViewFaqButton),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
@@ -2749,11 +2852,11 @@ class _SettingsScreenState extends State<SettingsScreen>
               onPressed: () {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Opening email client...')),
+                  SnackBar(content: Text(l10n.settingsOpeningEmailClientToast)),
                 );
               },
               icon: const Icon(Icons.email),
-              label: const Text('Contact Support'),
+              label: Text(l10n.settingsContactSupportButton),
             ),
           ],
         ),
@@ -2761,7 +2864,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              l10n.commonClose,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2773,12 +2876,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showLicensesDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Open Source Licenses',
+          l10n.settingsLicensesDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2786,13 +2890,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         content: SingleChildScrollView(
           child: Text(
-            'This app uses the following open source libraries:\n\n'
-            '• Flutter SDK (BSD License)\n'
-            '• Material Design Icons (Apache 2.0)\n'
-            '• SharedPreferences (BSD License)\n'
-            '• HTTP (BSD License)\n'
-            '• Path Provider (BSD License)\n\n'
-            'Full license texts are available in the app repository.',
+            l10n.settingsLicensesDialogBody,
             style: GoogleFonts.inter(
               height: 1.5,
               color: Theme.of(context).colorScheme.onSurface,
@@ -2803,7 +2901,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Close',
+              l10n.commonClose,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2815,12 +2913,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showRateAppDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Rate ART.KUBUS',
+          l10n.settingsRateAppDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -2830,14 +2929,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Enjoying the app?',
+              l10n.settingsRateAppDialogBodyTitle,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Please consider rating us on the app store!',
+              l10n.settingsRateAppDialogBodySubtitle,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -2859,7 +2958,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Maybe Later',
+              l10n.settingsMaybeLaterButton,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -2873,10 +2972,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Opening app store...')),
+                SnackBar(content: Text(l10n.settingsOpeningAppStoreToast)),
               );
             },
-            child: const Text('Rate Now'),
+            child: Text(l10n.settingsRateNowButton),
           ),
         ],
       ),
@@ -2911,7 +3010,14 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildDropdownTile(String title, String subtitle, String value, List<String> options, Function(String?) onChanged) {
+  Widget _buildDropdownTile(
+    String title,
+    String subtitle,
+    String value,
+    List<String> options,
+    Function(String?) onChanged, {
+    String Function(String option)? optionLabelBuilder,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       color: Theme.of(context).colorScheme.primaryContainer,
@@ -2940,7 +3046,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           items: options.map((String option) {
             return DropdownMenuItem<String>(
               value: option,
-              child: Text(option),
+              child: Text(optionLabelBuilder?.call(option) ?? option),
             );
           }).toList(),
           onChanged: onChanged,
@@ -3072,8 +3178,10 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Profile Settings Dialog Methods
   void _showProfileVisibilityDialog() {
+    final l10n = AppLocalizations.of(context)!;
     String selectedVisibility = _profileVisibility;
     final accentColor = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final visibilityOptions = _profileVisibilityOptions(l10n);
 
     showDialog(
       context: context,
@@ -3081,7 +3189,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         builder: (innerContext, setDialogState) => AlertDialog(
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
-            'Profile Visibility',
+            l10n.settingsProfileVisibilityDialogTitle,
             style: GoogleFonts.inter(
               color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -3089,7 +3197,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            children: _profileVisibilityOptions
+            children: visibilityOptions
                 .map(
                   (option) => Padding(
                     padding: const EdgeInsets.only(bottom: 8),
@@ -3108,7 +3216,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: GoogleFonts.inter(
                   color: Theme.of(innerContext).colorScheme.outline,
                 ),
@@ -3121,6 +3229,16 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               onPressed: () async {
                 final navigator = Navigator.of(dialogContext);
+                final displayVisibility = visibilityOptions
+                    .firstWhere(
+                      (opt) => opt.value == selectedVisibility,
+                      orElse: () => _ProfileVisibilityOption(
+                        value: selectedVisibility,
+                        label: selectedVisibility,
+                        description: '',
+                      ),
+                    )
+                    .label;
                 setState(() {
                   _profileVisibility = selectedVisibility;
                 });
@@ -3128,10 +3246,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Profile visibility set to $selectedVisibility')),
+                  SnackBar(content: Text(l10n.settingsProfileVisibilitySetToast(displayVisibility))),
                 );
               },
-              child: const Text('Save'),
+              child: Text(l10n.commonSave),
             ),
           ],
         ),
@@ -3140,13 +3258,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showPrivacySettingsDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (innerContext, setDialogState) => AlertDialog(
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
-            'Privacy Settings',
+            l10n.settingsPrivacySettingsDialogTitle,
             style: GoogleFonts.inter(
               color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -3159,30 +3278,46 @@ class _SettingsScreenState extends State<SettingsScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSwitchTile(
-                    'Data Collection',
-                    'Allow app to collect usage data',
+                    l10n.settingsPrivacyDataCollectionTitle,
+                    l10n.settingsPrivacyDataCollectionSubtitle,
                     _dataCollection,
                     (value) => setDialogState(() => _dataCollection = value),
                   ),
                   _buildSwitchTile(
-                    'Personalized Ads',
-                    'Show ads based on your interests',
+                    l10n.settingsPrivacyPersonalizedAdsTitle,
+                    l10n.settingsPrivacyPersonalizedAdsSubtitle,
                     _personalizedAds,
                     (value) => setDialogState(() => _personalizedAds = value),
                   ),
                   _buildSwitchTile(
-                    'Location Tracking',
-                    'Allow location-based features',
+                    l10n.settingsPrivacyLocationTrackingTitle,
+                    l10n.settingsPrivacyLocationTrackingSubtitle,
                     _locationTracking,
                     (value) => setDialogState(() => _locationTracking = value),
                   ),
                   const SizedBox(height: 16),
                   _buildDropdownTile(
-                    'Data Retention',
-                    'How long to keep your data',
+                    l10n.settingsPrivacyDataRetentionTitle,
+                    l10n.settingsPrivacyDataRetentionSubtitle,
                     _dataRetention,
                     ['3 Months', '6 Months', '1 Year', '2 Years', 'Indefinite'],
                     (value) => setDialogState(() => _dataRetention = value!),
+                    optionLabelBuilder: (option) {
+                      switch (option) {
+                        case '3 Months':
+                          return l10n.settingsRetention3Months;
+                        case '6 Months':
+                          return l10n.settingsRetention6Months;
+                        case '1 Year':
+                          return l10n.settingsRetention1Year;
+                        case '2 Years':
+                          return l10n.settingsRetention2Years;
+                        case 'Indefinite':
+                          return l10n.settingsRetentionIndefinite;
+                        default:
+                          return option;
+                      }
+                    },
                   ),
                 ],
               ),
@@ -3192,7 +3327,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: GoogleFonts.inter(
                   color: Theme.of(innerContext).colorScheme.outline,
                 ),
@@ -3210,10 +3345,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Privacy settings updated')),
+                  SnackBar(content: Text(l10n.settingsPrivacySettingsUpdatedToast)),
                 );
               },
-              child: const Text('Save'),
+              child: Text(l10n.commonSave),
             ),
           ],
         ),
@@ -3222,13 +3357,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showSecuritySettingsDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (innerContext, setDialogState) => AlertDialog(
           backgroundColor: Theme.of(innerContext).colorScheme.surface,
           title: Text(
-            'Security Settings',
+            l10n.settingsSecuritySettingsDialogTitle,
             style: GoogleFonts.inter(
               color: Theme.of(innerContext).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -3241,8 +3377,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildActionTile(
-                    'Change Password',
-                    'Update your account password',
+                    l10n.settingsChangePasswordTileTitle,
+                    l10n.settingsChangePasswordTileSubtitle,
                     Icons.lock_outline,
                     () {
                       Navigator.pop(innerContext);
@@ -3250,27 +3386,43 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                   ),
                   _buildSwitchTile(
-                    'Two-Factor Authentication',
-                    'Add extra security to your account',
+                    l10n.settingsTwoFactorTitle,
+                    l10n.settingsTwoFactorSubtitle,
                     _twoFactorAuth,
                     (value) => setDialogState(() => _twoFactorAuth = value),
                   ),
                   _buildSwitchTile(
-                    'Session Timeout',
-                    'Automatically sign out when idle',
+                    l10n.settingsSessionTimeoutTitle,
+                    l10n.settingsSessionTimeoutSubtitle,
                     _sessionTimeout,
                     (value) => setDialogState(() => _sessionTimeout = value),
                   ),
                   _buildDropdownTile(
-                    'Auto-Lock Time',
-                    'Lock app after inactivity',
+                    l10n.settingsAutoLockTimeTitle,
+                    l10n.settingsAutoLockTimeSubtitle,
                     _autoLockTime,
                     ['1 minute', '5 minutes', '15 minutes', '30 minutes', 'Never'],
                     (value) => setDialogState(() => _autoLockTime = value!),
+                    optionLabelBuilder: (option) {
+                      switch (option) {
+                        case '1 minute':
+                          return l10n.settingsAutoLock1Minute;
+                        case '5 minutes':
+                          return l10n.settingsAutoLock5Minutes;
+                        case '15 minutes':
+                          return l10n.settingsAutoLock15Minutes;
+                        case '30 minutes':
+                          return l10n.settingsAutoLock30Minutes;
+                        case 'Never':
+                          return l10n.settingsAutoLockNever;
+                        default:
+                          return option;
+                      }
+                    },
                   ),
                   _buildSwitchTile(
-                    'Login Notifications',
-                    'Get notified of new sign-ins',
+                    l10n.settingsLoginNotificationsTitle,
+                    l10n.settingsLoginNotificationsSubtitle,
                     _loginNotifications,
                     (value) => setDialogState(() => _loginNotifications = value),
                   ),
@@ -3282,7 +3434,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: GoogleFonts.inter(
                   color: Theme.of(innerContext).colorScheme.outline,
                 ),
@@ -3300,10 +3452,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Security settings updated')),
+                  SnackBar(content: Text(l10n.settingsSecuritySettingsUpdatedToast)),
                 );
               },
-              child: const Text('Save'),
+              child: Text(l10n.commonSave),
             ),
           ],
         ),
@@ -3312,13 +3464,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showAccountManagementDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surface,
           title: Text(
-            'Account Management',
+            l10n.settingsAccountManagementDialogTitle,
             style: GoogleFonts.inter(
               color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
@@ -3331,14 +3484,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildSwitchTile(
-                    'Email Notifications',
-                    'Receive updates via email',
+                    l10n.settingsEmailNotificationsTitle,
+                    l10n.settingsEmailNotificationsSubtitle,
                     _emailNotifications,
                     (value) => setDialogState(() => _emailNotifications = value),
                   ),
                   _buildSwitchTile(
-                    'Push Notifications',
-                    'Get notifications on your device',
+                    l10n.settingsPushNotificationsTitle,
+                    l10n.settingsPushNotificationsSubtitle,
                     _pushNotifications,
                     (value) async {
                       setDialogState(() => _pushNotifications = value);
@@ -3346,28 +3499,40 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                   ),
                   _buildSwitchTile(
-                    'Marketing Emails',
-                    'Receive promotional content',
+                    l10n.settingsMarketingEmailsTitle,
+                    l10n.settingsMarketingEmailsSubtitle,
                     _marketingEmails,
                     (value) => setDialogState(() => _marketingEmails = value),
                   ),
                   _buildDropdownTile(
-                    'Account Type',
-                    'Your current membership level',
+                    l10n.settingsAccountTypeTitle,
+                    l10n.settingsAccountTypeSubtitle,
                     _accountType,
                     ['Standard', 'Premium', 'Enterprise'],
                     (value) => setDialogState(() => _accountType = value!),
+                    optionLabelBuilder: (option) {
+                      switch (option) {
+                        case 'Standard':
+                          return l10n.settingsAccountTypeStandard;
+                        case 'Premium':
+                          return l10n.settingsAccountTypePremium;
+                        case 'Enterprise':
+                          return l10n.settingsAccountTypeEnterprise;
+                        default:
+                          return option;
+                      }
+                    },
                   ),
                   _buildSwitchTile(
-                    'Public Profile',
-                    'Allow others to find your profile',
+                    l10n.settingsPublicProfileTitle,
+                    l10n.settingsPublicProfileSubtitle,
                     _publicProfile,
                     (value) => setDialogState(() => _publicProfile = value),
                   ),
                   const SizedBox(height: 16),
                   _buildActionTile(
-                    'Deactivate Account',
-                    'Temporarily disable your account',
+                    l10n.settingsDeactivateAccountTileTitle,
+                    l10n.settingsDeactivateAccountTileSubtitle,
                     Icons.pause_circle_outline,
                     () {
                       Navigator.pop(context);
@@ -3375,8 +3540,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     },
                   ),
                   _buildActionTile(
-                    'Delete Account',
-                    'Permanently remove your account',
+                    l10n.settingsDeleteAccountTileTitle,
+                    l10n.settingsDeleteAccountTileSubtitle,
                     Icons.delete_forever,
                     () {
                       Navigator.pop(context);
@@ -3391,7 +3556,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
-                'Cancel',
+                l10n.commonCancel,
                 style: GoogleFonts.inter(
                   color: Theme.of(context).colorScheme.outline,
                 ),
@@ -3411,10 +3576,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 if (!mounted) return;
                 navigator.pop();
                 messenger.showSnackBar(
-                  const SnackBar(content: Text('Account settings updated')),
+                  SnackBar(content: Text(l10n.settingsAccountSettingsUpdatedToast)),
                 );
               },
-              child: const Text('Save'),
+              child: Text(l10n.commonSave),
             ),
           ],
         ),
@@ -3424,24 +3589,25 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   // Additional Dialog Methods
   void _showChangePasswordDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Change Password',
+          l10n.settingsChangePasswordDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'Current Password',
+                labelText: l10n.settingsCurrentPasswordLabel,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -3449,7 +3615,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextField(
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'New Password',
+                labelText: l10n.settingsNewPasswordLabel,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -3457,7 +3623,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             TextField(
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'Confirm New Password',
+                labelText: l10n.settingsConfirmNewPasswordLabel,
                 border: OutlineInputBorder(),
               ),
             ),
@@ -3467,7 +3633,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -3481,10 +3647,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Password updated successfully')),
+                SnackBar(content: Text(l10n.settingsPasswordUpdatedToast)),
               );
             },
-            child: const Text('Update'),
+            child: Text(l10n.settingsUpdateButton),
           ),
         ],
       ),
@@ -3492,12 +3658,13 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   void _showAccountDeactivationDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(
-          'Deactivate Account',
+          l10n.settingsDeactivateAccountDialogTitle,
           style: GoogleFonts.inter(
             color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.bold,
@@ -3509,7 +3676,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             Icon(Icons.warning_amber, size: 48, color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 16),
             Text(
-              'Are you sure you want to deactivate your account?',
+              l10n.settingsDeactivateAccountDialogBodyTitle,
               style: GoogleFonts.inter(
                 fontSize: 16,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -3518,7 +3685,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'You can reactivate it later by logging in.',
+              l10n.settingsDeactivateAccountDialogBodySubtitle,
               style: GoogleFonts.inter(
                 fontSize: 14, 
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
@@ -3531,7 +3698,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.outline,
               ),
@@ -3545,10 +3712,10 @@ class _SettingsScreenState extends State<SettingsScreen>
             onPressed: () {
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deactivated')),
+                SnackBar(content: Text(l10n.settingsAccountDeactivatedToast)),
               );
             },
-            child: const Text('Deactivate'),
+            child: Text(l10n.settingsDeactivateButton),
           ),
         ],
       ),

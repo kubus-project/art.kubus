@@ -8,8 +8,10 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/exhibitions_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../providers/wallet_provider.dart';
 import '../../models/artwork.dart';
@@ -28,6 +30,7 @@ import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import 'components/desktop_widgets.dart';
+import 'desktop_shell.dart';
 import '../art/art_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../services/search_service.dart';
@@ -323,6 +326,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildTopBar(ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+    final l10n = AppLocalizations.of(context)!;
     return Positioned(
       top: 0,
       left: 0,
@@ -347,7 +351,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 const AppLogo(width: 36, height: 36),
                 const SizedBox(width: 12),
                 Text(
-                  'Discover',
+                  l10n.desktopMapTitleDiscover,
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -367,7 +371,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   link: _searchFieldLink,
                   child: DesktopSearchBar(
                     controller: _searchController,
-                    hintText: 'Search artworks, artists, institutions',
+                    hintText: l10n.mapSearchHint,
                     onChanged: _handleSearchChange,
                     onSubmitted: _handleSearchSubmit,
                   ),
@@ -434,6 +438,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final trimmedQuery = _searchQuery.trim();
     if (!_isFetchingSearch && _searchSuggestions.isEmpty && trimmedQuery.length < 2) {
       return const SizedBox.shrink();
@@ -462,7 +467,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     return Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text(
-                        'Type at least 2 characters to search',
+                        l10n.mapSearchMinCharsHint,
                         style: GoogleFonts.inter(
                           color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
@@ -488,7 +493,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           ),
                           const SizedBox(width: 12),
                           Text(
-                            'No results found',
+                            l10n.commonNoResultsFound,
                             style: GoogleFonts.inter(
                               color: scheme.onSurface.withValues(alpha: 0.6),
                             ),
@@ -652,7 +657,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'AR Ready',
+                              AppLocalizations.of(context)!.mapArReadyChipLabel,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -685,7 +690,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'by ${artwork.artist}',
+                    AppLocalizations.of(context)!.commonByArtist(
+                      artwork.artist.isNotEmpty
+                          ? artwork.artist
+                          : AppLocalizations.of(context)!.commonUnknown,
+                    ),
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: themeProvider.accentColor,
@@ -713,7 +722,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       _buildDetailStat(Icons.favorite, '${artwork.likesCount}'),
                       _buildDetailStat(Icons.visibility, '${artwork.viewsCount}'),
                       if (artwork.discoveryCount > 0)
-                        _buildDetailStat(Icons.explore, '${artwork.discoveryCount} discoveries'),
+                        _buildDetailStat(
+                          Icons.explore,
+                          AppLocalizations.of(context)!.desktopMapDiscoveriesCount(artwork.discoveryCount),
+                        ),
                       if (artwork.actualRewards > 0)
                         _buildDetailStat(Icons.token, '${artwork.actualRewards} KUB8'),
                       if (distanceLabel != null) _buildDetailStat(Icons.location_on, distanceLabel),
@@ -732,9 +744,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                     ? 'ipfs://${artwork.model3DCID}'
                                     : null);
                             if (modelUrl == null) {
+                              final l10n = AppLocalizations.of(context)!;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: const Text('No AR asset available for this artwork'),
+                                  content: Text(l10n.desktopMapNoArAssetToast),
                                   behavior: SnackBarBehavior.floating,
                                 ),
                               );
@@ -746,7 +759,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ));
                           },
                           icon: const Icon(Icons.view_in_ar, size: 20),
-                          label: const Text('View in AR'),
+                          label: Text(AppLocalizations.of(context)!.commonViewInAr),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeProvider.accentColor,
                             foregroundColor: Colors.white,
@@ -760,11 +773,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () {
-                          unawaited(Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ArtDetailScreen(artworkId: artwork.id),
-                            ),
-                          ));
+                          final shellScope = DesktopShellScope.of(context);
+                          if (shellScope != null) {
+                            shellScope.pushScreen(
+                              DesktopSubScreen(
+                                title: artwork.title,
+                                child: ArtDetailScreen(artworkId: artwork.id),
+                              ),
+                            );
+                          } else {
+                            unawaited(Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ArtDetailScreen(artworkId: artwork.id),
+                              ),
+                            ));
+                          }
                         },
                         icon: const Icon(Icons.favorite_border, size: 20),
                         style: IconButton.styleFrom(
@@ -778,11 +801,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () {
-                          unawaited(Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ArtDetailScreen(artworkId: artwork.id),
-                            ),
-                          ));
+                          final shellScope = DesktopShellScope.of(context);
+                          if (shellScope != null) {
+                            shellScope.pushScreen(
+                              DesktopSubScreen(
+                                title: artwork.title,
+                                child: ArtDetailScreen(artworkId: artwork.id),
+                              ),
+                            );
+                          } else {
+                            unawaited(Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ArtDetailScreen(artworkId: artwork.id),
+                              ),
+                            ));
+                          }
                         },
                         icon: const Icon(Icons.share, size: 20),
                         style: IconButton.styleFrom(
@@ -807,7 +840,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       }
                     },
                     icon: const Icon(Icons.directions),
-                    label: const Text('Get Directions'),
+                    label: Text(AppLocalizations.of(context)!.commonGetDirections),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       side: BorderSide(color: themeProvider.accentColor),
@@ -847,6 +880,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildFiltersPanel(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(left: 24),
       decoration: BoxDecoration(
@@ -877,7 +911,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Filters',
+                  l10n.mapFiltersTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -903,7 +937,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 children: [
                   // Search radius
                   Text(
-                    'Search Radius',
+                    l10n.mapNearbyRadiusTitle,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -932,7 +966,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '${_searchRadius.toInt()} km',
+                          l10n.commonDistanceKm(_searchRadius.toInt().toString()),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -945,7 +979,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
                   // Artwork types
                   Text(
-                    'Artwork Type',
+                    l10n.desktopMapArtworkTypeTitle,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -957,18 +991,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _buildFilterChip('All', true, themeProvider),
-                      _buildFilterChip('AR Art', false, themeProvider),
-                      _buildFilterChip('NFTs', false, themeProvider),
-                      _buildFilterChip('3D Models', false, themeProvider),
-                      _buildFilterChip('Sculptures', false, themeProvider),
+                      _buildFilterChip(l10n.mapFilterAll, true, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeArArt, false, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeNfts, false, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeModels3d, false, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeSculptures, false, themeProvider),
                     ],
                   ),
                   const SizedBox(height: 24),
 
                   // Sort by
                   Text(
-                    'Sort By',
+                    l10n.desktopMapSortByTitle,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -976,10 +1010,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildSortOption('Distance', _selectedSort == 'distance', Icons.near_me, themeProvider),
-                  _buildSortOption('Popularity', _selectedSort == 'popularity', Icons.trending_up, themeProvider),
-                  _buildSortOption('Newest', _selectedSort == 'newest', Icons.schedule, themeProvider),
-                  _buildSortOption('Rating', _selectedSort == 'rating', Icons.star, themeProvider),
+                  _buildSortOption(l10n.desktopMapSortDistance, _selectedSort == 'distance', Icons.near_me, themeProvider),
+                  _buildSortOption(l10n.desktopMapSortPopularity, _selectedSort == 'popularity', Icons.trending_up, themeProvider),
+                  _buildSortOption(l10n.desktopMapSortNewest, _selectedSort == 'newest', Icons.schedule, themeProvider),
+                  _buildSortOption(l10n.desktopMapSortRating, _selectedSort == 'rating', Icons.star, themeProvider),
                 ],
               ),
             ),
@@ -1013,7 +1047,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Reset'),
+                    child: Text(l10n.commonReset),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1031,7 +1065,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Apply'),
+                    child: Text(l10n.commonApply),
                   ),
                 ),
               ],
@@ -1131,6 +1165,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Widget _buildMapControls(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         // Zoom controls
@@ -1182,7 +1217,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               _startMarkerCreationFlow(position: target);
             },
             icon: const Icon(Icons.add_location_alt_outlined, color: Colors.white),
-            tooltip: 'Create marker here',
+            tooltip: l10n.mapCreateMarkerHereTooltip,
           ),
         ),
         const SizedBox(height: 16),
@@ -1248,7 +1283,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Icon(Icons.auto_awesome, color: themeProvider.accentColor, size: 18),
                   const SizedBox(width: 8),
                   Text(
-                    'Nearby Artworks',
+                    AppLocalizations.of(context)!.arNearbyArtworksTitle,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1258,7 +1293,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   const Spacer(),
                   if (artworks.isNotEmpty)
                     IconButton(
-                      tooltip: 'View all',
+                      tooltip: AppLocalizations.of(context)!.commonViewAll,
                       icon: const Icon(Icons.arrow_forward, size: 16),
                       onPressed: () => _showArtworksList(context, artworks),
                       padding: EdgeInsets.zero,
@@ -1273,7 +1308,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Center(
                     child: Text(
-                      'No artworks loaded',
+                      AppLocalizations.of(context)!.mapEmptyNoArtworksTitle,
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -1360,7 +1395,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 const SizedBox(height: 2),
                                 // Artist
                                 Text(
-                                  artwork.artist,
+                                  artwork.artist.isNotEmpty
+                                      ? artwork.artist
+                                      : AppLocalizations.of(context)!.commonUnknown,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(
@@ -1425,7 +1462,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               return ListTile(
                 leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
                 title: Text(artwork.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                subtitle: Text(artwork.artist, style: GoogleFonts.inter(fontSize: 12)),
+                subtitle: Text(
+                  artwork.artist.isNotEmpty
+                      ? artwork.artist
+                      : AppLocalizations.of(context)!.commonUnknown,
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
                 trailing: Text('${artwork.rewards} KUB8', style: GoogleFonts.inter(fontSize: 12)),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -1486,11 +1528,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           skipFetch: true,
         );
         if (openDetail && mounted) {
-          unawaited(Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ArtDetailScreen(artworkId: hydrated.id),
-            ),
-          ));
+          final shellScope = DesktopShellScope.of(context);
+          if (shellScope != null) {
+            shellScope.pushScreen(
+              DesktopSubScreen(
+                title: hydrated.title,
+                child: ArtDetailScreen(artworkId: hydrated.id),
+              ),
+            );
+          } else {
+            unawaited(Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ArtDetailScreen(artworkId: hydrated.id),
+              ),
+            ));
+          }
         }
       }
     } catch (e) {
@@ -1516,8 +1568,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   /// Format distance in meters to human-readable string
   String _formatDistance(double meters, {bool includeAway = false}) {
-    if (meters < 1) return 'Here';
-    final suffix = includeAway ? ' away' : '';
+    final l10n = AppLocalizations.of(context)!;
+    if (meters < 1) return l10n.mapDistanceHere;
+    final suffix = includeAway ? l10n.mapDistanceAwaySuffix : '';
     if (meters >= 1000) {
       return '${(meters / 1000).toStringAsFixed(1)} km$suffix';
     }
@@ -1536,7 +1589,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final map = Map<String, dynamic>.from(metaArt.map((key, value) => MapEntry(key.toString(), value)));
     map['id'] ??= marker.artworkId ?? map['_id'] ?? map['artworkId'] ?? map['artwork_id'] ?? '';
     map['title'] ??= marker.name;
-    map['artist'] ??= map['artistName'] ?? map['artist'] ?? map['creator'] ?? 'Unknown artist';
+    map['artist'] ??= map['artistName'] ?? map['artist'] ?? map['creator'] ?? '';
     map['description'] ??= marker.description;
     map['imageUrl'] ??= map['coverImage'] ?? map['cover_image'] ?? map['image'] ?? map['coverUrl'] ?? map['cover_url'];
     map['latitude'] ??= marker.position.latitude;
@@ -1664,11 +1717,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         openDetail: true,
       ));
     } else if (suggestion.type == 'profile' && suggestion.id != null) {
-      unawaited(Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => UserProfileScreen(userId: suggestion.id!),
-        ),
-      ));
+      final shellScope = DesktopShellScope.of(context);
+      if (shellScope != null) {
+        shellScope.pushScreen(
+          DesktopSubScreen(
+            title: suggestion.subtitle ?? suggestion.label,
+            child: UserProfileScreen(userId: suggestion.id!),
+          ),
+        );
+      } else {
+        unawaited(Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => UserProfileScreen(userId: suggestion.id!),
+          ),
+        ));
+      }
     }
   }
 
@@ -2478,7 +2541,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             Text(
               marker.description.isNotEmpty
                   ? marker.description
-                  : 'No linked artwork found for this marker yet.',
+                  : AppLocalizations.of(context)!.mapNoLinkedArtworkForMarker,
               style: GoogleFonts.inter(color: scheme.onSurfaceVariant),
             ),
           ],
@@ -2486,7 +2549,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+            child: Text(AppLocalizations.of(context)!.commonClose),
           ),
         ],
       ),
@@ -2512,14 +2575,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final subjectData = await _refreshMarkerSubjectData(force: true) ?? _snapshotMarkerSubjectData();
     if (!mounted) return;
 
-    if (subjectData.artworks.isEmpty) {
-      final wallet = context.read<WalletProvider>().currentWalletAddress;
+    final l10n = AppLocalizations.of(context)!;
+    final wallet = context.read<WalletProvider>().currentWalletAddress;
+    if (wallet == null || wallet.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            wallet == null || wallet.isEmpty
-                ? 'Connect your wallet and create an AR-enabled artwork to place a marker.'
-                : 'No AR-enabled artworks found for your wallet. Create one first to place a marker.',
+            l10n.mapMarkerCreateWalletRequired,
             style: GoogleFonts.inter(),
           ),
           behavior: SnackBarBehavior.floating,
@@ -2527,6 +2589,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       return;
     }
+
+    final allowedSubjectTypes = <MarkerSubjectType>{
+      MarkerSubjectType.misc,
+      if (subjectData.artworks.isNotEmpty) MarkerSubjectType.artwork,
+      if (subjectData.exhibitions.isNotEmpty) MarkerSubjectType.exhibition,
+      if (subjectData.institutions.isNotEmpty) MarkerSubjectType.institution,
+      if (subjectData.events.isNotEmpty) MarkerSubjectType.event,
+      if (subjectData.delegates.isNotEmpty) MarkerSubjectType.group,
+    };
+
+    final initialSubjectType = allowedSubjectTypes.contains(MarkerSubjectType.artwork)
+        ? MarkerSubjectType.artwork
+        : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
+            ? MarkerSubjectType.exhibition
+            : allowedSubjectTypes.contains(MarkerSubjectType.event)
+                ? MarkerSubjectType.event
+                : allowedSubjectTypes.contains(MarkerSubjectType.institution)
+                    ? MarkerSubjectType.institution
+                    : MarkerSubjectType.misc;
 
     final MapMarkerFormResult? result = await MapMarkerDialog.show(
       context: context,
@@ -2539,7 +2620,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         final center = _effectiveCenter;
         setState(() => _pendingMarkerLocation = center);
       },
-      initialSubjectType: MarkerSubjectType.artwork,
+      initialSubjectType: initialSubjectType,
+      allowedSubjectTypes: allowedSubjectTypes,
       blockedArtworkIds: _artMarkers
           .where((m) => (m.artworkId ?? '').isNotEmpty)
           .map((m) => m.artworkId!)
@@ -2596,6 +2678,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required MapMarkerFormResult form,
   }) async {
     try {
+      final exhibitionsProvider = context.read<ExhibitionsProvider>();
       final currentZoom = _effectiveZoom;
       final gridCell = GridUtils.gridCellForZoom(position, currentZoom);
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
@@ -2642,6 +2725,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
 
       if (marker != null) {
+        if (form.subjectType == MarkerSubjectType.exhibition) {
+          final exhibitionId = (form.subject?.id ?? '').trim();
+          if (exhibitionId.isNotEmpty) {
+            try {
+              await exhibitionsProvider.linkExhibitionMarkers(exhibitionId, [marker.id]);
+            } catch (_) {
+              // Non-fatal.
+            }
+
+            final linkedArtworkId = (form.linkedArtwork?.id ?? '').trim();
+            if (linkedArtworkId.isNotEmpty) {
+              try {
+                await exhibitionsProvider.linkExhibitionArtworks(exhibitionId, [linkedArtworkId]);
+              } catch (_) {
+                // Non-fatal.
+              }
+            }
+          }
+        }
+
+        if (!mounted) return false;
         setState(() {
           _pendingMarkerLocation = null;
           _artMarkers.add(marker);
@@ -2654,7 +2758,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              e.message,
+              AppLocalizations.of(context)!.mapMarkerDuplicateToast,
               style: GoogleFonts.inter(color: Colors.white),
             ),
             backgroundColor: Colors.red,
@@ -2671,19 +2775,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   String _getFilterLabel(String filter) {
+    final l10n = AppLocalizations.of(context)!;
     switch (filter) {
       case 'all':
-        return 'All';
+        return l10n.mapFilterAll;
       case 'nearby':
-        return 'Nearby';
+        return l10n.mapFilterNearby;
       case 'discovered':
-        return 'Discovered';
+        return l10n.mapFilterDiscovered;
       case 'undiscovered':
-        return 'Undiscovered';
+        return l10n.mapFilterUndiscovered;
       case 'ar':
-        return 'AR';
+        return l10n.commonArShort;
       case 'favorites':
-        return 'Favorites';
+        return l10n.mapFilterFavorites;
       default:
         return filter;
     }

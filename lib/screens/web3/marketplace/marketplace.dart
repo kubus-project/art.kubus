@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
@@ -57,7 +59,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Future<void> _checkOnboarding() async {
-    if (await isOnboardingNeeded(MarketplaceOnboardingData.featureName)) {
+    if (await isOnboardingNeeded(MarketplaceOnboardingData.featureKey)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showOnboarding();
       });
@@ -65,15 +67,15 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   void _showOnboarding() {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Web3OnboardingScreen(
-          featureName: MarketplaceOnboardingData.featureName,
-          pages: MarketplaceOnboardingData.pages,
-          onComplete: () {
-            Navigator.pop(context);
-          },
+          featureKey: MarketplaceOnboardingData.featureKey,
+          featureTitle: MarketplaceOnboardingData.featureTitle(l10n),
+          pages: MarketplaceOnboardingData.pages(l10n),
+          onComplete: () {},
         ),
       ),
     );
@@ -176,7 +178,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'Network: ${web3Provider.currentNetwork}',
+                        AppLocalizations.of(context)!.marketplaceNetworkLabel(web3Provider.currentNetwork),
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: colorScheme.onSurface.withValues(alpha: 0.8),
@@ -194,7 +196,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Wallet: ${web3Provider.walletAddress}',
+                        AppLocalizations.of(context)!.marketplaceWalletLabel(web3Provider.walletAddress),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: colorScheme.onSurface.withValues(alpha: 0.8),
@@ -211,7 +213,10 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text('Close', style: GoogleFonts.inter(color: themeProvider.accentColor)),
+            child: Text(
+              AppLocalizations.of(context)!.commonClose,
+              style: GoogleFonts.inter(color: themeProvider.accentColor),
+            ),
           ),
         ],
       ),
@@ -523,7 +528,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Connect Your Wallet',
+                  AppLocalizations.of(context)!.marketplaceConnectWalletTitle,
                   style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -532,7 +537,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Connect a Solana wallet to view your NFTs',
+                  AppLocalizations.of(context)!.marketplaceConnectWalletDescription,
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -543,7 +548,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 ElevatedButton.icon(
                   onPressed: () => Navigator.of(context).pushNamed('/connect-wallet'),
                   icon: const Icon(Icons.link),
-                  label: const Text('Connect Wallet'),
+                  label: Text(AppLocalizations.of(context)!.authConnectWalletButton),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -561,10 +566,10 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
               child: EmptyStateCard(
                 icon: Icons.inventory_2_outlined,
-                title: 'No NFTs in your collection',
-                description: 'Mint NFTs from AR artworks to build your collection',
+                title: AppLocalizations.of(context)!.marketplaceEmptyCollectionTitle,
+                description: AppLocalizations.of(context)!.marketplaceEmptyCollectionDescription,
                 showAction: true,
-                actionLabel: 'Explore AR Art',
+                actionLabel: AppLocalizations.of(context)!.marketplaceExploreArArtButton,
                 onAction: () => Navigator.of(context).pushNamed('/ar'),
               ),
             ),
@@ -1089,7 +1094,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
-              'Cancel',
+              AppLocalizations.of(context)!.commonCancel,
               style: GoogleFonts.inter(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
@@ -1103,11 +1108,11 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
               foregroundColor: Theme.of(context).colorScheme.onPrimary,
             ),
             child: Text(
-              'List for Sale',
+              AppLocalizations.of(context)!.marketplaceListForSaleButton,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
               ),
@@ -1119,6 +1124,8 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
   }
 
   Future<void> _processListForSale(Collectible collectible, String price) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     try {
       final collectiblesProvider = context.read<CollectiblesProvider>();
       await collectiblesProvider.listCollectibleForSale(
@@ -1128,50 +1135,55 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
       
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('NFT listed for sale successfully!'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(l10n.marketplaceListForSaleSuccessToast),
+          backgroundColor: scheme.primary,
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Marketplace: list for sale failed: $e');
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to list NFT: $e'),
-          backgroundColor: Colors.red,
+          content: Text(l10n.marketplaceListForSaleFailedToast),
+          backgroundColor: scheme.error,
         ),
       );
     }
   }
 
   void _removeFromSale(Collectible collectible) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        backgroundColor: scheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
-          'Remove from Sale',
+          l10n.marketplaceRemoveFromSaleTitle,
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
-          'Are you sure you want to remove this NFT from sale?',
+          l10n.marketplaceRemoveFromSaleConfirmBody,
           style: GoogleFonts.inter(
-            color: Colors.grey[300],
+            color: scheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: Text(
-              'Cancel',
+              l10n.commonCancel,
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -1180,18 +1192,18 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               Navigator.of(context).pop();
               // In real app, implement remove from sale logic
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('NFT removed from sale'),
-                  backgroundColor: Colors.orange,
+                SnackBar(
+                  content: Text(l10n.marketplaceRemoveFromSaleSuccessToast),
+                  backgroundColor: scheme.surfaceContainerHighest,
                 ),
               );
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              backgroundColor: scheme.error,
+              foregroundColor: scheme.onError,
             ),
             child: Text(
-              'Remove',
+              l10n.commonRemove,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
               ),
@@ -1698,14 +1710,14 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           backgroundColor: colorScheme.surfaceContainerHighest,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
-            'Connect Wallet',
+            AppLocalizations.of(context)!.marketplaceMintConnectWalletTitle,
             style: GoogleFonts.inter(
               color: colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
           content: Text(
-            'Connect a Solana wallet to mint NFTs.',
+            AppLocalizations.of(context)!.marketplaceMintConnectWalletDescription,
             style: GoogleFonts.inter(
               color: colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
@@ -1714,7 +1726,10 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel', style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7))),
+              child: Text(
+                AppLocalizations.of(context)!.commonCancel,
+                style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.7)),
+              ),
             ),
             ElevatedButton.icon(
               onPressed: () {
@@ -1722,7 +1737,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 Navigator.of(context).pushNamed('/connect-wallet');
               },
               icon: const Icon(Icons.link),
-              label: const Text('Connect Wallet'),
+              label: Text(AppLocalizations.of(context)!.authConnectWalletButton),
               style: ElevatedButton.styleFrom(
                 backgroundColor: themeProvider.accentColor,
                 foregroundColor: colorScheme.onPrimary,
@@ -1925,6 +1940,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
 
       // Show success
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -1940,7 +1956,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               ),
               const SizedBox(width: 8),
               Text(
-                'Mint Successful!',
+                l10n.marketplaceMintSuccessTitle,
                 style: GoogleFonts.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
@@ -1949,7 +1965,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             ],
           ),
           content: Text(
-            'Your NFT has been successfully minted! You can view it in your wallet.',
+            l10n.marketplaceMintSuccessDescription,
             style: GoogleFonts.inter(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
@@ -1967,7 +1983,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
                 child: Text(
-                  'View in Wallet',
+                  l10n.marketplaceViewInWalletButton,
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w600,
                   ),
@@ -1978,12 +1994,16 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Marketplace: mint collectible failed: $e');
+      }
       if (!mounted) return;
       if (loadingShown && Navigator.of(context).canPop()) {
         Navigator.of(context).pop(); // Close loading
       }
       
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -1999,7 +2019,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
               ),
               const SizedBox(width: 8),
               Text(
-                'Mint Failed',
+                l10n.marketplaceMintFailedTitle,
                 style: GoogleFonts.inter(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
@@ -2008,7 +2028,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
             ],
           ),
           content: Text(
-            'Failed to mint NFT: $e',
+            l10n.marketplaceMintFailedDescription,
             style: GoogleFonts.inter(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
               height: 1.5,
@@ -2022,7 +2042,7 @@ class _MarketplaceState extends State<Marketplace> with TickerProviderStateMixin
                 foregroundColor: Theme.of(context).colorScheme.onPrimary,
               ),
               child: Text(
-                'Close',
+                l10n.commonClose,
                 style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
                 ),

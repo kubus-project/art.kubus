@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -47,6 +48,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final walletProvider = Provider.of<WalletProvider>(context);
     final walletAddress = walletProvider.currentWalletAddress;
     final hasWalletAddress = walletAddress != null && walletAddress.isNotEmpty;
@@ -62,7 +64,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
-          'Receive Tokens',
+          l10n.receiveTokenTitle,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -102,6 +104,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   Widget _buildTokenSelector() {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<WalletProvider>(
       builder: (context, walletProvider, _) {
         final tokens = walletProvider.tokens
@@ -128,7 +131,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Select token to receive',
+              l10n.receiveTokenSelectTokenTitle,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -178,7 +181,9 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  'Bal. ${token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2)}',
+                                  l10n.receiveTokenBalanceLabel(
+                                    token.balance.toStringAsFixed(token.decimals >= 3 ? 3 : 2),
+                                  ),
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -201,6 +206,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   Widget _buildQRCode(String? walletAddress, bool hasWalletAddress, Token? token) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final tokenSymbol = token?.symbol ?? _selectedToken;
     final qrData = hasWalletAddress && walletAddress != null
@@ -239,7 +245,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                           final theme = Theme.of(cxt);
                           return Center(
                             child: Text(
-                              'QR Error\nGeneration\nFailed',
+                              l10n.receiveTokenQrError,
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
                                 color: theme.colorScheme.onSurface,
@@ -251,7 +257,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                       )
                     : Center(
                         child: Text(
-                          'Create or import a wallet\nto generate a QR code',
+                          l10n.receiveTokenQrRequiresWallet,
                           textAlign: TextAlign.center,
                           style: GoogleFonts.inter(
                             color: Theme.of(context).colorScheme.onPrimary,
@@ -263,7 +269,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             ),
             const SizedBox(height: 16),
             Text(
-                    'Scan to send $tokenSymbol',
+              l10n.receiveTokenScanToSend(tokenSymbol),
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -273,8 +279,8 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             const SizedBox(height: 8),
             Text(
               hasWalletAddress
-                        ? 'Anyone can send $tokenSymbol to this address'
-                  : 'Finish wallet setup to share your address',
+                  ? l10n.receiveTokenAnyoneCanSend(tokenSymbol)
+                  : l10n.receiveTokenFinishSetupToShare,
               style: GoogleFonts.inter(
                 fontSize: 14,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -288,6 +294,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   Widget _buildAddressSection(String? walletAddress, bool hasWalletAddress, Token? token) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final accent = Provider.of<ThemeProvider>(context).accentColor;
     final tokenSymbol = token?.symbol ?? _selectedToken;
@@ -306,7 +313,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Your $tokenSymbol address',
+                l10n.receiveTokenYourAddressTitle(tokenSymbol),
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -316,7 +323,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               Row(
                 children: [
                   IconButton(
-                    tooltip: 'Share address',
+                    tooltip: l10n.receiveTokenShareAddressTooltip,
                     onPressed: hasWalletAddress && walletAddress != null
                         ? () => _shareAddress(walletAddress, token)
                         : null,
@@ -326,7 +333,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Copy address',
+                    tooltip: l10n.receiveTokenCopyAddressTooltip,
                     onPressed: hasWalletAddress ? () => _copyAddress(walletAddress) : null,
                     icon: Icon(
                       Icons.copy,
@@ -357,7 +364,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                     textAlign: TextAlign.center,
                   )
                 : Text(
-                    'Create or import a wallet to receive tokens',
+                    l10n.receiveTokenRequiresWalletToReceive,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -379,7 +386,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               ),
               icon: Icon(Icons.content_copy, color: theme.colorScheme.onSurface, size: 18),
               label: Text(
-                'Copy address',
+                l10n.receiveTokenCopyAddressButton,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -394,6 +401,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   Widget _buildInstructions() {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -413,7 +421,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
               ),
               const SizedBox(width: 8),
               Text(
-                'How to Receive $_selectedToken',
+                l10n.receiveTokenHowToReceiveTitle(_selectedToken),
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -425,20 +433,20 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           const SizedBox(height: 16),
           _buildInstructionStep(
             '1',
-            'Share your address',
-            'Send your wallet address to the person who wants to send you $_selectedToken',
+            l10n.receiveTokenStep1Title,
+            l10n.receiveTokenStep1Description(_selectedToken),
           ),
           const SizedBox(height: 12),
           _buildInstructionStep(
             '2',
-            'Or show QR code',
-            'Let them scan the QR code above with their wallet app',
+            l10n.receiveTokenStep2Title,
+            l10n.receiveTokenStep2Description,
           ),
           const SizedBox(height: 12),
           _buildInstructionStep(
             '3',
-            'Receive tokens',
-            'Tokens will appear in your wallet once the transaction is confirmed',
+            l10n.receiveTokenStep3Title,
+            l10n.receiveTokenStep3Description,
           ),
           const SizedBox(height: 16),
           Container(
@@ -454,7 +462,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Only send $_selectedToken and compatible tokens to this address',
+                    l10n.receiveTokenWarningOnlySend(_selectedToken),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.error,
@@ -521,10 +529,11 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   void _copyAddress(String? walletAddress) {
+    final l10n = AppLocalizations.of(context)!;
     if (walletAddress == null || walletAddress.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('No wallet address available yet'),
+          content: Text(l10n.receiveTokenNoWalletAddressToast),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 2),
@@ -535,7 +544,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
     Clipboard.setData(ClipboardData(text: walletAddress));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Address copied to clipboard'),
+        content: Text(l10n.walletHomeAddressCopiedToast),
         backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
@@ -544,10 +553,11 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   Future<void> _shareAddress(String address, Token? token) async {
+    final l10n = AppLocalizations.of(context)!;
     final tokenSymbol = token?.symbol ?? _selectedToken;
     final payload = _buildQrPayload(address, token);
     await SharePlus.instance.share(
-      ShareParams(text: 'Send $tokenSymbol to $address\n$payload'),
+      ShareParams(text: l10n.receiveTokenShareText(tokenSymbol, address, payload)),
     );
   }
 
@@ -580,6 +590,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
   }
 
   Widget _buildTokenSelectorEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
@@ -594,7 +605,7 @@ class _ReceiveTokenScreenState extends State<ReceiveTokenScreen>
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Connect or import a wallet to display available tokens.',
+              l10n.receiveTokenNoTokensMessage,
               style: GoogleFonts.inter(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),

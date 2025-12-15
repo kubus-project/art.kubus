@@ -10,6 +10,7 @@ import '../providers/cache_provider.dart';
 import '../providers/chat_provider.dart';
 import '../providers/collectibles_provider.dart';
 import '../providers/community_hub_provider.dart';
+import '../providers/collab_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/notification_provider.dart';
@@ -53,6 +54,7 @@ class AppBootstrapService {
     final institutionProvider = context.read<InstitutionProvider>();
     final taskProvider = context.read<TaskProvider>();
     final appRefreshProvider = context.read<AppRefreshProvider>();
+    final collabProvider = context.read<CollabProvider>();
 
     await _runTask('auth_token', () => backend.ensureAuthLoaded(walletAddress: walletAddress));
 
@@ -68,6 +70,13 @@ class AppBootstrapService {
       _runTask('collectibles', () => collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment)),
       _runTask('institutions', () => institutionProvider.initialize(seedMockIfEmpty: AppConfig.isDevelopment)),
     ];
+
+    if (AppConfig.isFeatureEnabled('collabInvites')) {
+      futures.add(_runTask('collab_invites', () async {
+        await collabProvider.initialize(refresh: true);
+        collabProvider.startInvitePolling();
+      }));
+    }
 
     if (shouldLoadCommunity) {
       futures.add(_runTask('recent_activity', () => recentActivityProvider.initialize(force: true)));

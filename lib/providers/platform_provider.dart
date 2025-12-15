@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'dart:io' show Platform;
 
 enum PlatformCapability {
   camera,
@@ -33,14 +32,34 @@ class PlatformProvider with ChangeNotifier {
 
   // Platform detection
   PlatformType get currentPlatform {
-    if (kIsWeb) return PlatformType.web;
-    if (Platform.isAndroid) return PlatformType.android;
-    if (Platform.isIOS) return PlatformType.ios;
-    if (Platform.isWindows) return PlatformType.windows;
-    if (Platform.isMacOS) return PlatformType.macos;
-    if (Platform.isLinux) return PlatformType.linux;
-    if (Platform.isFuchsia) return PlatformType.fuchsia;
-    return PlatformType.web; // fallback
+    // Avoid early-return patterns that can produce "unreachable code after return"
+    // warnings in the generated JS for debug web builds.
+    PlatformType platform = PlatformType.web;
+
+    if (!kIsWeb) {
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          platform = PlatformType.android;
+          break;
+        case TargetPlatform.iOS:
+          platform = PlatformType.ios;
+          break;
+        case TargetPlatform.windows:
+          platform = PlatformType.windows;
+          break;
+        case TargetPlatform.macOS:
+          platform = PlatformType.macos;
+          break;
+        case TargetPlatform.linux:
+          platform = PlatformType.linux;
+          break;
+        case TargetPlatform.fuchsia:
+          platform = PlatformType.fuchsia;
+          break;
+      }
+    }
+
+    return platform;
   }
 
   // Platform categories
@@ -232,7 +251,7 @@ class PlatformProvider with ChangeNotifier {
   }
 
   Color getSupportedFeatureColor(BuildContext context) {
-    return Theme.of(context).primaryColor;
+    return Theme.of(context).colorScheme.primary;
   }
 
   // Debug info

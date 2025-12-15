@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
@@ -27,68 +28,63 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      title: 'Welcome to art.kubus',
-      subtitle: 'Discover and create augmented reality art in the real world',
-      description:
-          'Transform your surroundings with immersive AR artworks and join a global community of digital artists.',
-      iconData: Icons.view_in_ar,
-      gradient: const LinearGradient(
-        colors: [Color.fromARGB(255, 4, 93, 148), Color(0xFF0B6E4F)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-    OnboardingPage(
-      title: 'Explore AR Artworks',
-      subtitle: 'Find amazing artworks around you',
-      description:
-          'Use your device to discover hidden AR artworks in your neighborhood and beyond. Every location tells a story.',
-      iconData: Icons.explore,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-    OnboardingPage(
-      title: 'Create & Share',
-      subtitle: 'Express your creativity',
-      description:
-          'Design stunning AR experiences with our intuitive creator tools and share them with the world.',
-      iconData: Icons.palette,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF10B981), Color(0xFF059669)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-    OnboardingPage(
-      title: 'Join the Community',
-      subtitle: 'Connect with fellow artists',
-      description:
-          'Engage with a vibrant community of AR creators. Share ideas, collaborate on projects, and participate in exclusive events.',
-      iconData: Icons.people,
-      gradient: const LinearGradient(
-        colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-    OnboardingPage(
-      title: 'Collect & Trade',
-      subtitle: 'Own unique digital assets',
-      description:
-          'Collect rare AR artworks as NFTs on Solana blockchain. Your creativity has real value in Web3.',
-      iconData: Icons.account_balance_wallet,
-      gradient: const LinearGradient(
-        colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-    ),
-  ];
+  List<OnboardingPage> _pages(AppLocalizations l10n) => [
+        OnboardingPage(
+          title: l10n.onboardingWelcomeTitle,
+          subtitle: l10n.onboardingWelcomeSubtitle,
+          description: l10n.onboardingWelcomeDescription,
+          iconData: Icons.view_in_ar,
+          gradient: const LinearGradient(
+            colors: [Color.fromARGB(255, 4, 93, 148), Color(0xFF0B6E4F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        OnboardingPage(
+          title: l10n.onboardingExploreTitle,
+          subtitle: l10n.onboardingExploreSubtitle,
+          description: l10n.onboardingExploreDescription,
+          iconData: Icons.explore,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        OnboardingPage(
+          title: l10n.onboardingCreateTitle,
+          subtitle: l10n.onboardingCreateSubtitle,
+          description: l10n.onboardingCreateDescription,
+          iconData: Icons.palette,
+          gradient: const LinearGradient(
+            colors: [Color(0xFF10B981), Color(0xFF059669)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        OnboardingPage(
+          title: l10n.onboardingCommunityTitle,
+          subtitle: l10n.onboardingCommunitySubtitle,
+          description: l10n.onboardingCommunityDescription,
+          iconData: Icons.people,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        OnboardingPage(
+          title: l10n.onboardingCollectiblesTitle,
+          subtitle: l10n.onboardingCollectiblesSubtitle,
+          description: l10n.onboardingCollectiblesDescription,
+          iconData: Icons.account_balance_wallet,
+          gradient: const LinearGradient(
+            colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ];
 
   @override
   void initState() {
@@ -125,7 +121,8 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   }
 
   void _nextPage() {
-    if (_currentPage < _pages.length - 1) {
+    final pages = _pages(AppLocalizations.of(context)!);
+    if (_currentPage < pages.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOutCubic,
@@ -136,8 +133,9 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   }
 
   void _skipToEnd() {
+    final pages = _pages(AppLocalizations.of(context)!);
     _pageController.animateToPage(
-      _pages.length - 1,
+      pages.length - 1,
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
     );
@@ -167,10 +165,12 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final accentColor = themeProvider.accentColor;
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
+    final pages = _pages(l10n);
 
     // Use larger layout for desktop
     final contentWidth = screenWidth > DesktopBreakpoints.large
@@ -203,10 +203,10 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
                           _slideController.reset();
                           _slideController.forward();
                         },
-                        itemCount: _pages.length,
+                        itemCount: pages.length,
                         itemBuilder: (context, index) {
                           return _buildPageContent(
-                            _pages[index],
+                            pages[index],
                             animationTheme,
                           );
                         },
@@ -229,6 +229,8 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   }
 
   Widget _buildHeader(Color accentColor) {
+    final l10n = AppLocalizations.of(context)!;
+    final pages = _pages(l10n);
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Row(
@@ -240,7 +242,7 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
               const AppLogo(width: 48, height: 48),
               const SizedBox(width: 16),
               Text(
-                'art.kubus',
+                l10n.appTitle,
                 style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -250,14 +252,14 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
             ],
           ),
           // Skip button
-          if (_currentPage < _pages.length - 1)
+          if (_currentPage < pages.length - 1)
             TextButton(
               onPressed: _skipToEnd,
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: Text(
-                'Skip',
+                l10n.commonSkip,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   color: Theme.of(context)
@@ -341,7 +343,9 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   }
 
   Widget _buildSidebar(Color accentColor, AppAnimationTheme animationTheme) {
-    final isLastPage = _currentPage == _pages.length - 1;
+    final l10n = AppLocalizations.of(context)!;
+    final pages = _pages(l10n);
+    final isLastPage = _currentPage == pages.length - 1;
 
     return Padding(
       padding: const EdgeInsets.only(right: 40, top: 20, bottom: 40),
@@ -351,7 +355,7 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
         children: [
           const Spacer(),
           // Page indicators with labels
-          ..._pages.asMap().entries.map((entry) {
+          ...pages.asMap().entries.map((entry) {
             final index = entry.key;
             final page = entry.value;
             final isActive = index == _currentPage;
@@ -456,7 +460,7 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
                 ),
               ),
               child: Text(
-                isLastPage ? 'Grant Permissions' : 'Continue',
+                isLastPage ? l10n.onboardingGrantPermissions : l10n.commonContinue,
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -483,7 +487,7 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
                   ),
                 ),
                 child: Text(
-                  'Skip Permissions',
+                  l10n.onboardingSkipPermissions,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -497,11 +501,11 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '${_currentPage + 1} of ${_pages.length}',
+                l10n.commonStepOfTotal(_currentPage + 1, pages.length),
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: _currentPage == _pages.length - 1
+                  color: _currentPage == pages.length - 1
                       ? Theme.of(context).colorScheme.onSurface
                       : Theme.of(context)
                           .colorScheme

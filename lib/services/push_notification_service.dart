@@ -23,6 +23,28 @@ class PushNotificationService {
   Function(String)? onNotificationTap;
   Function(String, Map<String, dynamic>)? onNotificationReceived;
 
+  final List<Function(String)> _notificationTapListeners = <Function(String)>[];
+  final List<Function(String, Map<String, dynamic>)> _notificationReceivedListeners =
+      <Function(String, Map<String, dynamic>)>[];
+
+  void addOnNotificationTapListener(Function(String) listener) {
+    if (_notificationTapListeners.contains(listener)) return;
+    _notificationTapListeners.add(listener);
+  }
+
+  void removeOnNotificationTapListener(Function(String) listener) {
+    _notificationTapListeners.remove(listener);
+  }
+
+  void addOnNotificationReceivedListener(Function(String, Map<String, dynamic>) listener) {
+    if (_notificationReceivedListeners.contains(listener)) return;
+    _notificationReceivedListeners.add(listener);
+  }
+
+  void removeOnNotificationReceivedListener(Function(String, Map<String, dynamic>) listener) {
+    _notificationReceivedListeners.remove(listener);
+  }
+
   /// Initialize push notification service
   Future<void> initialize() async {
     if (_initialized) return;
@@ -114,9 +136,25 @@ class PushNotificationService {
         final data = jsonDecode(payload) as Map<String, dynamic>;
         final type = data['type'] as String?;
         onNotificationTap?.call(payload);
+
+        for (final listener in List<Function(String)>.from(_notificationTapListeners)) {
+          try {
+            listener(payload);
+          } catch (_) {
+            // Ignore listener errors.
+          }
+        }
         
         if (type != null) {
           onNotificationReceived?.call(type, data);
+
+          for (final listener in List<Function(String, Map<String, dynamic>)>.from(_notificationReceivedListeners)) {
+            try {
+              listener(type, data);
+            } catch (_) {
+              // Ignore listener errors.
+            }
+          }
         }
       } catch (e) {
         debugPrint('Error parsing notification payload: $e');
@@ -1040,6 +1078,84 @@ class PushNotificationService {
     );
 
     await _storeInAppNotification('collaboration', titleText, bodyText, payloadData);
+  }
+
+  /// Push notification for collaboration invites on events/exhibitions.
+  /// Payload type: `collab_invite`
+  Future<void> showCollabInviteNotification({
+    required String inviteId,
+    required String entityType,
+    required String entityId,
+    required String role,
+    String? inviterName,
+    String? entityTitle,
+  }) async {
+    if (!_permissionGranted) return;
+
+    final normalizedType = entityType.trim().toLowerCase();
+    final itemLabel = (normalizedType == 'events' || normalizedType == 'event')
+        ? 'event'
+        : ((normalizedType == 'exhibitions' || normalizedType == 'exhibition') ? 'exhibition' : 'item');
+
+    final safeInviter = (inviterName ?? '').trim().isNotEmpty ? inviterName!.trim() : 'Someone';
+    final safeTitle = (entityTitle ?? '').trim();
+
+    const titleText = 'New invite';
+    final bodyText = safeTitle.isNotEmpty
+        ? '$safeInviter invited you to help manage "$safeTitle" ($itemLabel).'
+        : '$safeInviter invited you to help manage an $itemLabel.';
+
+    final payloadData = {
+      'type': 'collab_invite',
+      'inviteId': inviteId,
+      'entityType': entityType,
+      'entityId': entityId,
+      'role': role,
+      if (inviterName != null) 'inviterName': inviterName,
+      if (entityTitle != null) 'entityTitle': entityTitle,
+      'actionUrl': 'app://collab/invite/$inviteId',
+    };
+
+    if (kIsWeb) {
+      try {
+        await webshow.showNotification(titleText, bodyText, payloadData);
+        await _storeInAppNotification('collab_invite', titleText, bodyText, payloadData);
+        return;
+      } catch (e) {
+        debugPrint('PushNotificationService (web) showCollabInviteNotification failed: $e');
+      }
+    }
+
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'collab_invites',
+      'Collaboration Invites',
+      channelDescription: 'Invites to collaborate on events and exhibitions',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _flutterLocalNotificationsPlugin.show(
+      inviteId.hashCode,
+      titleText,
+      bodyText,
+      details,
+      payload: jsonEncode(payloadData),
+    );
+
+    await _storeInAppNotification('collab_invite', titleText, bodyText, payloadData);
   }
 
   /// Push notification for AR events

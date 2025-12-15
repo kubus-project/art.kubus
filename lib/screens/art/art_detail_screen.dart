@@ -15,6 +15,7 @@ import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/rarity_ui.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 class ArtDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -95,6 +96,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
@@ -102,7 +104,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         if (_artworkLoading) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('Loading artwork', style: GoogleFonts.outfit()),
+              title: Text(l10n.artDetailLoadingTitle, style: GoogleFonts.outfit()),
             ),
             body: const Center(child: InlineLoading()),
           );
@@ -111,7 +113,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         if (_artworkError != null) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('Artwork', style: GoogleFonts.outfit()),
+              title: Text(l10n.artDetailTitle, style: GoogleFonts.outfit()),
             ),
             body: Center(
               child: Column(
@@ -128,7 +130,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: _loadArtworkDetails,
-                    child: const Text('Retry'),
+                    child: Text(l10n.commonRetry),
                   ),
                 ],
               ),
@@ -139,10 +141,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         if (artwork == null) {
           return Scaffold(
             appBar: AppBar(
-              title: Text('Artwork Not Found', style: GoogleFonts.outfit()),
+              title: Text(l10n.artworkNotFound, style: GoogleFonts.outfit()),
             ),
-            body: const Center(
-              child: Text('Artwork not found'),
+            body: Center(
+              child: Text(l10n.artworkNotFound),
             ),
           );
         }
@@ -192,6 +194,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Future<void> _loadArtworkDetails() async {
+    final l10n = AppLocalizations.of(context)!;
     final provider = context.read<ArtworkProvider>();
     final existing = provider.getArtworkById(widget.artworkId);
 
@@ -217,7 +220,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _artworkError = 'Failed to load artwork details. Please try again.';
+        _artworkError = l10n.artDetailLoadFailedMessage;
       });
     } finally {
       if (mounted) {

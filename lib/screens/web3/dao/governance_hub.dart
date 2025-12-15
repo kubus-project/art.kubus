@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
@@ -65,7 +67,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Future<void> _checkOnboarding() async {
-    if (await isOnboardingNeeded(DAOOnboardingData.featureName)) {
+    if (await isOnboardingNeeded(DAOOnboardingData.featureKey)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showOnboarding();
       });
@@ -73,15 +75,15 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   void _showOnboarding() {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Web3OnboardingScreen(
-          featureName: DAOOnboardingData.featureName,
-          pages: DAOOnboardingData.pages,
-          onComplete: () {
-            Navigator.pop(context);
-          },
+          featureKey: DAOOnboardingData.featureKey,
+          featureTitle: DAOOnboardingData.featureTitle(l10n),
+          pages: DAOOnboardingData.pages(l10n),
+          onComplete: () {},
         ),
       ),
     );
@@ -334,6 +336,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildActiveProposals() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         // Filter active proposals using DAOProvider method
         final activeProposals = daoProvider.getActiveProposals();
         final reviews = daoProvider.reviews;
@@ -343,8 +346,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           return Center(
             child: EmptyStateCard(
               icon: Icons.how_to_vote,
-              title: 'No active proposals',
-              description: 'Submit a proposal or review to get governance moving.',
+              title: l10n.daoActiveProposalsEmptyTitle,
+              description: l10n.daoActiveProposalsEmptyDescription,
             ),
           );
         }
@@ -367,11 +370,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildReviewQueue(List<DAOReview> reviews) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'DAO Review Queue',
+          l10n.daoReviewQueueTitle,
           style: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w700,
@@ -387,6 +391,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
   Widget _buildReviewCard(DAOReview review, ThemeProvider themeProvider) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     const daoColor = Color(0xFF10B981);
     final statusColor = review.status.toLowerCase() == 'approved'
         ? Colors.green
@@ -404,14 +409,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     final normalizedStatus = review.status.toLowerCase();
     final moderationEnabled = AppConfig.isFeatureEnabled('daoReviewDecisions');
     final voteHelperText = !moderationEnabled
-        ? 'Voting is handled directly by the DAO; use proposals to decide.'
+      ? l10n.daoReviewVotingHandledByDaoHelper
         : normalizedStatus == 'pending'
             ? (isOwnSubmission
-                ? 'You cannot vote on your own submission'
+          ? l10n.daoReviewCannotVoteOwnSubmissionHelper
                 : votingDisabledOverride
-                    ? 'Voting disabled for this submission'
-                    : 'Voting opens after review')
-            : 'Decision recorded: ${review.status.toUpperCase()}';
+            ? l10n.daoReviewVotingDisabledSubmissionHelper
+            : l10n.daoReviewVotingOpensAfterReviewHelper)
+        : l10n.daoReviewDecisionRecordedHelper(review.status.toUpperCase());
     final isPending = normalizedStatus == 'pending';
     final canModerate = moderationEnabled && !isOwnSubmission && isPending;
     final isActionInFlight = _reviewActionId == review.id;
@@ -483,7 +488,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           ),
           const SizedBox(height: 8),
           Text(
-            review.medium.isNotEmpty ? review.medium : 'Medium not provided',
+            review.medium.isNotEmpty ? review.medium : l10n.daoReviewMediumNotProvided,
             style: GoogleFonts.inter(
               fontSize: 12,
               color: colorScheme.onSurface.withValues(alpha: 0.7),
@@ -511,7 +516,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 label: Text(
-                  'View details',
+                  l10n.daoReviewViewDetailsButton,
                   style: GoogleFonts.inter(
                     fontWeight: FontWeight.w600,
                     color: colorScheme.onSurface,
@@ -539,7 +544,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                             child: ElevatedButton(
                               onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'approved'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
+                                backgroundColor: colorScheme.primary,
                                 foregroundColor: colorScheme.onPrimary,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -554,7 +559,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                       ),
                                     )
                                   : Text(
-                                      'Approve',
+                                      l10n.daoModerationApproveLabel,
                                       style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
                                     ),
                             ),
@@ -579,7 +584,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                       ),
                                     )
                                   : Text(
-                                      'Reject',
+                                      l10n.daoModerationRejectLabel,
                                       style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12),
                                     ),
                             ),
@@ -598,17 +603,22 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Future<void> _confirmReviewDecision(DAOReview review, String decision) async {
+    final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final colorScheme = Theme.of(context).colorScheme;
     final notesController = TextEditingController();
-    final decisionLabel = decision == 'approved' ? 'Approve' : decision == 'rejected' ? 'Reject' : 'Set Pending';
+    final decisionLabel = decision == 'approved'
+      ? l10n.daoModerationApproveLabel
+      : decision == 'rejected'
+        ? l10n.daoModerationRejectLabel
+        : l10n.daoModerationSetPendingLabel;
 
     final shouldProceed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         backgroundColor: colorScheme.surfaceContainerHighest,
         title: Text(
-          '$decisionLabel submission?',
+          l10n.daoModerationDecisionDialogTitle(decisionLabel),
           style: GoogleFonts.inter(color: colorScheme.onSurface),
         ),
         content: Column(
@@ -616,14 +626,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Provide optional reviewer notes for the applicant.',
+              l10n.daoModerationDecisionDialogDescription,
               style: GoogleFonts.inter(color: colorScheme.onSurface.withValues(alpha: 0.75)),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: notesController,
-              decoration: const InputDecoration(
-                labelText: 'Reviewer notes (optional)',
+              decoration: InputDecoration(
+                labelText: l10n.daoModerationReviewerNotesLabel,
               ),
               maxLines: 3,
             ),
@@ -632,7 +642,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
@@ -662,21 +672,21 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
     if (!AppConfig.isFeatureEnabled('daoReviewDecisions')) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Review moderation is disabled.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.daoModerationDisabledToast)),
       );
       return;
     }
 
     if (reviewerWallet.isEmpty) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Connect a wallet to moderate submissions.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.daoModerationWalletRequiredToast)),
       );
       return;
     }
 
     if (WalletUtils.equals(reviewerWallet, review.walletAddress)) {
       messenger.showSnackBar(
-        SnackBar(content: Text('You cannot moderate your own submission.')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.daoModerationSelfNotAllowedToast)),
       );
       return;
     }
@@ -693,18 +703,26 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             reviewerWallet: reviewerWallet,
           );
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            updated != null ? 'Submission ${decision == 'approved' ? 'approved' : 'updated'}' : 'No changes saved',
+            updated != null
+                ? (decision == 'approved'
+                    ? l10n.daoModerationSubmissionApprovedToast
+                    : l10n.daoModerationSubmissionUpdatedToast)
+                : l10n.daoModerationNoChangesSavedToast,
           ),
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GovernanceHub: unable to update review: $e');
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Unable to update review: $e'),
+          content: Text(AppLocalizations.of(context)!.daoModerationUpdateFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -726,11 +744,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
     final isOwnSubmission = WalletUtils.equals(viewerWallet, review.walletAddress);
     final votingDisabledOverride = review.metadata?['votingDisabled'] == true || review.metadata?['voting_disabled'] == true;
+    final l10n = AppLocalizations.of(context)!;
     final voteDetailsText = isOwnSubmission
-        ? 'Voting disabled for the applicant profile.'
+      ? l10n.daoReviewDetailsVotingDisabledForApplicant
         : votingDisabledOverride
-            ? 'Voting is disabled for this submission.'
-            : 'Review decisions are managed by the DAO review process.';
+        ? l10n.daoReviewDetailsVotingDisabledForSubmission
+        : l10n.daoReviewDetailsVotingManagedByDao;
     final isPending = review.status.toLowerCase() == 'pending';
     final canModerate = AppConfig.isFeatureEnabled('daoReviewDecisions') && !isOwnSubmission && isPending;
     final isActionInFlight = _reviewActionId == review.id;
@@ -741,7 +760,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       builder: (context) => AlertDialog(
         backgroundColor: colorScheme.surfaceContainerHighest,
         title: Text(
-          'Review submission',
+          l10n.daoReviewDetailsDialogTitle,
           style: TextStyle(color: colorScheme.onSurface),
         ),
         content: SingleChildScrollView(
@@ -755,23 +774,23 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               ),
               const SizedBox(height: 12),
               Text(
-                'Portfolio: ${review.portfolioUrl}',
+                l10n.daoReviewDetailsPortfolioLabel(review.portfolioUrl),
                 style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.75)),
               ),
               const SizedBox(height: 8),
               Text(
-                'Medium: ${review.medium}',
+                l10n.daoReviewDetailsMediumLabel(review.medium),
                 style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.75)),
               ),
               const SizedBox(height: 12),
               Text(
-                'Status: ${review.status}',
+                l10n.daoReviewDetailsStatusLabel(review.status),
                 style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.8)),
               ),
               if ((review.reviewerNotes ?? '').isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Reviewer notes:',
+                  l10n.daoReviewDetailsReviewerNotesLabel,
                   style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.7), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
@@ -793,18 +812,18 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             TextButton(
               onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'rejected'),
               child: Text(
-                'Reject',
+                l10n.daoModerationRejectLabel,
                 style: TextStyle(color: colorScheme.error),
               ),
             ),
             TextButton(
               onPressed: isActionInFlight ? null : () => _confirmReviewDecision(review, 'approved'),
-              child: const Text('Approve'),
+              child: Text(l10n.daoModerationApproveLabel),
             ),
           ],
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(l10n.commonClose),
           ),
         ],
       ),
@@ -815,7 +834,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     final color = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     final totalVotes = proposal.totalVotes;
     final supportPct = (proposal.supportPercentage * 100).clamp(0, 100);
-    final quorumText = proposal.hasQuorum ? 'Quorum reached' : 'Quorum pending';
+    final l10n = AppLocalizations.of(context)!;
+    final quorumText = proposal.hasQuorum ? l10n.daoQuorumReached : l10n.daoQuorumPending;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -823,7 +843,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -851,7 +871,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 proposal.timeLeft,
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Colors.grey[400],
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -905,7 +925,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                     quorumText,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.grey[500],
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -915,15 +935,15 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    'Yes: ${proposal.yesVotes}',
+                    AppLocalizations.of(context)!.daoProposalVotesYesLabel(proposal.yesVotes.toString()),
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
                   ),
                   Text(
-                    'No: ${proposal.noVotes}',
+                    AppLocalizations.of(context)!.daoProposalVotesNoLabel(proposal.noVotes.toString()),
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
                   ),
                   Text(
-                    'Abstain: ${proposal.abstainVotes}',
+                    AppLocalizations.of(context)!.daoProposalVotesAbstainLabel(proposal.abstainVotes.toString()),
                     style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[400]),
                   ),
                 ],
@@ -943,7 +963,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Vote Yes'),
+                  child: Text(AppLocalizations.of(context)!.daoVoteYesButton),
                 ),
               ),
               const SizedBox(width: 12),
@@ -958,7 +978,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: const Text('Vote No'),
+                  child: Text(AppLocalizations.of(context)!.daoVoteNoButton),
                 ),
               ),
             ],
@@ -971,6 +991,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildVotingHistory() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         // Get actual votes from provider - use user's votes if available
         final userVotes = daoProvider.votes.take(10).toList();
         
@@ -978,14 +999,18 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         final votingHistory = userVotes.map((vote) {
           final proposal = daoProvider.getProposalById(vote.proposalId);
           return {
-            'title': proposal?.title ?? 'Unknown Proposal',
+            'title': proposal?.title ?? l10n.daoVotingHistoryUnknownProposal,
             'date': vote.timestamp.toString().substring(0, 10),
-            'vote': vote.choice.name == 'yes' ? 'Yes' : vote.choice.name == 'no' ? 'No' : 'Abstain',
-            'result': proposal?.isPassing == true ? 'Passing' : 'Not Passing',
+            'vote': vote.choice.name == 'yes'
+                ? l10n.daoVoteChoiceYes
+                : vote.choice.name == 'no'
+                    ? l10n.daoVoteChoiceNo
+                    : l10n.daoVoteChoiceAbstain,
+            'result': proposal?.isPassing == true ? l10n.daoVotingResultPassing : l10n.daoVotingResultNotPassing,
             'participation': proposal != null && proposal.totalVotes > 0 
                 ? '${((proposal.totalVotes / 100000) * 100).toStringAsFixed(0)}%' 
-                : 'N/A',
-            'yourPower': '${vote.votingPower} KUB8',
+                : l10n.commonNotAvailableShort,
+            'yourPower': l10n.daoVotingHistoryYourPowerLabel('${vote.votingPower} KUB8'),
           };
         }).toList();
         
@@ -994,8 +1019,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           return Center(
             child: EmptyStateCard(
               icon: Icons.how_to_vote,
-              title: 'No voting history yet',
-              description: 'Cast your first vote on an active proposal',
+              title: l10n.daoVotingHistoryEmptyTitle,
+              description: l10n.daoVotingHistoryEmptyDescription,
             ),
           );
         }
@@ -1225,6 +1250,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildCategorySelector() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final categories = [
       'Platform Update',
       'New Feature',
@@ -1238,31 +1265,31 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Category',
+          l10n.daoProposalCategoryLabel,
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[800]!),
+            border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
           ),
           child: DropdownButton<String>(
             value: _selectedCategory,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            dropdownColor: scheme.surfaceContainerHighest,
+            style: TextStyle(color: scheme.onSurface),
             items: categories.map((category) {
               return DropdownMenuItem<String>(
                 value: category,
-                child: Text(category),
+                child: Text(_categoryDisplayLabel(category, l10n)),
               );
             }).toList(),
             onChanged: (value) {
@@ -1276,49 +1303,71 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 
+  String _categoryDisplayLabel(String category, AppLocalizations l10n) {
+    switch (category) {
+      case 'Platform Update':
+        return l10n.daoCategoryPlatformUpdate;
+      case 'New Feature':
+        return l10n.daoCategoryNewFeature;
+      case 'Policy Change':
+        return l10n.daoCategoryPolicyChange;
+      case 'Treasury Allocation':
+        return l10n.daoCategoryTreasuryAllocation;
+      case 'Community Initiative':
+        return l10n.daoCategoryCommunityInitiative;
+      case 'Technical Improvement':
+        return l10n.daoCategoryTechnicalImprovement;
+      default:
+        return category;
+    }
+  }
+
   Widget _buildProposalRequirements() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[800]!),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.info_outline, color: Colors.green, size: 20),
+              Icon(Icons.info_outline, color: scheme.primary, size: 20),
               const SizedBox(width: 8),
               Text(
-                'Proposal Requirements',
+                l10n.daoProposalRequirementsTitle,
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: scheme.onSurface,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildRequirementItem('Wallet connection required to submit', Provider.of<Web3Provider>(context, listen: false).isConnected),
-          _buildRequirementItem('Proposal must be clearly defined', true),
-          _buildRequirementItem('Voting period: 3-14 days', true),
-          _buildRequirementItem('Quorum targets are enforced by DAO config', true),
+          _buildRequirementItem(l10n.daoProposalRequirementWalletConnected, Provider.of<Web3Provider>(context, listen: false).isConnected),
+          _buildRequirementItem(l10n.daoProposalRequirementClearlyDefined, true),
+          _buildRequirementItem(l10n.daoProposalRequirementVotingPeriod, true),
+          _buildRequirementItem(l10n.daoProposalRequirementQuorumTargets, true),
         ],
       ),
     );
   }
 
   Widget _buildRequirementItem(String text, bool isMet) {
+    final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
           Icon(
             isMet ? Icons.check_circle : Icons.cancel,
-            color: isMet ? Colors.green : Colors.red,
+            color: isMet ? scheme.primary : scheme.error,
             size: 16,
           ),
           const SizedBox(width: 8),
@@ -1327,7 +1376,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               text,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Colors.grey[400],
+                color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -1339,11 +1388,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Future<void> _submitProposal() async {
     final messenger = ScaffoldMessenger.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     if (_titleController.text.isEmpty || _descriptionController.text.isEmpty) {
       messenger.showSnackBar(
         SnackBar(
-          content: const Text('Please fill in all required fields'),
+          content: Text(l10n.daoProposalFillRequiredFieldsToast),
           backgroundColor: scheme.error,
         ),
       );
@@ -1356,9 +1406,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
     if (wallet.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Connect your wallet to submit proposals.'),
-        ),
+        SnackBar(content: Text(l10n.daoProposalWalletRequiredToast)),
       );
       return;
     }
@@ -1399,15 +1447,18 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       setState(() => _selectedIndex = 0);
       messenger.showSnackBar(
         SnackBar(
-          content: const Text('Proposal submitted to DAO'),
+          content: Text(l10n.daoProposalSubmittedToast),
           backgroundColor: scheme.surfaceContainerHighest,
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GovernanceHub: unable to submit proposal: $e');
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Unable to submit proposal: $e'),
+          content: Text(l10n.daoProposalSubmitFailedToast),
           backgroundColor: scheme.error,
         ),
       );
@@ -1424,6 +1475,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildTreasury() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: SingleChildScrollView(
@@ -1432,19 +1485,19 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'DAO Treasury',
+              l10n.daoTreasuryTitle,
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Community-controlled funds for platform development',
+              l10n.daoTreasurySubtitle,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.grey[400],
+                color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 24),
@@ -1462,6 +1515,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildTreasuryOverview() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final analytics = daoProvider.getDAOAnalytics();
         final treasuryAmountDisplay = (analytics['treasuryAmount'] as double? ?? 0.0).toStringAsFixed(2);
         final transactions = daoProvider.transactions;
@@ -1514,11 +1568,11 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               const SizedBox(height: 20),
               Row(
                 children: [
-                  Expanded(child: _buildTreasuryStatCard('Inflow', '${inflow.toStringAsFixed(2)} KUB8', Icons.trending_up)),
+                    Expanded(child: _buildTreasuryStatCard(l10n.daoTreasuryInflowLabel, '${inflow.toStringAsFixed(2)} KUB8', Icons.trending_up)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTreasuryStatCard('Outflow', '${outflow.toStringAsFixed(2)} KUB8', Icons.trending_down)),
+                    Expanded(child: _buildTreasuryStatCard(l10n.daoTreasuryOutflowLabel, '${outflow.toStringAsFixed(2)} KUB8', Icons.trending_down)),
                   const SizedBox(width: 12),
-                  Expanded(child: _buildTreasuryStatCard('Proposals', '${daoProvider.proposals.length}', Icons.security)),
+                    Expanded(child: _buildTreasuryStatCard(l10n.daoTreasuryProposalsLabel, '${daoProvider.proposals.length}', Icons.security)),
                 ],
               ),
             ],
@@ -1563,13 +1617,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildRecentTransactions() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final transactions = daoProvider.transactions.take(5).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Recent Transactions',
+              l10n.daoRecentTransactionsTitle,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -1581,8 +1636,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Center(
                 child: EmptyStateCard(
                   icon: Icons.history,
-                  title: 'No recent transactions',
-                  description: '',
+                  title: l10n.daoRecentTransactionsEmptyTitle,
+                  description: l10n.daoRecentTransactionsEmptyDescription,
                 ),
               )
             else
@@ -1674,28 +1729,30 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   String _formatDate(DateTime date) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final difference = now.difference(date);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
+      return l10n.commonTimeAgoDays(difference.inDays.toString());
     } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
+      return l10n.commonTimeAgoHours(difference.inHours.toString());
     } else {
-      return '${difference.inMinutes}m ago';
+      return l10n.commonTimeAgoMinutes(difference.inMinutes.toString());
     }
   }
 
   Widget _buildTreasuryProposals() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final treasuryProposals = daoProvider.proposals.where((p) => p.type == ProposalType.rewards).toList();
 
         if (treasuryProposals.isEmpty) {
           return EmptyStateCard(
             icon: Icons.savings,
-            title: 'No treasury proposals yet',
-            description: 'Create a treasury request to allocate KUB8 to initiatives.',
+            title: l10n.daoTreasuryProposalsEmptyTitle,
+            description: l10n.daoTreasuryProposalsEmptyDescription,
           );
         }
 
@@ -1705,7 +1762,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             Row(
               children: [
                 Text(
-                  'Treasury Proposals',
+                  l10n.daoTreasuryProposalsTitle,
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -1715,7 +1772,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 const Spacer(),
                 TextButton(
                   onPressed: () => setState(() => _selectedIndex = 2),
-                  child: Text('Create Proposal', style: TextStyle(color: Provider.of<ThemeProvider>(context).accentColor)),
+                  child: Text(
+                    l10n.daoCreateProposalButton,
+                    style: TextStyle(color: Provider.of<ThemeProvider>(context).accentColor),
+                  ),
                 ),
               ],
             ),
@@ -1728,6 +1788,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildDelegation() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: SingleChildScrollView(
@@ -1736,19 +1798,19 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Vote Delegation',
+              l10n.daoVoteDelegationTitle,
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Delegate your voting power to trusted community members',
+              l10n.daoVoteDelegationSubtitle,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Colors.grey[400],
+                color: scheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 24),
@@ -1840,17 +1902,19 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   Widget _buildTopDelegates() {
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
+        final scheme = Theme.of(context).colorScheme;
         final delegates = daoProvider.delegates.take(5).toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Top Delegates',
+              l10n.daoTopDelegatesTitle,
               style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -1858,8 +1922,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               Center(
                 child: EmptyStateCard(
                   icon: Icons.people,
-                  title: 'No delegates yet',
-                  description: 'No delegates have been registered yet.',
+                  title: l10n.daoTopDelegatesEmptyTitle,
+                  description: l10n.daoTopDelegatesEmptyDescription,
                 ),
               )
             else
@@ -1910,7 +1974,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                               '${delegate.delegatorCount} delegators • ${(delegate.participationRate * 100).toStringAsFixed(0)}% participation',
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: Colors.grey[400],
+                                color: scheme.onSurface.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -1930,24 +1994,24 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.2),
+                              color: scheme.primary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              'Active',
+                              l10n.daoDelegateActiveLabel,
                               style: GoogleFonts.inter(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
-                                color: Colors.green,
+                                color: scheme.primary,
                               ),
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Tap to delegate',
+                            l10n.daoTapToDelegateHint,
                             style: GoogleFonts.inter(
                               fontSize: 10,
-                              color: Colors.grey[500],
+                              color: scheme.onSurface.withValues(alpha: 0.6),
                               fontStyle: FontStyle.italic,
                             ),
                           ),
@@ -1964,23 +2028,25 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildDelegationActions() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Delegation Actions',
+          l10n.daoDelegationActionsTitle,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Choose how to use your voting power',
+          l10n.daoDelegationActionsSubtitle,
           style: GoogleFonts.inter(
             fontSize: 14,
-            color: Colors.grey[400],
+            color: scheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         const SizedBox(height: 16),
@@ -1990,10 +2056,10 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           child: ElevatedButton.icon(
             onPressed: _showDelegateSelection,
             icon: Icon(Icons.people_outline, size: 20),
-            label: const Text('Delegate to Trusted Members'),
+            label: Text(l10n.daoDelegateToTrustedMembersButton),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF10B981),
-              foregroundColor: Colors.white,
+              backgroundColor: scheme.primary,
+              foregroundColor: scheme.onPrimary,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -2008,7 +2074,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               child: ElevatedButton.icon(
                 onPressed: _selfDelegate,
                 icon: Icon(Icons.person_outline, size: 18),
-                label: const Text('Self Delegate'),
+                label: Text(l10n.daoSelfDelegateButton),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
@@ -2025,7 +2091,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               child: ElevatedButton.icon(
                 onPressed: _revokeDelegation,
                 icon: Icon(Icons.cancel_outlined, size: 18),
-                label: const Text('Revoke'),
+                label: Text(l10n.daoRevokeButton),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                   foregroundColor: Colors.white,
@@ -2192,51 +2258,56 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   void _delegateVote(String delegateName) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final votingPowerDisplay = '${context.read<Web3Provider>().kub8Balance.toStringAsFixed(2)} KUB8';
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Delegate Voting Power', style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onPrimary)),
+        title: Text(
+          l10n.daoDelegateVotingPowerDialogTitle,
+          style: GoogleFonts.inter(color: scheme.onSurface),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Are you sure you want to delegate your $votingPowerDisplay voting power to $delegateName?',
-              style: GoogleFonts.inter(color: Colors.grey[400]),
+              l10n.daoDelegateVotingPowerDialogBody(votingPowerDisplay, delegateName),
+              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
+                color: scheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green),
+                border: Border.all(color: scheme.primary),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.info_outline, color: Colors.green, size: 16),
+                      Icon(Icons.info_outline, color: scheme.primary, size: 16),
                       const SizedBox(width: 8),
                       Text(
-                        'Delegation Benefits',
+                        l10n.daoDelegationBenefitsTitle,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.green,
+                          color: scheme.primary,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '• Your delegate will vote on your behalf\n• You can revoke delegation anytime\n• Your voting power remains yours',
+                    l10n.daoDelegationBenefitsBody,
                     style: GoogleFonts.inter(
                       fontSize: 11,
-                      color: Colors.grey[400],
+                      color: scheme.onSurface.withValues(alpha: 0.7),
                       height: 1.4,
                     ),
                   ),
@@ -2248,14 +2319,14 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: Text(l10n.commonCancel, style: TextStyle(color: scheme.onSurface.withValues(alpha: 0.7))),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               _completeDelegation(delegateName);
             },
-            child: const Text('Confirm Delegation', style: TextStyle(color: Colors.green)),
+            child: Text(l10n.daoConfirmDelegationButton, style: TextStyle(color: scheme.primary)),
           ),
         ],
       ),
@@ -2263,16 +2334,18 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   void _completeDelegation(String delegateName) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     // Here you would typically call a smart contract or API
     // For now, we'll simulate the delegation
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Voting power successfully delegated to $delegateName'),
-        backgroundColor: Colors.green,
+        content: Text(l10n.daoDelegationSuccessToast(delegateName)),
+        backgroundColor: scheme.primary,
         action: SnackBarAction(
-          label: 'View Details',
-          textColor: Theme.of(context).colorScheme.onPrimary,
+          label: l10n.daoViewDelegationDetailsAction,
+          textColor: scheme.onPrimary,
           onPressed: () {
             // Show delegation details
             _showDelegationDetails(delegateName);
@@ -2288,6 +2361,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   void _showDelegationDetails(String delegateName) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -2303,26 +2378,26 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
           children: [
             Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 24),
+                Icon(Icons.check_circle, color: scheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
-                  'Delegation Active',
+                  l10n.daoDelegationActiveTitle,
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: scheme.onSurface,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            _buildDetailRow('Delegate', delegateName),
+            _buildDetailRow(l10n.daoDelegationDetailDelegateLabel, delegateName),
             _buildDetailRow(
-              'Voting Power',
+              l10n.daoDelegationDetailVotingPowerLabel,
               '${Provider.of<Web3Provider>(context, listen: false).kub8Balance.toStringAsFixed(2)} KUB8',
             ),
-            _buildDetailRow('Status', 'Active'),
-            _buildDetailRow('Started', 'Just now'),
+            _buildDetailRow(l10n.daoDelegationDetailStatusLabel, l10n.daoDelegationStatusActive),
+            _buildDetailRow(l10n.daoDelegationDetailStartedLabel, l10n.daoDelegationStartedJustNow),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -2337,7 +2412,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   side: BorderSide(color: Colors.grey[600]!),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text('Revoke Delegation'),
+                child: Text(l10n.daoRevokeDelegationButton),
               ),
             ),
           ],
@@ -2376,7 +2451,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Delegation revoked successfully'),
+        content: Text(AppLocalizations.of(context)!.daoDelegationRevokedToast),
         backgroundColor: scheme.tertiary,
       ),
     );
@@ -2386,7 +2461,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Self-delegation enabled'),
+        content: Text(AppLocalizations.of(context)!.daoSelfDelegationEnabledToast),
         backgroundColor: scheme.tertiary,
       ),
     );
@@ -2401,9 +2476,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
 
     if (wallet.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Connect your wallet before voting'),
-        ),
+        SnackBar(content: Text(AppLocalizations.of(context)!.daoVoteWalletRequiredToast)),
       );
       return;
     }
@@ -2419,15 +2492,22 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Vote ${isYes ? 'Yes' : 'No'} submitted'),
+          content: Text(
+            isYes
+                ? AppLocalizations.of(context)!.daoVoteSubmittedYesToast
+                : AppLocalizations.of(context)!.daoVoteSubmittedNoToast,
+          ),
           backgroundColor: scheme.surfaceContainerHighest,
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GovernanceHub: unable to submit vote: $e');
+      }
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Unable to submit vote: $e'),
+          content: Text(AppLocalizations.of(context)!.daoVoteSubmitFailedToast),
           backgroundColor: scheme.error,
         ),
       );
@@ -2470,7 +2550,6 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
     );
   }
 }
-
 
 
 

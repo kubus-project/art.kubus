@@ -108,7 +108,14 @@ class CommunityHubProvider extends ChangeNotifier {
       _groupsInitialized = true;
     } catch (e) {
       _groupsError = e.toString();
-      debugPrint('CommunityHubProvider.loadGroups failed: $e');
+      // Avoid noisy logs in release; failing to load groups is non-fatal.
+      if (kDebugMode) {
+        debugPrint('CommunityHubProvider.loadGroups failed: $e');
+      }
+      // Still mark initialized so the UI can render an empty state instead
+      // of blocking forever on a missing backend capability.
+      _groupsInitialized = true;
+      _groupsHasMore = false;
     } finally {
       _groupsLoading = false;
       notifyListeners();
@@ -286,7 +293,9 @@ class CommunityHubProvider extends ChangeNotifier {
       _artFeedRadiusKm = radiusKm;
     } catch (e) {
       _artFeedError = e.toString();
-      debugPrint('CommunityHubProvider.loadArtFeed failed: $e');
+      if (kDebugMode) {
+        debugPrint('CommunityHubProvider.loadArtFeed failed: $e');
+      }
     } finally {
       _artFeedLoading = false;
       notifyListeners();

@@ -302,6 +302,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
                             ? DecorationImage(
                                 image: NetworkImage(_coverImageUrl!),
                                 fit: BoxFit.cover,
+                                onError: (error, stackTrace) {
+                                  // Ignore cover image load errors (e.g., 404) to avoid
+                                  // bubbling into unhandled zone exceptions on web.
+                                },
                               )
                             : null,
                   ),
@@ -940,7 +944,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            setState(() => _isLoading = false);
+            if (mounted) setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -958,6 +962,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             fileName: fileName,
             fileType: 'cover',
             metadata: {'uploadFolder': 'profiles/cover'},
+            walletAddress: wallet,
           );
 
           final rawUploadedUrl = result['uploadedUrl']?.toString() ?? 
@@ -974,11 +979,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             coverImage: uploadedUrl,
           );
 
-          setState(() {
-            _coverImageUrl = uploadedUrl;
-            _localCoverBytes = null;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _coverImageUrl = uploadedUrl;
+              _localCoverBytes = null;
+              _isLoading = false;
+            });
+          }
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -991,7 +998,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
             ),
           );
         } catch (e) {
-          setState(() => _isLoading = false);
+          if (mounted) setState(() => _isLoading = false);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1083,7 +1090,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           }
         } catch (_) {}
         
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else {
         throw Exception(profileProvider.error ?? 'Failed to save profile');
       }

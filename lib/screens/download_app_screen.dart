@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../providers/themeprovider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -60,6 +61,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   }
 
   Future<void> _launchURL(String url) async {
+    final l10n = AppLocalizations.of(context)!;
     final Uri uri = Uri.parse(url);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -67,8 +69,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not open store. Please visit: $url'),
-            backgroundColor: Colors.orange,
+            content: Text(l10n.downloadAppCouldNotOpenStoreToast(url)),
+            backgroundColor: Theme.of(context).colorScheme.errorContainer,
           ),
         );
       }
@@ -78,8 +80,12 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
     final size = MediaQuery.of(context).size;
     final isLargeScreen = size.width > 800;
+    final featureName = widget.feature == 'AR Features'
+        ? l10n.downloadAppDefaultFeatureName
+        : widget.feature;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -114,7 +120,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
 
                         // Title
                         Text(
-                          'Experience ${widget.feature} in AR',
+                          l10n.downloadAppExperienceInArTitle(featureName),
                           style: GoogleFonts.inter(
                             fontSize: isLargeScreen ? 40 : 28,
                             fontWeight: FontWeight.bold,
@@ -127,7 +133,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
                         // Description
                         Text(
                           widget.description ??
-                              'To access augmented reality features and view digital art in your space, download the art.kubus mobile app.',
+                              l10n.downloadAppDefaultDescription,
                           style: GoogleFonts.inter(
                             fontSize: isLargeScreen ? 18 : 16,
                             color: Theme.of(context)
@@ -234,11 +240,12 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   }
 
   Widget _buildFeatureHighlights(bool isLargeScreen) {
+    final l10n = AppLocalizations.of(context)!;
     final features = [
-      {'icon': Icons.view_in_ar, 'text': 'View art in your space with AR'},
-      {'icon': Icons.camera_alt, 'text': 'Scan artworks with your camera'},
-      {'icon': Icons.touch_app, 'text': 'Interactive 3D experiences'},
-      {'icon': Icons.location_on, 'text': 'Location-based art discovery'},
+      {'icon': Icons.view_in_ar, 'text': l10n.downloadAppFeatureViewInAr},
+      {'icon': Icons.camera_alt, 'text': l10n.downloadAppFeatureScanArtworks},
+      {'icon': Icons.touch_app, 'text': l10n.downloadAppFeatureInteractive3d},
+      {'icon': Icons.location_on, 'text': l10n.downloadAppFeatureLocationDiscovery},
     ];
 
     return Wrap(
@@ -272,10 +279,11 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   }
 
   Widget _buildDownloadButtons(ThemeProvider themeProvider, bool isLargeScreen) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Text(
-          'Download for:',
+          l10n.downloadAppDownloadForLabel,
           style: GoogleFonts.inter(
             fontSize: isLargeScreen ? 18 : 16,
             fontWeight: FontWeight.w600,
@@ -290,7 +298,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           children: [
             // iOS App Store button
             _buildStoreButton(
-              label: 'iOS',
+              label: l10n.commonIosLabel,
               icon: Icons.apple,
               color: Colors.black,
               onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
@@ -298,8 +306,8 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
             ),
             // Android Play Store button
             _buildStoreButton(
-              label: 'Android',
-              icon: Icons.android_rounded,
+              label: l10n.commonAndroidLabel,
+              icon: Icons.android,
               color: const Color(0xFF01875F),
               onTap: () => _launchURL('https://github.com/kubus-project/art.kubus/releases'),
               isLargeScreen: isLargeScreen,
@@ -357,6 +365,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   }
 
   Widget _buildQRSection(ThemeProvider themeProvider, bool isLargeScreen) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.all(isLargeScreen ? 32 : 24),
       decoration: BoxDecoration(
@@ -375,7 +384,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'Scan QR Code',
+            l10n.downloadAppScanQrTitle,
             style: GoogleFonts.inter(
               fontSize: isLargeScreen ? 18 : 16,
               fontWeight: FontWeight.w600,
@@ -384,7 +393,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           ),
           const SizedBox(height: 8),
           Text(
-            'Or scan this code with your mobile device',
+            l10n.downloadAppScanQrSubtitle,
             style: GoogleFonts.inter(
               fontSize: isLargeScreen ? 14 : 12,
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -397,6 +406,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
   }
 
   Widget _buildContinueButton(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return TextButton(
       onPressed: () => Navigator.of(context).pop(),
       style: TextButton.styleFrom(
@@ -408,7 +418,7 @@ class _DownloadAppScreenState extends State<DownloadAppScreen>
           Icon(Icons.arrow_back, size: 20, color: themeProvider.accentColor),
           const SizedBox(width: 8),
           Text(
-            'Continue browsing',
+            l10n.downloadAppContinueBrowsingButton,
             style: GoogleFonts.inter(
               fontSize: 16,
               color: themeProvider.accentColor,

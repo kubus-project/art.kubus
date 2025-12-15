@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
 import '../../models/community_group.dart';
@@ -41,6 +43,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(_group.name),
@@ -51,10 +54,10 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               final isOwner = latest.isOwner;
               final isMember = latest.isMember;
               final label = isOwner
-                  ? 'Owner'
+                  ? l10n.commonOwner
                   : isMember
-                      ? 'Joined'
-                      : 'Join';
+                      ? l10n.commonJoined
+                      : l10n.commonJoin;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: ElevatedButton(
@@ -125,7 +128,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         TextButton(
                           onPressed: () => hub.loadGroupPosts(summary.id,
                               refresh: posts.isEmpty),
-                          child: const Text('Retry'),
+                          child: Text(l10n.commonRetry),
                         ),
                       ],
                     ),
@@ -133,9 +136,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 if (posts.isEmpty && !loading && error == null)
                   EmptyStateCard(
                     icon: Icons.forum_outlined,
-                    title: 'No posts yet',
-                    description:
-                        'Start the conversation by sharing the first update.',
+                    title: l10n.communityGroupFeedEmptyTitle,
+                    description: l10n.communityGroupFeedEmptyDescription,
                   ),
                 ...posts.map(_buildGroupPostCard),
                 if (loading && posts.isNotEmpty)
@@ -184,9 +186,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         _group = _resolveGroup(hub);
       });
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GroupFeedScreen: failed to update membership: $e');
+      }
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not update membership: $e')),
+        SnackBar(content: Text(l10n.communityGroupMembershipUpdateFailedToast)),
       );
     } finally {
       if (mounted) {
@@ -197,6 +203,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   Widget _buildGroupHeader(CommunityGroupSummary summary) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -217,7 +224,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
           Text(
             summary.description?.isNotEmpty == true
                 ? summary.description!
-                : 'This group has no description yet.',
+                : l10n.communityGroupNoDescription,
             style: GoogleFonts.inter(
               fontSize: 13,
               color: scheme.onSurface.withValues(alpha: 0.7),
@@ -230,14 +237,14 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             children: [
               Chip(
                 avatar: const Icon(Icons.people_alt, size: 16),
-                label: Text('${summary.memberCount} members'),
+                label: Text(l10n.commonMembersCount(summary.memberCount)),
               ),
               Chip(
                 avatar: Icon(
                   summary.isPublic ? Icons.public : Icons.lock,
                   size: 16,
                 ),
-                label: Text(summary.isPublic ? 'Public' : 'Private'),
+                label: Text(summary.isPublic ? l10n.commonPublic : l10n.commonPrivate),
               ),
             ],
           ),
@@ -249,6 +256,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   Widget _buildGroupPostCard(CommunityPost post) {
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = post.imageUrl ??
         (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
 
@@ -334,18 +342,20 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         ),
                       ),
                       icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: const Text('Discuss'),
+                      label: Text(l10n.commonComments),
                     ),
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () => SharePlus.instance.share(
                         ShareParams(
-                          text:
-                              'Discuss ${post.authorName}’s update inside ${_group.name} on art.kubus',
+                          text: l10n.communityGroupFeedShareText(
+                            post.authorName,
+                            _group.name,
+                          ),
                         ),
                       ),
                       icon: const Icon(Icons.share_outlined, size: 18),
-                      label: const Text('Share'),
+                      label: Text(l10n.commonShare),
                     ),
                   ],
                 ),
@@ -358,15 +368,19 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
   }
 
   String _getTimeAgo(DateTime timestamp) {
+    final l10n = AppLocalizations.of(context)!;
     final difference = DateTime.now().difference(timestamp);
     if (difference.inSeconds < 60) {
-      return '${difference.inSeconds}s ago';
+      return l10n.commonTimeAgoJustNow;
     } else if (difference.inMinutes < 60) {
-      return '${difference.inMinutes}m ago';
+      return l10n.commonTimeAgoMinutes(difference.inMinutes);
     } else if (difference.inHours < 24) {
-      return '${difference.inHours}h ago';
+      return l10n.commonTimeAgoHours(difference.inHours);
+    } else if (difference.inDays < 7) {
+      return l10n.commonTimeAgoDays(difference.inDays);
     } else {
-      return '${difference.inDays}d ago';
+      final weeks = (difference.inDays / 7).floor();
+      return l10n.commonTimeAgoWeeks(weeks);
     }
   }
 }

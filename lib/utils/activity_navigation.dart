@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:art_kubus/l10n/app_localizations.dart';
+
 import '../models/recent_activity.dart';
 import '../screens/community/post_detail_screen.dart';
 import '../screens/art/art_detail_screen.dart';
@@ -15,6 +17,7 @@ class ActivityNavigation {
   static Future<bool> open(BuildContext context, RecentActivity activity) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final metadata = Map<String, dynamic>.from(activity.metadata);
     final actionUrl = activity.actionUrl ?? _string(metadata['actionUrl']);
 
@@ -79,7 +82,7 @@ class ActivityNavigation {
     }
 
     messenger.showSnackBar(
-      const SnackBar(content: Text('Unable to open this activity right now.')),
+      SnackBar(content: Text(l10n.activityNavigationUnableToOpenToast)),
     );
     return false;
   }

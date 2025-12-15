@@ -322,7 +322,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           final wallet = profileProvider.currentUser?.walletAddress ?? '';
 
           if (wallet.isEmpty) {
-            setState(() => _isLoading = false);
+            if (mounted) setState(() => _isLoading = false);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -341,6 +341,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             fileName: fileName,
             fileType: 'cover',
             metadata: {'uploadFolder': 'profiles/cover'},
+            walletAddress: wallet,
           );
 
           // Extract URL from result
@@ -359,11 +360,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             coverImage: uploadedUrl,
           );
 
-          setState(() {
-            _coverImageUrl = uploadedUrl;
-            _localCoverBytes = null;
-            _isLoading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _coverImageUrl = uploadedUrl;
+              _localCoverBytes = null;
+              _isLoading = false;
+            });
+          }
 
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -376,7 +379,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             ),
           );
         } catch (e) {
-          setState(() => _isLoading = false);
+          if (mounted) setState(() => _isLoading = false);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -467,7 +470,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
             try { EventBus().emitProfileUpdated(updatedUser); } catch (_) {}
           }
         } catch (_) {}
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else {
         throw Exception(profileProvider.error ?? 'Failed to save profile');
       }
@@ -629,6 +632,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                             ? DecorationImage(
                                 image: NetworkImage(_coverImageUrl!),
                                 fit: BoxFit.cover,
+                                onError: (error, stackTrace) {
+                                  // Swallow image load errors (e.g., 404) so Flutter web
+                                  // doesn't surface them as unhandled zone errors.
+                                },
                               )
                             : null,
                   ),

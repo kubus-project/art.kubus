@@ -1,10 +1,11 @@
-import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../config/api_keys.dart';
 import '../../../providers/artwork_provider.dart';
@@ -918,7 +919,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: Text(
-              hasModel ? 'Replace' : 'Upload',
+              hasModel ? (AppLocalizations.of(context)!).commonReplace : (AppLocalizations.of(context)!).commonUpload,
               style: GoogleFonts.inter(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
@@ -931,7 +932,8 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   }
 
   Widget _buildNavigationButtons() {
-    const studioColor = Color(0xFFF59E0B);
+    final l10n = AppLocalizations.of(context)!;
+    final studioColor = Provider.of<ThemeProvider>(context, listen: false).accentColor;
     
     return Padding(
       padding: const EdgeInsets.all(24),
@@ -949,7 +951,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
                   ),
                 ),
                 child: Text(
-                  'Previous',
+                  l10n.commonBack,
                   style: GoogleFonts.inter(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
@@ -978,7 +980,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
                       ),
                     )
                   : Text(
-                      _currentStep < 3 ? 'Next' : 'Create Artwork',
+                      _currentStep < 3 ? l10n.commonNext : l10n.artistCreatorCreateArtworkButton,
                       style: GoogleFonts.inter(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w500,
@@ -1000,6 +1002,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   }
 
   Future<void> _pickCoverImage() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final file = await _imagePicker.pickImage(
         source: ImageSource.gallery,
@@ -1015,17 +1018,21 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cover selected')),
+        SnackBar(content: Text(l10n.artistCreatorCoverSelectedToast)),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ArtworkCreator: Failed to pick cover image: $e');
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick image: $e')),
+        SnackBar(content: Text(l10n.artistCreatorPickImageFailedToast)),
       );
     }
   }
 
   Future<void> _pickModelFile() async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -1043,12 +1050,15 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       });
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('3D model selected')),
+        SnackBar(content: Text(l10n.artistCreatorModelSelectedToast)),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ArtworkCreator: Failed to pick 3D model: $e');
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to pick model: $e')),
+        SnackBar(content: Text(l10n.artistCreatorPickModelFailedToast)),
       );
     }
   }
@@ -1062,11 +1072,12 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   }
 
   bool _validateCurrentStep() {
+    final l10n = AppLocalizations.of(context)!;
     switch (_currentStep) {
       case 0:
         if (_selectedImageBytes == null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please select an image')),
+            SnackBar(content: Text(l10n.artistCreatorSelectImageToast)),
           );
           return false;
         }
@@ -1090,6 +1101,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
     if (_isSubmitting) return;
     if (!_validateCurrentStep()) return;
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final profileProvider = context.read<ProfileProvider>();
     final web3Provider = context.read<Web3Provider>();
@@ -1098,21 +1110,21 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
     final wallet = (profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress).trim();
     if (wallet.isEmpty) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Connect your wallet to publish artwork.')),
+        SnackBar(content: Text(l10n.artistCreatorConnectWalletToPublishToast)),
       );
       return;
     }
 
     if (_selectedImageBytes == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Please select a cover image.')),
+        SnackBar(content: Text(l10n.artistCreatorSelectCoverImageToast)),
       );
       return;
     }
 
     if (_enableAR && _selectedModelBytes == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Upload a 3D model to enable AR.')),
+        SnackBar(content: Text(l10n.artistCreatorUploadModelToEnableArToast)),
       );
       return;
     }
@@ -1127,7 +1139,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
       if (latText.isEmpty || lngText.isEmpty) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Enter both latitude and longitude or disable coordinates.')),
+          SnackBar(content: Text(l10n.artistCreatorEnterLatLngOrDisableToast)),
         );
         return;
       }
@@ -1140,7 +1152,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
 
       if (latitude == null || longitude == null || !withinLatRange || !withinLngRange) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Coordinates must be valid latitude/longitude values.')),
+          SnackBar(content: Text(l10n.artistCreatorInvalidCoordinatesToast)),
         );
         return;
       }
@@ -1170,7 +1182,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
       final coverUrl = coverUpload['uploadedUrl'] as String? ?? coverUpload['data']?['url'] as String?;
       if (coverUrl == null || coverUrl.isEmpty) {
         messenger.showSnackBar(
-          const SnackBar(content: Text('Upload succeeded but cover URL missing.')),
+          SnackBar(content: Text(l10n.artistCreatorCoverUrlMissingToast)),
         );
         setState(() => _isSubmitting = false);
         return;
@@ -1220,7 +1232,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
           };
           mintSignature = await web3.mintArtworkNFT(metadata);
         } catch (e) {
-          debugPrint('NFT mint attempt failed (soft): $e');
+          if (kDebugMode) {
+            debugPrint('ArtworkCreator: NFT mint attempt failed (soft): $e');
+          }
         }
 
         if (price != null) {
@@ -1228,7 +1242,9 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
             // Simulated price sync to chain; when on-chain listing is wired, replace with real call.
             priceSyncSignature = 'price-${DateTime.now().millisecondsSinceEpoch}';
           } catch (e) {
-            debugPrint('Price sync failed (soft): $e');
+            if (kDebugMode) {
+              debugPrint('ArtworkCreator: Price sync failed (soft): $e');
+            }
           }
         }
       }
@@ -1275,7 +1291,7 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         // If backend didn't return data, still treat as success per requirement
         messenger.showSnackBar(
           SnackBar(
-            content: const Text('Artwork submitted. Backend response pending.'),
+            content: Text(l10n.artistCreatorSubmittedPendingToast),
             backgroundColor: themeProvider.accentColor,
           ),
         );
@@ -1287,14 +1303,14 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
         context: context,
         builder: (context) => AlertDialog(
           backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-          title: Text('Success!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+          title: Text(l10n.artistCreatorSuccessTitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 64),
+              Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 64),
               const SizedBox(height: 16),
               Text(
-                'Your artwork has been created successfully!',
+                l10n.artistCreatorSuccessBody,
                 style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
                 textAlign: TextAlign.center,
               ),
@@ -1308,22 +1324,25 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
                 _resetForm();
                 widget.onCreated?.call();
               },
-              child: const Text('Create Another'),
+              child: Text(l10n.eventCreatorCreateAnotherButton),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
                 widget.onCreated?.call();
               },
-              child: const Text('View Gallery'),
+              child: Text(l10n.artistCreatorViewGalleryButton),
             ),
           ],
         ),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('ArtworkCreator: Failed to create artwork: $e');
+      }
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Failed to create artwork: $e'),
+          content: Text(l10n.artistCreatorCreateFailedToast),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -1359,23 +1378,20 @@ class _ArtworkCreatorState extends State<ArtworkCreator>
   }
 
   void _showHelp() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title:  Text('AR Marker Creation', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(l10n.artistCreatorHelpTitle, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'Follow the 4-step process to create your AR artwork:\n\n'
-          '1. Upload: Select your artwork image\n'
-          '2. Details: Enter title, description, and pricing\n'
-          '3. Settings: Configure location and features\n'
-          '4. Review: Confirm and publish your artwork',
+          l10n.artistCreatorHelpBody,
           style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
+            child: Text(l10n.commonGotIt),
           ),
         ],
       ),

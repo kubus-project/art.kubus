@@ -1,348 +1,363 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'web3_onboarding.dart';
 
 class DAOOnboardingData {
-  static const String featureName = 'DAO';
-  
-  static final List<OnboardingPage> pages = [
-    const OnboardingPage(
-      title: 'Welcome to DAO Governance',
-      description: 'Participate in decentralized decision-making for the art.kubus ecosystem. Your voice matters in shaping the future of digital art.',
-      icon: Icons.account_balance,
-      gradientColors: [Color.fromARGB(255, 6, 89, 141), Color(0xFF0B6E4F)],
-      features: [
-        'Vote on important community proposals',
-        'Create and submit your own proposals',
-        'Earn KUB8 tokens for active participation',
-        'Connect with fellow art enthusiasts',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Your Voting Power',
-      description: 'Your voting power is determined by your KUB8 token balance. The more tokens you hold, the greater your influence in governance decisions.',
-      icon: Icons.how_to_vote,
-      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-      features: [
-        'Voting power = Your KUB8 balance',
-        'Vote on active proposals',
-        'See real-time voting results',
-        'Track your participation history',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Create Proposals',
-      description: 'Have an idea to improve the platform? Submit proposals for new features, policy changes, or community initiatives.',
-      icon: Icons.lightbulb_outline,
-      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-      features: [
-        'Submit detailed proposals with descriptions',
-        'Set voting duration and requirements',
-        'Gather community support',
-        'Track proposal status and engagement',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Ready to Govern',
-      description: 'You\'re all set to participate in DAO governance! Start by exploring active proposals or creating your first one.',
-      icon: Icons.rocket_launch,
-      gradientColors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
-      features: [
-        'Browse and vote on active proposals',
-        'Check your voting history',
-        'Monitor governance statistics',
-        'Connect with the community',
-      ],
-    ),
-  ];
+  static const String featureKey = 'DAO';
+
+  static String featureTitle(AppLocalizations l10n) =>
+      l10n.web3FeatureGovernanceTitle;
+
+  static List<OnboardingPage> pages(AppLocalizations l10n) => [
+        OnboardingPage(
+          title: l10n.web3DaoP1Title,
+          description: l10n.web3DaoP1Description,
+          icon: Icons.account_balance,
+          gradientColors: [const Color.fromARGB(255, 6, 89, 141), const Color(0xFF0B6E4F)],
+          features: [
+            l10n.web3DaoP1Feature1,
+            l10n.web3DaoP1Feature2,
+            l10n.web3DaoP1Feature3,
+            l10n.web3DaoP1Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3DaoP2Title,
+          description: l10n.web3DaoP2Description,
+          icon: Icons.how_to_vote,
+          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          features: [
+            l10n.web3DaoP2Feature1,
+            l10n.web3DaoP2Feature2,
+            l10n.web3DaoP2Feature3,
+            l10n.web3DaoP2Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3DaoP3Title,
+          description: l10n.web3DaoP3Description,
+          icon: Icons.lightbulb_outline,
+          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          features: [
+            l10n.web3DaoP3Feature1,
+            l10n.web3DaoP3Feature2,
+            l10n.web3DaoP3Feature3,
+            l10n.web3DaoP3Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3DaoP4Title,
+          description: l10n.web3DaoP4Description,
+          icon: Icons.rocket_launch,
+          gradientColors: [const Color(0xFFEC4899), const Color(0xFF0B6E4F)],
+          features: [
+            l10n.web3DaoP4Feature1,
+            l10n.web3DaoP4Feature2,
+            l10n.web3DaoP4Feature3,
+            l10n.web3DaoP4Feature4,
+          ],
+        ),
+      ];
 }
 
 class ArtistStudioOnboardingData {
-  static const String featureName = 'Artist Studio';
-  
-  static final List<OnboardingPage> pages = [
-    const OnboardingPage(
-      title: 'Welcome to Artist Studio',
-      description: 'Your creative workspace for managing artworks, creating AR markers, and analyzing your artistic journey in the metaverse.',
-      icon: Icons.palette,
-      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-      features: [
-        'Manage your digital artwork collection',
-        'Create interactive AR markers',
-        'Track performance analytics',
-        'Monetize your creative work',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Artwork Gallery',
-      description: 'Showcase your digital creations and NFTs. Upload, organize, and display your artworks for the world to discover.',
-      icon: Icons.photo_library,
-      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
-      features: [
-        'Upload and organize your artworks',
-        'Create detailed artwork descriptions',
-        'Set pricing and availability',
-        'Track views and engagement',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'AR Marker Creator',
-      description: 'Transform your artworks into immersive AR experiences. Place markers in real-world locations for others to discover.',
-      icon: Icons.view_in_ar,
-      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-      features: [
-        'Create geo-located AR markers',
-        'Attach artworks to real locations',
-        'Set discovery rewards in KUB8',
-        'Monitor marker interactions',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Analytics Dashboard',
-      description: 'Track your artistic performance with detailed analytics on views, discoveries, earnings, and community engagement.',
-      icon: Icons.analytics,
-      gradientColors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
-      features: [
-        'Monitor artwork performance',
-        'Track KUB8 earnings',
-        'Analyze discovery patterns',
-        'Export detailed reports',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Start Creating',
-      description: 'Your studio is ready! Begin by uploading your first artwork or creating an AR marker to share with the community.',
-      icon: Icons.create,
-      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-      features: [
-        'Upload your first artwork',
-        'Create your first AR marker',
-        'Explore community creations',
-        'Start earning KUB8 tokens',
-      ],
-    ),
-  ];
+  static const String featureKey = 'Artist Studio';
+
+  static String featureTitle(AppLocalizations l10n) =>
+      l10n.web3FeatureArtistStudioTitle;
+
+  static List<OnboardingPage> pages(AppLocalizations l10n) => [
+        OnboardingPage(
+          title: l10n.web3ArtistStudioP1Title,
+          description: l10n.web3ArtistStudioP1Description,
+          icon: Icons.palette,
+          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          features: [
+            l10n.web3ArtistStudioP1Feature1,
+            l10n.web3ArtistStudioP1Feature2,
+            l10n.web3ArtistStudioP1Feature3,
+            l10n.web3ArtistStudioP1Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3ArtistStudioP2Title,
+          description: l10n.web3ArtistStudioP2Description,
+          icon: Icons.photo_library,
+          gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
+          features: [
+            l10n.web3ArtistStudioP2Feature1,
+            l10n.web3ArtistStudioP2Feature2,
+            l10n.web3ArtistStudioP2Feature3,
+            l10n.web3ArtistStudioP2Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3ArtistStudioP3Title,
+          description: l10n.web3ArtistStudioP3Description,
+          icon: Icons.view_in_ar,
+          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          features: [
+            l10n.web3ArtistStudioP3Feature1,
+            l10n.web3ArtistStudioP3Feature2,
+            l10n.web3ArtistStudioP3Feature3,
+            l10n.web3ArtistStudioP3Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3ArtistStudioP4Title,
+          description: l10n.web3ArtistStudioP4Description,
+          icon: Icons.analytics,
+          gradientColors: [const Color(0xFFEC4899), const Color(0xFF0B6E4F)],
+          features: [
+            l10n.web3ArtistStudioP4Feature1,
+            l10n.web3ArtistStudioP4Feature2,
+            l10n.web3ArtistStudioP4Feature3,
+            l10n.web3ArtistStudioP4Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3ArtistStudioP5Title,
+          description: l10n.web3ArtistStudioP5Description,
+          icon: Icons.create,
+          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          features: [
+            l10n.web3ArtistStudioP5Feature1,
+            l10n.web3ArtistStudioP5Feature2,
+            l10n.web3ArtistStudioP5Feature3,
+            l10n.web3ArtistStudioP5Feature4,
+          ],
+        ),
+      ];
 }
 
 class InstitutionHubOnboardingData {
-  static const String featureName = 'Institution Hub';
-  
-  static final List<OnboardingPage> pages = [
-    const OnboardingPage(
-      title: 'Welcome to Institution Hub',
-      description: 'Manage cultural events, exhibitions, and educational programs. Connect your institution with the digital art community.',
-      icon: Icons.museum,
-      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-      features: [
-        'Create and manage cultural events',
-        'Host virtual exhibitions',
-        'Engage with the art community',
-        'Track event performance',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Event Management',
-      description: 'Organize exhibitions, workshops, and cultural events. Manage attendees, scheduling, and promotional activities.',
-      icon: Icons.event,
-      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-      features: [
-        'Schedule exhibitions and workshops',
-        'Manage event registration',
-        'Send notifications to attendees',
-        'Track event engagement',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Event Creation Tools',
-      description: 'Design compelling events with rich descriptions, media content, and interactive elements to attract participants.',
-      icon: Icons.create_new_folder,
-      gradientColors: [Color(0xFF072A40), Color(0xFF0B6E4F)],
-      features: [
-        'Design event pages with media',
-        'Set capacity and pricing',
-        'Create promotional materials',
-        'Integrate with calendar systems',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Analytics & Insights',
-      description: 'Measure the success of your events with comprehensive analytics on attendance, engagement, and community impact.',
-      icon: Icons.insights,
-      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
-      features: [
-        'Track attendance and engagement',
-        'Monitor revenue and costs',
-        'Analyze participant feedback',
-        'Generate detailed reports',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Launch Your Events',
-      description: 'Ready to connect with the art community! Start by creating your first event or exploring ongoing exhibitions.',
-      icon: Icons.launch,
-      gradientColors: [Color(0xFFEC4899), Color(0xFF06B6D4)],
-      features: [
-        'Create your first event',
-        'Explore community events',
-        'Connect with other institutions',
-        'Build your cultural network',
-      ],
-    ),
-  ];
+  static const String featureKey = 'Institution Hub';
+
+  static String featureTitle(AppLocalizations l10n) =>
+      l10n.web3FeatureInstitutionHubTitle;
+
+  static List<OnboardingPage> pages(AppLocalizations l10n) => [
+        OnboardingPage(
+          title: l10n.web3InstitutionHubP1Title,
+          description: l10n.web3InstitutionHubP1Description,
+          icon: Icons.museum,
+          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          features: [
+            l10n.web3InstitutionHubP1Feature1,
+            l10n.web3InstitutionHubP1Feature2,
+            l10n.web3InstitutionHubP1Feature3,
+            l10n.web3InstitutionHubP1Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3InstitutionHubP2Title,
+          description: l10n.web3InstitutionHubP2Description,
+          icon: Icons.event,
+          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          features: [
+            l10n.web3InstitutionHubP2Feature1,
+            l10n.web3InstitutionHubP2Feature2,
+            l10n.web3InstitutionHubP2Feature3,
+            l10n.web3InstitutionHubP2Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3InstitutionHubP3Title,
+          description: l10n.web3InstitutionHubP3Description,
+          icon: Icons.create_new_folder,
+          gradientColors: [const Color(0xFF072A40), const Color(0xFF0B6E4F)],
+          features: [
+            l10n.web3InstitutionHubP3Feature1,
+            l10n.web3InstitutionHubP3Feature2,
+            l10n.web3InstitutionHubP3Feature3,
+            l10n.web3InstitutionHubP3Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3InstitutionHubP4Title,
+          description: l10n.web3InstitutionHubP4Description,
+          icon: Icons.insights,
+          gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
+          features: [
+            l10n.web3InstitutionHubP4Feature1,
+            l10n.web3InstitutionHubP4Feature2,
+            l10n.web3InstitutionHubP4Feature3,
+            l10n.web3InstitutionHubP4Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3InstitutionHubP5Title,
+          description: l10n.web3InstitutionHubP5Description,
+          icon: Icons.launch,
+          gradientColors: [const Color(0xFFEC4899), const Color(0xFF06B6D4)],
+          features: [
+            l10n.web3InstitutionHubP5Feature1,
+            l10n.web3InstitutionHubP5Feature2,
+            l10n.web3InstitutionHubP5Feature3,
+            l10n.web3InstitutionHubP5Feature4,
+          ],
+        ),
+      ];
 }
 
 class MarketplaceOnboardingData {
-  static const String featureName = 'Marketplace';
-  
-  static final List<OnboardingPage> pages = [
-    const OnboardingPage(
-      title: 'Welcome to NFT Marketplace',
-      description: 'Discover, buy, and sell unique digital art NFTs in our vibrant marketplace. Connect with artists and collectors worldwide.',
-      icon: Icons.store,
-      gradientColors: [Color(0xFF6366F1), Color(0xFF3B82F6)],
-      features: [
-        'Browse thousands of unique NFTs',
-        'Buy and sell with secure transactions',
-        'Discover trending and featured art',
-        'Support your favorite artists',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Discover Amazing Art',
-      description: 'Explore our curated collection of digital art from talented creators. Filter by style, price, rarity, and more.',
-      icon: Icons.explore,
-      gradientColors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-      features: [
-        'Filter by price, category, and rarity',
-        'View detailed artwork information',
-        'Check authenticity and provenance',
-        'Save favorites to your wishlist',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'List Your Creations',
-      description: 'Artists can easily list their NFTs for sale. Set your price, add descriptions, and reach collectors worldwide.',
-      icon: Icons.sell,
-      gradientColors: [Color(0xFF10B981), Color(0xFF059669)],
-      features: [
-        'Upload and mint your digital art',
-        'Set fixed prices or enable auctions',
-        'Add detailed descriptions and tags',
-        'Track sales and earnings',
-      ],
-    ),
-    const OnboardingPage(
-      title: 'Start Trading',
-      description: 'You\'re ready to dive into the NFT marketplace! Start exploring, buying, or listing your first digital artwork.',
-      icon: Icons.shopping_cart,
-      gradientColors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-      features: [
-        'Explore featured collections',
-        'Make your first purchase',
-        'List your artwork for sale',
-        'Join the creative community',
-      ],
-    ),
-  ];
+  static const String featureKey = 'Marketplace';
+
+  static String featureTitle(AppLocalizations l10n) =>
+      l10n.web3FeatureMarketplaceTitle;
+
+  static List<OnboardingPage> pages(AppLocalizations l10n) => [
+        OnboardingPage(
+          title: l10n.web3MarketplaceP1Title,
+          description: l10n.web3MarketplaceP1Description,
+          icon: Icons.store,
+          gradientColors: [const Color(0xFF6366F1), const Color(0xFF3B82F6)],
+          features: [
+            l10n.web3MarketplaceP1Feature1,
+            l10n.web3MarketplaceP1Feature2,
+            l10n.web3MarketplaceP1Feature3,
+            l10n.web3MarketplaceP1Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3MarketplaceP2Title,
+          description: l10n.web3MarketplaceP2Description,
+          icon: Icons.explore,
+          gradientColors: [const Color(0xFF06B6D4), const Color(0xFF3B82F6)],
+          features: [
+            l10n.web3MarketplaceP2Feature1,
+            l10n.web3MarketplaceP2Feature2,
+            l10n.web3MarketplaceP2Feature3,
+            l10n.web3MarketplaceP2Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3MarketplaceP3Title,
+          description: l10n.web3MarketplaceP3Description,
+          icon: Icons.sell,
+          gradientColors: [const Color(0xFF10B981), const Color(0xFF059669)],
+          features: [
+            l10n.web3MarketplaceP3Feature1,
+            l10n.web3MarketplaceP3Feature2,
+            l10n.web3MarketplaceP3Feature3,
+            l10n.web3MarketplaceP3Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3MarketplaceP4Title,
+          description: l10n.web3MarketplaceP4Description,
+          icon: Icons.shopping_cart,
+          gradientColors: [const Color(0xFFF59E0B), const Color(0xFFEF4444)],
+          features: [
+            l10n.web3MarketplaceP4Feature1,
+            l10n.web3MarketplaceP4Feature2,
+            l10n.web3MarketplaceP4Feature3,
+            l10n.web3MarketplaceP4Feature4,
+          ],
+        ),
+      ];
 }
 
 class Web3FeaturesOnboardingData {
-  static const String featureName = 'Web3 Features';
+  static const String featureKey = 'Web3 Features';
 
-  static const List<OnboardingPage> pages = [
-    OnboardingPage(
-      title: 'Welcome to Web3',
-      description: 'Connect your wallet to unlock decentralized features powered by blockchain technology.',
-      icon: Icons.account_balance_wallet,
-      gradientColors: [
-        Colors.blue,
-        Color(0xFF3F51B5),
-      ],
-      features: [
-        'Secure wallet-based authentication',
-        'True ownership of digital assets',
-        'Decentralized transactions',
-        'Cross-platform compatibility',
-      ],
-    ),
-    OnboardingPage(
-      title: 'NFT Marketplace',
-      description: 'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
-      icon: Icons.store,
-      gradientColors: [
-        Color(0xFFFF6B6B),
-        Color(0xFFE91E63),
-      ],
-      features: [
-        'Browse trending digital artworks',
-        'Purchase NFTs with SOL tokens',
-        'List your own creations for sale',
-        'Track marketplace analytics',
-        'Discover featured collections',
-      ],
-    ),
-    OnboardingPage(
-      title: 'Artist Studio',
-      description: 'Create, mint, and manage your digital artworks with professional tools.',
-      icon: Icons.palette,
-      gradientColors: [
-        Color(0xFFFF9A8B),
-        Color(0xFFFF7043),
-      ],
-      features: [
-        'Upload and mint AR artworks as NFTs',
-        'Set pricing and royalties',
-        'Track creation analytics',
-        'Manage your digital portfolio',
-        'Collaborate with other artists',
-      ],
-    ),
-    OnboardingPage(
-      title: 'DAO Governance',
-      description: 'Participate in community decisions and help shape the future of the platform.',
-      icon: Icons.how_to_vote,
-      gradientColors: [
-        Color(0xFF4ECDC4),
-        Color(0xFF26A69A),
-      ],
-      features: [
-        'Vote on platform proposals',
-        'Submit improvement suggestions',
-        'Earn governance tokens',
-        'Access exclusive DAO benefits',
-        'Shape community guidelines',
-      ],
-    ),
-    OnboardingPage(
-      title: 'Institution Hub',
-      description: 'Connect with galleries, museums, and cultural institutions in the Web3 space.',
-      icon: Icons.museum,
-      gradientColors: [
-        Color(0xFF667eea),
-        Color(0xFF764ba2),
-      ],
-      features: [
-        'Partner with verified institutions',
-        'Access exclusive exhibitions',
-        'Institutional-grade security',
-        'Professional networking tools',
-        'Curated collection management',
-      ],
-    ),
-    OnboardingPage(
-      title: 'KUB8 Token Economy',
-      description: 'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
-      icon: Icons.monetization_on,
-      gradientColors: [
-        Color(0xFFFFD700),
-        Color(0xFFFF8C00),
-      ],
-      features: [
-        'Earn tokens for discoveries',
-        'Reward system for creators',
-        'Stake tokens for benefits',
-        'Pay for premium features',
-        'Trade on decentralized exchanges',
-      ],
-    ),
-  ];
+  static String featureTitle(AppLocalizations l10n) => l10n.web3FeatureWeb3Title;
+
+  static List<OnboardingPage> pages(AppLocalizations l10n) => [
+        OnboardingPage(
+          title: l10n.web3FeaturesP1Title,
+          description: l10n.web3FeaturesP1Description,
+          icon: Icons.account_balance_wallet,
+          gradientColors: [
+            Colors.blue,
+            const Color(0xFF3F51B5),
+          ],
+          features: [
+            l10n.web3FeaturesP1Feature1,
+            l10n.web3FeaturesP1Feature2,
+            l10n.web3FeaturesP1Feature3,
+            l10n.web3FeaturesP1Feature4,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3FeaturesP2Title,
+          description: l10n.web3FeaturesP2Description,
+          icon: Icons.store,
+          gradientColors: [
+            const Color(0xFFFF6B6B),
+            const Color(0xFFE91E63),
+          ],
+          features: [
+            l10n.web3FeaturesP2Feature1,
+            l10n.web3FeaturesP2Feature2,
+            l10n.web3FeaturesP2Feature3,
+            l10n.web3FeaturesP2Feature4,
+            l10n.web3FeaturesP2Feature5,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3FeaturesP3Title,
+          description: l10n.web3FeaturesP3Description,
+          icon: Icons.palette,
+          gradientColors: [
+            const Color(0xFFFF9A8B),
+            const Color(0xFFFF7043),
+          ],
+          features: [
+            l10n.web3FeaturesP3Feature1,
+            l10n.web3FeaturesP3Feature2,
+            l10n.web3FeaturesP3Feature3,
+            l10n.web3FeaturesP3Feature4,
+            l10n.web3FeaturesP3Feature5,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3FeaturesP4Title,
+          description: l10n.web3FeaturesP4Description,
+          icon: Icons.how_to_vote,
+          gradientColors: [
+            const Color(0xFF4ECDC4),
+            const Color(0xFF26A69A),
+          ],
+          features: [
+            l10n.web3FeaturesP4Feature1,
+            l10n.web3FeaturesP4Feature2,
+            l10n.web3FeaturesP4Feature3,
+            l10n.web3FeaturesP4Feature4,
+            l10n.web3FeaturesP4Feature5,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3FeaturesP5Title,
+          description: l10n.web3FeaturesP5Description,
+          icon: Icons.museum,
+          gradientColors: [
+            const Color(0xFF667eea),
+            const Color(0xFF764ba2),
+          ],
+          features: [
+            l10n.web3FeaturesP5Feature1,
+            l10n.web3FeaturesP5Feature2,
+            l10n.web3FeaturesP5Feature3,
+            l10n.web3FeaturesP5Feature4,
+            l10n.web3FeaturesP5Feature5,
+          ],
+        ),
+        OnboardingPage(
+          title: l10n.web3FeaturesP6Title,
+          description: l10n.web3FeaturesP6Description,
+          icon: Icons.monetization_on,
+          gradientColors: [
+            const Color(0xFFFFD700),
+            const Color(0xFFFF8C00),
+          ],
+          features: [
+            l10n.web3FeaturesP6Feature1,
+            l10n.web3FeaturesP6Feature2,
+            l10n.web3FeaturesP6Feature3,
+            l10n.web3FeaturesP6Feature4,
+            l10n.web3FeaturesP6Feature5,
+          ],
+        ),
+      ];
 }

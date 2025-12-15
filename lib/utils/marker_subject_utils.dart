@@ -1,6 +1,7 @@
 import '../models/artwork.dart';
 import '../models/institution.dart';
 import '../models/dao.dart';
+import '../models/exhibition.dart';
 import '../models/map_marker_subject.dart';
 
 bool artworkSupportsAR(Artwork artwork) {
@@ -26,9 +27,19 @@ String formatEventDate(DateTime date) {
   return '${local.year}-$month-$day';
 }
 
+String _formatDateRange(DateTime? from, DateTime? to) {
+  if (from == null && to == null) return '';
+  if (from != null && to != null) {
+    return '${formatEventDate(from)} → ${formatEventDate(to)}';
+  }
+  if (from != null) return formatEventDate(from);
+  return formatEventDate(to!);
+}
+
 List<MarkerSubjectOption> buildSubjectOptions({
   required MarkerSubjectType type,
   required List<Artwork> artworks,
+  required List<Exhibition> exhibitions,
   required List<Institution> institutions,
   required List<Event> events,
   required List<Delegate> delegates,
@@ -47,6 +58,31 @@ List<MarkerSubjectOption> buildSubjectOptions({
                 'arEnabled': artwork.arEnabled,
               },
             ),
+          )
+          .toList();
+    case MarkerSubjectType.exhibition:
+      return exhibitions
+          .map(
+            (ex) {
+              final when = _formatDateRange(ex.startsAt, ex.endsAt);
+              final subtitleParts = <String>[];
+              final loc = (ex.locationName ?? '').trim();
+              if (loc.isNotEmpty) subtitleParts.add(loc);
+              if (when.isNotEmpty) subtitleParts.add(when);
+              return MarkerSubjectOption(
+                type: type,
+                id: ex.id,
+                title: ex.title,
+                subtitle: subtitleParts.join(' • '),
+                metadata: {
+                  if ((ex.eventId ?? '').isNotEmpty) 'eventId': ex.eventId,
+                  if ((ex.locationName ?? '').isNotEmpty) 'locationName': ex.locationName,
+                  if (ex.lat != null) 'lat': ex.lat,
+                  if (ex.lng != null) 'lng': ex.lng,
+                  if ((ex.status ?? '').isNotEmpty) 'status': ex.status,
+                },
+              );
+            },
           )
           .toList();
     case MarkerSubjectType.institution:

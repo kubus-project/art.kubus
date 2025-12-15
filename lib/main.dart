@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 import 'providers/connection_provider.dart';
@@ -24,6 +25,10 @@ import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/community_hub_provider.dart';
+import 'providers/locale_provider.dart';
+import 'providers/events_provider.dart';
+import 'providers/exhibitions_provider.dart';
+import 'providers/collab_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -33,7 +38,12 @@ import 'screens/art/art_detail_screen.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
+import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
+
+import 'screens/collab/invites_inbox_screen.dart';
+import 'screens/events/event_detail_screen.dart';
+import 'screens/events/exhibition_detail_screen.dart';
 
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
@@ -139,13 +149,20 @@ class _AppLauncherState extends State<AppLauncher> {
   Widget build(BuildContext context) {
     // Create ThemeProvider once at the top of the widget tree so theme and
     // accent state stays stable across splash + main UI.
-    return ChangeNotifierProvider<ThemeProvider>(
-      create: (_) => ThemeProvider(),
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<ThemeProvider>(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider<LocaleProvider>(create: (_) => LocaleProvider()),
+      ],
+      child: Consumer2<ThemeProvider, LocaleProvider>(
+        builder: (context, themeProvider, localeProvider, _) {
           if (!_initialized) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
+              locale: localeProvider.locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              onGenerateTitle: (context) => AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
               theme: themeProvider.lightTheme,
               darkTheme: themeProvider.darkTheme,
               themeMode: themeProvider.themeMode,
@@ -200,6 +217,9 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
               ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
+              ChangeNotifierProvider(create: (context) => EventsProvider()),
+              ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
+              ChangeNotifierProvider(create: (context) => CollabProvider()),
               ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
                 create: (context) {
                   final artworkProvider = ArtworkProvider();
@@ -246,10 +266,56 @@ class ArtKubus extends StatefulWidget {
 }
 
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initNotificationRouting();
+  }
+
+  void _initNotificationRouting() {
+    final handler = NotificationHandler();
+    handler.onNavigate = (route, params) {
+      final navigator = _navigatorKey.currentState;
+      if (navigator == null) return;
+
+      if (route == '/collab_invite') {
+        final rawType = (params['entityType'] ?? '').toString();
+        final rawId = (params['entityId'] ?? '').toString();
+
+        final entityType = rawType.trim().toLowerCase();
+        final entityId = rawId.trim();
+
+        if (entityId.isEmpty) {
+          navigator.push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+          return;
+        }
+
+        if (entityType == 'events' || entityType == 'event') {
+          navigator.push(MaterialPageRoute(builder: (_) => EventDetailScreen(eventId: entityId)));
+          return;
+        }
+
+        if (entityType == 'exhibitions' || entityType == 'exhibition') {
+          navigator.push(MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: entityId)));
+          return;
+        }
+
+        navigator.push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+        return;
+      }
+
+      // Best-effort fallback to named routes.
+      try {
+        navigator.pushNamed(route, arguments: params);
+      } catch (_) {
+        // Ignore unknown routes.
+      }
+    };
+
+    handler.initialize();
   }
 
   @override
@@ -273,11 +339,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ThemeProvider>(
-      builder: (context, themeProvider, child) {
+    return Consumer2<ThemeProvider, LocaleProvider>(
+      builder: (context, themeProvider, localeProvider, child) {
         return MaterialApp(
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
+          navigatorKey: _navigatorKey,
+          locale: localeProvider.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          onGenerateTitle: (context) => AppLocalizations.of(context)?.appTitle ?? 'art.kubus',
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
@@ -296,8 +367,9 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
               }
               artworkId = artworkId?.trim();
               if (artworkId == null || artworkId.isEmpty) {
-                return const Scaffold(
-                  body: Center(child: Text('Artwork not found')),
+                final l10n = AppLocalizations.of(context)!;
+                return Scaffold(
+                  body: Center(child: Text(l10n.artworkNotFound)),
                 );
               }
               return ArtDetailScreen(artworkId: artworkId);
@@ -307,9 +379,12 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             '/connect-wallet': (context) => const ConnectWallet(),
             '/sign-in': (context) => const SignInScreen(),
             '/register': (context) => const RegisterScreen(),
-            '/web3': (context) => const Scaffold(
-              body: Center(child: Text('Web3 Dashboard - Coming Soon')),
-            ),
+            '/web3': (context) {
+              final l10n = AppLocalizations.of(context)!;
+              return Scaffold(
+                body: Center(child: Text(l10n.web3DashboardComingSoon)),
+              );
+            },
           },
         );
       },

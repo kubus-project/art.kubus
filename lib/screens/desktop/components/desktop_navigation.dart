@@ -5,6 +5,8 @@ import '../../../providers/themeprovider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/collab_provider.dart';
+import '../../../config/config.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../utils/app_animations.dart';
@@ -38,6 +40,7 @@ class DesktopNavigation extends StatefulWidget {
   final VoidCallback onSettingsTap;
   final VoidCallback onNotificationsTap;
   final VoidCallback onWalletTap;
+  final VoidCallback? onCollabInvitesTap;
 
   const DesktopNavigation({
     super.key,
@@ -51,6 +54,7 @@ class DesktopNavigation extends StatefulWidget {
     required this.onSettingsTap,
     required this.onNotificationsTap,
     required this.onWalletTap,
+    this.onCollabInvitesTap,
   });
 
   @override
@@ -141,7 +145,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     ),
                   ),
                   Text(
-                    'AR Art Platform',
+                    'Art Platform',
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -283,6 +287,26 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       ),
       child: Column(
         children: [
+          // Collaboration invites button (with badge)
+          if (AppConfig.isFeatureEnabled('collabInvites') && widget.onCollabInvitesTap != null)
+            Consumer<CollabProvider>(
+              builder: (context, collabProvider, _) {
+                final pendingCount = collabProvider.pendingInviteCount;
+                return _buildActionButton(
+                  icon: Icons.group_add_outlined,
+                  label: 'Invites',
+                  onTap: widget.onCollabInvitesTap!,
+                  themeProvider: themeProvider,
+                  animationTheme: animationTheme,
+                  showBadge: pendingCount > 0,
+                  badgeCount: pendingCount,
+                );
+              },
+            ),
+          
+          if (AppConfig.isFeatureEnabled('collabInvites') && widget.onCollabInvitesTap != null)
+            const SizedBox(height: 8),
+          
           // Notifications button
           _buildActionButton(
             icon: Icons.notifications_outlined,
@@ -325,6 +349,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     required ThemeProvider themeProvider,
     required AppAnimationTheme animationTheme,
     bool showBadge = false,
+    int badgeCount = 0,
   }) {
     return Material(
       color: Colors.transparent,
@@ -342,13 +367,43 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                 : MainAxisAlignment.center,
             children: [
               Stack(
+                clipBehavior: Clip.none,
                 children: [
                   Icon(
                     icon,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                     size: 24,
                   ),
-                  if (showBadge)
+                  // Generic badge with count (for collab invites, etc.)
+                  if (showBadge && badgeCount > 0)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            badgeCount > 99 ? '99+' : badgeCount.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onError,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  // Notification badge (uses NotificationProvider)
+                  if (showBadge && badgeCount == 0)
                     Consumer<NotificationProvider>(
                       builder: (context, np, _) {
                         if (np.unreadCount == 0) return const SizedBox.shrink();

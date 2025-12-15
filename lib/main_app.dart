@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'providers/themeprovider.dart';
 import 'providers/wallet_provider.dart';
 import 'providers/profile_provider.dart';
@@ -11,6 +12,7 @@ import 'screens/community/profile_screen.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/desktop/desktop_shell.dart';
 import 'utils/app_animations.dart';
+import 'widgets/user_persona_onboarding_gate.dart';
 
 class MainApp extends StatefulWidget {
   const MainApp({super.key});
@@ -35,40 +37,42 @@ class _MainAppState extends State<MainApp> {
       return const DesktopShell();
     }
 
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: IndexedStack(
-            index: _currentIndex,
-            // Keep heavy AR resources out of the tree unless the AR tab is active.
-            children: _buildScreens(),
+    return UserPersonaOnboardingGate(
+      child: Stack(
+        children: [
+          Scaffold(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            body: IndexedStack(
+              index: _currentIndex,
+              // Keep heavy AR resources out of the tree unless the AR tab is active.
+              children: _buildScreens(),
+            ),
+            bottomNavigationBar: _buildBottomNavigationBar(),
           ),
-          bottomNavigationBar: _buildBottomNavigationBar(),
-        ),
 
-        // Lock overlay with animated transitions
-        Positioned.fill(
-          child: IgnorePointer(
-            ignoring: !walletProvider.isLocked,
-            child: AnimatedSwitcher(
-              duration: animationTheme.medium,
-              switchInCurve: animationTheme.fadeCurve,
-              switchOutCurve: animationTheme.fadeCurve,
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: CurvedAnimation(parent: animation, curve: animationTheme.fadeCurve),
-                child: child,
+          // Lock overlay with animated transitions
+          Positioned.fill(
+            child: IgnorePointer(
+              ignoring: !walletProvider.isLocked,
+              child: AnimatedSwitcher(
+                duration: animationTheme.medium,
+                switchInCurve: animationTheme.fadeCurve,
+                switchOutCurve: animationTheme.fadeCurve,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: CurvedAnimation(parent: animation, curve: animationTheme.fadeCurve),
+                  child: child,
+                ),
+                child: walletProvider.isLocked
+                    ? _LockOverlay(
+                        key: const ValueKey('locked'),
+                        onUnlockRequested: _handleUnlock,
+                      )
+                    : const SizedBox(key: ValueKey('unlocked')),
               ),
-              child: walletProvider.isLocked
-                  ? _LockOverlay(
-                      key: const ValueKey('locked'),
-                      onUnlockRequested: _handleUnlock,
-                    )
-                  : const SizedBox(key: ValueKey('unlocked')),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -182,12 +186,13 @@ class _MainAppState extends State<MainApp> {
 
   Future<void> _handleUnlock() async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final localWallet = Provider.of<WalletProvider>(context, listen: false);
 
     final ok = await localWallet.authenticateForAppUnlock();
     if (ok) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App unlocked')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
       return;
     }
 
@@ -196,18 +201,18 @@ class _MainAppState extends State<MainApp> {
     final entered = await showDialog<String?>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Enter PIN to unlock'),
+        title: Text(l10n.lockEnterPinTitle),
         content: TextField(
           controller: pinController,
           keyboardType: TextInputType.number,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'PIN'),
+          decoration: InputDecoration(labelText: l10n.commonPinLabel),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.of(ctx).pop(null), child: Text(l10n.commonCancel)),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(pinController.text.trim()),
-            child: const Text('Unlock'),
+            child: Text(l10n.commonUnlock),
           ),
         ],
       ),
@@ -217,9 +222,9 @@ class _MainAppState extends State<MainApp> {
     final ok2 = await localWallet.authenticateForAppUnlock(pin: entered);
     if (!mounted) return;
     if (ok2) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('App unlocked')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAppUnlockedToast)));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Authentication failed')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.lockAuthenticationFailedToast)));
     }
   }
 }
@@ -231,6 +236,7 @@ class _LockOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
       child: Center(
@@ -240,19 +246,19 @@ class _LockOverlay extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'App locked',
+                l10n.lockAppLockedTitle,
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
               Text(
-                'Authenticate to unlock access to the wallet features.',
+                l10n.lockAppLockedDescription,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: onUnlockRequested,
-                child: const Text('Unlock'),
+                child: Text(l10n.commonUnlock),
               ),
             ],
           ),

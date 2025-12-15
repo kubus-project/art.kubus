@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import 'api_keys.dart';
 
 /// Production-ready configuration for art.kubus app
@@ -9,9 +9,9 @@ class AppConfig {
   // ===========================================
   
   /// Current environment mode
-  static const bool isProduction = kReleaseMode;
-  static const bool isDevelopment = kDebugMode;
-  static const bool isProfile = kProfileMode;
+  static const bool isProduction = bool.fromEnvironment('dart.vm.product');
+  static const bool isProfile = bool.fromEnvironment('dart.vm.profile');
+  static const bool isDevelopment = !isProduction && !isProfile;
   
   // ===========================================
   // FEATURE FLAGS
@@ -33,6 +33,8 @@ class AppConfig {
   static const bool enableWeb3 = true;
   static const bool enableMarketplace = true;
   static const bool enableNFTMinting = true;
+  static const bool enableEvents = true;
+  static const bool enableExhibitions = true;
   static const bool enableDaoOnchainTreasury = true;
   static const bool enableDaoReviewDecisions = true;
   static const bool enableWalletConnect = true;
@@ -50,6 +52,16 @@ class AppConfig {
   static const bool enableUserProfiles = true;
   static const bool enableFollowing = true;
   static const bool enableMessaging = false; // Future feature
+
+  /// Collaboration (events/exhibitions)
+  static const bool enableCollabInvites = true;
+  static const bool enableCollabInviteNotifications = true;
+
+  /// Season 0 beta program
+  static const bool enableSeason0 = true;
+
+  /// Labs section (advanced Web3 surfaces: marketplace/minting/DAO terminology)
+  static const bool enableLabs = false;
   
   /// Analytics and tracking
   static const bool enableAnalytics = isProduction;
@@ -96,17 +108,15 @@ class AppConfig {
   // ===========================================
   
   /// API endpoints
-  static const String baseApiUrl = 'https://api.kubus.site';
-  
-  //isDevelopment 
-  //  ? 'http://localhost:3000' 
-  //  : 'https://api.kubus.site';
+  static const String baseApiUrl = String.fromEnvironment(
+    'BACKEND_BASE_URL',
+    defaultValue: isDevelopment ? 'http://localhost:3000' : 'https://api.kubus.site',
+  );
   
   /// Mock data endpoint (when useBackendMockData is true)
-  static const String mockDataApiUrl = '$baseApiUrl/api/mock';
+  static final String mockDataApiUrl = '$baseApiUrl/api/mock';
   
   /// IPFS configuration (future integration)
-  static String get ipfsGateway => ApiKeys.ipfsGateway;
   static String get ipfsApiUrl => ApiKeys.ipfsApiUrl;
   static const bool enableIPFS = false; // Future feature
   
@@ -221,6 +231,8 @@ class AppConfig {
       case 'googleAuth': return enableGoogleAuth;
       case 'multiAuth': return enableMultiAuthEntry;
       case 'marketplace': return enableMarketplace;
+      case 'events': return enableEvents;
+      case 'exhibitions': return enableExhibitions;
       case 'ar': return enableARViewer;
       case 'analytics': return enableAnalytics;
       case 'debug': return enableDebugPrints;
@@ -228,48 +240,53 @@ class AppConfig {
       case 'haptics': return enableHapticFeedback;
       case 'animations': return enableAnimations;
       case 'ipfs': return enableIPFS;
+      case 'collabInvites': return enableCollabInvites;
+      case 'collabInviteNotifications': return enableCollabInviteNotifications;
+      case 'season0': return enableSeason0;
+      case 'labs': return enableLabs;
       default: return false;
     }
   }
   
   /// Get current environment string
   static String get environmentName {
-    if (isProduction) return 'production';
-    if (isDevelopment) return 'development';
-    if (isProfile) return 'profile';
-    return 'unknown';
+    // Structure as a simple chain to avoid patterns that sometimes produce
+    // "unreachable code after return" warnings in generated debug JS.
+    if (isProduction) {
+      return 'production';
+    }
+    if (isProfile) {
+      return 'profile';
+    }
+    return 'development';
   }
   
   /// Debug print helper
   static void debugPrint(String message) {
-    if (enableDebugPrints) {
-      if (kDebugMode) {
-        print('[ArtKubus Debug] $message');
-      }
+    if (enableDebugPrints && foundation.kDebugMode) {
+      foundation.debugPrint('[art.kubus Debug] $message');
     }
   }
   
   /// Verbose logging helper
   static void verboseLog(String category, String message) {
-    if (enableVerboseLogging) {
-      debugPrint('[$category] $message');
-    }
+    if (!enableVerboseLogging) return;
+    debugPrint('[$category] $message');
   }
   
   /// Network logging helper
   static void networkLog(String method, String url, {Map<String, dynamic>? data}) {
-    if (enableNetworkLogging) {
-      debugPrint('[$method] $url ${data != null ? '- Data: $data' : ''}');
-    }
+    if (!enableNetworkLogging) return;
+    debugPrint('[$method] $url ${data != null ? '- Data: $data' : ''}');
   }
 }
 
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.1.2';
-  static const int buildNumber = 7;
-  static const String buildDate = '2025-12-03';
+  static const String version = '0.2.1';
+  static const int buildNumber = 9;
+  static const String buildDate = '2025-12-15';
   
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';
@@ -284,6 +301,10 @@ class PreferenceKeys {
   static const String hasSeenWelcome = 'has_seen_welcome';
   static const String hasCompletedOnboarding = 'has_completed_onboarding';
   static const String walletAddress = 'wallet_address';
+  /// User persona UX preference (stored per-wallet by ProfileProvider).
+  static const String userPersona = 'user_persona';
+  /// Marks that persona onboarding has been completed (stored per-wallet).
+  static const String userPersonaOnboardedV1 = 'user_persona_onboarded_v1';
   static const String selectedNetwork = 'selected_network';
   static const String soundEnabled = 'sound_enabled';
   static const String hapticsEnabled = 'haptics_enabled';

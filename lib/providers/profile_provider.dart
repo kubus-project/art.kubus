@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/config.dart';
 import '../models/user_profile.dart';
+import '../models/user_persona.dart';
 import '../services/backend_api_service.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
@@ -191,6 +193,43 @@ class ProfileProvider extends ChangeNotifier {
   String? get error => _error;
   bool get hasProfile => _currentUser != null;
   ProfilePreferences get preferences => _currentUser?.preferences ?? _cachedPreferences ?? _cachedPreferencesFromPrefs();
+
+  String? get _currentWalletAddress {
+    final wallet = _currentUser?.walletAddress;
+    if (wallet != null && wallet.isNotEmpty) return wallet;
+    final stored = _prefs.getString(PreferenceKeys.walletAddress) ?? _prefs.getString('wallet_address');
+    if (stored != null && stored.isNotEmpty) return stored;
+    return null;
+  }
+
+  String _personaKeyForWallet(String walletAddress) => '${PreferenceKeys.userPersona}_$walletAddress';
+  String _personaOnboardedKeyForWallet(String walletAddress) => '${PreferenceKeys.userPersonaOnboardedV1}_$walletAddress';
+
+  UserPersona? get userPersona {
+    final raw = preferences.persona;
+    final parsed = UserPersonaX.tryParse(raw);
+    if (parsed != null) return parsed;
+
+    final wallet = _currentWalletAddress;
+    if (wallet == null) return null;
+    final persisted = _prefs.getString(_personaKeyForWallet(wallet));
+    return UserPersonaX.tryParse(persisted);
+  }
+
+  bool get hasCompletedPersonaOnboarding {
+    final wallet = _currentWalletAddress;
+    if (wallet == null) return false;
+    return _prefs.getBool(_personaOnboardedKeyForWallet(wallet)) ?? false;
+  }
+
+  /// Whether we should prompt the user to choose a UX persona.
+  ///
+  /// This is shown once per wallet/profile and is not an access control gate.
+  bool get needsPersonaOnboarding {
+    final wallet = _currentWalletAddress;
+    if (wallet == null || wallet.isEmpty) return false;
+    return userPersona == null;
+  }
   
   // Dynamic getters for profile stats (from backend)
   int get artworksCount => _currentUser?.stats?.artworksDiscovered ?? 0;
@@ -214,6 +253,35 @@ class ProfileProvider extends ChangeNotifier {
     _isSignedIn = true;
     notifyListeners();
     try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+  }
+
+  Future<void> setUserPersona(UserPersona persona, {bool persistToBackend = true}) async {
+    final wallet = _currentWalletAddress;
+    if (wallet == null || wallet.isEmpty) return;
+
+    final nextValue = persona.storageValue;
+    try {
+      await _prefs.setString(_personaKeyForWallet(wallet), nextValue);
+      await _prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+    } catch (_) {}
+
+    final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+    final nextPrefs = existing.copyWith(persona: nextValue);
+    _cachedPreferences = nextPrefs;
+    if (_currentUser != null) {
+      _currentUser = _currentUser!.copyWith(preferences: nextPrefs);
+      notifyListeners();
+      try { EventBus().emitProfileUpdated(_currentUser); } catch (_) {}
+    }
+
+    await _persistPreferences(nextPrefs);
+
+    if (!persistToBackend) return;
+    try {
+      await saveProfile(walletAddress: wallet, preferences: nextPrefs);
+    } catch (_) {
+      // Keep local preference even if backend update fails.
+    }
   }
 
   void setRoleFlags({bool? isArtist, bool? isInstitution}) {
@@ -403,7 +471,7 @@ class ProfileProvider extends ChangeNotifier {
         } catch (_) {}
         _isSignedIn = true;
         // Merge backend preferences with locally cached toggles for offline continuity
-        final mergedPrefs = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+        final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
         _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
         await _persistPreferences(mergedPrefs);
         debugPrint('ProfileProvider: Profile loaded from backend: ${_currentUser?.username}');
@@ -452,7 +520,7 @@ class ProfileProvider extends ChangeNotifier {
             _currentUser = _currentUser?.copyWith(avatar: _convertSvgToRaster(resolved));
           } catch (_) {}
           _isSignedIn = true;
-          final mergedPrefs = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+          final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
           await _persistPreferences(mergedPrefs);
         } catch (regError) {
@@ -460,7 +528,7 @@ class ProfileProvider extends ChangeNotifier {
           // If registration also fails, create local default
           _currentUser = _createDefaultProfile(walletAddress);
           _isSignedIn = true;
-          final mergedPrefs = _cachedPreferencesFromPrefs();
+          final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
           _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
           await _persistPreferences(mergedPrefs);
         }
@@ -491,6 +559,7 @@ class ProfileProvider extends ChangeNotifier {
     Map<String, String>? social,
     bool? isArtist,
     bool? isInstitution,
+    ProfilePreferences? preferences,
   }) async {
     _isLoading = true;
     _error = null;
@@ -511,6 +580,7 @@ class ProfileProvider extends ChangeNotifier {
       final effectiveSocial = social ?? _currentUser?.social;
       final effectiveIsArtist = isArtist ?? _currentUser?.isArtist;
       final effectiveIsInstitution = isInstitution ?? _currentUser?.isInstitution;
+      final effectivePreferences = preferences;
 
       final profileData = {
         'walletAddress': walletAddress,
@@ -522,6 +592,7 @@ class ProfileProvider extends ChangeNotifier {
         if (effectiveSocial != null) 'social': effectiveSocial,
         if (effectiveIsArtist != null) 'isArtist': effectiveIsArtist,
         if (effectiveIsInstitution != null) 'isInstitution': effectiveIsInstitution,
+        if (effectivePreferences != null) 'preferences': effectivePreferences.toJson(),
       };
 
       // Always save to backend
@@ -547,6 +618,7 @@ class ProfileProvider extends ChangeNotifier {
           'social': profileData['social'] ?? _currentUser?.social ?? {},
           'isArtist': profileData['isArtist'] ?? _currentUser?.isArtist ?? false,
           'isInstitution': profileData['isInstitution'] ?? _currentUser?.isInstitution ?? false,
+          if (profileData['preferences'] != null) 'preferences': profileData['preferences'],
           'createdAt': _currentUser?.createdAt.toIso8601String() ?? DateTime.now().toIso8601String(),
           'updatedAt': DateTime.now().toIso8601String(),
         };
@@ -564,6 +636,13 @@ class ProfileProvider extends ChangeNotifier {
       
       // Update sign-in state
       _isSignedIn = true;
+
+      // Persist preferences (including persona) locally for offline continuity.
+      try {
+        final mergedPrefs = _mergePreferencesWithLocalPersona(walletAddress);
+        _currentUser = _currentUser?.copyWith(preferences: mergedPrefs);
+        await _persistPreferences(mergedPrefs);
+      } catch (_) {}
 
       // Save to SharedPreferences
       await _prefs.setString('wallet_address', walletAddress);
@@ -824,10 +903,12 @@ class ProfileProvider extends ChangeNotifier {
 
   ProfilePreferences _cachedPreferencesFromPrefs() {
     try {
+      final wallet = _prefs.getString(PreferenceKeys.walletAddress) ?? _prefs.getString('wallet_address') ?? '';
       final bool isPrivate = _prefs.getBool('private_profile') ?? false;
       final bool showActivityStatus = _prefs.getBool('show_activity_status') ?? true;
       final bool showCollection = _prefs.getBool('show_collection') ?? true;
       final bool allowMessages = _prefs.getBool('allow_messages') ?? true;
+      final String? persona = wallet.isNotEmpty ? _prefs.getString(_personaKeyForWallet(wallet)) : null;
       return ProfilePreferences(
         privacy: isPrivate ? 'private' : 'public',
         notifications: true,
@@ -835,10 +916,33 @@ class ProfileProvider extends ChangeNotifier {
         showActivityStatus: showActivityStatus,
         showCollection: showCollection,
         allowMessages: allowMessages,
+        persona: persona,
       );
     } catch (_) {
       return _currentUser?.preferences ?? ProfilePreferences();
     }
+  }
+
+  ProfilePreferences _mergePreferencesWithLocalPersona(String walletAddress) {
+    final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
+    final currentPersona = (existing.persona ?? '').trim();
+    if (currentPersona.isNotEmpty) {
+      // Ensure local keys are kept in sync so onboarding doesn't reappear.
+      try {
+        _prefs.setString(_personaKeyForWallet(walletAddress), currentPersona);
+        _prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
+      } catch (_) {}
+      return existing;
+    }
+
+    final persisted = (_prefs.getString(_personaKeyForWallet(walletAddress)) ?? '').trim();
+    if (persisted.isEmpty) return existing;
+
+    // Mark onboarding complete when we have a persisted persona.
+    try {
+      _prefs.setBool(_personaOnboardedKeyForWallet(walletAddress), true);
+    } catch (_) {}
+    return existing.copyWith(persona: persisted);
   }
 
   Future<void> _applyDaoReviewRoles(String walletAddress) async {
@@ -876,6 +980,12 @@ class ProfileProvider extends ChangeNotifier {
       await _prefs.setBool('show_activity_status', preferences.showActivityStatus);
       await _prefs.setBool('show_collection', preferences.showCollection);
       await _prefs.setBool('allow_messages', preferences.allowMessages);
+      final wallet = _currentWalletAddress;
+      final persona = (preferences.persona ?? '').trim();
+      if (wallet != null && wallet.isNotEmpty && persona.isNotEmpty) {
+        await _prefs.setString(_personaKeyForWallet(wallet), persona);
+        await _prefs.setBool(_personaOnboardedKeyForWallet(wallet), true);
+      }
       _cachedPreferences = preferences;
     } catch (_) {}
   }
@@ -897,12 +1007,8 @@ class ProfileProvider extends ChangeNotifier {
   }) async {
     try {
       final existing = _currentUser?.preferences ?? _cachedPreferencesFromPrefs();
-      final next = ProfilePreferences(
-        privacy: (privateProfile ?? (existing.privacy.toLowerCase() == 'private'))
-            ? 'private'
-            : 'public',
-        notifications: existing.notifications,
-        theme: existing.theme,
+      final next = existing.copyWith(
+        privacy: (privateProfile ?? (existing.privacy.toLowerCase() == 'private')) ? 'private' : 'public',
         showActivityStatus: showActivityStatus ?? existing.showActivityStatus,
         showCollection: showCollection ?? existing.showCollection,
         allowMessages: allowMessages ?? existing.allowMessages,

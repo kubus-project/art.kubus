@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
 import 'artwork_creator.dart';
@@ -7,11 +9,17 @@ import 'artwork_gallery.dart';
 import 'artist_analytics.dart';
 import 'package:provider/provider.dart';
 
+import '../../../config/config.dart';
+import '../../../providers/collab_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
+import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
+import '../../../models/user_persona.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../collab/invites_inbox_screen.dart';
+import '../../events/exhibition_list_screen.dart';
 
 class ArtistStudio extends StatefulWidget {
   const ArtistStudio({super.key});
@@ -26,6 +34,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   bool _reviewLoading = false;
   bool _hasFetchedReviewForWallet = false;
   String _lastReviewWallet = '';
+  bool _hasSetInitialTabByPersona = false;
 
   @override
   void initState() {
@@ -38,6 +47,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
     super.didChangeDependencies();
     final wallet = _resolveWalletAddress(listen: true);
     final walletChanged = wallet != _lastReviewWallet;
+    final persona = context.watch<ProfileProvider>().userPersona;
+    if (!_hasSetInitialTabByPersona && persona != null) {
+      final desiredIndex = persona == UserPersona.creator ? 1 : 0;
+      if (_selectedIndex != desiredIndex) {
+        _selectedIndex = desiredIndex;
+      }
+      _hasSetInitialTabByPersona = true;
+    }
+
     if (!walletChanged && _hasFetchedReviewForWallet) return;
 
     final daoProvider = context.read<DAOProvider>();
@@ -56,7 +74,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Future<void> _checkOnboarding() async {
-    if (await isOnboardingNeeded(ArtistStudioOnboardingData.featureName)) {
+    if (await isOnboardingNeeded(ArtistStudioOnboardingData.featureKey)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _showOnboarding();
       });
@@ -64,15 +82,15 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   void _showOnboarding() {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => Web3OnboardingScreen(
-          featureName: ArtistStudioOnboardingData.featureName,
-          pages: ArtistStudioOnboardingData.pages,
-          onComplete: () {
-            Navigator.pop(context);
-          },
+          featureKey: ArtistStudioOnboardingData.featureKey,
+          featureTitle: ArtistStudioOnboardingData.featureTitle(l10n),
+          pages: ArtistStudioOnboardingData.pages(l10n),
+          onComplete: () {},
         ),
       ),
     );
@@ -130,6 +148,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
@@ -144,9 +163,13 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final hasConflictingInstitutionReview = reviewIsInstitution && !isReviewRejected;
     final isCrossRoleBlocked = hasInstitutionBadge || hasConflictingInstitutionReview;
 
+    // Build pages list - Exhibitions tab is optional based on feature flag
+    final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final pages = <Widget>[
       ArtworkGallery(onCreateRequested: () => setState(() => _selectedIndex = 1)),
       ArtworkCreator(onCreated: () => setState(() => _selectedIndex = 0)),
+      if (exhibitionsEnabled)
+        const ExhibitionListScreen(embedded: true, canCreate: true),
       const ArtistAnalytics(),
     ];
 
@@ -156,7 +179,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          'Artist Studio',
+          l10n.artistStudioTitle,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -169,6 +192,47 @@ class _ArtistStudioState extends State<ArtistStudio> {
             icon:  Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showOnboarding,
           ),
+          if (AppConfig.isFeatureEnabled('collabInvites'))
+            Consumer<CollabProvider>(
+              builder: (context, collabProvider, _) {
+                final pendingCount = collabProvider.pendingInviteCount;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      tooltip: 'Invites',
+                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onPrimary),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                        );
+                      },
+                    ),
+                    if (pendingCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.error,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
+                          ),
+                          child: Text(
+                            pendingCount > 99 ? '99+' : pendingCount.toString(),
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onError,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           IconButton(
             icon:  Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
             onPressed: _showSettings,
@@ -198,10 +262,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
         },
         body: isCrossRoleBlocked
             ? _buildRoleBlockedContent(
-                title: hasInstitutionBadge ? 'Institution role active' : 'Institution review in progress',
-                description: hasInstitutionBadge
-                    ? 'Institution accounts can view exhibitions and events but cannot maintain artist applications. Use a dedicated artist wallet to create artworks.'
-                    : 'You have an institution application pending. Complete or withdraw it before switching to an artist review.',
+            title: hasInstitutionBadge
+              ? l10n.artistStudioInstitutionRoleActiveTitle
+              : l10n.artistStudioInstitutionReviewInProgressTitle,
+            description: hasInstitutionBadge
+              ? l10n.artistStudioInstitutionRoleActiveDescription
+              : l10n.artistStudioInstitutionReviewInProgressDescription,
                 icon: Icons.domain_disabled,
               )
             : isApprovedArtist
@@ -251,7 +317,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Welcome to your Studio',
+                  AppLocalizations.of(context)!.artistStudioHeaderWelcome,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -260,7 +326,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Create AR markers for your artwork and share them with the world',
+                  AppLocalizations.of(context)!.artistStudioHeaderSubtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Colors.white.withValues(alpha: 0.9),
@@ -283,18 +349,19 @@ class _ArtistStudioState extends State<ArtistStudio> {
     required bool hasInstitutionBadge,
     required bool hasConflictingInstitutionReview,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     if (isCrossRoleBlocked) {
       final scheme = Theme.of(context).colorScheme;
       final title = hasInstitutionBadge
-        ? 'Institution badge active'
-        : hasConflictingInstitutionReview
-          ? 'Institution review in progress'
-          : 'Role conflict detected';
+          ? l10n.artistStudioCrossRoleInstitutionBadgeActiveTitle
+          : hasConflictingInstitutionReview
+              ? l10n.artistStudioCrossRoleInstitutionReviewInProgressTitle
+              : l10n.artistStudioCrossRoleConflictTitle;
       final message = hasInstitutionBadge
-        ? 'Institution accounts unlock curation & event tooling. Use a dedicated artist wallet if you need creator utilities.'
-        : hasConflictingInstitutionReview
-          ? 'You currently have an institution application pending. Complete that process or request a review reset before applying as an artist.'
-          : 'We detected an existing institution record for this wallet. Clear it from settings before applying as an artist.';
+          ? l10n.artistStudioCrossRoleInstitutionBadgeActiveDescription
+          : hasConflictingInstitutionReview
+              ? l10n.artistStudioCrossRoleInstitutionReviewInProgressDescription
+              : l10n.artistStudioCrossRoleConflictDescription;
       return _buildRoleBanner(
         icon: Icons.domain_disabled,
         title: title,
@@ -304,19 +371,23 @@ class _ArtistStudioState extends State<ArtistStudio> {
     }
 
     final scheme = Theme.of(context).colorScheme;
-    const studioColor = Color(0xFFF59E0B);
+    final studioColor = context.watch<ThemeProvider>().accentColor;
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
     final isApproved = isApprovedArtist;
     final isRejected = status == 'rejected' && !isApprovedArtist;
     final statusLabel = isApproved
-        ? 'APPROVED'
+        ? l10n.artistStudioDaoStatusApproved
         : review != null
-            ? status.toUpperCase()
-            : 'NOT APPLIED';
+            ? (isPending
+                ? l10n.artistStudioDaoStatusPending
+                : isRejected
+                    ? l10n.artistStudioDaoStatusRejected
+                    : status.toUpperCase())
+            : l10n.artistStudioDaoStatusNotApplied;
     final statusColor = isApproved
-        ? Colors.green
+        ? scheme.primary
         : isRejected
             ? scheme.error
             : studioColor;
@@ -325,14 +396,14 @@ class _ArtistStudioState extends State<ArtistStudio> {
       !_reviewLoading &&
       (!isPending && !isApproved || isRejected);
     final ctaLabel = !hasWallet
-        ? 'Connect a wallet to apply'
+        ? l10n.artistStudioCtaConnectWalletToApply
         : isApproved
-            ? 'Approved by DAO'
+            ? l10n.artistStudioCtaApprovedByDao
             : isPending
-                ? 'Pending DAO review'
-          : isRejected
-            ? 'Resubmit for review'
-            : 'Apply for DAO review';
+                ? l10n.artistStudioCtaPendingDaoReview
+                : isRejected
+                    ? l10n.artistStudioCtaResubmitForReview
+                    : l10n.artistStudioCtaApplyForDaoReview;
     final IconData ctaIcon = isApproved
         ? Icons.verified_outlined
         : isPending
@@ -359,7 +430,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   color: studioColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.brush_rounded, color: studioColor, size: 26),
+                child: Icon(Icons.brush_rounded, color: studioColor, size: 26),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -367,7 +438,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Artist application (DAO)',
+                      l10n.artistStudioDaoCardTitle,
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -376,7 +447,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Submit your practice for DAO review. Future releases will route approvals directly through governance.',
+                      l10n.artistStudioDaoCardSubtitle,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: scheme.onSurface.withValues(alpha: 0.7),
@@ -418,7 +489,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   )
                 else if (review != null)
                   Text(
-                    'Status synced from DAO',
+                    l10n.artistStudioStatusSyncedFromDao,
                     style: GoogleFonts.inter(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6)),
                   ),
               ],
@@ -433,11 +504,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
               const SizedBox(height: 8),
               Text(
                 isPending
-                    ? 'Your submission is in the DAO review queue. We\'ll notify you after a decision.'
+                    ? l10n.artistStudioReviewPendingInfo
                     : isApproved
-                        ? 'Congratulations! You\'ve been cleared by DAO reviewers.'
+                        ? l10n.artistStudioReviewApprovedInfo
                         : isRejected
-                            ? 'Your last submission was rejected. You can resubmit with updates.'
+                            ? l10n.artistStudioReviewRejectedInfo
                             : '',
                 style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
               ),
@@ -445,7 +516,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
           ] else if (!hasWallet) ...[
             const SizedBox(height: 8),
             Text(
-              'Connect your wallet to submit for DAO review.',
+              l10n.artistStudioConnectWalletToSubmitForDaoReview,
               style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.65)),
             ),
           ],
@@ -476,6 +547,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Widget _buildNavigationTabs(bool isApprovedArtist) {
+    final l10n = AppLocalizations.of(context)!;
+    final studioColor = context.watch<ThemeProvider>().accentColor;
+    final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -484,22 +558,23 @@ class _ArtistStudioState extends State<ArtistStudio> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton('Gallery', Icons.collections, 0, isApprovedArtist)),
-          Expanded(child: _buildTabButton('Create', Icons.add_circle_outline, 1, isApprovedArtist)),
-          Expanded(child: _buildTabButton('Analytics', Icons.analytics, 2, isApprovedArtist)),
+          Expanded(child: _buildTabButton(l10n.artistStudioTabGallery, Icons.collections, 0, isApprovedArtist, studioColor)),
+          Expanded(child: _buildTabButton(l10n.artistStudioTabCreate, Icons.add_circle_outline, 1, isApprovedArtist, studioColor)),
+          if (exhibitionsEnabled)
+            Expanded(child: _buildTabButton('Exhibitions', Icons.collections_bookmark, 2, isApprovedArtist, studioColor)),
+          Expanded(child: _buildTabButton(l10n.artistStudioTabAnalytics, Icons.analytics, exhibitionsEnabled ? 3 : 2, isApprovedArtist, studioColor)),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String label, IconData icon, int index, bool enabled) {
+  Widget _buildTabButton(String label, IconData icon, int index, bool enabled, Color studioColor) {
     final isSelected = _selectedIndex == index;
-    const studioColor = Color(0xFFF59E0B);
     return GestureDetector(
       onTap: enabled
           ? () => setState(() => _selectedIndex = index)
           : () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Artist Studio unlocks after DAO approval.')),
+                SnackBar(content: Text(AppLocalizations.of(context)!.artistStudioUnlocksAfterDaoApprovalToast)),
               ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -595,6 +670,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     required IconData icon,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -623,7 +699,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Tip: Use separate wallets for artist and institution roles to avoid DAO review conflicts.',
+              l10n.artistStudioSeparateWalletsTip,
               style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
               textAlign: TextAlign.center,
             ),
@@ -635,6 +711,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
   Widget _buildLockedContent() {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -651,12 +728,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Artist Studio is locked',
+              l10n.artistStudioLockedTitle,
               style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
             ),
             const SizedBox(height: 8),
             Text(
-              'Apply for DAO review to unlock gallery, creation tools, and analytics.',
+              l10n.artistStudioLockedDescription,
               style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
@@ -664,7 +741,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
             OutlinedButton.icon(
               onPressed: () => _showArtistApplicationModal(),
               icon: const Icon(Icons.send_rounded),
-              label: const Text('Apply for DAO review'),
+              label: Text(l10n.artistStudioCtaApplyForDaoReview),
             ),
           ],
         ),
@@ -673,6 +750,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   void _showSettings() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -686,7 +764,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Studio Settings',
+              l10n.artistStudioSettingsTitle,
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -702,6 +780,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Future<void> _showArtistApplicationModal() async {
+    final l10n = AppLocalizations.of(context)!;
     final portfolioController = TextEditingController();
     final mediumController = TextEditingController();
     final statementController = TextEditingController();
@@ -720,7 +799,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
         final viewInsets = MediaQuery.of(sheetContext).viewInsets.bottom;
         return StatefulBuilder(
           builder: (context, setModalState) {
-                    final colorScheme = Theme.of(context).colorScheme;
+            final colorScheme = Theme.of(context).colorScheme;
             return Padding(
               padding: EdgeInsets.only(bottom: viewInsets),
               child: SingleChildScrollView(
@@ -743,7 +822,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Artist application',
+                        l10n.artistStudioApplicationModalTitle,
                         style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -752,7 +831,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Share a snapshot of your practice. Submissions are routed to the DAO review queue.',
+                        l10n.artistStudioApplicationModalSubtitle,
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -762,22 +841,22 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       TextFormField(
                         controller: portfolioController,
                         decoration: InputDecoration(
-                          labelText: 'Portfolio or website',
+                          labelText: l10n.artistStudioApplicationFieldPortfolioLabel,
                           border: const OutlineInputBorder(),
                         ),
                         validator: (value) => (value == null || value.trim().isEmpty)
-                            ? 'Please provide a link to your work'
+                            ? l10n.artistStudioApplicationValidationPortfolio
                             : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: mediumController,
                         decoration: InputDecoration(
-                          labelText: 'Primary medium or focus',
+                          labelText: l10n.artistStudioApplicationFieldMediumLabel,
                           border: const OutlineInputBorder(),
                         ),
                         validator: (value) => (value == null || value.trim().isEmpty)
-                            ? 'Let the DAO know what you create'
+                            ? l10n.artistStudioApplicationValidationMedium
                             : null,
                       ),
                       const SizedBox(height: 16),
@@ -785,12 +864,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
                         controller: statementController,
                         maxLines: 4,
                         decoration: InputDecoration(
-                          labelText: 'Artist statement',
+                          labelText: l10n.artistStudioApplicationFieldStatementLabel,
                           alignLabelWithHint: true,
                           border: const OutlineInputBorder(),
                         ),
                         validator: (value) => (value == null || value.trim().length < 20)
-                            ? 'Share at least 20 characters about your work'
+                            ? l10n.artistStudioApplicationValidationStatementMinChars(20)
                             : null,
                       ),
                       const SizedBox(height: 24),
@@ -809,23 +888,18 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                   final wallet = profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress;
                                   if (wallet.isEmpty) {
                                     scaffold.showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Connect your wallet before submitting to the DAO.'),
-                                      ),
+                                      SnackBar(content: Text(l10n.artistStudioApplicationWalletRequiredToast)),
                                     );
                                     return;
                                   }
                                   setModalState(() => isSubmitting = true);
                                   try {
-                                    if (wallet.isEmpty) {
-                                      throw Exception('Connect your wallet first.');
-                                    }
                                     final review = await daoProvider.submitReview(
                                       walletAddress: wallet,
                                       portfolioUrl: portfolioController.text.trim(),
                                       medium: mediumController.text.trim(),
                                       statement: statementController.text.trim(),
-                                      title: 'Artist application',
+                                      title: l10n.artistStudioApplicationReviewTitle,
                                       metadata: {
                                         'role': 'artist',
                                         'source': 'artist_studio',
@@ -841,19 +915,24 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                     if (!mounted) return;
                                     scaffold.showSnackBar(
                                       SnackBar(
-                                        content: Text(review != null
-                                            ? 'Application submitted to DAO reviewers.'
-                                            : 'Unable to submit application right now.'),
+                                        content: Text(
+                                          review != null
+                                              ? l10n.artistStudioApplicationSubmittedToast
+                                              : l10n.artistStudioApplicationUnableToSubmitToast,
+                                        ),
                                         backgroundColor: review != null
-                                            ? Colors.green
+                                            ? colorScheme.primary
                                             : colorScheme.error,
                                       ),
                                     );
                                   } catch (err) {
+                                    if (kDebugMode) {
+                                      debugPrint('ArtistStudio: submission failed: $err');
+                                    }
                                     if (!mounted) return;
                                     scaffold.showSnackBar(
                                       SnackBar(
-                                        content: Text('Submission failed: $err'),
+                                        content: Text(l10n.artistStudioApplicationSubmissionFailedToast),
                                         backgroundColor: colorScheme.error,
                                       ),
                                     );
@@ -879,7 +958,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                   ),
                                 )
                               : Text(
-                                  'Submit application',
+                                  l10n.artistStudioApplicationSubmitButton,
                                   style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                                 ),
                         ),
@@ -899,7 +978,6 @@ class _ArtistStudioState extends State<ArtistStudio> {
     statementController.dispose();
   }
 }
-
 
 
 

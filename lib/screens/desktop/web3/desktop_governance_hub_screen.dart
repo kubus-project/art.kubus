@@ -7,6 +7,7 @@ import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
+import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
 import '../../web3/dao/dao_analytics.dart';
 
@@ -127,7 +128,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             'Create Proposal',
             'Submit new governance idea',
             Icons.add_box_outlined,
-            themeProvider.accentColor,
+            Theme.of(context).colorScheme.primary,
             () {
               // Handled by mobile view's create proposal tab
             },
@@ -147,9 +148,11 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             Icons.analytics_outlined,
             const Color(0xFFFF6B6B),
             () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const DAOAnalytics()),
+              DesktopShellScope.of(context)?.pushScreen(
+                DesktopSubScreen(
+                  title: 'DAO Analytics',
+                  child: const DAOAnalytics(),
+                ),
               );
             },
           ),
@@ -360,7 +363,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     'Proposals',
                     proposals.length.toString(),
                     Icons.description_outlined,
-                    themeProvider.accentColor,
+                    Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(width: 12),

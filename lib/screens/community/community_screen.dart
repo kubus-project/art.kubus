@@ -1,10 +1,13 @@
 // NOTE: use_build_context_synchronously lint handled per-instance; avoid file-level ignore
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../config/config.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/app_loading.dart';
@@ -46,6 +49,7 @@ import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../season0/season0_screen.dart';
 
 enum CommunityFeedType {
   following,
@@ -89,38 +93,38 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   late TabController _tabController;
 
-  final List<String> _tabs = ['Following', 'Discover', 'Groups', 'Art'];
+  static const int _tabCount = 4;
 
-  static const List<_ComposerCategoryOption> _composerCategories = [
+  List<_ComposerCategoryOption> _composerCategories(AppLocalizations l10n) => [
     _ComposerCategoryOption(
       value: 'post',
-      label: 'Post',
+      label: l10n.communityComposerCategoryPostLabel,
       icon: Icons.edit_outlined,
-      description: 'Share an update with the community',
+      description: l10n.communityComposerCategoryPostDescription,
     ),
     _ComposerCategoryOption(
       value: 'art_drop',
-      label: 'Art drop',
+      label: l10n.communityComposerCategoryArtDropLabel,
       icon: Icons.view_in_ar_outlined,
-      description: 'Highlight a location-based activation',
+      description: l10n.communityComposerCategoryArtDropDescription,
     ),
     _ComposerCategoryOption(
       value: 'art_review',
-      label: 'Art review',
+      label: l10n.communityComposerCategoryArtReviewLabel,
       icon: Icons.rate_review_outlined,
-      description: 'Share your thoughts on an artwork',
+      description: l10n.communityComposerCategoryArtReviewDescription,
     ),
     _ComposerCategoryOption(
       value: 'event',
-      label: 'Event',
+      label: l10n.communityComposerCategoryEventLabel,
       icon: Icons.event_outlined,
-      description: 'Announce meetups and gatherings',
+      description: l10n.communityComposerCategoryEventDescription,
     ),
     _ComposerCategoryOption(
       value: 'question',
-      label: 'Question',
+      label: l10n.communityComposerCategoryQuestionLabel,
       icon: Icons.help_outline,
-      description: 'Ask the community for feedback',
+      description: l10n.communityComposerCategoryQuestionDescription,
     ),
   ];
 
@@ -183,7 +187,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         final hub = Provider.of<CommunityHubProvider>(context, listen: false);
         await hub.loadGroups(refresh: true, search: value.trim());
       } catch (e) {
-        debugPrint('Failed to search community groups: $e');
+        if (kDebugMode) {
+          debugPrint('CommunityScreen: failed to search community groups: $e');
+        }
       }
     });
   }
@@ -196,8 +202,12 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
       await hub.loadGroups(refresh: force);
     } catch (e) {
-      debugPrint('Failed to load community groups: $e');
-      _showSnack('Unable to refresh community groups right now.');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: failed to load community groups: $e');
+      }
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.communityGroupsRefreshFailedToast);
     }
   }
 
@@ -214,8 +224,12 @@ class _CommunityScreenState extends State<CommunityScreen>
         await hub.joinGroup(group.id);
       }
     } catch (e) {
-      debugPrint('Failed to update group membership: $e');
-      _showSnack('Could not update your group membership. Please try again.');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: failed to update group membership: $e');
+      }
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.communityGroupMembershipUpdateFailedToast);
     } finally {
       if (mounted) {
         setState(() {
@@ -258,13 +272,14 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Future<loc.LocationData?> _obtainCurrentLocation() async {
+    final l10n = AppLocalizations.of(context)!;
     final location = loc.Location();
     try {
       bool serviceEnabled = await location.serviceEnabled();
       if (!serviceEnabled) {
         serviceEnabled = await location.requestService();
         if (!serviceEnabled) {
-          _showSnack('Enable location services to view nearby art posts.');
+          _showSnack(l10n.communityLocationEnableServicesToast);
           return null;
         }
       }
@@ -275,24 +290,25 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
       if (permission != loc.PermissionStatus.granted &&
           permission != loc.PermissionStatus.grantedLimited) {
-        _showSnack('Location permission is required to load art near you.');
+        _showSnack(l10n.communityLocationPermissionRequiredToast);
         return null;
       }
 
       final locationData = await location.getLocation();
       if (locationData.latitude == null || locationData.longitude == null) {
-        _showSnack('Unable to determine your current location.');
+        _showSnack(l10n.communityLocationUnableToDetermineToast);
         return null;
       }
       return locationData;
     } catch (e) {
       debugPrint('Location error: $e');
-      _showSnack('Unable to access location services.');
+      _showSnack(l10n.communityLocationUnableToAccessToast);
       return null;
     }
   }
 
   Future<void> _ensureArtFeedLoaded({bool force = false}) async {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoadingArtFeed && !force) return;
     if (!force && _artFeedPosts.isNotEmpty) return;
 
@@ -306,7 +322,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (locationData == null) {
       setState(() {
         _isLoadingArtFeed = false;
-        _artFeedError = 'Location permission required to load art feed.';
+        _artFeedError = l10n.communityArtFeedLocationPermissionRequiredError;
       });
       return;
     }
@@ -330,9 +346,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       if (!mounted) return;
       setState(() {
         _isLoadingArtFeed = false;
-        _artFeedError = 'Failed to load nearby art posts.';
+        _artFeedError = l10n.communityArtFeedLoadFailedError;
       });
-      _showSnack('Unable to load nearby art posts. Please try again.');
+      _showSnack(l10n.communityArtFeedLoadFailedToast);
     }
   }
 
@@ -485,11 +501,13 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     if (followingPosts == null && discoverPosts != null) {
-      _showSnack('Following feed is unavailable right now. Showing Discover.');
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.communityFollowingFeedUnavailableToast);
     } else if (discoverPosts == null &&
         followingPosts != null &&
         _activeFeed == CommunityFeedType.discover) {
-      _showSnack('Discover feed is unavailable right now. Showing Following.');
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.communityDiscoverFeedUnavailableToast);
     }
 
     _combinedFeedLoadInFlight = false;
@@ -700,7 +718,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _tabs.length, vsync: this);
+    _tabController = TabController(length: _tabCount, vsync: this);
     _groupSearchController = TextEditingController();
     // Load following feed by default
     _communityPosts = _followingFeedPosts;
@@ -1084,6 +1102,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildAppBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
     final isSmallScreen = MediaQuery.of(context).size.width < 375;
     final animationTheme = context.animationTheme;
     return Container(
@@ -1091,7 +1110,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       child: Row(
         children: [
           Text(
-            'Connect',
+            l10n.communityScreenTitle,
             style: GoogleFonts.inter(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -1101,7 +1120,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           const Spacer(),
           // Search icon - unified TopBarIcon
           TopBarIcon(
-            tooltip: 'Search',
+            tooltip: l10n.commonSearch,
             icon: Icon(
               Icons.search,
               color: Theme.of(context).colorScheme.onSurface,
@@ -1112,7 +1131,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           const SizedBox(width: 8),
           // Bell icon - unified TopBarIcon
           TopBarIcon(
-            tooltip: 'Notifications',
+            tooltip: l10n.commonNotifications,
             icon: AnimatedBuilder(
               animation: _bellController,
               builder: (ctx, child) {
@@ -1145,7 +1164,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 }
               });
               return TopBarIcon(
-                tooltip: 'Open messages',
+                tooltip: l10n.messagesTitle,
                 icon: ScaleTransition(
                   scale: _messageScale,
                   child: Icon(
@@ -1162,7 +1181,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   showGeneralDialog(
                     context: context,
                     barrierDismissible: true,
-                    barrierLabel: 'Messages',
+                    barrierLabel: l10n.messagesTitle,
                     barrierColor: Theme.of(context)
                         .colorScheme
                         .primaryContainer
@@ -1238,6 +1257,13 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildTabBar() {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final tabLabels = [
+      l10n.communityFollowingTab,
+      l10n.communityDiscoverTab,
+      l10n.communityGroupsTab,
+      l10n.communityArtTab,
+    ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -1254,7 +1280,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             isScrollable: isSmallScreen,
             tabAlignment:
                 isSmallScreen ? TabAlignment.start : TabAlignment.fill,
-            tabs: _tabs
+            tabs: tabLabels
                 .map((tab) => Tab(
                       child: Text(
                         tab,
@@ -1292,21 +1318,23 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildFeedTab() {
+    final l10n = AppLocalizations.of(context)!;
     return _buildPostTimeline(
       onRefresh: () => _loadCommunityData(followingOnly: true),
       emptyIcon: Icons.feed,
-      emptyTitle: 'No Posts Available',
-      emptySubtitle: 'Follow creators to see their updates here.',
+      emptyTitle: l10n.communityFeedEmptyTitle,
+      emptySubtitle: l10n.communityFeedEmptyDescription,
       showBufferedBanner: true,
     );
   }
 
   Widget _buildDiscoverTab() {
+    final l10n = AppLocalizations.of(context)!;
     return _buildPostTimeline(
       onRefresh: () => _loadCommunityData(followingOnly: false),
       emptyIcon: Icons.travel_explore,
-      emptyTitle: 'No Community Posts Yet',
-      emptySubtitle: 'Posts from across kubus will appear here soon.',
+      emptyTitle: l10n.communityDiscoverEmptyTitle,
+      emptySubtitle: l10n.communityDiscoverEmptyDescription,
     );
   }
 
@@ -1348,8 +1376,15 @@ class _CommunityScreenState extends State<CommunityScreen>
             controller: showBufferedBanner ? _feedScrollController : null,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
-            itemCount: _communityPosts.length,
-            itemBuilder: (context, index) => _buildPostCard(index),
+            itemCount: _communityPosts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+            itemBuilder: (context, index) {
+              // Season 0 banner at the top if enabled
+              if (AppConfig.isFeatureEnabled('season0') && index == 0) {
+                return _buildSeason0Banner();
+              }
+              final postIndex = AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+              return _buildPostCard(postIndex);
+            },
           ),
           if (showBufferedBanner && _bufferedIncomingPosts.isNotEmpty)
             Positioned(
@@ -1373,7 +1408,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                       ],
                     ),
                     child: Text(
-                      '${_bufferedIncomingPosts.length} new post${_bufferedIncomingPosts.length > 1 ? 's' : ''} — Tap to show',
+                      AppLocalizations.of(context)!.communityNewPostsBanner(
+                        _bufferedIncomingPosts.length,
+                      ),
                       style: GoogleFonts.inter(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w700),
@@ -1387,9 +1424,75 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
+  Widget _buildSeason0Banner() {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final accent = context.watch<ThemeProvider>().accentColor;
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const Season0Screen()),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [accent.withValues(alpha: 0.15), scheme.primaryContainer.withValues(alpha: 0.4)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: accent.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.rocket_launch_outlined, color: accent, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.season0BannerTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    l10n.season0BannerTap,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.65),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.4)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildGroupsTab() {
     return Consumer<CommunityHubProvider>(
       builder: (context, hub, _) {
+        final l10n = AppLocalizations.of(context)!;
         if (!hub.groupsInitialized && hub.groupsLoading) {
           return const AppLoading();
         }
@@ -1408,11 +1511,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                 padding: const EdgeInsets.only(top: 48),
                 child: EmptyStateCard(
                   icon: Icons.groups_outlined,
-                  title: 'No groups yet',
+                  title: l10n.communityGroupsEmptyTitle,
                   description:
                       hub.currentGroupSearchQuery.isEmpty
-                          ? 'Join a community to unlock curator chats, drops, and meetups.'
-                          : 'No groups match “${hub.currentGroupSearchQuery}”. Try another search.',
+                          ? l10n.communityGroupsEmptyDescription
+                          : l10n.communityGroupsEmptySearchDescription(
+                              hub.currentGroupSearchQuery,
+                            ),
                 ),
               ),
             if (hasGroups)
@@ -1434,7 +1539,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 padding: const EdgeInsets.only(top: 16),
                 child: Center(
                   child: Text(
-                    'You’ve reached the end of the directory.',
+                    l10n.communityGroupsEndOfDirectory,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       color: Theme.of(context)
@@ -1471,6 +1576,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildGroupSearchField(CommunityHubProvider hub) {
+    final l10n = AppLocalizations.of(context)!;
     final query = hub.currentGroupSearchQuery;
     if (_groupSearchController.text != query) {
       _groupSearchController.value = TextEditingValue(
@@ -1486,7 +1592,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         prefixIcon: const Icon(Icons.search),
         suffixIcon: query.isNotEmpty
             ? IconButton(
-                tooltip: 'Clear search',
+                tooltip: l10n.communityClearSearchTooltip,
                 onPressed: () {
                   _groupSearchController.clear();
                   _onGroupSearchChanged('');
@@ -1494,7 +1600,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 icon: const Icon(Icons.clear),
               )
             : null,
-        hintText: 'Search community groups',
+        hintText: l10n.communityGroupsSearchHint,
         filled: true,
         fillColor: Theme.of(context)
           .colorScheme
@@ -1511,6 +1617,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildGroupErrorBanner(String message) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
@@ -1533,7 +1640,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           TextButton(
             onPressed: () => _ensureGroupsLoaded(force: true),
-            child: const Text('Retry'),
+            child: Text(l10n.commonRetry),
           ),
         ],
       ),
@@ -1543,12 +1650,13 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildGroupCard(CommunityGroupSummary group) {
     final scheme = Theme.of(context).colorScheme;
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
     final isProcessing = _groupActionsInFlight.contains(group.id);
     final membershipLabel = group.isOwner
-        ? 'Owner'
-        : group.isMember
-            ? 'Joined'
-            : 'Join';
+      ? l10n.commonOwner
+      : group.isMember
+        ? l10n.commonJoined
+        : l10n.commonJoin;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
@@ -1580,7 +1688,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     Text(
                       group.description?.isNotEmpty == true
                           ? group.description!
-                          : 'No description yet',
+                          : l10n.communityGroupNoDescription,
                       style: GoogleFonts.inter(
                         fontSize: 13,
                         color: scheme.onSurface.withValues(alpha: 0.7),
@@ -1627,11 +1735,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                   group.isPublic ? Icons.public : Icons.lock,
                   size: 16,
                 ),
-                label: Text(group.isPublic ? 'Public' : 'Private'),
+                label: Text(group.isPublic ? l10n.commonPublic : l10n.commonPrivate),
               ),
               Chip(
                 avatar: const Icon(Icons.people_alt, size: 16),
-                label: Text('${group.memberCount} members'),
+                label: Text(l10n.commonMembersCount(group.memberCount)),
               ),
             ],
           ),
@@ -1647,7 +1755,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Latest post',
+                    l10n.communityGroupLatestPostLabel,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -1682,7 +1790,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           OutlinedButton.icon(
             onPressed: () => _openGroupFeed(group),
             icon: const Icon(Icons.forum_outlined, size: 18),
-            label: const Text('Open group feed'),
+            label: Text(l10n.communityOpenGroupFeedButton),
           ),
         ],
       ),
@@ -1690,6 +1798,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildArtTab() {
+    final l10n = AppLocalizations.of(context)!;
     if (_isLoadingArtFeed && _artFeedPosts.isEmpty) {
       return const AppLoading();
     }
@@ -1705,19 +1814,17 @@ class _CommunityScreenState extends State<CommunityScreen>
           if (_artFeedError != null && _artFeedPosts.isEmpty)
             _buildArtStatusCard(
               icon: Icons.location_off_outlined,
-              title: 'Location needed',
-              description:
-                  'We could not determine your current location. Enable permissions and try again.',
-              actionLabel: 'Retry',
+              title: l10n.communityArtFeedLocationNeededTitle,
+              description: l10n.communityArtFeedLocationNeededDescription,
+              actionLabel: l10n.commonRetry,
               onAction: () => _ensureArtFeedLoaded(force: true),
             )
           else if (_artFeedPosts.isEmpty)
             _buildArtStatusCard(
               icon: Icons.brush_outlined,
-              title: 'No nearby activations',
-              description:
-                  'Walk a little or expand your radius to discover pop-up art moments around you.',
-              actionLabel: 'Refresh',
+              title: l10n.communityArtFeedNoNearbyActivationsTitle,
+              description: l10n.communityArtFeedNoNearbyActivationsDescription,
+              actionLabel: l10n.commonRefresh,
               onAction: () => _ensureArtFeedLoaded(force: true),
             ),
           ..._artFeedPosts.map(_buildArtPostCard),
@@ -1742,14 +1849,18 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildArtFeedHeader() {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final radiusKm = Provider.of<CommunityHubProvider>(context, listen: false)
         .artFeedRadiusKm;
     String subtitle;
     if (_artFeedLatitude != null && _artFeedLongitude != null) {
       subtitle =
-          'Center: ${_artFeedLatitude!.toStringAsFixed(3)}, ${_artFeedLongitude!.toStringAsFixed(3)}';
+          l10n.communityArtFeedCenterSubtitle(
+            _artFeedLatitude!.toStringAsFixed(3),
+            _artFeedLongitude!.toStringAsFixed(3),
+          );
     } else {
-      subtitle = 'Enable precise location to unlock nearby AR drops.';
+      subtitle = l10n.communityArtFeedEnablePreciseLocationHint;
     }
 
     return Container(
@@ -1762,7 +1873,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Art near you',
+            l10n.communityArtFeedHeaderTitle,
             style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -1771,7 +1882,9 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            'Showing activations within ${radiusKm.toStringAsFixed(1)} km',
+            l10n.communityArtFeedRadiusSubtitle(
+              l10n.commonDistanceKm(radiusKm.toStringAsFixed(1)),
+            ),
             style: GoogleFonts.inter(
               fontSize: 13,
               color: scheme.onSurface.withValues(alpha: 0.7),
@@ -1792,10 +1905,11 @@ class _CommunityScreenState extends State<CommunityScreen>
               ElevatedButton.icon(
                 onPressed: () => _ensureArtFeedLoaded(force: true),
                 icon: const Icon(Icons.near_me_outlined, size: 18),
-                label: const Text('Refresh location'),
+                label: Text(l10n.communityArtFeedRefreshLocationButton),
               ),
               OutlinedButton.icon(
                 onPressed: () async {
+                  final l10n = AppLocalizations.of(context)!;
                   await showModalBottomSheet(
                     context: context,
                     builder: (ctx) => Padding(
@@ -1805,7 +1919,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Art feed beta',
+                            l10n.communityArtFeedAboutTitle,
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -1813,7 +1927,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'We use your location only to highlight AR activations nearby and never store exact coordinates.',
+                            l10n.communityArtFeedAboutBody,
                             style: GoogleFonts.inter(fontSize: 14),
                           ),
                         ],
@@ -1822,7 +1936,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   );
                 },
                 icon: const Icon(Icons.info_outline, size: 18),
-                label: const Text('About this feed'),
+                label: Text(l10n.communityArtFeedAboutButton),
               ),
             ],
           ),
@@ -1885,6 +1999,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildArtPostCard(CommunityPost post) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final imageUrl = post.imageUrl ??
         (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
 
@@ -1914,11 +2029,11 @@ class _CommunityScreenState extends State<CommunityScreen>
               style: GoogleFonts.inter(fontSize: 12),
             ),
             trailing: IconButton(
-              tooltip: 'Share',
+              tooltip: l10n.commonShare,
               onPressed: () => SharePlus.instance.share(
                 ShareParams(
                   text:
-                      'Check out this AR moment from ${post.authorName} on art.kubus!',
+                      l10n.communityArtFeedShareText(post.authorName),
                 ),
               ),
               icon: const Icon(Icons.share_outlined),
@@ -1989,7 +2104,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           [
                             post.location?.name,
                             post.distanceKm != null
-                                ? '${post.distanceKm!.toStringAsFixed(1)} km away'
+                                ? l10n.commonDistanceKmAway(post.distanceKm!.toStringAsFixed(1))
                                 : null,
                           ].whereType<String>().join(' • '),
                           style: GoogleFonts.inter(
@@ -2021,7 +2136,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ),
                       ),
                       icon: const Icon(Icons.open_in_new, size: 18),
-                      label: const Text('View post'),
+                      label: Text(l10n.communityViewPostButton),
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
@@ -2042,7 +2157,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               )
                           : null,
                       icon: const Icon(Icons.groups_2_outlined, size: 18),
-                      label: const Text('Group'),
+                      label: Text(l10n.commonGroup),
                     ),
                   ],
                 ),
@@ -2740,6 +2855,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
     final animationTheme = context.animationTheme;
+    final l10n = AppLocalizations.of(context)!;
     final int tabIndex = _tabController.index;
 
     // Groups tab (index 2) and Art tab (index 3) get expandable FABs
@@ -2749,16 +2865,16 @@ class _CommunityScreenState extends State<CommunityScreen>
         scheme: scheme,
         animationTheme: animationTheme,
         mainIcon: Icons.add,
-        mainLabel: 'Create',
+        mainLabel: l10n.commonCreate,
         options: [
           _ExpandableFabOption(
             icon: Icons.group_add_outlined,
-            label: 'Create group',
+            label: l10n.communityFabCreateGroup,
             onTap: () => _showCreateGroupSheet(),
           ),
           _ExpandableFabOption(
             icon: Icons.post_add_outlined,
-            label: 'Group post',
+            label: l10n.communityFabGroupPost,
             onTap: () {
               _handleGroupFabPressed();
             },
@@ -2771,16 +2887,16 @@ class _CommunityScreenState extends State<CommunityScreen>
         scheme: scheme,
         animationTheme: animationTheme,
         mainIcon: Icons.add,
-        mainLabel: 'Create',
+        mainLabel: l10n.commonCreate,
         options: [
           _ExpandableFabOption(
             icon: Icons.place_outlined,
-            label: 'Art drop',
+            label: l10n.communityFabArtDrop,
             onTap: () => _handleArtFabPressed(),
           ),
           _ExpandableFabOption(
             icon: Icons.rate_review_outlined,
-            label: 'Post review',
+            label: l10n.communityFabPostReview,
             onTap: () => _createNewPost(presetCategory: 'review', artContext: true),
           ),
         ],
@@ -2795,7 +2911,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       backgroundColor: themeProvider.accentColor,
       icon: Icon(Icons.edit_outlined, color: scheme.onPrimary),
       label: Text(
-        'New post',
+        l10n.communityFabNewPost,
         style: GoogleFonts.inter(
           fontWeight: FontWeight.w600,
           color: scheme.onPrimary,
@@ -2836,6 +2952,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     required String mainLabel,
     required List<_ExpandableFabOption> options,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -2934,7 +3051,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           label: AnimatedSwitcher(
             duration: animationTheme.short,
             child: Text(
-              _isFabExpanded ? 'Close' : mainLabel,
+              _isFabExpanded ? l10n.commonClose : mainLabel,
               key: ValueKey(_isFabExpanded),
               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
             ),
@@ -2959,6 +3076,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         builder: (context, setModalState) {
           final scheme = Theme.of(context).colorScheme;
           final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+          final l10n = AppLocalizations.of(context)!;
 
           return Padding(
             padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -2984,7 +3102,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     child: Row(
                       children: [
                         Text(
-                          'Create Group',
+                          l10n.communityCreateGroupTitle,
                           style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.w700,
@@ -3008,8 +3126,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           TextField(
                             controller: nameController,
                             decoration: InputDecoration(
-                              labelText: 'Group Name',
-                              hintText: 'e.g. AR Artists Ljubljana',
+                              labelText: l10n.communityCreateGroupNameLabel,
+                              hintText: l10n.communityCreateGroupNameHint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -3022,8 +3140,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                             controller: descriptionController,
                             maxLines: 3,
                             decoration: InputDecoration(
-                              labelText: 'Description',
-                              hintText: 'What is this group about?',
+                              labelText: l10n.communityCreateGroupDescriptionLabel,
+                              hintText: l10n.communityCreateGroupDescriptionHint,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -3035,13 +3153,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(
-                              'Public Group',
+                              l10n.communityCreateGroupPublicLabel,
                               style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                             ),
                             subtitle: Text(
                               isPublic
-                                  ? 'Anyone can join and view posts'
-                                  : 'Members must be approved',
+                                  ? l10n.communityCreateGroupPublicHint
+                                  : l10n.communityCreateGroupPrivateHint,
                               style: GoogleFonts.inter(fontSize: 13),
                             ),
                             value: isPublic,
@@ -3064,6 +3182,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                               ? null
                               : () async {
                                   final sheetNavigator = Navigator.of(sheetContext);
+                                    final l10n = AppLocalizations.of(context)!;
                                   setModalState(() => isCreating = true);
                                   try {
                                     final created = await hub.createGroup(
@@ -3076,12 +3195,15 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     if (!mounted) return;
                                     sheetNavigator.pop();
                                     if (created != null) {
-                                      _showSnack('Group "${created.name}" created!');
+                                      _showSnack(l10n.communityGroupCreatedToast(created.name));
                                       _openGroupFeed(created);
                                     }
                                   } catch (e) {
                                     setModalState(() => isCreating = false);
-                                    _showSnack('Failed to create group: $e');
+                                    if (kDebugMode) {
+                                      debugPrint('CommunityScreen: failed to create group: $e');
+                                    }
+                                    _showSnack(l10n.communityCreateGroupFailedToast);
                                   }
                                 },
                           child: isCreating
@@ -3094,7 +3216,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     tileSize: 3.5,
                                   ),
                                 )
-                              : const Text('Create Group'),
+                                : Text(l10n.communityCreateGroupButton),
                         ),
                       ),
                     ),
@@ -3209,7 +3331,9 @@ class _CommunityScreenState extends State<CommunityScreen>
           isLoading = false;
         });
       } catch (e) {
-        debugPrint('Community search error: $e');
+        if (kDebugMode) {
+          debugPrint('CommunityScreen: search error: $e');
+        }
         if (!mounted) return;
         if (myRequest != requestId) return;
         setModalState(() => isLoading = false);
@@ -3224,6 +3348,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         builder: (context, setModalState) {
           final scheme = Theme.of(context).colorScheme;
           final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+          final l10n = AppLocalizations.of(context)!;
 
           if (sheetSearchController.text.trim().isNotEmpty && results.isEmpty && !isLoading) {
             Future.microtask(() => runSearch(setModalState));
@@ -3253,7 +3378,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     child: Row(
                       children: [
                         _buildSearchTypeChip(
-                          label: 'Profiles',
+                          label: l10n.communitySearchTypeProfiles,
                           selected: searchType == 'profiles',
                           scheme: scheme,
                           themeProvider: themeProvider,
@@ -3266,7 +3391,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           },
                         ),
                         _buildSearchTypeChip(
-                          label: 'Artworks',
+                          label: l10n.communitySearchTypeArtworks,
                           selected: searchType == 'artworks',
                           scheme: scheme,
                           themeProvider: themeProvider,
@@ -3279,7 +3404,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           },
                         ),
                         _buildSearchTypeChip(
-                          label: 'Institutions',
+                          label: l10n.communitySearchTypeInstitutions,
                           selected: searchType == 'institutions',
                           scheme: scheme,
                           themeProvider: themeProvider,
@@ -3292,7 +3417,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           },
                         ),
                         _buildSearchTypeChip(
-                          label: 'Screens',
+                          label: l10n.communitySearchTypeScreens,
                           selected: searchType == 'screens',
                           scheme: scheme,
                           themeProvider: themeProvider,
@@ -3305,7 +3430,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           },
                         ),
                         _buildSearchTypeChip(
-                          label: 'Posts',
+                          label: l10n.communitySearchTypePosts,
                           selected: searchType == 'posts',
                           scheme: scheme,
                           themeProvider: themeProvider,
@@ -3327,14 +3452,14 @@ class _CommunityScreenState extends State<CommunityScreen>
                     controller: sheetSearchController,
                     decoration: InputDecoration(
                       hintText: searchType == 'profiles'
-                          ? 'Search people…'
+                        ? l10n.communitySearchHintProfiles
                           : searchType == 'artworks'
-                              ? 'Search artworks…'
+                          ? l10n.communitySearchHintArtworks
                               : searchType == 'institutions'
-                                  ? 'Search institutions…'
+                            ? l10n.communitySearchHintInstitutions
                                   : searchType == 'screens'
-                                      ? 'Search screens…'
-                                      : 'Search posts…',
+                              ? l10n.communitySearchHintScreens
+                              : l10n.communitySearchHintPosts,
                       prefixIcon: const Icon(Icons.search),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       filled: true,
@@ -3358,7 +3483,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                               child: Padding(
                                 padding: const EdgeInsets.all(24),
                                 child: Text(
-                                  sheetSearchController.text.trim().isEmpty ? 'Start typing to search' : 'No results',
+                                  sheetSearchController.text.trim().isEmpty
+                                      ? l10n.communitySearchEmptyStartTyping
+                                      : l10n.communitySearchEmptyNoResults,
                                   style: GoogleFonts.inter(
                                     fontSize: 14,
                                     color: scheme.onSurface.withValues(alpha: 0.45),
@@ -4052,12 +4179,13 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildComposerHeader(BuildContext sheetContext) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(sheetContext)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
       child: Row(
         children: [
           Text(
-            'Compose',
+            l10n.communityComposerTitle,
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.w700,
@@ -4066,7 +4194,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           const Spacer(),
           IconButton(
-            tooltip: 'Close',
+            tooltip: l10n.commonClose,
             onPressed: () => Navigator.of(sheetContext).maybePop(),
             icon: const Icon(Icons.close),
             color: scheme.onSurface,
@@ -4079,12 +4207,13 @@ class _CommunityScreenState extends State<CommunityScreen>
   Widget _buildComposerTextField() {
     final scheme = Theme.of(context).colorScheme;
     final isCompact = MediaQuery.of(context).size.width < 400;
+    final l10n = AppLocalizations.of(context)!;
     return TextField(
       controller: _newPostController,
       minLines: 3,
       maxLines: null,
       decoration: InputDecoration(
-        hintText: 'Share what you’re building, discovering, or activating…',
+        hintText: l10n.communityComposerTextHint,
         hintStyle: GoogleFonts.inter(fontSize: isCompact ? 14 : 16),
         filled: true,
         fillColor: scheme.primaryContainer.withValues(alpha: 0.4),
@@ -4107,6 +4236,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildComposerMediaPreview(StateSetter setModalState) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     if (_selectedPostImageBytes != null) {
       return Stack(
         children: [
@@ -4123,7 +4253,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             top: 12,
             right: 12,
             child: IconButton(
-              tooltip: 'Remove image',
+              tooltip: l10n.commonRemove,
               style: IconButton.styleFrom(
                 backgroundColor: scheme.surface.withValues(alpha: 0.8),
               ),
@@ -4176,7 +4306,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               top: 12,
               right: 12,
               child: IconButton(
-                tooltip: 'Remove video',
+                tooltip: l10n.commonRemove,
                 style: IconButton.styleFrom(
                   backgroundColor: scheme.surface.withValues(alpha: 0.8),
                 ),
@@ -4195,6 +4325,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildComposerAttachmentRow(StateSetter setModalState) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final hasMedia = _hasSelectedMedia;
     final animationTheme = context.animationTheme;
     return AnimatedContainer(
@@ -4212,7 +4343,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           Expanded(
             child: _buildPostOption(
               Icons.image_outlined,
-              'Image',
+              l10n.commonImage,
               onTap: () async {
                 final picker = ImagePicker();
                 final image = await picker.pickImage(
@@ -4236,7 +4367,7 @@ class _CommunityScreenState extends State<CommunityScreen>
           Expanded(
             child: _buildPostOption(
               Icons.videocam_outlined,
-              'Video',
+              l10n.commonVideo,
               onTap: () async {
                 final picker = ImagePicker();
                 final video = await picker.pickVideo(
@@ -4264,11 +4395,13 @@ class _CommunityScreenState extends State<CommunityScreen>
   ) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final animationTheme = context.animationTheme;
+    final l10n = AppLocalizations.of(context)!;
+    final categories = _composerCategories(l10n);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        children: _composerCategories.map((option) {
+        children: categories.map((option) {
           final selected = draft.category == option.value;
           return Padding(
             padding: const EdgeInsets.only(right: 12),
@@ -4316,6 +4449,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     CommunityHubProvider hub,
   ) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final group = draft.targetGroup;
     final hasGroup = group != null;
     final animationTheme = context.animationTheme;
@@ -4351,7 +4485,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    group?.name ?? 'Target group',
+                    group?.name ?? l10n.communityComposerTargetGroupLabel,
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -4360,8 +4494,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   const SizedBox(height: 4),
                   Text(
                     group == null
-                        ? 'Optional • Join a group to unlock curator chats.'
-                        : 'Posting in ${group.name}. Tap to change or clear.',
+                        ? l10n.communityComposerGroupOptionalHelper
+                        : l10n.communityComposerPostingInGroupHelper(group.name),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: scheme.onSurface.withValues(alpha: 0.6),
@@ -4372,7 +4506,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             if (group != null)
               IconButton(
-                tooltip: 'Remove group',
+                tooltip: l10n.communityComposerRemoveGroupTooltip,
                 onPressed: () => hub.setDraftGroup(null),
                 icon: const Icon(Icons.close),
               )
@@ -4386,6 +4520,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildComposerArtworkSelector(CommunityPostDraft draft) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final artwork = draft.artwork;
     final hasArtwork = artwork != null;
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
@@ -4437,7 +4572,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    artwork?.title ?? 'Link artwork',
+                    artwork?.title ?? l10n.communityComposerLinkArtworkTitle,
                     style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -4446,8 +4581,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                   const SizedBox(height: 4),
                   Text(
                     artwork == null
-                        ? 'Add provenance to help collectors discover it.'
-                        : 'Attached to ${artwork.title}.',
+                        ? l10n.communityComposerLinkArtworkDescription
+                        : l10n.communityComposerArtworkAttachedDescription(artwork.title),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: scheme.onSurface.withValues(alpha: 0.6),
@@ -4458,7 +4593,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             if (artwork != null)
               IconButton(
-                tooltip: 'Remove artwork',
+                tooltip: l10n.communityComposerRemoveArtworkTooltip,
                 onPressed: () => hub.setDraftArtwork(null),
                 icon: const Icon(Icons.close),
               )
@@ -4475,13 +4610,14 @@ class _CommunityScreenState extends State<CommunityScreen>
     StateSetter setModalState,
   ) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final location = draft.location;
     final label = draft.locationLabel ?? location?.name;
     final animationTheme = context.animationTheme;
     final addButton = OutlinedButton.icon(
       key: const ValueKey('composer_location_add'),
       icon: const Icon(Icons.my_location_outlined),
-      label: const Text('Attach current location'),
+      label: Text(l10n.communityComposerAttachCurrentLocationButton),
       onPressed: () => _captureDraftLocation(setModalState),
     );
 
@@ -4509,7 +4645,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    label ?? 'Attached location',
+                    label ?? l10n.communityComposerAttachedLocationLabel,
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
@@ -4517,7 +4653,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Remove location',
+                  tooltip: l10n.communityComposerRemoveLocationTooltip,
                   onPressed: () => Provider.of<CommunityHubProvider>(context,
                           listen: false)
                       .setDraftLocation(null),
@@ -4542,13 +4678,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                   onPressed: () => _promptLocationLabelEdit(location,
                       initialLabel: label),
                   icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
-                  label: const Text('Rename'),
+                  label: Text(l10n.commonRename),
                 ),
                 const SizedBox(width: 8),
                 TextButton.icon(
                   onPressed: () => _captureDraftLocation(setModalState),
                   icon: const Icon(Icons.my_location, size: 18),
-                  label: const Text('Refresh'),
+                  label: Text(l10n.commonRefresh),
                 ),
               ],
             ),
@@ -4723,6 +4859,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         builder: (context, setModalState) {
           final scheme = Theme.of(context).colorScheme;
           final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+          final l10n = AppLocalizations.of(context)!;
 
           // Load suggestions on first build
           if (showSuggestions && suggestions.isEmpty && !isLoading) {
@@ -4806,12 +4943,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                       autofocus: true,
                       decoration: InputDecoration(
                         hintText: searchType == 'tags'
-                            ? 'Search tags...'
-                            : searchType == 'profiles'
-                                ? 'Search users by name or @handle...'
-                                : searchType == 'artworks'
-                                    ? 'Search artworks...'
-                                    : 'Search...',
+                          ? l10n.communitySearchSheetHintTags
+                          : searchType == 'profiles'
+                            ? l10n.communitySearchSheetHintProfiles
+                            : searchType == 'artworks'
+                              ? l10n.communitySearchSheetHintArtworks
+                              : l10n.communitySearchSheetHintDefault,
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: searchController.text.isNotEmpty
                             ? IconButton(
@@ -4877,7 +5014,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                             });
                           }
                         } catch (e) {
-                          debugPrint('Search error: $e');
+                          if (kDebugMode) {
+                            debugPrint('CommunityScreen: search error: $e');
+                          }
                           if (mounted) setModalState(() => isLoading = false);
                         }
                       },
@@ -4921,8 +5060,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         const SizedBox(height: 16),
                                         Text(
                                           searchController.text.isEmpty
-                                              ? 'Start typing to search'
-                                              : 'No results found',
+                                              ? l10n.communitySearchEmptyStartTyping
+                                              : l10n.communitySearchEmptyNoResults,
                                           style: GoogleFonts.inter(
                                             color: scheme.onSurface.withValues(alpha: 0.5),
                                           ),
@@ -5485,23 +5624,24 @@ class _CommunityScreenState extends State<CommunityScreen>
   }) async {
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
     final controller = TextEditingController(text: initialLabel ?? '');
+    final l10n = AppLocalizations.of(context)!;
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Name this place'),
+        title: Text(l10n.communityNameThisPlaceTitle),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(hintText: 'e.g. Kubus HQ roof'),
+          decoration: InputDecoration(hintText: l10n.communityNamePlaceHint),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
+            child: Text(l10n.commonCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('Save'),
+            child: Text(l10n.commonSave),
           ),
         ],
       ),
@@ -5518,7 +5658,8 @@ class _CommunityScreenState extends State<CommunityScreen>
           prefs.getString('walletAddress');
       if (walletAddress == null || walletAddress.isEmpty) {
         if (!mounted) return null;
-        _showSnack('Please connect your wallet first.');
+        final l10n = AppLocalizations.of(context)!;
+        _showSnack(l10n.communityConnectWalletFirstToast);
         return null;
       }
       await BackendApiService().loadAuthToken();
@@ -5533,8 +5674,12 @@ class _CommunityScreenState extends State<CommunityScreen>
       }
       return walletAddress;
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: wallet auth failed: $e');
+      }
       if (!mounted) return null;
-      _showSnack('Unable to authenticate: $e');
+      final l10n = AppLocalizations.of(context)!;
+      _showSnack(l10n.communityUnableToAuthenticateToast);
       return null;
     }
   }
@@ -5634,10 +5779,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   }) async {
     final messenger = ScaffoldMessenger.of(sheetContext);
     final navigator = Navigator.of(sheetContext);
+    final l10n = AppLocalizations.of(sheetContext)!;
     var content = _newPostController.text.trim();
     if (content.isEmpty && !_hasSelectedMedia) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Add text, an image, or a video.')),
+        SnackBar(content: Text(l10n.communityComposerAddContentToast)),
       );
       return;
     }
@@ -5673,16 +5819,19 @@ class _CommunityScreenState extends State<CommunityScreen>
         SnackBar(
           content: Text(
             isGroupPost
-                ? 'Shared inside ${groupName ?? "group"}. '
-                : 'Post created successfully!',
+                ? l10n.communityComposerSharedInGroupToast(groupName ?? l10n.communityGroupFallbackName)
+                : l10n.communityComposerPostCreatedToast,
           ),
         ),
       );
     } catch (e) {
       setModalState(() => _isPostingNew = false);
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: create post failed: $e');
+      }
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed to create post: $e')),
+        SnackBar(content: Text(l10n.communityComposerCreatePostFailedToast)),
       );
     }
   }
@@ -5720,6 +5869,7 @@ class _CommunityScreenState extends State<CommunityScreen>
 
     final post = _communityPosts[index];
     final wasLiked = post.isLiked;
+    final l10n = AppLocalizations.of(context)!;
     final walletAddress = Provider.of<WalletProvider>(context, listen: false)
         .currentWalletAddress;
 
@@ -5737,19 +5887,21 @@ class _CommunityScreenState extends State<CommunityScreen>
       // Show feedback message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(!wasLiked ? 'Post liked!' : 'Post unliked!'),
+          content: Text(!wasLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
           duration: const Duration(seconds: 1),
         ),
       );
     } catch (e) {
-      debugPrint('CommunityScreen: togglePostLike failed: $e');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: togglePostLike failed: $e');
+      }
       // CommunityService performs rollback on error; ensure UI is refreshed
       setState(() {});
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to ${!wasLiked ? 'like' : 'unlike'} post'),
+          content: Text(l10n.communityToggleLikeFailedToast),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -5757,15 +5909,17 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   void _showPostLikes(String postId) {
+    final l10n = AppLocalizations.of(context)!;
     _showLikesDialog(
-      title: 'Post Likes',
+      title: l10n.communityPostLikesTitle,
       loader: () => BackendApiService().getPostLikes(postId),
     );
   }
 
   void _showCommentLikes(String commentId) {
+    final l10n = AppLocalizations.of(context)!;
     _showLikesDialog(
-      title: 'Comment Likes',
+      title: l10n.communityCommentLikesTitle,
       loader: () => BackendApiService().getCommentLikes(commentId),
     );
   }
@@ -5952,9 +6106,10 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Future<_CommentAuthorContext?> _resolveCommentAuthorContext() async {
+    final l10n = AppLocalizations.of(context)!;
     final prefs = await SharedPreferences.getInstance();
     String? currentUserId = prefs.getString('user_id');
-    final username = prefs.getString('username') ?? 'Current User';
+    final username = prefs.getString('username') ?? l10n.commonYou;
     String? walletAddress = prefs.getString('wallet') ??
         prefs.getString('wallet_address') ??
         prefs.getString('walletAddress');
@@ -5988,7 +6143,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     return _CommentAuthorContext(
       userId: resolvedUserId,
       walletAddress: canonicalWallet.isNotEmpty ? canonicalWallet : null,
-      displayName: username.isNotEmpty ? username : 'Current User',
+      displayName: username.isNotEmpty ? username : l10n.commonYou,
       avatarUrl: cachedAvatar,
     );
   }
@@ -6004,6 +6159,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
       if (!mounted) return;
 
+      final l10n = AppLocalizations.of(context)!;
+
       setState(() {
         _bookmarkedPosts[index] = post.isBookmarked;
       });
@@ -6011,16 +6168,22 @@ class _CommunityScreenState extends State<CommunityScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            post.isBookmarked ? 'Post bookmarked!' : 'Bookmark removed!',
+            post.isBookmarked
+                ? l10n.communityBookmarkAddedToast
+                : l10n.communityBookmarkRemovedToast,
           ),
           duration: const Duration(seconds: 1),
         ),
       );
     } catch (error) {
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: bookmark toggle failed: $error');
+      }
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Could not update bookmark'),
+          content: Text(l10n.communityBookmarkUpdateFailedToast),
           duration: const Duration(seconds: 2),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
@@ -6031,25 +6194,38 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _showComments(int index) async {
     if (index >= _communityPosts.length) return;
 
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+
     final post = _communityPosts[index];
-    debugPrint('🔵 _showComments called for post ${post.id}');
+    if (kDebugMode) {
+      debugPrint('CommunityScreen: opening comments for post ${post.id}');
+    }
 
     // Fetch comments from backend to ensure we have fresh, nested replies and author avatars
     try {
-      debugPrint('   📥 Fetching comments from backend...');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: fetching backend comments…');
+      }
       final backendComments =
           await BackendApiService().getComments(postId: post.id);
-      debugPrint(
-          '   ✅ Received ${backendComments.length} root comments from backend');
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityScreen: received ${backendComments.length} root comments from backend');
+      }
 
       // Count total comments including nested replies
       int totalComments = backendComments.length;
       for (final comment in backendComments) {
         totalComments += comment.replies.length;
-        debugPrint(
-            '   Comment ${comment.id} has ${comment.replies.length} replies');
+        if (kDebugMode) {
+          debugPrint(
+              'CommunityScreen: comment ${comment.id} has ${comment.replies.length} replies');
+        }
       }
-      debugPrint('   Total comments (including nested): $totalComments');
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: total comments (including nested): $totalComments');
+      }
 
       // Replace current comments with backend-provided nested comments
       post.comments = backendComments;
@@ -6057,7 +6233,10 @@ class _CommunityScreenState extends State<CommunityScreen>
 
       if (mounted) setState(() {});
     } catch (e) {
-      debugPrint('❌ Failed to load backend comments for post ${post.id}: $e');
+      if (kDebugMode) {
+        debugPrint(
+            'CommunityScreen: failed to load backend comments for post ${post.id}: $e');
+      }
     }
 
     final TextEditingController commentController = TextEditingController();
@@ -6091,7 +6270,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: Row(
                   children: [
                     Text(
-                      'Comments',
+                      l10n.commonComments,
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -6100,7 +6279,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     const Spacer(),
                     Text(
-                      '${post.commentCount} comments',
+                      l10n.commonCommentsCount(post.commentCount),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Theme.of(context)
@@ -6221,12 +6400,13 @@ class _CommunityScreenState extends State<CommunityScreen>
                                         });
                                         // Show error feedback
                                         if (context.mounted) {
+                                          final l10n = AppLocalizations.of(context)!;
+                                          final scheme = Theme.of(context).colorScheme;
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
                                             SnackBar(
-                                              content: Text(
-                                                  'Failed to update like: $e'),
-                                              backgroundColor: Colors.red,
+                                              content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
+                                              backgroundColor: scheme.errorContainer,
                                               duration:
                                                   const Duration(seconds: 2),
                                             ),
@@ -6292,7 +6472,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                 .onSurface
                                                 .withValues(alpha: 0.6)),
                                         const SizedBox(width: 6),
-                                        Text('Reply',
+                                        Text(l10n.commonReply,
                                             style: GoogleFonts.inter(
                                                 fontSize: 12,
                                                 color: Theme.of(context)
@@ -6395,6 +6575,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                                             0.6),
                                                           ),
                                                           onPressed: () async {
+                                                            final l10n = AppLocalizations.of(context)!;
+                                                            final scheme = Theme.of(context).colorScheme;
                                                             setModalState(() {
                                                               reply.isLiked =
                                                                   !reply
@@ -6426,11 +6608,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                                         context)
                                                                     .showSnackBar(
                                                                   SnackBar(
-                                                                    content: Text(
-                                                                        'Failed to update like: $e'),
-                                                                    backgroundColor:
-                                                                        Colors
-                                                                            .red,
+                                                                    content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
+                                                                    backgroundColor: scheme.errorContainer,
                                                                     duration: const Duration(
                                                                         seconds:
                                                                             2),
@@ -6525,7 +6704,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Replying to comment',
+                                AppLocalizations.of(context)!.communityReplyingToCommentLabel,
                                 style: GoogleFonts.inter(
                                   fontSize: 13,
                                   color: Provider.of<ThemeProvider>(context)
@@ -6589,7 +6768,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           child: TextField(
                             controller: commentController,
                             decoration: InputDecoration(
-                              hintText: 'Add a comment...',
+                              hintText: l10n.postDetailWriteCommentHint,
                               hintStyle: GoogleFonts.inter(
                                 fontSize: 14,
                                 color: Theme.of(context)
@@ -6638,16 +6817,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   if (authorContext == null) {
                                     if (!mounted) return;
                                     messenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Please complete onboarding or re-login to comment.'),
-                                        duration: Duration(seconds: 2),
+                                      SnackBar(
+                                        content: Text(l10n.communityCommentAuthRequiredToast),
+                                        duration: const Duration(seconds: 2),
                                       ),
                                     );
                                     return;
                                   }
-                                  debugPrint(
-                                      '💬 Adding comment with parentCommentId: $replyToCommentId');
+                                  if (kDebugMode) {
+                                    debugPrint('CommunityScreen: adding comment (submit) parentCommentId=$replyToCommentId');
+                                  }
                                   await CommunityService.addComment(
                                     post,
                                     value.trim(),
@@ -6667,8 +6846,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     post.comments = backendComments;
                                     post.commentCount = post.comments.length;
                                   } catch (e) {
-                                    debugPrint(
-                                        'Warning: failed to refresh comments after submit: $e');
+                                    if (kDebugMode) {
+                                      debugPrint('CommunityScreen: failed to refresh comments after submit: $e');
+                                    }
                                   }
                                   if (!mounted) return;
                                   // Reset reply state
@@ -6678,17 +6858,19 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   commentController.clear();
 
                                   messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Comment added!'),
-                                      duration: Duration(seconds: 2),
+                                    SnackBar(
+                                      content: Text(l10n.postDetailCommentAddedToast),
+                                      duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 } catch (e) {
+                                  if (kDebugMode) {
+                                    debugPrint('CommunityScreen: add comment (submit) failed: $e');
+                                  }
                                   if (!mounted) return;
                                   messenger.showSnackBar(
                                     SnackBar(
-                                      content:
-                                          Text('Failed to add comment: $e'),
+                                      content: Text(l10n.postDetailAddCommentFailedToast),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
@@ -6722,16 +6904,16 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   if (authorContext == null) {
                                     if (!mounted) return;
                                     messenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                            'Please complete onboarding or re-login to comment.'),
-                                        duration: Duration(seconds: 2),
+                                      SnackBar(
+                                        content: Text(l10n.communityCommentAuthRequiredToast),
+                                        duration: const Duration(seconds: 2),
                                       ),
                                     );
                                     return;
                                   }
-                                  debugPrint(
-                                      '💬 Adding comment (button) with parentCommentId: $replyToCommentId');
+                                  if (kDebugMode) {
+                                    debugPrint('CommunityScreen: adding comment (button) parentCommentId=$replyToCommentId');
+                                  }
                                   await CommunityService.addComment(
                                     post,
                                     commentText,
@@ -6751,8 +6933,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     post.comments = backendComments;
                                     post.commentCount = post.comments.length;
                                   } catch (e) {
-                                    debugPrint(
-                                        'Warning: failed to refresh comments after send: $e');
+                                    if (kDebugMode) {
+                                      debugPrint('CommunityScreen: failed to refresh comments after send: $e');
+                                    }
                                   }
                                   if (!mounted) return;
 
@@ -6763,17 +6946,19 @@ class _CommunityScreenState extends State<CommunityScreen>
                                   commentController.clear();
 
                                   messenger.showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Comment added!'),
-                                      duration: Duration(seconds: 2),
+                                    SnackBar(
+                                      content: Text(l10n.postDetailCommentAddedToast),
+                                      duration: const Duration(seconds: 2),
                                     ),
                                   );
                                 } catch (e) {
+                                  if (kDebugMode) {
+                                    debugPrint('CommunityScreen: add comment (button) failed: $e');
+                                  }
                                   if (!mounted) return;
                                   messenger.showSnackBar(
                                     SnackBar(
-                                      content:
-                                          Text('Failed to add comment: $e'),
+                                      content: Text(l10n.postDetailAddCommentFailedToast),
                                       duration: const Duration(seconds: 2),
                                     ),
                                   );
@@ -6813,6 +6998,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _showShareModal(CommunityPost post) {
     if (!mounted) return;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final searchController = TextEditingController();
     List<Map<String, dynamic>> searchResults = [];
     bool isSearching = false;
@@ -6843,7 +7029,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Share Post',
+                    Text(l10n.postDetailSharePostTitle,
                         style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -6860,7 +7046,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                 child: TextField(
                   controller: searchController,
                   decoration: InputDecoration(
-                    hintText: 'Search for profiles...',
+                    hintText: l10n.postDetailSearchProfilesHint,
                     prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -6906,7 +7092,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ListTile(
                       leading:
                           Icon(Icons.link, color: theme.colorScheme.primary),
-                      title: Text('Copy Link', style: GoogleFonts.inter()),
+                      title: Text(l10n.postDetailCopyLink, style: GoogleFonts.inter()),
                       onTap: () async {
                         final messenger = ScaffoldMessenger.of(context);
                         final sheetNavigator = Navigator.of(sheetContext);
@@ -6915,9 +7101,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         if (!mounted) return;
                         sheetNavigator.pop();
                         messenger.showSnackBar(
-                          const SnackBar(
-                            content: Text('Link copied to clipboard'),
-                          ),
+                          SnackBar(content: Text(l10n.postDetailLinkCopiedToast)),
                         );
 
                         // Track analytics
@@ -6931,7 +7115,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ListTile(
                       leading:
                           Icon(Icons.share, color: theme.colorScheme.primary),
-                      title: Text('Share via...', style: GoogleFonts.inter()),
+                      title: Text(l10n.postDetailShareViaEllipsis, style: GoogleFonts.inter()),
                       onTap: () async {
                         Navigator.pop(sheetContext);
                         final shareText =
@@ -6957,8 +7141,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                           ? Center(
                               child: EmptyStateCard(
                                 icon: Icons.person_search,
-                                title: 'No profiles found',
-                                description: 'Try a different search term',
+                                title: l10n.postDetailNoProfilesFoundTitle,
+                                description: l10n.postDetailNoProfilesFoundDescription,
                               ),
                             )
                           : ListView.builder(
@@ -6973,7 +7157,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     profile['walletAddr'];
                                 final username = profile['username'] ??
                                     walletAddr ??
-                                    'unknown';
+                                  l10n.commonUnknown;
                                 final display = profile['displayName'] ??
                                     profile['display_name'] ??
                                     username;
@@ -6984,7 +7168,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       wallet: username,
                                       avatarUrl: avatar,
                                       radius: 20),
-                                  title: Text(display ?? 'Unnamed',
+                                    title: Text(display ?? l10n.commonUnnamed,
                                       style: GoogleFonts.inter()),
                                   subtitle: Text('@$username',
                                       style: GoogleFonts.inter(fontSize: 12)),
@@ -6998,7 +7182,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       await BackendApiService().sharePostViaDM(
                                         postId: post.id,
                                         recipientWallet: walletAddr ?? username,
-                                        message: 'Check out this post!',
+                                        message: l10n.postDetailShareDmDefaultMessage,
                                       );
                                       BackendApiService().trackAnalyticsEvent(
                                         eventType: 'share_dm',
@@ -7012,15 +7196,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                                       messenger.showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Shared post with @$username',
+                                            l10n.postDetailShareSuccessToast(username.toString()),
                                           ),
                                         ),
                                       );
                                     } catch (e) {
+                                      if (kDebugMode) {
+                                        debugPrint('CommunityScreen: share via DM failed: $e');
+                                      }
                                       if (!mounted) return;
                                       messenger.showSnackBar(
                                         SnackBar(
-                                          content: Text('Failed to share: $e'),
+                                          content: Text(l10n.postDetailShareFailedToast),
                                         ),
                                       );
                                     }
@@ -7041,6 +7228,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (!mounted) return;
     final theme = Theme.of(context);
     final repostContentController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
       context: context,
@@ -7079,7 +7267,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       children: [
                         TextButton(
                             onPressed: () => Navigator.pop(sheetContext),
-                            child: Text('Cancel', style: GoogleFonts.inter())),
+                          child: Text(l10n.commonCancel, style: GoogleFonts.inter())),
                         const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: () async {
@@ -7109,20 +7297,23 @@ class _CommunityScreenState extends State<CommunityScreen>
                               messenger.showSnackBar(
                                 SnackBar(
                                   content: Text(content.isEmpty
-                                      ? 'Reposted!'
-                                      : 'Reposted with comment!'),
+                                      ? l10n.postDetailRepostSuccessToast
+                                      : l10n.postDetailRepostWithCommentSuccessToast),
                                 ),
                               );
                             } catch (e) {
+                              if (kDebugMode) {
+                                debugPrint('CommunityScreen: repost failed: $e');
+                              }
                               if (!mounted) return;
                               messenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('Failed to repost: $e'),
+                                  content: Text(l10n.postDetailRepostFailedToast),
                                 ),
                               );
                             }
                           },
-                          child: Text('Repost', style: GoogleFonts.inter()),
+                          child: Text(l10n.postDetailRepostButton, style: GoogleFonts.inter()),
                         ),
                       ],
                     ),
@@ -7140,7 +7331,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         controller: repostContentController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: 'Add your thoughts (optional)...',
+                          hintText: l10n.postDetailRepostThoughtsHint,
                           border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12)),
                           filled: true,
@@ -7148,7 +7339,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text('Reposting:',
+                      Text(l10n.postDetailRepostingLabel,
                           style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -7238,6 +7429,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _viewRepostsList(CommunityPost post) async {
     if (!mounted) return;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
       context: context,
@@ -7284,7 +7476,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   }
                   if (snapshot.hasError) {
                     return Center(
-                        child: Text('Error loading reposts',
+                        child: Text(l10n.communityRepostsLoadFailedMessage,
                             style: GoogleFonts.inter()));
                   }
                   final reposts = snapshot.data ?? [];
@@ -7292,8 +7484,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     return Center(
                       child: EmptyStateCard(
                         icon: Icons.repeat,
-                        title: 'No reposts yet',
-                        description: 'This post has not been reposted yet.',
+                        title: l10n.communityNoRepostsTitle,
+                        description: l10n.communityNoRepostsDescription,
                       ),
                     );
                   }
@@ -7305,7 +7497,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       final user = repost['user'] as Map<String, dynamic>?;
                       final username = user?['username'] ??
                           user?['walletAddress'] ??
-                          'Unknown';
+                          l10n.commonUnknown;
                       final displayName = user?['displayName'] ?? username;
                       final avatar = user?['avatar'];
                       final comment = repost['repostComment'] as String?;
@@ -7354,6 +7546,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _showRepostOptions(CommunityPost post) {
     if (!mounted) return;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
       context: context,
@@ -7374,9 +7567,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                     color: theme.colorScheme.outline,
                     borderRadius: BorderRadius.circular(2))),
             ListTile(
-              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
               title:
-                  Text('Unrepost', style: GoogleFonts.inter(color: Colors.red)),
+                  Text(l10n.communityUnrepostAction, style: GoogleFonts.inter(color: theme.colorScheme.error)),
               onTap: () {
                 Navigator.pop(sheetContext);
                 _unrepostPost(post);
@@ -7385,7 +7578,7 @@ class _CommunityScreenState extends State<CommunityScreen>
             ListTile(
               leading: Icon(Icons.cancel,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-              title: Text('Cancel', style: GoogleFonts.inter()),
+              title: Text(l10n.commonCancel, style: GoogleFonts.inter()),
               onTap: () => Navigator.pop(sheetContext),
             ),
             const SizedBox(height: 16),
@@ -7398,23 +7591,24 @@ class _CommunityScreenState extends State<CommunityScreen>
   void _unrepostPost(CommunityPost post) async {
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Unrepost', style: GoogleFonts.inter()),
-        content: Text('Are you sure you want to remove this repost?',
+        title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
+        content: Text(l10n.communityUnrepostConfirmBody,
             style: GoogleFonts.inter()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text('Cancel', style: GoogleFonts.inter()),
+            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: Text('Unrepost', style: GoogleFonts.inter()),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(dialogContext).colorScheme.error),
+            child: Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -7433,12 +7627,15 @@ class _CommunityScreenState extends State<CommunityScreen>
       await _loadCommunityData();
       if (!mounted) return;
       messenger.showSnackBar(
-        const SnackBar(content: Text('Repost removed')),
+        SnackBar(content: Text(l10n.communityRepostRemovedToast)),
       );
     } catch (e) {
+      if (kDebugMode) {
+        debugPrint('CommunityScreen: unrepost failed: $e');
+      }
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed to unrepost: $e')),
+        SnackBar(content: Text(l10n.communityUnrepostFailedToast)),
       );
     }
   }

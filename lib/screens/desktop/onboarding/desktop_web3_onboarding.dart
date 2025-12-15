@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../utils/app_animations.dart';
@@ -9,13 +10,15 @@ import '../desktop_shell.dart';
 
 /// Desktop-optimized Web3 feature onboarding
 class DesktopWeb3OnboardingScreen extends StatefulWidget {
-  final String featureName;
+  final String featureKey;
+  final String featureTitle;
   final List<Web3OnboardingPage> pages;
   final VoidCallback onComplete;
 
   const DesktopWeb3OnboardingScreen({
     super.key,
-    required this.featureName,
+    required this.featureKey,
+    required this.featureTitle,
     required this.pages,
     required this.onComplete,
   });
@@ -99,15 +102,16 @@ class _DesktopWeb3OnboardingScreenState
 
   Future<void> _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('${widget.featureName}_onboarding_completed', true);
-    widget.onComplete();
+    await prefs.setBool('${widget.featureKey}_onboarding_completed', true);
     if (mounted && Navigator.of(context).canPop()) {
       Navigator.of(context).pop();
     }
+    widget.onComplete();
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final accentColor = themeProvider.accentColor;
     final animationTheme = context.animationTheme;
@@ -135,7 +139,7 @@ class _DesktopWeb3OnboardingScreenState
           TextButton(
             onPressed: _skipOnboarding,
             child: Text(
-              'Skip',
+              l10n.commonSkip,
               style: GoogleFonts.inter(
                 fontSize: 16,
                 color: Theme.of(context)
@@ -183,6 +187,7 @@ class _DesktopWeb3OnboardingScreenState
   }
 
   Widget _buildPageContent(Web3OnboardingPage page) {
+    final l10n = AppLocalizations.of(context)!;
     return FadeTransition(
       opacity: _fadeAnimation,
       child: SlideTransition(
@@ -247,11 +252,11 @@ class _DesktopWeb3OnboardingScreenState
                       width: 1,
                     ),
                   ),
-                  child: Column(
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Key Features:',
+                        l10n.web3OnboardingKeyFeaturesTitle,
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -311,6 +316,7 @@ class _DesktopWeb3OnboardingScreenState
   }
 
   Widget _buildSidebar(Color accentColor, AppAnimationTheme animationTheme) {
+    final l10n = AppLocalizations.of(context)!;
     final isLastPage = _currentPage == widget.pages.length - 1;
 
     return Padding(
@@ -332,7 +338,7 @@ class _DesktopWeb3OnboardingScreenState
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              widget.featureName,
+              widget.featureTitle,
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -442,7 +448,7 @@ class _DesktopWeb3OnboardingScreenState
                 onPressed: _previousPage,
                 icon: const Icon(Icons.arrow_back),
                 label: Text(
-                  'Previous',
+                  l10n.commonBack,
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -477,7 +483,7 @@ class _DesktopWeb3OnboardingScreenState
                 ),
               ),
               child: Text(
-                isLastPage ? 'Get Started' : 'Continue',
+                isLastPage ? l10n.commonGetStarted : l10n.commonContinue,
                 style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -492,7 +498,7 @@ class _DesktopWeb3OnboardingScreenState
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '${_currentPage + 1} of ${widget.pages.length}',
+                l10n.commonStepOfTotal(_currentPage + 1, widget.pages.length),
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   color: Theme.of(context)

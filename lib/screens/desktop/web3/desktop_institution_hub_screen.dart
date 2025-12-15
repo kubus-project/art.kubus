@@ -5,14 +5,21 @@ import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../providers/collab_provider.dart';
+import '../../../config/config.dart';
 import '../../../models/dao.dart';
+import '../../../models/user_persona.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
+import '../desktop_shell.dart';
+import '../../collab/invites_inbox_screen.dart';
 import '../../web3/institution/institution_hub.dart';
 import '../../web3/institution/event_creator.dart';
 import '../../web3/institution/event_manager.dart';
 import '../../web3/institution/institution_analytics.dart';
+import '../../events/exhibition_creator_screen.dart';
+import '../../events/exhibition_list_screen.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
 /// Left: Mobile institution hub view
@@ -155,6 +162,19 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
   }
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
+    final persona = context.watch<ProfileProvider>().userPersona;
+    final showCreateActions = persona == null || persona == UserPersona.institution;
+
+    // Compute approval status for gating quick actions
+    final profileProvider = context.watch<ProfileProvider>();
+    final daoProvider = context.watch<DAOProvider>();
+    final wallet = _resolveWalletAddress(listen: true);
+    final review = _institutionReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final hasInstitutionBadge = profileProvider.currentUser?.isInstitution ?? false;
+    final reviewStatus = review?.status.toLowerCase() ?? '';
+    final reviewIsInstitution = review?.isInstitutionApplication ?? false;
+    final isApprovedInstitution = hasInstitutionBadge || (reviewIsInstitution && reviewStatus == 'approved');
+
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: ListView(
@@ -185,42 +205,125 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
             ),
           ),
           const SizedBox(height: 12),
-          _buildQuickActionTile(
-            'Create Event',
-            'Schedule new exhibition',
-            Icons.event_outlined,
-            themeProvider.accentColor,
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EventCreator()),
-              );
-            },
-          ),
-          _buildQuickActionTile(
-            'Manage Events',
-            'View all exhibitions',
-            Icons.event_note_outlined,
-            const Color(0xFF4ECDC4),
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const EventManager()),
-              );
-            },
-          ),
-          _buildQuickActionTile(
-            'Analytics',
-            'View performance stats',
-            Icons.analytics_outlined,
-            const Color(0xFFFF6B6B),
-            () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const InstitutionAnalytics()),
-              );
-            },
-          ),
+          if (AppConfig.isFeatureEnabled('collabInvites'))
+            Consumer<CollabProvider>(
+              builder: (context, collabProvider, _) {
+                final pending = collabProvider.pendingInviteCount;
+                final scheme = Theme.of(context).colorScheme;
+                final badge = pending > 0
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: scheme.error,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          pending > 99 ? '99+' : pending.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onError,
+                          ),
+                        ),
+                      )
+                    : Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: scheme.onSurface.withValues(alpha: 0.4),
+                      );
+
+                return _buildQuickActionTile(
+                  'Invites',
+                  pending > 0 ? 'You have pending collaboration invites' : 'View collaboration invites',
+                  Icons.group_add_outlined,
+                  Theme.of(context).colorScheme.primary,
+                  () {
+                    DesktopShellScope.of(context)?.pushScreen(
+                      DesktopSubScreen(
+                        title: 'Collaboration Invites',
+                        child: const InvitesInboxScreen(),
+                      ),
+                    );
+                  },
+                  trailing: badge,
+                );
+              },
+            ),
+          if (isApprovedInstitution && showCreateActions && AppConfig.isFeatureEnabled('events'))
+            _buildQuickActionTile(
+              'Create Event',
+              'Schedule a new event',
+              Icons.event_outlined,
+              const Color(0xFFFFB300), // Amber
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'Create Event',
+                    child: const EventCreator(),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedInstitution && showCreateActions && AppConfig.isFeatureEnabled('exhibitions'))
+            _buildQuickActionTile(
+              'Create Exhibition',
+              'Publish a new exhibition',
+              Icons.museum_outlined,
+              Theme.of(context).colorScheme.secondary,
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'Create Exhibition',
+                    child: const ExhibitionCreatorScreen(),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedInstitution)
+            _buildQuickActionTile(
+              'Manage Events',
+              'View all events',
+              Icons.event_note_outlined,
+              const Color(0xFF4ECDC4),
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'Manage Events',
+                    child: const EventManager(),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedInstitution && AppConfig.isFeatureEnabled('exhibitions'))
+            _buildQuickActionTile(
+              'My Exhibitions',
+              'View hosted and collaborating exhibitions',
+              Icons.collections_bookmark_outlined,
+              const Color(0xFF9C27B0), // Purple for exhibitions
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'My Exhibitions',
+                    child: const ExhibitionListScreen(embedded: true, canCreate: true),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedInstitution)
+            _buildQuickActionTile(
+              'Analytics',
+              'View performance stats',
+              Icons.analytics_outlined,
+              const Color(0xFFFF6B6B),
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'Analytics',
+                    child: const InstitutionAnalytics(),
+                  ),
+                );
+              },
+            ),
           const SizedBox(height: 24),
 
           // Stats
@@ -359,6 +462,7 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
     IconData icon,
     Color color,
     VoidCallback onTap,
+    {Widget? trailing}
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -410,11 +514,12 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                     ],
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
+                trailing ??
+                    Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    ),
               ],
             ),
           ),
@@ -424,6 +529,7 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
   }
 
   Widget _buildStatsGrid(ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
       children: [
         Row(
@@ -433,7 +539,7 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                 'Events',
                 '0',
                 Icons.event_outlined,
-                themeProvider.accentColor,
+                scheme.primary,
               ),
             ),
             const SizedBox(width: 12),

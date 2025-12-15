@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../widgets/app_logo.dart';
@@ -21,63 +22,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      title: 'Welcome to art.kubus',
-      subtitle: 'Discover and create augmented reality art in the real world',
-      description: 'Transform your surroundings with immersive AR artworks and join a global community of digital artists.',
-      iconData: Icons.view_in_ar,
-      gradient: const LinearGradient(
-        colors: [Color.fromARGB(255, 4, 93, 148), Color(0xFF0B6E4F)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+  List<OnboardingPage> get _pages {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      OnboardingPage(
+        title: l10n.onboardingWelcomeTitle,
+        subtitle: l10n.onboardingWelcomeSubtitle,
+        description: l10n.onboardingWelcomeDescription,
+        iconData: Icons.view_in_ar,
+        gradient: const LinearGradient(
+          colors: [Color.fromARGB(255, 4, 93, 148), Color(0xFF0B6E4F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ),
-    OnboardingPage(
-      title: 'Explore AR Artworks',
-      subtitle: 'Find amazing artworks around you',
-      description: 'Use your device to discover hidden AR artworks in your neighborhood and beyond. Every location tells a story.',
-      iconData: Icons.explore,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      OnboardingPage(
+        title: l10n.onboardingExploreTitle,
+        subtitle: l10n.onboardingExploreSubtitle,
+        description: l10n.onboardingExploreDescription,
+        iconData: Icons.explore,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF06B6D4), Color(0xFF3B82F6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ),
-    OnboardingPage(
-      title: 'Create & Share',
-      subtitle: 'Express your creativity',
-      description: 'Design stunning AR experiences with our intuitive creator tools and share them with the world.',
-      iconData: Icons.palette,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF10B981), Color(0xFF059669)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      OnboardingPage(
+        title: l10n.onboardingCreateTitle,
+        subtitle: l10n.onboardingCreateSubtitle,
+        description: l10n.onboardingCreateDescription,
+        iconData: Icons.palette,
+        gradient: const LinearGradient(
+          colors: [Color(0xFF10B981), Color(0xFF059669)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ),
-    OnboardingPage(
-      title: 'Join the Community',
-      subtitle: 'Connect with fellow artists',
-      description: 'Engage with a vibrant community of AR creators. Share ideas, collaborate on projects, and participate in exclusive events.',
-      iconData: Icons.people,
-      gradient: const LinearGradient(
-        colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      OnboardingPage(
+        title: l10n.onboardingCommunityTitle,
+        subtitle: l10n.onboardingCommunitySubtitle,
+        description: l10n.onboardingCommunityDescription,
+        iconData: Icons.people,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFEC4899), Color(0xFF0B6E4F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ),
-    OnboardingPage(
-      title: 'Collect & Trade',
-      subtitle: 'Own unique digital assets',
-      description: 'Collect rare AR artworks as NFTs on Solana blockchain. Your creativity has real value in Web3.',
-      iconData: Icons.account_balance_wallet,
-      gradient: const LinearGradient(
-        colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      OnboardingPage(
+        title: l10n.onboardingCollectiblesTitle,
+        subtitle: l10n.onboardingCollectiblesSubtitle,
+        description: l10n.onboardingCollectiblesDescription,
+        iconData: Icons.account_balance_wallet,
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF59E0B), Color(0xFFEF4444)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ),
-  ];
+    ];
+  }
 
   @override
   void initState() {
@@ -146,6 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   }
 
   Widget _buildHeader([bool isSmallScreen = false]) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: EdgeInsets.all(isSmallScreen ? 20 : 24),
       child: Row(
@@ -160,7 +165,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
               ),
               SizedBox(width: isSmallScreen ? 8 : 12),
               Text(
-                'art.kubus',
+                l10n.appTitle,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 18 : 20,
                   fontWeight: FontWeight.bold,
@@ -174,7 +179,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
             TextButton(
               onPressed: _skipToEnd,
               child: Text(
-                'Skip',
+                l10n.commonSkip,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 14 : 16,
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
@@ -259,6 +264,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   }
 
   Widget _buildBottomSection([bool isSmallScreen = false]) {
+    final l10n = AppLocalizations.of(context)!;
     return LayoutBuilder(
       builder: (context, constraints) {
         final constraintSmallScreen = MediaQuery.of(context).size.height < 700;
@@ -294,7 +300,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                     ),
                   ),
                   child: Text(
-                    _currentPage == _pages.length - 1 ? 'Grant Permissions' : 'Continue',
+                    _currentPage == _pages.length - 1 ? l10n.onboardingGrantPermissions : l10n.commonContinue,
                     style: GoogleFonts.inter(
                       fontSize: effectiveSmallScreen ? 16 : 18,
                       fontWeight: FontWeight.w600,
@@ -308,7 +314,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
                 TextButton(
                   onPressed: _startWalletCreation,
                   child: Text(
-                    'Skip Permissions',
+                    l10n.onboardingSkipPermissions,
                     style: GoogleFonts.inter(
                       fontSize: effectiveSmallScreen ? 14 : 16,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -394,7 +400,6 @@ class OnboardingPage {
     required this.gradient,
   });
 }
-
 
 
 

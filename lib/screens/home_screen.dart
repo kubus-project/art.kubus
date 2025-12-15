@@ -13,6 +13,7 @@ import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
 import '../models/artwork.dart';
 import '../models/recent_activity.dart';
+import '../models/user_persona.dart';
 import 'web3/dao/governance_hub.dart';
 import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
@@ -20,6 +21,8 @@ import 'web3/marketplace/marketplace.dart';
 import 'web3/wallet/wallet_home.dart';
 import 'web3/wallet/connectwallet_screen.dart';
 import 'onboarding/web3/web3_onboarding.dart' as web3;
+import 'onboarding/web3/onboarding_data.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
@@ -159,6 +162,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildAppBar() {
     final web3Provider = Provider.of<Web3Provider>(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return SliverAppBar(
       floating: true,
@@ -240,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 // Notification bell
                 Consumer<NotificationProvider>(
                   builder: (context, np, _) => TopBarIcon(
-                    tooltip: 'Notifications',
+                    tooltip: l10n.commonNotifications,
                     icon: Icon(
                       Icons.notifications_outlined,
                       color: Theme.of(context).colorScheme.onSurface,
@@ -265,7 +269,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
-    final greeting = _getGreeting();
+    final l10n = AppLocalizations.of(context)!;
+    final greeting = _getGreeting(l10n);
     final isArtist = profileProvider.currentUser?.isArtist ?? false;
     final isInstitution = profileProvider.currentUser?.isInstitution ?? false;
 
@@ -313,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   children: [
                                     Flexible(
                                       child: Text(
-                                        '$greeting ${profileProvider.currentUser?.displayName ?? 'Explorer'}',
+                                        '$greeting ${profileProvider.currentUser?.displayName ?? l10n.homeDefaultDisplayName}',
                                         style: GoogleFonts.inter(
                                           fontSize: titleSize,
                                           fontWeight: FontWeight.bold,
@@ -340,7 +345,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 ),
                                 SizedBox(height: isSmallScreen ? 6 : 8),
                                 Text(
-                                  'Discover amazing AR art and connect with creators',
+                                  l10n.homeWelcomeSubtitle,
                                   style: GoogleFonts.inter(
                                     fontSize: descriptionSize,
                             color: Colors.white.withValues(alpha: 0.9),
@@ -418,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     size: isSmallScreen ? 16 : 18,
                   ),
                   label: Text(
-                    'Explore Web3',
+                    l10n.homeExploreWeb3Button,
                     style: GoogleFonts.inter(
                       fontSize: isSmallScreen ? 12 : 14,
                       fontWeight: FontWeight.w600,
@@ -487,8 +492,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final navigationProvider = Provider.of<NavigationProvider>(context);
+        final profileProvider = context.watch<ProfileProvider>();
         final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+        final l10n = AppLocalizations.of(context)!;
         final frequentScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
+        final persona = profileProvider.userPersona;
+        final suggestedKeys = _suggestedQuickActionKeys(persona)
+            .where((key) => NavigationProvider.screenDefinitions.containsKey(key))
+            .toList(growable: false);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Quick Actions',
+                  l10n.homeQuickActionsTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -506,7 +517,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 if (frequentScreens.isNotEmpty)
                   Text(
-                    'Recently Used',
+                    l10n.homeRecentlyUsedLabel,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Theme.of(context)
@@ -519,34 +530,61 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 12),
             if (frequentScreens.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.touch_app,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                      size: 32,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outline,
+                      ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        'Start exploring! Your recently visited screens will appear here.',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.touch_app,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          size: 32,
                         ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            l10n.homeQuickActionsEmptyDescription,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (suggestedKeys.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: suggestedKeys.map((key) {
+                          final def = NavigationProvider.screenDefinitions[key]!;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 12),
+                            child: _buildActionCard(
+                              def.name,
+                              def.icon,
+                              themeProvider.accentColor,
+                              false,
+                              onTap: () => navigationProvider.navigateToScreen(context, key),
+                              visitCount: 0,
+                            ),
+                          );
+                        }).toList(growable: false),
                       ),
                     ),
                   ],
-                ),
+                ],
               )
             else
               SingleChildScrollView(
@@ -572,6 +610,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  List<String> _suggestedQuickActionKeys(UserPersona? persona) {
+    switch (persona) {
+      case UserPersona.lover:
+        return const ['map', 'community', 'marketplace'];
+      case UserPersona.creator:
+        return const ['studio', 'ar', 'map'];
+      case UserPersona.institution:
+        return const ['institution_hub', 'map', 'community'];
+      case null:
+        return const ['map', 'studio', 'institution_hub'];
+    }
   }
 
   Widget _buildActionCard(
@@ -669,32 +720,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildStatsCards() {
     return Consumer<ConfigProvider>(
       builder: (context, configProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         if (!configProvider.useMockData) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Your Stats',
+                l10n.homeYourStatsTitle,
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              const EmptyStateCard(
-                  icon: Icons.analytics,
-                  title: 'No Stats Available',
-                  description:
-                      'Stats will appear as you interact with the platform',
-                ),
+              EmptyStateCard(
+                icon: Icons.analytics,
+                title: l10n.homeNoStatsAvailableTitle,
+                description: l10n.homeNoStatsAvailableDescription,
+              ),
             ],
           );
         }
 
         final stats = [
-          ('Artworks', '42', Icons.image),
-          ('Followers', '1.2k', Icons.people),
-          ('Views', '8.5k', Icons.visibility),
+          ('artworks', '42', Icons.image),
+          ('followers', '1.2k', Icons.people),
+          ('views', '8.5k', Icons.visibility),
         ];
 
         return LayoutBuilder(
@@ -706,7 +757,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your Stats',
+                  l10n.homeYourStatsTitle,
                   style: GoogleFonts.inter(
                     fontSize: isSmallScreen ? 18 : 20,
                     fontWeight: FontWeight.bold,
@@ -752,6 +803,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildStatCard(String title, String value, IconData icon,
       {bool showIconOnly = false, bool isVerticalLayout = false}) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final displayTitle = _getStatDisplayTitle(title, l10n);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -795,7 +848,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ),
                         ),
                         Text(
-                          title,
+                          displayTitle,
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 7 : 8,
                             color: Theme.of(context)
@@ -833,7 +886,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                 ),
                                 Text(
-                                  title,
+                                  displayTitle,
                                   style: GoogleFonts.inter(
                                     fontSize: isSmallScreen ? 7 : 8,
                                     color: Theme.of(context)
@@ -866,7 +919,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ),
                           ),
                           Text(
-                            title,
+                            displayTitle,
                             style: GoogleFonts.inter(
                               fontSize: isSmallScreen ? 7 : 8,
                               color: Theme.of(context)
@@ -886,16 +939,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  String _getGreeting() {
+  String _getGreeting(AppLocalizations l10n) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning,';
-    if (hour < 17) return 'Good afternoon,';
-    return 'Good evening,';
+    if (hour < 12) return l10n.commonGreetingMorning;
+    if (hour < 17) return l10n.commonGreetingAfternoon;
+    return l10n.commonGreetingEvening;
   }
 
   Widget _buildWeb3Section() {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, child) {
+        final l10n = AppLocalizations.of(context)!;
         // Show as connected if wallet is connected (mock or real)
         final bool isEffectivelyConnected = web3Provider.isConnected;
 
@@ -906,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Community and Art',
+                  l10n.homeWeb3SectionTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -929,7 +983,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         const Icon(Icons.lock, size: 12, color: Colors.orange),
                         const SizedBox(width: 4),
                         Text(
-                          'Account Required',
+                          l10n.homeAccountRequiredLabel,
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             color: Colors.orange,
@@ -946,8 +1000,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Expanded(
                   child: _buildWeb3Card(
-                    'DAO',
-                    'Governance',
+                    l10n.homeWeb3DaoTitle,
+                    l10n.homeWeb3DaoSubtitle,
                     Icons.how_to_vote,
                     const Color(0xFF4ECDC4),
                     isEffectivelyConnected
@@ -963,8 +1017,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildWeb3Card(
-                    'Artist',
-                    'Studio',
+                    l10n.homeWeb3ArtistTitle,
+                    l10n.homeWeb3ArtistSubtitle,
                     Icons.palette,
                     const Color(0xFFFF9A8B),
                     isEffectivelyConnected
@@ -984,8 +1038,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               children: [
                 Expanded(
                   child: _buildWeb3Card(
-                    'Institution',
-                    'Hub',
+                    l10n.homeWeb3InstitutionTitle,
+                    l10n.homeWeb3InstitutionSubtitle,
                     Icons.museum,
                     const Color(0xFF667eea),
                     isEffectivelyConnected
@@ -1001,8 +1055,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildWeb3Card(
-                    'Marketplace',
-                    'NFTs',
+                    l10n.homeWeb3MarketplaceTitle,
+                    l10n.homeWeb3MarketplaceSubtitle,
                     Icons.store,
                     const Color(0xFFFF6B6B),
                     isEffectivelyConnected
@@ -1170,6 +1224,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Consumer<RecentActivityProvider>(
       builder: (context, activityProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final activities =
             activityProvider.activities.take(5).toList(growable: false);
         final isLoading = activityProvider.isLoading && activities.isEmpty;
@@ -1203,7 +1258,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Activity',
+                  l10n.homeRecentActivityTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1213,7 +1268,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 TextButton(
                   onPressed: _showFullActivity,
                   child: Text(
-                    'View All',
+                    l10n.commonViewAll,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: accentColor,
@@ -1246,27 +1301,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildActivityEmptyState() {
+    final l10n = AppLocalizations.of(context)!;
     return EmptyStateCard(
           icon: Icons.timeline,
-          title: 'No Recent Activity',
-          description:
-              'Your recent interactions will appear here as soon as something happens.',
+          title: l10n.homeNoRecentActivityTitle,
+          description: l10n.homeNoRecentActivityDescription,
         );
   }
 
   Widget _buildActivityErrorState(String error, VoidCallback onRetry) {
+    if (kDebugMode) {
+      debugPrint('HomeScreen: activity load failed: $error');
+    }
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         EmptyStateCard(
           icon: Icons.wifi_off,
-          title: 'Unable to load activity',
-          description: error,
+          title: l10n.homeUnableToLoadActivityTitle,
+          description: l10n.commonSomethingWentWrong,
         ),
         const SizedBox(height: 12),
         OutlinedButton(
           onPressed: onRetry,
-          child: const Text('Retry'),
+          child: Text(l10n.commonRetry),
         ),
       ],
     );
@@ -1275,6 +1334,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildFeaturedArtworks() {
     return Consumer<ArtworkProvider>(
       builder: (context, artworkProvider, child) {
+        final l10n = AppLocalizations.of(context)!;
         final featuredArtworks = artworkProvider.artworks.take(5).toList();
 
         return Column(
@@ -1284,7 +1344,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Featured Artworks',
+                  l10n.homeFeaturedArtworksTitle,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1296,7 +1356,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _navigateToGallery();
                   },
                   child: Text(
-                    'Explore',
+                    l10n.commonExplore,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Provider.of<ThemeProvider>(context).accentColor,
@@ -1311,11 +1371,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: featuredArtworks.isEmpty
                   ?  EmptyStateCard(
                           icon: Icons.image_not_supported,
-                          title: 'No featured artworks',
-                          description:
-                              'Explore the gallery to discover featured AR artworks.',
+                        title: l10n.homeNoFeaturedArtworksTitle,
+                        description: l10n.homeNoFeaturedArtworksDescription,
                           showAction: true,
-                          actionLabel: 'Explore',
+                        actionLabel: l10n.commonExplore,
                           onAction: _navigateToGallery,
                     )
                   : ListView.builder(
@@ -1334,6 +1393,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildArtworkCard(Artwork artwork, int index) {
+    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return GestureDetector(
@@ -1377,7 +1437,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'by ${artwork.artist}',
+                    l10n.commonByArtist(artwork.artist),
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Theme.of(context)
@@ -1545,6 +1605,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   void _showMockNotificationsBottomSheet(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
       context: context,
@@ -1572,7 +1633,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Row(
                 children: [
                   Text(
-                    'Notifications',
+                    l10n.commonNotifications,
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -1583,7 +1644,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   TextButton(
                     onPressed: () => Navigator.pop(context),
                     child: Text(
-                      'Mark all read',
+                      l10n.homeMarkAllReadButton,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: themeProvider.accentColor,
@@ -1607,30 +1668,31 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildNotificationItem(int index) {
+    final l10n = AppLocalizations.of(context)!;
     final notifications = [
       (
-        'New artwork discovered nearby',
-        'Check out "Digital Dreams" by @artist_maya',
+        l10n.homeMockNotificationNewArtworkTitle,
+        l10n.homeMockNotificationNewArtworkBody,
         Icons.location_on,
-        '5 min ago'
+        l10n.commonTimeAgoMinutes(5)
       ),
       (
-        'KUB8 rewards earned',
-        'You earned 15 KUB8 tokens for discovering 3 artworks',
+        l10n.homeMockNotificationRewardsTitle,
+        l10n.homeMockNotificationRewardsBody,
         Icons.account_balance_wallet,
-        '1 hour ago'
+        l10n.commonTimeAgoHours(1)
       ),
       (
-        'Friend request',
-        '@collector_sam wants to connect with you',
+        l10n.homeMockNotificationFriendRequestTitle,
+        l10n.homeMockNotificationFriendRequestBody,
         Icons.person_add,
-        '2 hours ago'
+        l10n.commonTimeAgoHours(2)
       ),
       (
-        'Artwork featured',
-        'Your AR sculpture was featured in trending',
+        l10n.homeMockNotificationFeaturedTitle,
+        l10n.homeMockNotificationFeaturedBody,
         Icons.star,
-        '4 hours ago'
+        l10n.commonTimeAgoHours(4)
       ),
     ];
 
@@ -1752,17 +1814,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       debugPrint('HomeScreen: wallet onboarding triggered');
     }
 
+    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
+
     // Navigate directly to comprehensive Web3 onboarding
-    Navigator.of(context).push(
+    navigator.push(
       MaterialPageRoute(
-        builder: (context) => web3.Web3OnboardingScreen(
-          featureName: 'Web3 Features',
-          pages: _getWeb3OnboardingPages(),
+        builder: (_) => web3.Web3OnboardingScreen(
+          featureKey: Web3FeaturesOnboardingData.featureKey,
+          featureTitle: Web3FeaturesOnboardingData.featureTitle(l10n),
+          pages: _getWeb3OnboardingPages(l10n),
           onComplete: () {
-            Navigator.of(context).pop();
             // Navigate to wallet creation/connection screen
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const ConnectWallet()),
+            navigator.push(
+              MaterialPageRoute(builder: (_) => const ConnectWallet()),
             );
           },
         ),
@@ -1770,110 +1835,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  List<web3.OnboardingPage> _getWeb3OnboardingPages() {
-    return [
-      const web3.OnboardingPage(
-        title: 'Welcome to Web3',
-        description:
-            'Connect your wallet to unlock decentralized features powered by blockchain technology.',
-        icon: Icons.account_balance_wallet,
-        gradientColors: [
-          Colors.white,
-          Color(0xFF3F51B5),
-        ],
-        features: [
-          'Secure wallet-based authentication',
-          'True ownership of digital assets',
-          'Decentralized transactions',
-          'Cross-platform compatibility',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'NFT Marketplace',
-        description:
-            'Buy, sell, and trade unique digital artworks as NFTs with full ownership rights.',
-        icon: Icons.store,
-        gradientColors: [
-          Color(0xFFFF6B6B),
-          Color(0xFFE91E63),
-        ],
-        features: [
-          'Browse trending digital artworks',
-          'Purchase NFTs with SOL tokens',
-          'List your own creations for sale',
-          'Track marketplace analytics',
-          'Discover featured collections',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'Artist Studio',
-        description:
-            'Create, mint, and manage your digital artworks with professional tools.',
-        icon: Icons.palette,
-        gradientColors: [
-          Color(0xFFFF9A8B),
-          Color(0xFFFF7043),
-        ],
-        features: [
-          'Upload and mint AR artworks as NFTs',
-          'Set pricing and royalties',
-          'Track creation analytics',
-          'Manage your digital portfolio',
-          'Collaborate with other artists',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'DAO Governance',
-        description:
-            'Participate in community decisions and help shape the future of the platform.',
-        icon: Icons.how_to_vote,
-        gradientColors: [
-          Color(0xFF4ECDC4),
-          Color(0xFF26A69A),
-        ],
-        features: [
-          'Vote on platform proposals',
-          'Submit improvement suggestions',
-          'Earn governance tokens',
-          'Access exclusive DAO benefits',
-          'Shape community guidelines',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'Institution Hub',
-        description:
-            'Connect with galleries, museums, and cultural institutions in the Web3 space.',
-        icon: Icons.museum,
-        gradientColors: [
-          Color(0xFF667eea),
-          Color(0xFF764ba2),
-        ],
-        features: [
-          'Partner with verified institutions',
-          'Access exclusive exhibitions',
-          'Institutional-grade security',
-          'Professional networking tools',
-          'Curated collection management',
-        ],
-      ),
-      const web3.OnboardingPage(
-        title: 'KUB8 Token Economy',
-        description:
-            'Earn and spend KUB8 tokens throughout the ecosystem for various activities.',
-        icon: Icons.monetization_on,
-        gradientColors: [
-          Color(0xFFFFD700),
-          Color(0xFFFF8C00),
-        ],
-        features: [
-          'Earn tokens for discoveries',
-          'Reward system for creators',
-          'Stake tokens for benefits',
-          'Pay for premium features',
-          'Trade on decentralized exchanges',
-        ],
-      ),
-    ];
+  List<web3.OnboardingPage> _getWeb3OnboardingPages(AppLocalizations l10n) {
+    return Web3FeaturesOnboardingData.pages(l10n);
   }
 
   void _showFullActivity() {
@@ -1907,6 +1870,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
 
   void _showStatsDialog(String statType, IconData icon) {
+    final l10n = AppLocalizations.of(context)!;
+    final displayTitle = _getStatDisplayTitle(statType, l10n);
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -1917,7 +1882,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Icon(icon,
                   color: Provider.of<ThemeProvider>(dialogContext).accentColor),
               const SizedBox(width: 12),
-              Text('$statType Details'),
+              Text(l10n.homeStatsDialogTitle(displayTitle)),
             ],
           ),
           content: SizedBox(
@@ -1927,17 +1892,17 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               child: Column(
                 children: [
                   EnhancedBarChart(
-                    title: '$statType Trend (Last 7 days)',
+                    title: l10n.homeStatsTrendTitle(displayTitle),
                     data: _getStatsData(statType),
-                    accentColor: const Color(0xFF4A90E2),
-                    labels: const [
-                      'Mon',
-                      'Tue',
-                      'Wed',
-                      'Thu',
-                      'Fri',
-                      'Sat',
-                      'Sun'
+                    accentColor: Provider.of<ThemeProvider>(dialogContext).accentColor,
+                    labels: [
+                      l10n.commonWeekdayMonShort,
+                      l10n.commonWeekdayTueShort,
+                      l10n.commonWeekdayWedShort,
+                      l10n.commonWeekdayThuShort,
+                      l10n.commonWeekdayFriShort,
+                      l10n.commonWeekdaySatShort,
+                      l10n.commonWeekdaySunShort,
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -1949,7 +1914,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Close'),
+              child: Text(l10n.commonClose),
             ),
             ElevatedButton(
               onPressed: () {
@@ -1963,7 +1928,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 );
               },
-              child: const Text('View Advanced'),
+              child: Text(l10n.homeViewAdvancedButton),
             ),
           ],
         ),
@@ -1973,15 +1938,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Widget _buildStatsTimeline(String statType) {
     final milestones = _getStatsMilestones(statType);
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Recent Milestones',
+          l10n.homeRecentMilestonesTitle,
           style: GoogleFonts.inter(
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: scheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -1992,8 +1960,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4A90E2),
+                    decoration: BoxDecoration(
+                      color: accent,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -2003,7 +1971,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       milestone,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: scheme.onSurface.withValues(alpha: 0.8),
                       ),
                     ),
                   ),
@@ -2016,11 +1984,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   List<double> _getStatsData(String statType) {
     switch (statType) {
-      case 'Artworks':
+      case 'artworks':
         return [35.0, 37.0, 39.0, 40.0, 41.0, 42.0, 42.0];
-      case 'Followers':
+      case 'followers':
         return [980.0, 1050.0, 1120.0, 1150.0, 1180.0, 1200.0, 1200.0];
-      case 'Views':
+      case 'views':
         return [7200.0, 7800.0, 8100.0, 8300.0, 8450.0, 8500.0, 8500.0];
       default:
         return [10.0, 20.0, 30.0, 25.0, 35.0, 40.0, 45.0];
@@ -2028,27 +1996,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   List<String> _getStatsMilestones(String statType) {
+    final l10n = AppLocalizations.of(context)!;
     switch (statType) {
-      case 'Artworks':
+      case 'artworks':
         return [
-          'Uploaded "Digital Dreams" - 2 days ago',
-          'Reached 40 artworks milestone - 3 days ago',
-          'Featured artwork in gallery - 1 week ago',
+          l10n.homeStatsMilestoneArtworks1,
+          l10n.homeStatsMilestoneArtworks2,
+          l10n.homeStatsMilestoneArtworks3,
         ];
-      case 'Followers':
+      case 'followers':
         return [
-          'Gained 50 new followers this week',
-          'Reached 1K followers - 2 days ago',
-          'Featured in trending artists - 1 week ago',
+          l10n.homeStatsMilestoneFollowers1,
+          l10n.homeStatsMilestoneFollowers2,
+          l10n.homeStatsMilestoneFollowers3,
         ];
-      case 'Views':
+      case 'views':
         return [
-          'Daily views record: 850 - Yesterday',
-          'Reached 8K total views - 2 days ago',
-          'Viral artwork: 1.2K views - 1 week ago',
+          l10n.homeStatsMilestoneViews1,
+          l10n.homeStatsMilestoneViews2,
+          l10n.homeStatsMilestoneViews3,
         ];
       default:
-        return ['No milestones yet'];
+        return [l10n.homeStatsNoMilestonesYet];
+    }
+  }
+
+  String _getStatDisplayTitle(String statType, AppLocalizations l10n) {
+    switch (statType) {
+      case 'artworks':
+        return l10n.homeStatArtworks;
+      case 'followers':
+        return l10n.homeStatFollowers;
+      case 'views':
+        return l10n.homeStatViews;
+      default:
+        return statType;
     }
   }
 }
@@ -2075,6 +2057,7 @@ class _NotificationsBottomSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     final provider =
         Provider.of<RecentActivityProvider>(context, listen: false);
 
@@ -2100,7 +2083,7 @@ class _NotificationsBottomSheet extends StatelessWidget {
             child: Row(
               children: [
                 Text(
-                  'Notifications',
+                  l10n.commonNotifications,
                   style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -2110,7 +2093,7 @@ class _NotificationsBottomSheet extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh',
+                  tooltip: l10n.commonRefresh,
                   onPressed: () => provider.refresh(force: true),
                 ),
               ],
@@ -2126,6 +2109,11 @@ class _NotificationsBottomSheet extends StatelessWidget {
                     activityProvider.isLoading && activities.isEmpty;
                 final hasError =
                     activityProvider.error != null && activities.isEmpty;
+
+                if (hasError && kDebugMode) {
+                  debugPrint(
+                      'HomeScreen: notifications load failed: ${activityProvider.error}');
+                }
 
                 if (isLoading) {
                   return const Center(child: CircularProgressIndicator());
@@ -2144,14 +2132,13 @@ class _NotificationsBottomSheet extends StatelessWidget {
                                   ? Icons.error_outline
                                   : Icons.notifications_off_outlined,
                               title: hasError
-                                  ? 'Unable to load notifications'
-                                  : 'No Notifications',
+                                ? l10n.homeUnableToLoadNotificationsTitle
+                                : l10n.homeNoNotificationsTitle,
                               description: hasError
-                                  ? (activityProvider.error ??
-                                      'Something went wrong')
-                                  : 'You\'re all caught up!',
+                                ? l10n.commonSomethingWentWrong
+                                : l10n.homeAllCaughtUpDescription,
                               showAction: hasError,
-                              actionLabel: hasError ? 'Retry' : null,
+                              actionLabel: hasError ? l10n.commonRetry : null,
                               onAction: hasError
                                   ? () => activityProvider.refresh(force: true)
                                   : null,
@@ -2203,10 +2190,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
   @override
   Widget build(BuildContext context) {
     final accentColor = Provider.of<ThemeProvider>(context).accentColor;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Activity',
+          l10n.homeActivityTitle,
           style: GoogleFonts.inter(
             fontWeight: FontWeight.bold,
           ),
@@ -2223,6 +2211,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
           }
 
           if (activityProvider.error != null && activities.isEmpty) {
+            if (kDebugMode) {
+              debugPrint(
+                  'HomeScreen: activity screen load failed: ${activityProvider.error}');
+            }
             return RefreshIndicator(
               onRefresh: () => activityProvider.refresh(force: true),
               child: ListView(
@@ -2231,13 +2223,13 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 children: [
                   EmptyStateCard(
                     icon: Icons.wifi_off,
-                    title: 'Unable to load activity',
-                    description: activityProvider.error!,
+                    title: l10n.homeUnableToLoadActivityTitle,
+                    description: l10n.commonSomethingWentWrong,
                   ),
                   const SizedBox(height: 12),
                   OutlinedButton(
                     onPressed: () => activityProvider.refresh(force: true),
-                    child: const Text('Retry'),
+                    child: Text(l10n.commonRetry),
                   ),
                 ],
               ),
@@ -2250,12 +2242,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
-                children: const [
+                children: [
                   EmptyStateCard(
                     icon: Icons.timeline,
-                    title: 'No Recent Activity',
-                    description:
-                        'Your interactions will show up here as soon as they happen.',
+                    title: l10n.homeNoRecentActivityTitle,
+                    description: l10n.homeNoRecentActivityDescription,
                   ),
                 ],
               ),
@@ -2388,7 +2379,7 @@ class RecentActivityTile extends StatelessWidget {
                       ],
                       const SizedBox(height: 4),
                       Text(
-                        formatActivityTime(activity.timestamp),
+                        formatActivityTime(context, activity.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           color: theme.colorScheme.onSurface
@@ -2436,12 +2427,13 @@ IconData activityCategoryIcon(ActivityCategory category) {
   }
 }
 
-String formatActivityTime(DateTime timestamp) {
+String formatActivityTime(BuildContext context, DateTime timestamp) {
+  final l10n = AppLocalizations.of(context)!;
   final now = DateTime.now();
   final diff = now.difference(timestamp);
-  if (diff.inMinutes < 1) return 'Just now';
-  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-  if (diff.inHours < 24) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
-  return '${timestamp.month}/${timestamp.day}/${timestamp.year}';
+  if (diff.inMinutes < 1) return l10n.commonJustNow;
+  if (diff.inMinutes < 60) return l10n.commonTimeAgoMinutes(diff.inMinutes);
+  if (diff.inHours < 24) return l10n.commonTimeAgoHours(diff.inHours);
+  if (diff.inDays < 7) return l10n.commonTimeAgoDays(diff.inDays);
+  return MaterialLocalizations.of(context).formatShortDate(timestamp);
 }

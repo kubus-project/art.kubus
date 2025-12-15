@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../screens/map_screen.dart';
 import '../screens/art/ar_screen.dart';
@@ -307,8 +308,9 @@ class NavigationProvider with ChangeNotifier {
 
     final definition = screenDefinitions[screenKey];
     if (definition == null) return;
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Unable to navigate to ${definition.name}')),
+      SnackBar(content: Text(l10n.navigationUnableToNavigateToScreen(definition.name))),
     );
   }
 

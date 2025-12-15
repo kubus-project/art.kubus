@@ -16,6 +16,8 @@ class SocketService {
   SocketService._internal();
 
   io.Socket? _socket;
+  String? _socketBaseUrl;
+  Completer<bool>? _connectCompleter;
   final List<NotificationCallback> _notificationListeners = [];
   final List<NotificationCallback> _messageListeners = [];
   final List<NotificationCallback> _messageReadListeners = [];
@@ -36,6 +38,7 @@ class SocketService {
   final List<NotificationCallback> _messageReactionListeners = [];
 
   void _log(String msg) {
+    if (!kDebugMode) return;
     try {
       debugPrint('SocketService: ${DateTime.now().toIso8601String()} - $msg');
     } catch (_) {}
@@ -104,19 +107,33 @@ class SocketService {
   /// Connects socket to backend. If `baseUrl` is null uses `BackendApiService().baseUrl`.
   /// Returns true when connected, false on error/timeout.
   Future<bool> connect([String? baseUrl]) async {
+    final api = BackendApiService();
+
+    // Ensure auth token is loaded so we can supply it to the socket handshake.
     try {
-      final api = BackendApiService();
-      // Ensure auth token is loaded so we can supply it to the socket handshake
-      try {
-        await api.ensureAuthLoaded();
-      } catch (e) {
+      await api.ensureAuthLoaded();
+    } catch (e) {
+      if (kDebugMode) {
         debugPrint('SocketService: ensureAuthLoaded failed: $e');
       }
-      final resolvedBase = (baseUrl ?? api.baseUrl).replaceAll(RegExp(r'/+$'), '');
-      if (_socket != null && _socket!.connected) return true;
+    }
 
+    final resolvedBase = (baseUrl ?? api.baseUrl).replaceAll(RegExp(r'/+$'), '');
+    if (_socket != null && _socket!.connected) return true;
+
+    // If the target base URL changes, reset the socket instance.
+    if (_socket != null && _socketBaseUrl != null && _socketBaseUrl != resolvedBase) {
+      disconnect();
+    }
+
+    // Reuse an in-flight connect attempt.
+    if (_connectCompleter != null) {
+      return _connectCompleter!.future
+          .timeout(const Duration(seconds: 6), onTimeout: () => false);
+    }
+
+    if (_socket == null) {
       final token = api.getAuthToken();
-
       final options = <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
@@ -124,54 +141,74 @@ class SocketService {
         'extraHeaders': token != null ? {'Authorization': 'Bearer $token'} : {},
       };
 
+      _socketBaseUrl = resolvedBase;
       _socket = io.io(resolvedBase, options);
 
-      final completer = Completer<bool>();
+      // Register all event handlers once per socket instance.
+      _notificationHandlerRegistered = false;
+      _registerAllHandlers();
 
       _socket!.onConnect((_) {
-        debugPrint('SocketService: Connected');
-        // Register all handlers immediately on connect
-        _registerAllHandlers();
-        // Re-subscribe if we had a previous wallet
+        if (kDebugMode) {
+          debugPrint('SocketService: Connected');
+        }
+        // Re-subscribe if we had a previous wallet.
         if (_currentSubscribedWallet != null) {
           _resubscribe(_currentSubscribedWallet!);
         }
-        // Notify connect listeners so UI can refresh data
+        // Notify connect listeners so UI can refresh data.
         for (final cb in _connectListeners) {
-          try { cb(); } catch (e) { debugPrint('SocketService: connect listener error: $e'); }
-        }
-        if (!completer.isCompleted) completer.complete(true);
-      });
-    _socket!.on('chat:conversation-updated', (data) {
-      try {
-        debugPrint('SocketService: Received chat:conversation-updated: $data');
-        if (data is Map<String, dynamic>) {
-          final mapped = Map<String, dynamic>.from(data);
-          for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: chat:conversation-updated listener error: $e'); }
+          try {
+            cb();
+          } catch (e) {
+            if (kDebugMode) {
+              debugPrint('SocketService: connect listener error: $e');
+            }
           }
         }
-      } catch (e) { debugPrint('SocketService: chat:conversation-updated handler error: $e'); }
-    });
+        final c = _connectCompleter;
+        if (c != null && !c.isCompleted) c.complete(true);
+        _connectCompleter = null;
+      });
 
-    _socket!.onDisconnect((_) {
-      debugPrint('SocketService: Disconnected');
-      _notificationHandlerRegistered = false;
-    });
+      _socket!.onDisconnect((_) {
+        if (kDebugMode) {
+          debugPrint('SocketService: Disconnected');
+        }
+        final c = _connectCompleter;
+        if (c != null && !c.isCompleted) c.complete(false);
+        _connectCompleter = null;
+      });
 
-      // start connection
+      // Fail fast on connection errors.
+      _socket!.on('connect_error', (err) {
+        if (kDebugMode) {
+          debugPrint('SocketService: connect_error: $err');
+        }
+        final c = _connectCompleter;
+        if (c != null && !c.isCompleted) c.complete(false);
+        _connectCompleter = null;
+      });
+    }
+
+    _connectCompleter = Completer<bool>();
+
+    // Start connection.
     try {
       _socket!.connect();
     } catch (e) {
-      debugPrint('SocketService: connect() error: $e');
-    }
-
-    // wait up to 6 seconds for connect
-    return await completer.future.timeout(const Duration(seconds: 6), onTimeout: () => false);
-    } catch (e) {
-      debugPrint('SocketService.connect failed: $e');
+      if (kDebugMode) {
+        debugPrint('SocketService: connect() error: $e');
+      }
+      final c = _connectCompleter;
+      if (c != null && !c.isCompleted) c.complete(false);
+      _connectCompleter = null;
       return false;
     }
+
+    // Wait up to 6 seconds for connect.
+    return _connectCompleter!.future
+        .timeout(const Duration(seconds: 6), onTimeout: () => false);
   }
 
   // Stream getters for consumers
@@ -310,6 +347,7 @@ class SocketService {
   }
 
   void _registerAllHandlers() {
+    if (_socket == null) return;
     if (_notificationHandlerRegistered) return;
     _notificationHandlerRegistered = true;
     
@@ -365,6 +403,24 @@ class SocketService {
         }
       } catch (e) {
         debugPrint('SocketService: notification:new handler error: $e');
+      }
+    });
+
+    _socket!.on('chat:conversation-updated', (data) {
+      try {
+        debugPrint('SocketService: Received chat:conversation-updated: $data');
+        if (data is Map<String, dynamic>) {
+          final mapped = Map<String, dynamic>.from(data);
+          for (final l in _conversationListeners) {
+            try {
+              l(mapped);
+            } catch (e) {
+              debugPrint('SocketService: chat:conversation-updated listener error: $e');
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('SocketService: chat:conversation-updated handler error: $e');
       }
     });
 
@@ -657,8 +713,10 @@ class SocketService {
   void disconnect() {
     _socket?.disconnect();
     _socket = null;
+    _socketBaseUrl = null;
     _currentSubscribedWallet = null;
     _notificationHandlerRegistered = false;
+    _connectCompleter = null;
   }
 
   bool get isConnected => _socket?.connected ?? false;
