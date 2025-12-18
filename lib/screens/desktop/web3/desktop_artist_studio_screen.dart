@@ -10,6 +10,7 @@ import '../../../providers/collab_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -232,14 +233,14 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       );
 
                 return _buildQuickActionTile(
-                  'Invites',
-                  pending > 0 ? 'You have pending collaboration invites' : 'View collaboration invites',
+                  l10n.desktopArtistStudioQuickActionInvitesTitle,
+                  pending > 0 ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
                   Icons.group_add_outlined,
                   scheme.primary,
                   () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
-                        title: 'Collaboration Invites',
+                        title: l10n.desktopArtistStudioQuickActionCollaborationInvitesTitle,
                         child: const InvitesInboxScreen(),
                       ),
                     );
@@ -253,7 +254,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
               l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
               Icons.add_photo_alternate_outlined,
-              const Color(0xFF4ECDC4), // Teal
+              AppColorUtils.tealAccent, // Collections/gallery
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -280,14 +281,14 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             ),
           if (isApprovedArtist && AppConfig.isFeatureEnabled('exhibitions'))
             _buildQuickActionTile(
-              'My Exhibitions',
-              'View exhibitions you collaborate on',
+              l10n.desktopArtistStudioQuickActionExhibitionsTitle,
+              l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
               Icons.collections_bookmark_outlined,
-              const Color(0xFF9C27B0), // Purple for exhibitions
+              AppColorUtils.tealAccent, // Collections
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
-                    title: 'My Exhibitions',
+                    title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
                     child: const ExhibitionListScreen(embedded: true, canCreate: true),
                   ),
                 );
@@ -298,7 +299,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               l10n.desktopArtistStudioQuickActionAnalyticsTitle,
               l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
               Icons.analytics_outlined,
-              scheme.tertiary,
+              AppColorUtils.indigoAccent, // Analytics
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -423,7 +424,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   // Apply functionality handled by mobile view
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
+                  backgroundColor: AppColorUtils.purpleAccent,
                   foregroundColor: scheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -526,7 +527,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 l10n.desktopArtistStudioStatArtworks,
                 '0',
                 Icons.collections_outlined,
-                const Color(0xFF4ECDC4), // Teal
+                AppColorUtils.tealAccent, // Collections
               ),
             ),
             const SizedBox(width: 12),

@@ -8,6 +8,7 @@ import '../../screens/desktop/desktop_shell.dart';
 import '../desktop/onboarding/desktop_onboarding_screen.dart';
 import 'permissions_screen.dart';
 import '../auth/sign_in_screen.dart';
+import '../../utils/app_color_utils.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -337,7 +338,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       height: 8,
       decoration: BoxDecoration(
         color: isActive 
-            ? Theme.of(context).colorScheme.primary
+            ? AppColorUtils.amberAccent
             : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(4),
       ),

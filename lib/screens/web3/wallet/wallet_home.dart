@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/navigation_provider.dart';
 import '../../../widgets/app_loading.dart';
@@ -172,8 +171,8 @@ class _WalletHomeState extends State<WalletHome> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            Provider.of<ThemeProvider>(context).accentColor,
-                            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.8),
+                            AppColorUtils.amberAccent,
+                            AppColorUtils.amberAccent.withValues(alpha: 0.8),
                           ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -181,7 +180,7 @@ class _WalletHomeState extends State<WalletHome> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                            color: AppColorUtils.amberAccent.withValues(alpha: 0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 10),
                           ),
@@ -310,7 +309,7 @@ class _WalletHomeState extends State<WalletHome> {
                             child: _buildActionButton(
                               l10n.walletHomeActionSend,
                               Icons.arrow_upward,
-                              const Color(0xFFFF6B6B), // Red for Send
+                              AppColorUtils.coralAccent, // Send
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const SendTokenScreen()),
@@ -323,7 +322,7 @@ class _WalletHomeState extends State<WalletHome> {
                             child: _buildActionButton(
                               l10n.walletHomeActionReceive,
                               Icons.arrow_downward,
-                              const Color(0xFF4ECDC4), // Teal for Receive
+                              AppColorUtils.indigoAccent, // Receive
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const ReceiveTokenScreen()),
@@ -336,7 +335,7 @@ class _WalletHomeState extends State<WalletHome> {
                             child: _buildActionButton(
                               l10n.walletHomeActionSwap,
                               Icons.swap_horiz,
-                              const Color(0xFF45B7D1), // Blue for Swap
+                              AppColorUtils.greenAccent, // Swap
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const TokenSwap()),
@@ -349,7 +348,7 @@ class _WalletHomeState extends State<WalletHome> {
                             child: _buildActionButton(
                               l10n.walletHomeActionNfts,
                               Icons.image,
-                              const Color(0xFF96CEB4), // Green for NFTs
+                              AppColorUtils.tealAccent, // NFTs
                               () => Navigator.push(
                                 context,
                                 MaterialPageRoute(builder: (context) => const NFTGallery()),
@@ -650,7 +649,7 @@ class _WalletHomeState extends State<WalletHome> {
                 l10n.commonViewAll,
                 style: GoogleFonts.inter(
                   fontSize: isSmallScreen ? 12 : 14,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
+                  color: AppColorUtils.amberAccent,
                 ),
               ),
             ),
@@ -744,20 +743,19 @@ class _WalletHomeState extends State<WalletHome> {
   }
 
   Color _getTransactionColor(TransactionType type) {
-    final scheme = Theme.of(context).colorScheme;
     switch (type) {
       case TransactionType.send:
-        return scheme.error;
+        return AppColorUtils.coralAccent;
       case TransactionType.receive:
-        return scheme.primary;
+        return AppColorUtils.indigoAccent;
       case TransactionType.swap:
-        return scheme.secondary;
+        return AppColorUtils.greenAccent;
       case TransactionType.stake:
-        return AppColorUtils.shiftLightness(scheme.primary, -0.08);
+        return AppColorUtils.amberAccent;
       case TransactionType.unstake:
-        return AppColorUtils.shiftLightness(scheme.primary, 0.10);
+        return AppColorUtils.orangeAccent;
       case TransactionType.governanceVote:
-        return scheme.primary;
+        return AppColorUtils.purpleAccent;
     }
   }
 

@@ -8,7 +8,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../community/community_interactions.dart';
 import '../../models/community_group.dart';
 import '../../providers/community_hub_provider.dart';
-import '../../providers/themeprovider.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/empty_state_card.dart';
@@ -149,9 +148,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                         shape: BoxShape.circle,
                         tileSize: 4,
                         progress: null,
-                        color: Provider.of<ThemeProvider>(context,
-                                listen: false)
-                            .accentColor,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                   ),
@@ -255,7 +252,6 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
 
   Widget _buildGroupPostCard(CommunityPost post) {
     final scheme = Theme.of(context).colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
     final imageUrl = post.imageUrl ??
         (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
@@ -301,8 +297,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.3),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
+                          scheme.secondary.withValues(alpha: 0.3),
+                          scheme.secondary.withValues(alpha: 0.1),
                         ],
                       ),
                     ),
@@ -313,9 +309,9 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                 },
                 errorBuilder: (_, __, ___) => Container(
                   height: 220,
-                  color: themeProvider.accentColor.withValues(alpha: 0.1),
+                  color: scheme.onSurface.withValues(alpha: 0.1),
                   child: Icon(Icons.broken_image_outlined,
-                      color: scheme.onPrimary),
+                      color: scheme.onSurface.withValues(alpha: 0.5)),
                 ),
               ),
             ),

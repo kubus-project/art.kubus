@@ -13,11 +13,11 @@ import '../../../config/config.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
@@ -189,7 +189,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
         ),
         actions: [
           IconButton(
-            icon:  Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
+            icon:  Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
           ),
           if (AppConfig.isFeatureEnabled('collabInvites'))
@@ -201,7 +201,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   children: [
                     IconButton(
                       tooltip: 'Invites',
-                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onPrimary),
+                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
@@ -234,7 +234,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
               },
             ),
           IconButton(
-            icon:  Icon(Icons.settings, color: Theme.of(context).colorScheme.onPrimary),
+            icon:  Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showSettings,
           ),
         ],
@@ -371,7 +371,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     }
 
     final scheme = Theme.of(context).colorScheme;
-    final studioColor = context.watch<ThemeProvider>().accentColor;
+    final studioColor = AppColorUtils.purpleAccent; // Artist/creative semantic color
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
@@ -548,7 +548,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
   Widget _buildNavigationTabs(bool isApprovedArtist) {
     final l10n = AppLocalizations.of(context)!;
-    final studioColor = context.watch<ThemeProvider>().accentColor;
+    final studioColor = AppColorUtils.purpleAccent; // Artist/creative semantic color
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -561,7 +561,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
           Expanded(child: _buildTabButton(l10n.artistStudioTabGallery, Icons.collections, 0, isApprovedArtist, studioColor)),
           Expanded(child: _buildTabButton(l10n.artistStudioTabCreate, Icons.add_circle_outline, 1, isApprovedArtist, studioColor)),
           if (exhibitionsEnabled)
-            Expanded(child: _buildTabButton('Exhibitions', Icons.collections_bookmark, 2, isApprovedArtist, studioColor)),
+            Expanded(child: _buildTabButton(l10n.artistStudioTabExhibitions, Icons.collections_bookmark, 2, isApprovedArtist, studioColor)),
           Expanded(child: _buildTabButton(l10n.artistStudioTabAnalytics, Icons.analytics, exhibitionsEnabled ? 3 : 2, isApprovedArtist, studioColor)),
         ],
       ),
@@ -589,7 +589,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
             Icon(
               icon,
               color: enabled && isSelected
-                  ? Theme.of(context).colorScheme.onPrimary
+                  ? Theme.of(context).colorScheme.onSurface
                   : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.3),
               size: 20,
             ),
@@ -600,7 +600,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
                 color: enabled && isSelected
-                    ? Theme.of(context).colorScheme.onPrimary
+                    ? Theme.of(context).colorScheme.onSurface
                     : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.3),
               ),
               textAlign: TextAlign.center,

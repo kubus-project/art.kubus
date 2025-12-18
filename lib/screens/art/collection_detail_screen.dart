@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import '../../providers/themeprovider.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/app_color_utils.dart';
 import 'art_detail_screen.dart';
 import 'collection_settings_screen.dart';
 import '../web3/artist/artwork_creator.dart';
@@ -189,6 +189,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
   }
 
   Widget _buildCollectionInfo(String collectionName, int artworkCount) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -202,7 +203,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'by You',
+          l10n.collectionDetailByYou,
           style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w500,
@@ -257,6 +258,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
   }
 
   Widget _buildDescription() {
+    final l10n = AppLocalizations.of(context)!;
     final descriptions = [
       'A curated collection of digital artworks that blur the line between dreams and reality.',
       'Street art meets augmented reality in this urban-inspired collection.',
@@ -269,7 +271,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Description',
+          l10n.collectionDetailDescription,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -290,11 +292,12 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
   }
 
   Widget _buildArtworksGrid(int artworkCount) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Artworks',
+          l10n.collectionDetailArtworks,
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w600,
@@ -319,7 +322,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
   }
 
   Widget _buildArtworkCard(int index) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    // Use tertiary for artwork/art semantic color
+    final artworkColor = Theme.of(context).colorScheme.tertiary;
     
     return GestureDetector(
       onTap: () => _openArtworkDetail(index),
@@ -339,8 +343,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      themeProvider.accentColor.withValues(alpha: 0.3),
-                      themeProvider.accentColor.withValues(alpha: 0.1),
+                      artworkColor.withValues(alpha: 0.3),
+                      artworkColor.withValues(alpha: 0.1),
                     ],
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
@@ -381,7 +385,9 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
   }
 
   Widget _buildActions() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    // Use tealAccent for collection-related actions
+    const collectionColor = AppColorUtils.tealAccent;
     
     return Row(
       children: [
@@ -389,9 +395,9 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           child: ElevatedButton.icon(
             onPressed: () => _addArtwork(),
             icon: const Icon(Icons.add),
-            label: const Text('Add Artwork'),
+            label: Text(l10n.collectionDetailAddArtwork),
             style: ElevatedButton.styleFrom(
-              backgroundColor: themeProvider.accentColor,
+              backgroundColor: collectionColor,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
@@ -405,7 +411,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
           child: OutlinedButton.icon(
             onPressed: () => _manageCollection(),
             icon: const Icon(Icons.settings),
-            label: const Text('Manage'),
+            label: Text(l10n.collectionDetailManage),
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
@@ -437,19 +443,21 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen>
   }
 
   void _shareCollection() {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sharing collection...'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(l10n.collectionDetailSharingToast),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   void _editCollection() {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Opening collection editor...'),
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: Text(l10n.collectionDetailOpeningEditorToast),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

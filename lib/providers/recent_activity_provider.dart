@@ -81,7 +81,9 @@ class RecentActivityProvider extends ChangeNotifier {
       _lastSync = DateTime.now();
       _error = null;
     } catch (e, st) {
-      debugPrint('RecentActivityProvider.refresh error: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('RecentActivityProvider.refresh error: $e\n$st');
+      }
       _error = 'Unable to load your recent activity';
     } finally {
       _isLoading = false;
@@ -120,7 +122,9 @@ class RecentActivityProvider extends ChangeNotifier {
           mapped.add(activity);
         }
       } catch (e) {
-        debugPrint('RecentActivityProvider: failed to map activity: $e');
+        if (kDebugMode) {
+          debugPrint('RecentActivityProvider: failed to map activity: $e');
+        }
       }
     }
     mapped.sort((a, b) => b.timestamp.compareTo(a.timestamp));

@@ -33,6 +33,8 @@ import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import 'activity/advanced_analytics_screen.dart';
 import '../utils/app_animations.dart';
+import '../utils/app_color_utils.dart';
+import '../utils/kubus_color_roles.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../widgets/staggered_fade_slide.dart';
 import 'art/art_detail_screen.dart';
@@ -306,48 +308,48 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Flexible(
-                                      child: Text(
-                                        '$greeting ${profileProvider.currentUser?.displayName ?? l10n.homeDefaultDisplayName}',
-                                        style: GoogleFonts.inter(
-                                          fontSize: titleSize,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                    if (isArtist) ...[
-                                      const SizedBox(width: 8),
-                                      ArtistBadge(
-                                        fontSize: isSmallScreen ? 9 : 10,
-                                        useOnPrimary: true,
-                                      ),
-                                    ],
-                                    if (isInstitution) ...[
-                                      const SizedBox(width: 8),
-                                      InstitutionBadge(
-                                        fontSize: isSmallScreen ? 9 : 10,
-                                        useOnPrimary: true,
-                                      ),
-                                    ],
-                                  ],
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                '$greeting ${profileProvider.currentUser?.displayName ?? l10n.homeDefaultDisplayName}',
+                                style: GoogleFonts.inter(
+                                  fontSize: titleSize,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
                                 ),
-                                SizedBox(height: isSmallScreen ? 6 : 8),
-                                Text(
-                                  l10n.homeWelcomeSubtitle,
-                                  style: GoogleFonts.inter(
-                                    fontSize: descriptionSize,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (isArtist) ...[
+                              const SizedBox(width: 8),
+                              ArtistBadge(
+                                fontSize: isSmallScreen ? 9 : 10,
+                                useOnPrimary: true,
+                              ),
+                            ],
+                            if (isInstitution) ...[
+                              const SizedBox(width: 8),
+                              InstitutionBadge(
+                                fontSize: isSmallScreen ? 9 : 10,
+                                useOnPrimary: true,
+                              ),
+                            ],
+                          ],
+                        ),
+                        SizedBox(height: isSmallScreen ? 6 : 8),
+                        Text(
+                          l10n.homeWelcomeSubtitle,
+                          style: GoogleFonts.inter(
+                            fontSize: descriptionSize,
                             color: Colors.white.withValues(alpha: 0.9),
                           ),
                         ),
@@ -412,7 +414,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onPressed: () => _showWalletOnboarding(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
-                    foregroundColor: themeProvider.accentColor,
+                    foregroundColor: AppColorUtils.tealAccent,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -493,12 +495,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, constraints) {
         final navigationProvider = Provider.of<NavigationProvider>(context);
         final profileProvider = context.watch<ProfileProvider>();
-        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
         final l10n = AppLocalizations.of(context)!;
-        final frequentScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
+        final frequentScreens =
+            navigationProvider.getQuickActionScreens(maxItems: 12);
         final persona = profileProvider.userPersona;
         final suggestedKeys = _suggestedQuickActionKeys(persona)
-            .where((key) => NavigationProvider.screenDefinitions.containsKey(key))
+            .where(
+                (key) => NavigationProvider.screenDefinitions.containsKey(key))
             .toList(growable: false);
 
         return Column(
@@ -546,7 +549,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         Icon(
                           Icons.touch_app,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.5),
                           size: 32,
                         ),
                         const SizedBox(width: 16),
@@ -555,7 +561,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             l10n.homeQuickActionsEmptyDescription,
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ),
@@ -568,15 +577,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: suggestedKeys.map((key) {
-                          final def = NavigationProvider.screenDefinitions[key]!;
+                          final def =
+                              NavigationProvider.screenDefinitions[key]!;
                           return Padding(
                             padding: const EdgeInsets.only(right: 12),
                             child: _buildActionCard(
                               def.name,
                               def.icon,
-                              themeProvider.accentColor,
+                              AppColorUtils.featureColor(
+                                  key, Theme.of(context).colorScheme),
                               false,
-                              onTap: () => navigationProvider.navigateToScreen(context, key),
+                              onTap: () => navigationProvider.navigateToScreen(
+                                  context, key),
                               visitCount: 0,
                             ),
                           );
@@ -596,7 +608,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       child: _buildActionCard(
                         screen.name,
                         screen.icon,
-                        themeProvider.accentColor,
+                        AppColorUtils.featureColor(
+                            screen.key, Theme.of(context).colorScheme),
                         false,
                         onTap: () => navigationProvider.navigateToScreen(
                             context, screen.key),
@@ -775,19 +788,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         padding: EdgeInsets.only(
                             bottom: index < stats.length - 1 ? 8 : 0),
                         child: _buildStatCard(stat.$1, stat.$2, stat.$3,
-                            showIconOnly: false, isVerticalLayout: true),
+                            color: AppColorUtils.statColor(
+                                index, Theme.of(context).colorScheme),
+                            showIconOnly: false,
+                            isVerticalLayout: true),
                       );
                     }).toList(),
                   )
                 else
                   // Horizontal layout for other screen sizes - show icons only
                   Row(
-                    children: stats.map((stat) {
+                    children: stats.asMap().entries.map((entry) {
+                      final stat = entry.value;
                       return Expanded(
                         child: Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: _buildStatCard(stat.$1, stat.$2, stat.$3,
-                              showIconOnly: true, isVerticalLayout: false),
+                              color: AppColorUtils.statColor(
+                                  entry.key, Theme.of(context).colorScheme),
+                              showIconOnly: true,
+                              isVerticalLayout: false),
                         ),
                       );
                     }).toList(),
@@ -801,8 +821,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildStatCard(String title, String value, IconData icon,
-      {bool showIconOnly = false, bool isVerticalLayout = false}) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+      {Color? color,
+      bool showIconOnly = false,
+      bool isVerticalLayout = false}) {
+    final scheme = Theme.of(context).colorScheme;
+    final statColor = color ?? AppColorUtils.featureColor(title, scheme);
     final l10n = AppLocalizations.of(context)!;
     final displayTitle = _getStatDisplayTitle(title, l10n);
 
@@ -823,7 +846,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: themeProvider.accentColor.withValues(alpha: 0.1),
+                  color: statColor.withValues(alpha: 0.1),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -834,7 +857,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     children: [
                       Icon(
                         icon,
-                        color: themeProvider.accentColor,
+                        color: statColor,
                         size: 28, // Keep original icon size
                       ),
                       if (isSmallScreen) ...[
@@ -868,7 +891,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         children: [
                           Icon(
                             icon,
-                            color: themeProvider.accentColor,
+                            color: statColor,
                             size: 20, // Keep original icon size
                           ),
                           SizedBox(width: isSmallScreen ? 8 : 12),
@@ -906,7 +929,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         children: [
                           Icon(
                             icon,
-                            color: themeProvider.accentColor,
+                            color: statColor,
                             size: 24, // Keep original icon size
                           ),
                           SizedBox(height: isSmallScreen ? 4 : 6),
@@ -931,8 +954,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-              ],
-            ),
+                        ],
+                      ),
           ),
         );
       },
@@ -968,30 +991,36 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ),
                 if (!isEffectivelyConnected)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: Colors.orange.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.lock, size: 12, color: Colors.orange),
-                        const SizedBox(width: 4),
-                        Text(
-                          l10n.homeAccountRequiredLabel,
-                          style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: Colors.orange,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  Builder(
+                    builder: (context) {
+                      final roles = KubusColorRoles.of(context);
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: roles.lockedFeature.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: roles.lockedFeature.withValues(alpha: 0.3)),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock,
+                                size: 12, color: roles.lockedFeature),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.homeAccountRequiredLabel,
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: roles.lockedFeature,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
               ],
             ),
@@ -1003,7 +1032,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3DaoTitle,
                     l10n.homeWeb3DaoSubtitle,
                     Icons.how_to_vote,
-                    const Color(0xFF4ECDC4),
+                    AppColorUtils.tealAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1020,7 +1049,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3ArtistTitle,
                     l10n.homeWeb3ArtistSubtitle,
                     Icons.palette,
-                    const Color(0xFFFF9A8B),
+                    AppColorUtils.pinkAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1041,7 +1070,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3InstitutionTitle,
                     l10n.homeWeb3InstitutionSubtitle,
                     Icons.museum,
-                    const Color(0xFF667eea),
+                    AppColorUtils.indigoAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1058,7 +1087,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3MarketplaceTitle,
                     l10n.homeWeb3MarketplaceSubtitle,
                     Icons.store,
-                    const Color(0xFFFF6B6B),
+                    AppColorUtils.coralAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1221,7 +1250,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildRecentActivity() {
-    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     return Consumer<RecentActivityProvider>(
       builder: (context, activityProvider, child) {
         final l10n = AppLocalizations.of(context)!;
@@ -1232,7 +1260,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
         Widget content;
         if (isLoading) {
-          content = _buildActivityLoadingState(accentColor);
+          content = _buildActivityLoadingState();
         } else if (error != null && activities.isEmpty) {
           content = _buildActivityErrorState(
               error, () => activityProvider.refresh(force: true));
@@ -1245,7 +1273,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             itemCount: activities.length,
             itemBuilder: (context, index) => RecentActivityTile(
               activity: activities[index],
-              accentColor: accentColor,
               onTap: () => ActivityNavigation.open(context, activities[index]),
             ),
           );
@@ -1271,7 +1298,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.commonViewAll,
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: accentColor,
+                      color: Theme.of(context).colorScheme.tertiary,
                     ),
                   ),
                 ),
@@ -1285,7 +1312,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildActivityLoadingState(Color accentColor) {
+  Widget _buildActivityLoadingState() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32),
       alignment: Alignment.center,
@@ -1294,7 +1321,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         height: 32,
         child: CircularProgressIndicator(
           strokeWidth: 3,
-          valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+          valueColor: AlwaysStoppedAnimation<Color>(AppColorUtils.amberAccent),
         ),
       ),
     );
@@ -1303,10 +1330,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildActivityEmptyState() {
     final l10n = AppLocalizations.of(context)!;
     return EmptyStateCard(
-          icon: Icons.timeline,
-          title: l10n.homeNoRecentActivityTitle,
-          description: l10n.homeNoRecentActivityDescription,
-        );
+      icon: Icons.timeline,
+      title: l10n.homeNoRecentActivityTitle,
+      description: l10n.homeNoRecentActivityDescription,
+    );
   }
 
   Widget _buildActivityErrorState(String error, VoidCallback onRetry) {
@@ -1369,13 +1396,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             SizedBox(
               height: 180,
               child: featuredArtworks.isEmpty
-                  ?  EmptyStateCard(
-                          icon: Icons.image_not_supported,
-                        title: l10n.homeNoFeaturedArtworksTitle,
-                        description: l10n.homeNoFeaturedArtworksDescription,
-                          showAction: true,
-                        actionLabel: l10n.commonExplore,
-                          onAction: _navigateToGallery,
+                  ? EmptyStateCard(
+                      icon: Icons.image_not_supported,
+                      title: l10n.homeNoFeaturedArtworksTitle,
+                      description: l10n.homeNoFeaturedArtworksDescription,
+                      showAction: true,
+                      actionLabel: l10n.commonExplore,
+                      onAction: _navigateToGallery,
                     )
                   : ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -1416,7 +1443,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             SizedBox(
               height: 110,
               child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
                 child: _buildCardCover(artwork, themeProvider),
               ),
             ),
@@ -1510,7 +1538,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: themeProvider.accentColor,
+                color: AppColorUtils.tealAccent,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -1579,8 +1607,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     if (!context.mounted) return;
 
-    final accentColor = context.read<ThemeProvider>().accentColor;
-
     await showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1589,7 +1615,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         return ChangeNotifierProvider.value(
           value: activityProvider,
           child: _NotificationsBottomSheet(
-            accentColor: accentColor,
             showUnreadOnly: true,
             onActivitySelected: (activity) async {
               Navigator.of(sheetContext).pop();
@@ -1604,7 +1629,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showMockNotificationsBottomSheet(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
@@ -1647,7 +1671,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       l10n.homeMarkAllReadButton,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: themeProvider.accentColor,
+                        color: AppColorUtils.greenAccent,
                       ),
                     ),
                   ),
@@ -1714,14 +1738,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context)
-                  .accentColor
-                  .withValues(alpha: 0.1),
+              color: AppColorUtils.amberAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               notification.$3,
-              color: Provider.of<ThemeProvider>(context).accentColor,
+              color: AppColorUtils.amberAccent,
               size: 20,
             ),
           ),
@@ -1868,7 +1890,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-
   void _showStatsDialog(String statType, IconData icon) {
     final l10n = AppLocalizations.of(context)!;
     final displayTitle = _getStatDisplayTitle(statType, l10n);
@@ -1894,7 +1915,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   EnhancedBarChart(
                     title: l10n.homeStatsTrendTitle(displayTitle),
                     data: _getStatsData(statType),
-                    accentColor: Provider.of<ThemeProvider>(dialogContext).accentColor,
+                    accentColor:
+                        Provider.of<ThemeProvider>(dialogContext).accentColor,
                     labels: [
                       l10n.commonWeekdayMonShort,
                       l10n.commonWeekdayTueShort,
@@ -1940,7 +1962,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final milestones = _getStatsMilestones(statType);
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final accent =
+        Provider.of<ThemeProvider>(context, listen: false).accentColor;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2045,12 +2068,10 @@ class ActivityScreen extends StatefulWidget {
 
 class _NotificationsBottomSheet extends StatelessWidget {
   const _NotificationsBottomSheet({
-    required this.accentColor,
     required this.onActivitySelected,
     this.showUnreadOnly = false,
   });
 
-  final Color accentColor;
   final Future<void> Function(RecentActivity activity) onActivitySelected;
   final bool showUnreadOnly;
 
@@ -2132,11 +2153,11 @@ class _NotificationsBottomSheet extends StatelessWidget {
                                   ? Icons.error_outline
                                   : Icons.notifications_off_outlined,
                               title: hasError
-                                ? l10n.homeUnableToLoadNotificationsTitle
-                                : l10n.homeNoNotificationsTitle,
+                                  ? l10n.homeUnableToLoadNotificationsTitle
+                                  : l10n.homeNoNotificationsTitle,
                               description: hasError
-                                ? l10n.commonSomethingWentWrong
-                                : l10n.homeAllCaughtUpDescription,
+                                  ? l10n.commonSomethingWentWrong
+                                  : l10n.homeAllCaughtUpDescription,
                               showAction: hasError,
                               actionLabel: hasError ? l10n.commonRetry : null,
                               onAction: hasError
@@ -2156,7 +2177,6 @@ class _NotificationsBottomSheet extends StatelessWidget {
                             final activity = activities[index];
                             return RecentActivityTile(
                               activity: activity,
-                              accentColor: accentColor,
                               onTap: () => onActivitySelected(activity),
                               margin: EdgeInsets.zero,
                             );
@@ -2189,7 +2209,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = Provider.of<ThemeProvider>(context).accentColor;
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
@@ -2261,7 +2280,6 @@ class _ActivityScreenState extends State<ActivityScreen> {
               itemCount: activities.length,
               itemBuilder: (context, index) => RecentActivityTile(
                 activity: activities[index],
-                accentColor: accentColor,
                 margin: EdgeInsets.only(
                     bottom: index == activities.length - 1 ? 0 : 16),
                 onTap: () =>
@@ -2277,14 +2295,14 @@ class _ActivityScreenState extends State<ActivityScreen> {
 
 class RecentActivityTile extends StatelessWidget {
   final RecentActivity activity;
-  final Color accentColor;
+  final Color? accentColor;
   final EdgeInsetsGeometry margin;
   final VoidCallback? onTap;
 
   const RecentActivityTile({
     super.key,
     required this.activity,
-    required this.accentColor,
+    this.accentColor,
     this.margin = const EdgeInsets.only(bottom: 12),
     this.onTap,
   });
@@ -2296,6 +2314,8 @@ class RecentActivityTile extends StatelessWidget {
         ? activity.description
         : (activity.metadata['message']?.toString() ?? '');
     final isUnread = !activity.isRead;
+    final tileColor = accentColor ??
+        AppColorUtils.activityColor(activity.category.name, theme.colorScheme);
 
     return Container(
       margin: margin,
@@ -2313,7 +2333,7 @@ class RecentActivityTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isUnread
-                    ? accentColor.withValues(alpha: 0.4)
+                    ? tileColor.withValues(alpha: 0.4)
                     : theme.colorScheme.outline,
               ),
             ),
@@ -2324,12 +2344,12 @@ class RecentActivityTile extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: accentColor.withValues(alpha: 0.1),
+                    color: tileColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     activityCategoryIcon(activity.category),
-                    color: accentColor,
+                    color: tileColor,
                     size: 20,
                   ),
                 ),
@@ -2358,7 +2378,7 @@ class RecentActivityTile extends StatelessWidget {
                               width: 8,
                               height: 8,
                               decoration: BoxDecoration(
-                                color: accentColor,
+                                color: tileColor,
                                 shape: BoxShape.circle,
                               ),
                             ),
@@ -2398,34 +2418,9 @@ class RecentActivityTile extends StatelessWidget {
   }
 }
 
-IconData activityCategoryIcon(ActivityCategory category) {
-  switch (category) {
-    case ActivityCategory.like:
-      return Icons.favorite;
-    case ActivityCategory.comment:
-      return Icons.chat_bubble_outline;
-    case ActivityCategory.discovery:
-      return Icons.location_on;
-    case ActivityCategory.reward:
-      return Icons.account_balance_wallet;
-    case ActivityCategory.follow:
-      return Icons.person_add;
-    case ActivityCategory.share:
-      return Icons.share;
-    case ActivityCategory.mention:
-      return Icons.alternate_email;
-    case ActivityCategory.nft:
-      return Icons.blur_on;
-    case ActivityCategory.ar:
-      return Icons.view_in_ar;
-    case ActivityCategory.save:
-      return Icons.bookmark;
-    case ActivityCategory.achievement:
-      return Icons.emoji_events;
-    case ActivityCategory.system:
-      return Icons.notifications;
-  }
-}
+/// Returns icon for activity category - delegates to centralized AppColorUtils
+IconData activityCategoryIcon(ActivityCategory category) =>
+    AppColorUtils.activityIcon(category);
 
 String formatActivityTime(BuildContext context, DateTime timestamp) {
   final l10n = AppLocalizations.of(context)!;

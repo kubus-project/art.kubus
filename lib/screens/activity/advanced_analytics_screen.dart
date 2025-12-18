@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/inline_loading.dart';
-import 'package:provider/provider.dart';
 import '../../widgets/topbar_icon.dart';
-import '../../providers/themeprovider.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/app_color_utils.dart';
 
 class AdvancedAnalyticsScreen extends StatefulWidget {
   final String statType;
@@ -138,7 +137,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected 
-                      ? Provider.of<ThemeProvider>(context).accentColor
+                      ? AppColorUtils.amberAccent
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -162,9 +161,9 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   Widget _buildTabBar() {
     return TabBar(
       controller: _tabController,
-      labelColor: Provider.of<ThemeProvider>(context).accentColor,
+      labelColor: AppColorUtils.amberAccent,
       unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-      indicatorColor: Provider.of<ThemeProvider>(context).accentColor,
+      indicatorColor: AppColorUtils.amberAccent,
       labelStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       tabs: const [
         Tab(text: 'Overview'),
@@ -246,6 +245,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
     final previousValue = _getPreviousValue();
     final change = ((currentValue - previousValue) / previousValue * 100);
     final isPositive = change >= 0;
+    final scheme = Theme.of(context).colorScheme;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -254,13 +254,13 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
-            Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.05),
+            scheme.tertiary.withValues(alpha: 0.1),
+            scheme.tertiary.withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+          color: scheme.tertiary.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -327,6 +327,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   }
 
   Widget _buildAdvancedChart() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       height: 300,
       padding: const EdgeInsets.all(20),
@@ -351,7 +352,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
             child: CustomPaint(
               painter: AdvancedChartPainter(
                 data: _getChartData(),
-                accentColor: Provider.of<ThemeProvider>(context).accentColor,
+                accentColor: scheme.tertiary,
               ),
               size: Size.infinite,
             ),
@@ -458,7 +459,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
               child: InlineLoading(
                 progress: progress,
                 tileSize: 8.0,
-                color: Provider.of<ThemeProvider>(context).accentColor,
+                color: AppColorUtils.greenAccent,
                 duration: animationTheme.medium,
               ),
             ),
@@ -548,6 +549,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   }
 
   Widget _buildSeasonalityChart() {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       height: 200,
       padding: const EdgeInsets.all(20),
@@ -571,7 +573,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
           Expanded(
             child: CustomPaint(
               painter: SeasonalityChartPainter(
-                accentColor: Provider.of<ThemeProvider>(context).accentColor,
+                accentColor: scheme.tertiary,
               ),
               size: Size.infinite,
             ),
@@ -987,7 +989,7 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
                 style: GoogleFonts.inter(
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
+                  color: AppColorUtils.amberAccent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -1157,10 +1159,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
   }
 
   void _shareAnalytics() {
+    final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Analytics report shared successfully!'),
-        backgroundColor: Provider.of<ThemeProvider>(context).accentColor,
+        backgroundColor: scheme.tertiary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

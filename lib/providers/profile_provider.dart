@@ -433,6 +433,7 @@ class ProfileProvider extends ChangeNotifier {
             displayName: user.name,
             bio: user.bio,
             avatar: user.profileImageUrl ?? '',
+            coverImage: MediaUrlResolver.resolve(user.coverImageUrl),
             isArtist: user.isArtist,
             isInstitution: user.isInstitution,
             createdAt: DateTime.now(),
@@ -454,6 +455,7 @@ class ProfileProvider extends ChangeNotifier {
               displayName: _shortWallet(walletAddress),
               bio: profileData['bio']?.toString() ?? '',
               avatar: profileData['avatar']?.toString() ?? '',
+              coverImage: (profileData['coverImage'] ?? profileData['cover_image_url'])?.toString(),
               isArtist: profileData['isArtist'] == true || profileData['is_artist'] == true,
               isInstitution: profileData['isInstitution'] == true || profileData['is_institution'] == true,
               createdAt: DateTime.now(),
@@ -499,6 +501,7 @@ class ProfileProvider extends ChangeNotifier {
               displayName: user.name,
               bio: user.bio,
               avatar: user.profileImageUrl ?? '',
+              coverImage: MediaUrlResolver.resolve(user.coverImageUrl),
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
@@ -608,6 +611,7 @@ class ProfileProvider extends ChangeNotifier {
         profileJson = Map<String, dynamic>.from(savedProfileRaw);
       } catch (e) {
         debugPrint('ProfileProvider: failed to parse saveProfile response: $e');
+        final fallbackCover = profileData['coverImage'] ?? _currentUser?.coverImage;
         profileJson = {
           'id': _currentUser?.id ?? 'profile_${walletAddress.substring(0, 8)}',
           'walletAddress': walletAddress,
@@ -615,6 +619,7 @@ class ProfileProvider extends ChangeNotifier {
           'displayName': profileData['displayName'] ?? _currentUser?.displayName ?? '',
           'bio': profileData['bio'] ?? _currentUser?.bio ?? '',
           'avatar': profileData['avatar'] ?? _currentUser?.avatar ?? '',
+          if (fallbackCover != null) 'coverImage': fallbackCover,
           'social': profileData['social'] ?? _currentUser?.social ?? {},
           'isArtist': profileData['isArtist'] ?? _currentUser?.isArtist ?? false,
           'isInstitution': profileData['isInstitution'] ?? _currentUser?.isInstitution ?? false,
@@ -659,6 +664,7 @@ class ProfileProvider extends ChangeNotifier {
             username: u.username,
             bio: u.bio,
             profileImageUrl: u.avatar,
+            coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
             followersCount: u.stats?.followersCount ?? 0,
             followingCount: u.stats?.followingCount ?? 0,
             postsCount: u.stats?.artworksCreated ?? 0,

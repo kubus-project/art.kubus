@@ -24,6 +24,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
 import '../../utils/wallet_utils.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/app_color_utils.dart';
 
 // Use AvatarWidget from widgets to render avatars safely
 
@@ -61,7 +62,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final Map<String, String?> _displayNameCache = {};
   Timer? _scrollDebounce;
   final Set<String> _pendingReadMarks = {};
-  final Set<String> _animatedMessageIds = {}; // Track which messages have been animated
+  final Set<String> _animatedMessageIds =
+      {}; // Track which messages have been animated
   Timer? _readQueueTimer;
   final List<String> _readQueue = [];
   final int _readQueueDelayMs = 150; // milliseconds between queued read sends
@@ -69,7 +71,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   List<String> _conversationMembers = [];
   String _normWallet(String? w) => WalletUtils.normalize(w);
   // Removed UserService cache listener usage; we now fetch user profiles directly.
-  
+
   ChatMessage? _replyingTo;
 
   @override
@@ -93,7 +95,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (widget.preloadedDisplayNames != null) {
       _displayNameCache.addAll(widget.preloadedDisplayNames!);
     }
-    if (widget.preloadedMembers != null && widget.preloadedMembers!.isNotEmpty) {
+    if (widget.preloadedMembers != null &&
+        widget.preloadedMembers!.isNotEmpty) {
       _conversationMembers = List<String>.from(widget.preloadedMembers!);
       for (final wallet in _conversationMembers) {
         _hydrateFromGlobalCache(wallet);
@@ -101,23 +104,33 @@ class _ConversationScreenState extends State<ConversationScreen> {
       // If a preloaded avatar is present for the header, set it too
       if (_conversationMembers.isNotEmpty) {
         final w = _conversationMembers.first;
-            if (_avatarUrlCache.containsKey(w) && (_avatarUrlCache[w]?.isNotEmpty ?? false)) {
-              _conversationAvatar = _avatarUrlCache[w];
-            }
+        if (_avatarUrlCache.containsKey(w) &&
+            (_avatarUrlCache[w]?.isNotEmpty ?? false)) {
+          _conversationAvatar = _avatarUrlCache[w];
+        }
       }
     }
     // As a fallback, use provider-level preloaded maps if we didn't receive explicit preloaded data.
-    if ((_conversationMembers.isEmpty || _conversationAvatar == null) && _avatarUrlCache.isEmpty && _displayNameCache.isEmpty) {
+    if ((_conversationMembers.isEmpty || _conversationAvatar == null) &&
+        _avatarUrlCache.isEmpty &&
+        _displayNameCache.isEmpty) {
       try {
-        final map = _chatProvider.getPreloadedProfileMapsForConversation(widget.conversation.id);
-        final members = (map['members'] as List<dynamic>?)?.cast<String>() ?? [];
+        final map = _chatProvider
+            .getPreloadedProfileMapsForConversation(widget.conversation.id);
+        final members =
+            (map['members'] as List<dynamic>?)?.cast<String>() ?? [];
         final avatars = (map['avatars'] as Map<String, String?>?) ?? {};
         final names = (map['names'] as Map<String, String?>?) ?? {};
         if (members.isNotEmpty) {
           _conversationMembers = members;
-          if (_avatarUrlCache.isEmpty && avatars.isNotEmpty) _avatarUrlCache.addAll(avatars);
-          if (_displayNameCache.isEmpty && names.isNotEmpty) _displayNameCache.addAll(names);
-          if (_conversationAvatar == null && _avatarUrlCache.containsKey(members.first)) {
+          if (_avatarUrlCache.isEmpty && avatars.isNotEmpty) {
+            _avatarUrlCache.addAll(avatars);
+          }
+          if (_displayNameCache.isEmpty && names.isNotEmpty) {
+            _displayNameCache.addAll(names);
+          }
+          if (_conversationAvatar == null &&
+              _avatarUrlCache.containsKey(members.first)) {
             _conversationAvatar = _avatarUrlCache[members.first];
           }
         }
@@ -126,8 +139,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     // Load messages and other conversation initialization off the main path
     _persistCacheSnapshots();
-    Future(() async { try { await _load(); } catch (e) { debugPrint('ConversationScreen.initState: _load error: $e'); } });
-    
+    Future(() async {
+      try {
+        await _load();
+      } catch (e) {
+        debugPrint('ConversationScreen.initState: _load error: $e');
+      }
+    });
+
     // Continue initState: add scroll + socket listeners
     _scrollController.addListener(_onScroll);
     _socketService.addConnectListener(_onSocketConnected);
@@ -154,17 +173,22 @@ class _ConversationScreenState extends State<ConversationScreen> {
       }
       if (avatarUrl != null && avatarUrl.trim().isNotEmpty) {
         final existing = _avatarUrlCache[trimmed];
-        if (existing == null || existing.isEmpty || _isPlaceholderAvatar(existing, trimmed)) {
+        if (existing == null ||
+            existing.isEmpty ||
+            _isPlaceholderAvatar(existing, trimmed)) {
           _assignAvatarIfBetter(trimmed, avatarUrl.trim());
         }
       }
     }
 
     for (final profile in conv.memberProfiles) {
-      addMember(profile.wallet, displayName: profile.displayName, avatarUrl: profile.avatarUrl);
+      addMember(profile.wallet,
+          displayName: profile.displayName, avatarUrl: profile.avatarUrl);
     }
     if (conv.counterpartProfile != null) {
-      addMember(conv.counterpartProfile!.wallet, displayName: conv.counterpartProfile!.displayName, avatarUrl: conv.counterpartProfile!.avatarUrl);
+      addMember(conv.counterpartProfile!.wallet,
+          displayName: conv.counterpartProfile!.displayName,
+          avatarUrl: conv.counterpartProfile!.avatarUrl);
     }
     if (conv.memberWallets.isNotEmpty) {
       for (final wallet in conv.memberWallets) {
@@ -176,12 +200,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
       _conversationMembers = seededMembers;
     }
 
-    _conversationAvatar ??= _normalizeAvatar(conv.displayAvatar) ?? conv.displayAvatar ??
-        (conv.counterpartProfile?.avatarUrl != null && conv.counterpartProfile!.avatarUrl!.isNotEmpty
+    _conversationAvatar ??= _normalizeAvatar(conv.displayAvatar) ??
+        conv.displayAvatar ??
+        (conv.counterpartProfile?.avatarUrl != null &&
+                conv.counterpartProfile!.avatarUrl!.isNotEmpty
             ? _normalizeAvatar(conv.counterpartProfile!.avatarUrl)
             : null);
 
-    if ((_conversationAvatar == null || _conversationAvatar!.isEmpty) && _conversationMembers.isNotEmpty) {
+    if ((_conversationAvatar == null || _conversationAvatar!.isEmpty) &&
+        _conversationMembers.isNotEmpty) {
       final primary = _conversationMembers.first;
       final candidate = _avatarUrlCache[primary];
       if (candidate != null && candidate.isNotEmpty) {
@@ -196,12 +223,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final cachedAvatar = _cacheProvider.getAvatar(wallet);
       if (cachedAvatar != null && cachedAvatar.isNotEmpty) {
         final current = _avatarUrlCache[wallet];
-        if (current == null || current.isEmpty || _isPlaceholderAvatar(current, wallet)) {
+        if (current == null ||
+            current.isEmpty ||
+            _isPlaceholderAvatar(current, wallet)) {
           _assignAvatarIfBetter(wallet, cachedAvatar);
         }
       }
       final cachedName = _cacheProvider.getDisplayName(wallet);
-      if (cachedName != null && cachedName.isNotEmpty && _isPlaceholderName(_displayNameCache[wallet], wallet)) {
+      if (cachedName != null &&
+          cachedName.isNotEmpty &&
+          _isPlaceholderName(_displayNameCache[wallet], wallet)) {
         _displayNameCache[wallet] = cachedName;
       }
     } catch (_) {}
@@ -228,9 +259,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
     ));
   }
 
-  Future<void> _fetchAvatarsForMessages(List<ChatMessage> list, [String? myWallet]) async {
+  Future<void> _fetchAvatarsForMessages(List<ChatMessage> list,
+      [String? myWallet]) async {
     final profile = Provider.of<ProfileProvider>(context, listen: false);
-    final String currentWallet = myWallet ?? (profile.currentUser?.walletAddress ?? '');
+    final String currentWallet =
+        myWallet ?? (profile.currentUser?.walletAddress ?? '');
     final Set<String> walletsNeedingResolution = {};
 
     for (final message in list) {
@@ -260,16 +293,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
 
     try {
-      final cached = UserService.getCachedUsers(walletsNeedingResolution.toList());
+      final cached =
+          UserService.getCachedUsers(walletsNeedingResolution.toList());
       final resolved = <String>{};
       for (final entry in cached.entries) {
         final wallet = entry.key;
         final user = entry.value;
-        final avatarCandidate = (user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty)
+        final avatarCandidate = (user.profileImageUrl != null &&
+                user.profileImageUrl!.isNotEmpty)
             ? (_normalizeAvatar(user.profileImageUrl) ?? user.profileImageUrl)
             : null;
 
-        if (avatarCandidate != null && _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
+        if (avatarCandidate != null &&
+            _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
           _assignAvatarIfBetter(wallet, avatarCandidate);
         }
         if (_isPlaceholderName(_displayNameCache[wallet], wallet)) {
@@ -286,7 +322,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
 
     try {
-      final users = await UserService.getUsersByWallets(walletsNeedingResolution.toList());
+      final users = await UserService.getUsersByWallets(
+          walletsNeedingResolution.toList());
       try {
         EventBus().emitProfilesUpdated(users);
       } catch (_) {}
@@ -296,10 +333,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
       for (final user in users) {
         final wallet = user.id;
         if (wallet.isEmpty) continue;
-        final avatarCandidate = (user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty)
+        final avatarCandidate = (user.profileImageUrl != null &&
+                user.profileImageUrl!.isNotEmpty)
             ? (_normalizeAvatar(user.profileImageUrl) ?? user.profileImageUrl)
             : null;
-        if (avatarCandidate != null && _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
+        if (avatarCandidate != null &&
+            _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet)) {
           _assignAvatarIfBetter(wallet, avatarCandidate);
         }
         if (_isPlaceholderName(_displayNameCache[wallet], wallet)) {
@@ -318,11 +357,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
         try {
           final user = await UserService.getUserById(wallet);
           if (!mounted) return;
-          final avatarCandidate = (user?.profileImageUrl != null && user!.profileImageUrl!.isNotEmpty)
+          final avatarCandidate = (user?.profileImageUrl != null &&
+                  user!.profileImageUrl!.isNotEmpty)
               ? (_normalizeAvatar(user.profileImageUrl) ?? user.profileImageUrl)
               : null;
-          final applied = _assignAvatarIfBetter(wallet, avatarCandidate, allowOverrideReal: false);
-          if (!applied && _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet) && avatarCandidate == null) {
+          final applied = _assignAvatarIfBetter(wallet, avatarCandidate,
+              allowOverrideReal: false);
+          if (!applied &&
+              _isPlaceholderAvatar(_avatarUrlCache[wallet], wallet) &&
+              avatarCandidate == null) {
             _avatarUrlCache.remove(wallet);
           }
           _displayNameCache[wallet] = user?.name ?? '';
@@ -339,318 +382,375 @@ class _ConversationScreenState extends State<ConversationScreen> {
     _persistCacheSnapshots();
   }
 
-    /// Load the messages and associated member data for this conversation.
-    Future<void> _load() async {
-      // Capture current wallet synchronously to avoid using BuildContext inside background async futures
-      final profile = Provider.of<ProfileProvider>(context, listen: false);
-      final myWallet = (profile.currentUser?.walletAddress ?? '');
+  /// Load the messages and associated member data for this conversation.
+  Future<void> _load() async {
+    // Capture current wallet synchronously to avoid using BuildContext inside background async futures
+    final profile = Provider.of<ProfileProvider>(context, listen: false);
+    final myWallet = (profile.currentUser?.walletAddress ?? '');
 
-      // Load messages and return quickly to render UI. Heavy follow-ups run in background.
-      List<ChatMessage> list = [];
-      try {
-        list = await _chatProvider.loadMessages(widget.conversation.id);
-      } catch (e) {
-        debugPrint('ConversationScreen._load: loadMessages failed: $e');
-        list = [];
-      }
-      if (!mounted) return;
+    // Load messages and return quickly to render UI. Heavy follow-ups run in background.
+    List<ChatMessage> list = [];
+    try {
+      list = await _chatProvider.loadMessages(widget.conversation.id);
+    } catch (e) {
+      debugPrint('ConversationScreen._load: loadMessages failed: $e');
+      list = [];
+    }
+    if (!mounted) return;
 
-      // Pre-populate avatar and display name caches from message rows when available
-      try {
-        for (final m in list) {
-          final w = m.senderWallet;
-          if (w.isEmpty) continue;
-          _hydrateFromGlobalCache(w);
-              if (m.senderAvatar != null && m.senderAvatar!.isNotEmpty) {
-                _assignAvatarIfBetter(w, m.senderAvatar);
-              }
-          if (m.senderDisplayName != null && m.senderDisplayName!.isNotEmpty) {
-            _displayNameCache[w] = m.senderDisplayName;
-          }
-        }
-      } catch (_) {}
-
-      // Build a set of wallets mentioned in messages (non-blocking users will be fetched)
-      final Set<String> walletsToFetch = {};
+    // Pre-populate avatar and display name caches from message rows when available
+    try {
       for (final m in list) {
         final w = m.senderWallet;
         if (w.isEmpty) continue;
-        // skip current user
-        if (_normWallet(w) == _normWallet(myWallet)) continue;
         _hydrateFromGlobalCache(w);
-        walletsToFetch.add(w);
+        if (m.senderAvatar != null && m.senderAvatar!.isNotEmpty) {
+          _assignAvatarIfBetter(w, m.senderAvatar);
+        }
+        if (m.senderDisplayName != null && m.senderDisplayName!.isNotEmpty) {
+          _displayNameCache[w] = m.senderDisplayName;
+        }
       }
+    } catch (_) {}
 
-      // Prepopulate caches from local ChatProvider cache and persistent cache to minimize lookups and ensure immediate UI availability
-      final List<String> missingWallets = [];
-      for (final w in walletsToFetch) {
-        final cu = _chatProvider.getCachedUser(w);
-        if (cu != null) {
-          if (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) {
+    // Build a set of wallets mentioned in messages (non-blocking users will be fetched)
+    final Set<String> walletsToFetch = {};
+    for (final m in list) {
+      final w = m.senderWallet;
+      if (w.isEmpty) continue;
+      // skip current user
+      if (_normWallet(w) == _normWallet(myWallet)) continue;
+      _hydrateFromGlobalCache(w);
+      walletsToFetch.add(w);
+    }
+
+    // Prepopulate caches from local ChatProvider cache and persistent cache to minimize lookups and ensure immediate UI availability
+    final List<String> missingWallets = [];
+    for (final w in walletsToFetch) {
+      final cu = _chatProvider.getCachedUser(w);
+      if (cu != null) {
+        if (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) {
+          final cur = _avatarUrlCache[w];
+          final candidate =
+              (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty)
+                  ? (_normalizeAvatar(cu.profileImageUrl) ?? cu.profileImageUrl)
+                  : null;
+          if (candidate != null && _isPlaceholderAvatar(cur, w)) {
+            _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
+          }
+        }
+        if (cu.name.isNotEmpty) {
+          final cur = _displayNameCache[w];
+          if (_isPlaceholderName(cur, w)) _displayNameCache[w] = cu.name;
+        }
+      } else {
+        // Attempt to read from persisted UserService cache sync to avoid network fetch and flicker
+        final persisted = UserService.getCachedUser(w);
+        if (persisted != null) {
+          if (persisted.profileImageUrl != null &&
+              persisted.profileImageUrl!.isNotEmpty) {
             final cur = _avatarUrlCache[w];
-              final candidate = (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(cu.profileImageUrl) ?? cu.profileImageUrl) : null;
-              if (candidate != null && _isPlaceholderAvatar(cur, w)) {
-                _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
-              }
+            final candidate = (persisted.profileImageUrl != null &&
+                    persisted.profileImageUrl!.isNotEmpty)
+                ? (_normalizeAvatar(persisted.profileImageUrl) ??
+                    persisted.profileImageUrl)
+                : null;
+            if (candidate != null && _isPlaceholderAvatar(cur, w)) {
+              _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
+            }
           }
-          if (cu.name.isNotEmpty) {
+          if (persisted.name.isNotEmpty) {
             final cur = _displayNameCache[w];
-            if (_isPlaceholderName(cur, w)) _displayNameCache[w] = cu.name;
-          }
-        } else {
-          // Attempt to read from persisted UserService cache sync to avoid network fetch and flicker
-          final persisted = UserService.getCachedUser(w);
-          if (persisted != null) {
-            if (persisted.profileImageUrl != null && persisted.profileImageUrl!.isNotEmpty) {
-              final cur = _avatarUrlCache[w];
-              final candidate = (persisted.profileImageUrl != null && persisted.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(persisted.profileImageUrl) ?? persisted.profileImageUrl) : null;
-              if (candidate != null && _isPlaceholderAvatar(cur, w)) {
-                _assignAvatarIfBetter(w, candidate, allowOverrideReal: true);
-              }
+            if (_isPlaceholderName(cur, w)) {
+              _displayNameCache[w] = persisted.name;
             }
-            if (persisted.name.isNotEmpty) {
-              final cur = _displayNameCache[w];
-              if (_isPlaceholderName(cur, w)) _displayNameCache[w] = persisted.name;
-            }
-            continue;
           }
-          if (!_avatarUrlCache.containsKey(w) || !(_displayNameCache.containsKey(w) && (_displayNameCache[w]?.isNotEmpty ?? false))) {
-            missingWallets.add(w);
-          }
+          continue;
+        }
+        if (!_avatarUrlCache.containsKey(w) ||
+            !(_displayNameCache.containsKey(w) &&
+                (_displayNameCache[w]?.isNotEmpty ?? false))) {
+          missingWallets.add(w);
         }
       }
+    }
 
-      // Fetch missing user profiles in one call so the UI can display names/avatars on first render
-      // If we have preloaded members from the previous screen, don't trigger a network fetch
-      final hasPreloadedMembers = widget.preloadedMembers != null && widget.preloadedMembers!.isNotEmpty;
-      if (!hasPreloadedMembers && missingWallets.isNotEmpty) {
+    // Fetch missing user profiles in one call so the UI can display names/avatars on first render
+    // If we have preloaded members from the previous screen, don't trigger a network fetch
+    final hasPreloadedMembers =
+        widget.preloadedMembers != null && widget.preloadedMembers!.isNotEmpty;
+    if (!hasPreloadedMembers && missingWallets.isNotEmpty) {
+      try {
+        final users = await UserService.getUsersByWallets(missingWallets);
         try {
-          final users = await UserService.getUsersByWallets(missingWallets);
-          try { EventBus().emitProfilesUpdated(users); } catch (_) {}
-          for (final u in users) {
-            final key = u.id;
-              final p = (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(u.profileImageUrl) ?? u.profileImageUrl) : null;
-            final curAv = _avatarUrlCache[key];
-            final curName = _displayNameCache[key];
-              if (p != null && _isPlaceholderAvatar(curAv, key)) {
-                _assignAvatarIfBetter(key, p, allowOverrideReal: true);
-              }
-            if (_isPlaceholderName(curName, key)) _displayNameCache[key] = u.name;
+          EventBus().emitProfilesUpdated(users);
+        } catch (_) {}
+        for (final u in users) {
+          final key = u.id;
+          final p = (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty)
+              ? (_normalizeAvatar(u.profileImageUrl) ?? u.profileImageUrl)
+              : null;
+          final curAv = _avatarUrlCache[key];
+          final curName = _displayNameCache[key];
+          if (p != null && _isPlaceholderAvatar(curAv, key)) {
+            _assignAvatarIfBetter(key, p, allowOverrideReal: true);
           }
-        } catch (e) {
-          // ignore and proceed; fallback background fetch will still occur
-          debugPrint('ConversationScreen._load: prefetch profiles failed: $e');
+          if (_isPlaceholderName(curName, key)) _displayNameCache[key] = u.name;
+        }
+      } catch (e) {
+        // ignore and proceed; fallback background fetch will still occur
+        debugPrint('ConversationScreen._load: prefetch profiles failed: $e');
+      }
+    }
+
+    // Update UI with messages (and now with pre-fetched avatars/names)
+    // Prefer to set conversation header info from first other participant if available
+    final firstOther = walletsToFetch.isNotEmpty ? walletsToFetch.first : null;
+    if (firstOther != null && !_conversationMembers.contains(firstOther)) {
+      _conversationMembers = [firstOther];
+      // prefer cached avatar & name if available
+      if (_avatarUrlCache.containsKey(firstOther) &&
+          (_avatarUrlCache[firstOther]?.isNotEmpty ?? false)) {
+        if (_isPlaceholderAvatar(_conversationAvatar, firstOther)) {
+          _conversationAvatar = _avatarUrlCache[firstOther];
         }
       }
+    }
 
-      // Update UI with messages (and now with pre-fetched avatars/names)
-      // Prefer to set conversation header info from first other participant if available
-      final firstOther = walletsToFetch.isNotEmpty ? walletsToFetch.first : null;
-      if (firstOther != null && !_conversationMembers.contains(firstOther)) {
-        _conversationMembers = [firstOther];
-        // prefer cached avatar & name if available
-        if (_avatarUrlCache.containsKey(firstOther) && (_avatarUrlCache[firstOther]?.isNotEmpty ?? false)) {
-            if (_isPlaceholderAvatar(_conversationAvatar, firstOther)) _conversationAvatar = _avatarUrlCache[firstOther];
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          _messages = list;
-          // Ensure keys align to current messages so index-based keys are stable
-          _messageKeys.clear();
-        });
-      }
-      debugPrint('ConversationScreen._load: ${_messages.length} messages loaded for ${widget.conversation.id}');
-      _persistCacheSnapshots();
-
-      // Fetch any remaining missing avatars/display names in background (non-blocking fallback)
-      Future(() async {
-        try {
-          await _fetchAvatarsForMessages(list, myWallet);
-        } catch (e) {
-          debugPrint('ConversationScreen._load: _fetchAvatarsForMessages error: $e');
-        }
+    if (mounted) {
+      setState(() {
+        _messages = list;
+        // Ensure keys align to current messages so index-based keys are stable
+        _messageKeys.clear();
       });
+    }
+    debugPrint(
+        'ConversationScreen._load: ${_messages.length} messages loaded for ${widget.conversation.id}');
+    _persistCacheSnapshots();
 
-      // Open conversation subscription, mark read, and fetch members in background; don't block initial render.
-      Future(() async {
-        try {
-          await _chatProvider.openConversation(widget.conversation.id);
-        } catch (e) {
-          debugPrint('ConversationScreen._load: openConversation failed: $e');
-        }
-        try {
-          await _chatProvider.markRead(widget.conversation.id);
-        } catch (e) {
-          debugPrint('ConversationScreen._load: markRead failed: $e');
-        }
+    // Fetch any remaining missing avatars/display names in background (non-blocking fallback)
+    Future(() async {
+      try {
+        await _fetchAvatarsForMessages(list, myWallet);
+      } catch (e) {
+        debugPrint(
+            'ConversationScreen._load: _fetchAvatarsForMessages error: $e');
+      }
+    });
 
-        try {
-          final mems = await _chatProvider.fetchMembers(widget.conversation.id);
-          final wallets = (mems as List)
-              .map((e) => (e['wallet_address'] as String?) ?? '')
-              .where((w) => w.isNotEmpty && _normWallet(w) != _normWallet(myWallet))
-              .toList();
+    // Open conversation subscription, mark read, and fetch members in background; don't block initial render.
+    Future(() async {
+      try {
+        await _chatProvider.openConversation(widget.conversation.id);
+      } catch (e) {
+        debugPrint('ConversationScreen._load: openConversation failed: $e');
+      }
+      try {
+        await _chatProvider.markRead(widget.conversation.id);
+      } catch (e) {
+        debugPrint('ConversationScreen._load: markRead failed: $e');
+      }
 
-          // If backend returned no members, infer from messages
-          if (wallets.isEmpty) {
-            for (final m in _messages) {
-              try {
-                final w = m.senderWallet;
-                if (w.isNotEmpty && _normWallet(w) != _normWallet(myWallet)) {
-                  wallets.add(w);
-                  break;
-                }
-              } catch (_) {}
-            }
-          }
+      try {
+        final mems = await _chatProvider.fetchMembers(widget.conversation.id);
+        final wallets = (mems as List)
+            .map((e) => (e['wallet_address'] as String?) ?? '')
+            .where(
+                (w) => w.isNotEmpty && _normWallet(w) != _normWallet(myWallet))
+            .toList();
 
-          if (wallets.isNotEmpty) {
-            _conversationMembers = wallets;
-            for (final wallet in wallets) {
-              _hydrateFromGlobalCache(wallet);
-            }
-          }
-
-          // Fetch display name and avatar for header from user service (prefer caches first)
-          if (wallets.isNotEmpty) {
+        // If backend returned no members, infer from messages
+        if (wallets.isEmpty) {
+          for (final m in _messages) {
             try {
-              final missing = <String>[];
-              for (final w in wallets) {
-                final cu = _chatProvider.getCachedUser(w);
-                if (cu != null) {
-                  if (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) {
-                    final cur = _avatarUrlCache[cu.id];
-                      final candidate = (cu.profileImageUrl != null && cu.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(cu.profileImageUrl) ?? cu.profileImageUrl) : null;
-                      if (candidate != null && _isPlaceholderAvatar(cur, cu.id)) {
-                        _assignAvatarIfBetter(cu.id, candidate, allowOverrideReal: true);
-                      }
-                  }
-                  if (cu.name.isNotEmpty) {
-                    final cur = _displayNameCache[cu.id];
-                    if (_isPlaceholderName(cur, cu.id)) _displayNameCache[cu.id] = cu.name;
-                  }
-                } else {
-                  missing.add(w);
-                }
-              }
-              if (missing.isNotEmpty) {
-                final users = await UserService.getUsersByWallets(missing);
-                try { EventBus().emitProfilesUpdated(users); } catch (_) {}
-                for (final u in users) {
-                  final key = u.id;
-                  final curAv = _avatarUrlCache[key];
-                  final curName = _displayNameCache[key];
-                  if (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty) {
-                        final candidate = (u.profileImageUrl != null && u.profileImageUrl!.isNotEmpty) ? (_normalizeAvatar(u.profileImageUrl) ?? u.profileImageUrl) : null;
-                        if (candidate != null && _isPlaceholderAvatar(curAv, key)) {
-                          _assignAvatarIfBetter(key, candidate, allowOverrideReal: true);
-                        }
-                  }
-                  if (u.name.isNotEmpty) if (_isPlaceholderName(curName, key)) _displayNameCache[key] = u.name;
-                }
+              final w = m.senderWallet;
+              if (w.isNotEmpty && _normWallet(w) != _normWallet(myWallet)) {
+                wallets.add(w);
+                break;
               }
             } catch (_) {}
           }
+        }
 
-          // Prefer conversation display avatar from model if present
-          _conversationAvatar = _normalizeAvatar(widget.conversation.displayAvatar) ?? widget.conversation.displayAvatar;
-          if (_conversationAvatar == null || _conversationAvatar!.isEmpty) {
-            if (!widget.conversation.isGroup && wallets.isNotEmpty) {
-              final cached = _chatProvider.getCachedUser(wallets.first);
-                if (cached != null && (cached.profileImageUrl ?? '').isNotEmpty) {
-                  _conversationAvatar = _normalizeAvatar(cached.profileImageUrl) ?? cached.profileImageUrl;
-                } else if (_avatarUrlCache[wallets.first]?.isNotEmpty ?? false) {
-                  _conversationAvatar = _avatarUrlCache[wallets.first];
+        if (wallets.isNotEmpty) {
+          _conversationMembers = wallets;
+          for (final wallet in wallets) {
+            _hydrateFromGlobalCache(wallet);
+          }
+        }
+
+        // Fetch display name and avatar for header from user service (prefer caches first)
+        if (wallets.isNotEmpty) {
+          try {
+            final missing = <String>[];
+            for (final w in wallets) {
+              final cu = _chatProvider.getCachedUser(w);
+              if (cu != null) {
+                if (cu.profileImageUrl != null &&
+                    cu.profileImageUrl!.isNotEmpty) {
+                  final cur = _avatarUrlCache[cu.id];
+                  final candidate = (cu.profileImageUrl != null &&
+                          cu.profileImageUrl!.isNotEmpty)
+                      ? (_normalizeAvatar(cu.profileImageUrl) ??
+                          cu.profileImageUrl)
+                      : null;
+                  if (candidate != null && _isPlaceholderAvatar(cur, cu.id)) {
+                    _assignAvatarIfBetter(cu.id, candidate,
+                        allowOverrideReal: true);
+                  }
                 }
+                if (cu.name.isNotEmpty) {
+                  final cur = _displayNameCache[cu.id];
+                  if (_isPlaceholderName(cur, cu.id)) {
+                    _displayNameCache[cu.id] = cu.name;
+                  }
+                }
+              } else {
+                missing.add(w);
+              }
+            }
+            if (missing.isNotEmpty) {
+              final users = await UserService.getUsersByWallets(missing);
+              try {
+                EventBus().emitProfilesUpdated(users);
+              } catch (_) {}
+              for (final u in users) {
+                final key = u.id;
+                final curAv = _avatarUrlCache[key];
+                final curName = _displayNameCache[key];
+                if (u.profileImageUrl != null &&
+                    u.profileImageUrl!.isNotEmpty) {
+                  final candidate = (u.profileImageUrl != null &&
+                          u.profileImageUrl!.isNotEmpty)
+                      ? (_normalizeAvatar(u.profileImageUrl) ??
+                          u.profileImageUrl)
+                      : null;
+                  if (candidate != null && _isPlaceholderAvatar(curAv, key)) {
+                    _assignAvatarIfBetter(key, candidate,
+                        allowOverrideReal: true);
+                  }
+                }
+                if (u.name.isNotEmpty) {
+                  if (_isPlaceholderName(curName, key)) {
+                    _displayNameCache[key] = u.name;
+                  }
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
+        // Prefer conversation display avatar from model if present
+        _conversationAvatar =
+            _normalizeAvatar(widget.conversation.displayAvatar) ??
+                widget.conversation.displayAvatar;
+        if (_conversationAvatar == null || _conversationAvatar!.isEmpty) {
+          if (!widget.conversation.isGroup && wallets.isNotEmpty) {
+            final cached = _chatProvider.getCachedUser(wallets.first);
+            if (cached != null && (cached.profileImageUrl ?? '').isNotEmpty) {
+              _conversationAvatar = _normalizeAvatar(cached.profileImageUrl) ??
+                  cached.profileImageUrl;
+            } else if (_avatarUrlCache[wallets.first]?.isNotEmpty ?? false) {
+              _conversationAvatar = _avatarUrlCache[wallets.first];
             }
           }
-
-          if (mounted) {
-            debugPrint('ConversationScreen._load: header avatar=$_conversationAvatar, members=${_conversationMembers.length}, display cache keys=${_displayNameCache.keys.length}');
-            setState(() {});
-            _persistCacheSnapshots();
-          }
-        } catch (e) {
-          debugPrint('ConversationScreen: failed to fetch members for header: $e');
         }
-      });
 
-      // Defer per-message marking to viewport-based detection
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibleMessages());
-    }
-
-    /// Normalize avatar URLs returned by backend to absolute URLs or gateways.
-    String? _normalizeAvatar(String? a) {
-      return MediaUrlResolver.resolve(a);
-    }
-
-
-    bool _isPlaceholderAvatar(String? current, String wallet) {
-      if (current == null || current.isEmpty) return true;
-      if (UserService.isPlaceholderAvatarUrl(current)) return true;
-      try { return current == UserService.safeAvatarUrl(wallet); } catch (_) { return false; }
-    }
-
-    String? _normalizeAndValidateAvatar(String wallet, String? avatar) {
-      if (wallet.isEmpty) return null;
-      final normalized = _normalizeAvatar(avatar);
-      if (normalized == null || normalized.isEmpty) return null;
-      if (_isPlaceholderAvatar(normalized, wallet)) return null;
-      return normalized;
-    }
-
-    bool _assignAvatarIfBetter(String wallet, String? avatar, {bool allowOverrideReal = false}) {
-      final normalized = _normalizeAndValidateAvatar(wallet, avatar);
-      if (normalized == null) return false;
-      final current = _avatarUrlCache[wallet];
-      final hasReal = current != null && current.isNotEmpty && !_isPlaceholderAvatar(current, wallet);
-      if (hasReal && !allowOverrideReal) return false;
-      if (current == normalized) return false;
-      _avatarUrlCache[wallet] = normalized;
-      _promoteConversationAvatar(wallet);
-      return true;
-    }
-
-    void _promoteConversationAvatar(String wallet) {
-      if (_conversationMembers.isEmpty) return;
-      final primary = _conversationMembers.first;
-      if (primary != wallet) return;
-      final candidate = _avatarUrlCache[wallet];
-      if (candidate == null || candidate.isEmpty) return;
-      if (_conversationAvatar == null || _isPlaceholderAvatar(_conversationAvatar, wallet)) {
-        _conversationAvatar = candidate;
+        if (mounted) {
+          debugPrint(
+              'ConversationScreen._load: header avatar=$_conversationAvatar, members=${_conversationMembers.length}, display cache keys=${_displayNameCache.keys.length}');
+          setState(() {});
+          _persistCacheSnapshots();
+        }
+      } catch (e) {
+        debugPrint(
+            'ConversationScreen: failed to fetch members for header: $e');
       }
-    }
+    });
 
-    bool _isPlaceholderName(String? current, String wallet) {
-      if (current == null || current.isEmpty) return true;
-      return current == wallet || current == 'Conversation' || current == 'Group';
-    }
+    // Defer per-message marking to viewport-based detection
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _checkVisibleMessages());
+  }
 
-    /// Simple time-ago formatter used in chat bubbles and tooltips.
-    String _formatTimeAgo(DateTime dt) {
-      final l10n = AppLocalizations.of(context)!;
-      final now = DateTime.now();
-      final diff = now.difference(dt);
-      if (diff.inSeconds < 60) return l10n.commonTimeAgoJustNow;
-      if (diff.inMinutes < 60) return l10n.commonTimeAgoMinutes(diff.inMinutes);
-      if (diff.inHours < 24) return l10n.commonTimeAgoHours(diff.inHours);
-      if (diff.inDays < 7) return l10n.commonTimeAgoDays(diff.inDays);
-      return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  /// Normalize avatar URLs returned by backend to absolute URLs or gateways.
+  String? _normalizeAvatar(String? a) {
+    return MediaUrlResolver.resolve(a);
+  }
+
+  bool _isPlaceholderAvatar(String? current, String wallet) {
+    if (current == null || current.isEmpty) return true;
+    if (UserService.isPlaceholderAvatarUrl(current)) return true;
+    try {
+      return current == UserService.safeAvatarUrl(wallet);
+    } catch (_) {
+      return false;
     }
+  }
+
+  String? _normalizeAndValidateAvatar(String wallet, String? avatar) {
+    if (wallet.isEmpty) return null;
+    final normalized = _normalizeAvatar(avatar);
+    if (normalized == null || normalized.isEmpty) return null;
+    if (_isPlaceholderAvatar(normalized, wallet)) return null;
+    return normalized;
+  }
+
+  bool _assignAvatarIfBetter(String wallet, String? avatar,
+      {bool allowOverrideReal = false}) {
+    final normalized = _normalizeAndValidateAvatar(wallet, avatar);
+    if (normalized == null) return false;
+    final current = _avatarUrlCache[wallet];
+    final hasReal = current != null &&
+        current.isNotEmpty &&
+        !_isPlaceholderAvatar(current, wallet);
+    if (hasReal && !allowOverrideReal) return false;
+    if (current == normalized) return false;
+    _avatarUrlCache[wallet] = normalized;
+    _promoteConversationAvatar(wallet);
+    return true;
+  }
+
+  void _promoteConversationAvatar(String wallet) {
+    if (_conversationMembers.isEmpty) return;
+    final primary = _conversationMembers.first;
+    if (primary != wallet) return;
+    final candidate = _avatarUrlCache[wallet];
+    if (candidate == null || candidate.isEmpty) return;
+    if (_conversationAvatar == null ||
+        _isPlaceholderAvatar(_conversationAvatar, wallet)) {
+      _conversationAvatar = candidate;
+    }
+  }
+
+  bool _isPlaceholderName(String? current, String wallet) {
+    if (current == null || current.isEmpty) return true;
+    return current == wallet || current == 'Conversation' || current == 'Group';
+  }
+
+  /// Simple time-ago formatter used in chat bubbles and tooltips.
+  String _formatTimeAgo(DateTime dt) {
+    final l10n = AppLocalizations.of(context)!;
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inSeconds < 60) return l10n.commonTimeAgoJustNow;
+    if (diff.inMinutes < 60) return l10n.commonTimeAgoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.commonTimeAgoHours(diff.inHours);
+    if (diff.inDays < 7) return l10n.commonTimeAgoDays(diff.inDays);
+    return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+  }
 
   Future<void> _send() async {
     final l10n = AppLocalizations.of(context)!;
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     _controller.clear();
-    
+
     final replyToId = _replyingTo?.id;
     setState(() => _replyingTo = null);
-    
-    await _chatProvider.sendMessage(widget.conversation.id, text, replyToId: replyToId);
+
+    await _chatProvider.sendMessage(widget.conversation.id, text,
+        replyToId: replyToId);
     // Fire a lightweight local notification so background listeners stay aware
     try {
       PushNotificationService().showCommunityInteractionNotification(
@@ -662,10 +762,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
     } catch (_) {}
   }
 
-  Widget _buildReadersAvatars(List<Map<String, dynamic>> readers, String senderWallet) {
+  Widget _buildReadersAvatars(
+      List<Map<String, dynamic>> readers, String senderWallet) {
     if (readers.isEmpty) return const SizedBox.shrink();
     final items = readers.where((r) {
-      final wallet = (r['wallet_address'] as String? ?? r['wallet'] as String? ?? '');
+      final wallet =
+          (r['wallet_address'] as String? ?? r['wallet'] as String? ?? '');
       return _normWallet(wallet) != _normWallet(senderWallet);
     }).toList();
     if (items.isEmpty) return const SizedBox.shrink();
@@ -683,29 +785,37 @@ class _ConversationScreenState extends State<ConversationScreen> {
             left: i * (avatarSize - overlap),
             child: AnimatedSwitcher(
               duration: Duration(milliseconds: 20 + (i * 40)),
-              transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+              transitionBuilder: (child, anim) =>
+                  ScaleTransition(scale: anim, child: child),
               child: Builder(
-                key: ValueKey('${visible[i]['wallet_address'] ?? visible[i]['wallet'] ?? i}'),
-                builder: (ctx) {
-                  final r = visible[i];
-                  final avatar = r['avatar_url'] as String?;
-                  final wallet = (r['wallet_address'] as String? ?? r['wallet'] as String? ?? '');
-                      final effectiveAvatar = (avatar != null && avatar.isNotEmpty) ? (_normalizeAvatar(avatar) ?? avatar) : null;
-                  final display = (r['displayName'] as String?) ?? wallet;
-                  String suffix = '';
-                  final readAtStr = r['read_at'] as String? ?? r['readAt'] as String?;
-                  if (readAtStr != null && readAtStr.isNotEmpty) {
-                    try {
-                      final dt = DateTime.parse(readAtStr);
-                      suffix = ' • ${_formatTimeAgo(dt)}';
-                    } catch (_) {}
-                  }
-                  return Tooltip(
-                    message: '$display$suffix',
-                    child: _buildAvatar(effectiveAvatar, wallet, radius: avatarSize / 2),
-                  );
-                }
-              ),
+                  key: ValueKey(
+                      '${visible[i]['wallet_address'] ?? visible[i]['wallet'] ?? i}'),
+                  builder: (ctx) {
+                    final r = visible[i];
+                    final avatar = r['avatar_url'] as String?;
+                    final wallet = (r['wallet_address'] as String? ??
+                        r['wallet'] as String? ??
+                        '');
+                    final effectiveAvatar =
+                        (avatar != null && avatar.isNotEmpty)
+                            ? (_normalizeAvatar(avatar) ?? avatar)
+                            : null;
+                    final display = (r['displayName'] as String?) ?? wallet;
+                    String suffix = '';
+                    final readAtStr =
+                        r['read_at'] as String? ?? r['readAt'] as String?;
+                    if (readAtStr != null && readAtStr.isNotEmpty) {
+                      try {
+                        final dt = DateTime.parse(readAtStr);
+                        suffix = ' • ${_formatTimeAgo(dt)}';
+                      } catch (_) {}
+                    }
+                    return Tooltip(
+                      message: '$display$suffix',
+                      child: _buildAvatar(effectiveAvatar, wallet,
+                          radius: avatarSize / 2),
+                    );
+                  }),
             ),
           ),
         if (count > 3)
@@ -716,20 +826,27 @@ class _ConversationScreenState extends State<ConversationScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.0),
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.surface, width: 1.0),
               ),
-              child: Text('+${count - visible.length}', style: GoogleFonts.inter(fontSize: 10, color: Theme.of(context).colorScheme.onSurface)),
+              child: Text('+${count - visible.length}',
+                  style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.onSurface)),
             ),
           ),
       ]),
     );
   }
 
-  bool _hasReceivedRead(List<Map<String, dynamic>> readers, String senderWallet) {
+  bool _hasReceivedRead(
+      List<Map<String, dynamic>> readers, String senderWallet) {
     if (readers.isEmpty) return false;
     final senderNorm = _normWallet(senderWallet);
     for (final entry in readers) {
-      final wallet = (entry['wallet_address'] as String?) ?? (entry['wallet'] as String?) ?? '';
+      final wallet = (entry['wallet_address'] as String?) ??
+          (entry['wallet'] as String?) ??
+          '';
       if (wallet.isEmpty) continue;
       if (_normWallet(wallet) != senderNorm) {
         return true;
@@ -738,18 +855,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
     return false;
   }
 
-  Color _readIndicatorColor(BuildContext context, {required bool isMine, required bool isRead}) {
+  Color _readIndicatorColor(BuildContext context,
+      {required bool isMine, required bool isRead}) {
     final scheme = Theme.of(context).colorScheme;
-    final Color contrast = isMine ? scheme.onPrimary : scheme.onPrimaryContainer;
+    final Color contrast =
+        isMine ? scheme.onPrimary : scheme.onPrimaryContainer;
     if (!isRead) {
       return contrast.withValues(alpha: 0.72);
     }
     return contrast;
   }
 
-  Widget _wrapWithAnimation(Widget child, bool shouldAnimate, {required String messageId}) {
+  Widget _wrapWithAnimation(Widget child, bool shouldAnimate,
+      {required String messageId}) {
     if (!shouldAnimate) return child;
-    
+
     try {
       return TweenAnimationBuilder<double>(
         key: ValueKey('anim_$messageId'),
@@ -778,21 +898,61 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  Widget _buildAvatar(String? avatarUrl, String wallet, {double radius = 18, bool allowFabricatedFallback = false}) {
+  Widget _buildAvatar(String? avatarUrl, String wallet,
+      {double radius = 18, bool allowFabricatedFallback = false}) {
     // Delegate to safeAvatarWidget which handles network errors and fallbacks.
     final normalized = _normalizeAvatar(avatarUrl) ?? avatarUrl;
     try {
-      debugPrint('ConversationScreen._buildAvatar: wallet=$wallet, avatarUrl=$normalized');
-      final isLoading = (!_avatarUrlCache.containsKey(wallet) && _chatProvider.getCachedUser(wallet) == null && UserService.getCachedUser(wallet) == null && (avatarUrl == null || avatarUrl.isEmpty));
-      return AvatarWidget(avatarUrl: normalized, wallet: wallet, radius: radius, isLoading: isLoading, allowFabricatedFallback: allowFabricatedFallback);
+      debugPrint(
+          'ConversationScreen._buildAvatar: wallet=$wallet, avatarUrl=$normalized');
+      final isLoading = (!_avatarUrlCache.containsKey(wallet) &&
+          _chatProvider.getCachedUser(wallet) == null &&
+          UserService.getCachedUser(wallet) == null &&
+          (avatarUrl == null || avatarUrl.isEmpty));
+      return AvatarWidget(
+          avatarUrl: normalized,
+          wallet: wallet,
+          radius: radius,
+          isLoading: isLoading,
+          allowFabricatedFallback: allowFabricatedFallback);
     } catch (e, st) {
-      debugPrint('ConversationScreen._buildAvatar: AvatarWidget build failed for $wallet, avatarUrl=$normalized: $e\n$st');
+      debugPrint(
+          'ConversationScreen._buildAvatar: AvatarWidget build failed for $wallet, avatarUrl=$normalized: $e\n$st');
       // Return a simple initials-based fallback to avoid crash
       final parts = wallet.trim().split(RegExp(r'\\s+'));
-      final initials = parts.where((p) => p.isNotEmpty).map((p) => p[0]).take(2).join().toUpperCase();
-      final base = Container(width: radius * 2, height: radius * 2, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(radius * 0.5)), alignment: Alignment.center, child: Text(initials.isNotEmpty ? initials : 'U', style: TextStyle(fontSize: (radius * 0.7).clamp(10, 14).toDouble(), fontWeight: FontWeight.w600)));
-      final isLoading = (!_avatarUrlCache.containsKey(wallet) && _chatProvider.getCachedUser(wallet) == null && UserService.getCachedUser(wallet) == null && (avatarUrl == null || avatarUrl.isEmpty));
-      if (isLoading) return Stack(alignment: Alignment.center, children: [base, SizedBox(width: radius, height: radius, child: InlineLoading(expand: true, shape: BoxShape.circle, tileSize: (radius * 0.25).clamp(4.0, 10.0)))]);
+      final initials = parts
+          .where((p) => p.isNotEmpty)
+          .map((p) => p[0])
+          .take(2)
+          .join()
+          .toUpperCase();
+      final base = Container(
+          width: radius * 2,
+          height: radius * 2,
+          decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(radius * 0.5)),
+          alignment: Alignment.center,
+          child: Text(initials.isNotEmpty ? initials : 'U',
+              style: TextStyle(
+                  fontSize: (radius * 0.7).clamp(10, 14).toDouble(),
+                  fontWeight: FontWeight.w600)));
+      final isLoading = (!_avatarUrlCache.containsKey(wallet) &&
+          _chatProvider.getCachedUser(wallet) == null &&
+          UserService.getCachedUser(wallet) == null &&
+          (avatarUrl == null || avatarUrl.isEmpty));
+      if (isLoading) {
+        return Stack(alignment: Alignment.center, children: [
+          base,
+          SizedBox(
+              width: radius,
+              height: radius,
+              child: InlineLoading(
+                  expand: true,
+                  shape: BoxShape.circle,
+                  tileSize: (radius * 0.25).clamp(4.0, 10.0)))
+        ]);
+      }
       return base;
     }
   }
@@ -815,10 +975,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
       final filename = file.name;
       final ext = file.extension?.toLowerCase() ?? '';
       String contentType = 'application/octet-stream';
-      if (['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext)) contentType = 'image/${ext == 'jpg' ? 'jpeg' : ext}';
-      if (['mp4', 'mov', 'webm', 'avi'].contains(ext)) contentType = 'video/$ext';
+      if (['png', 'jpg', 'jpeg', 'webp', 'gif'].contains(ext)) {
+        contentType = 'image/${ext == 'jpg' ? 'jpeg' : ext}';
+      }
+      if (['mp4', 'mov', 'webm', 'avi'].contains(ext)) {
+        contentType = 'video/$ext';
+      }
       setState(() => _isUploading = true);
-      await _chatProvider.uploadAttachment(widget.conversation.id, bytes, filename, contentType);
+      await _chatProvider.uploadAttachment(
+          widget.conversation.id, bytes, filename, contentType);
       setState(() => _isUploading = false);
       // The socket should push the new message; we refresh local list just in case
       await _load();
@@ -831,18 +996,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildReplyPreview() {
     if (_replyingTo == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context)!;
-    final isMe = _replyingTo!.senderWallet == (Provider.of<ProfileProvider>(context, listen: false).currentUser?.walletAddress ?? '');
-    final senderName = isMe ? l10n.commonYou : (_displayNameCache[_replyingTo!.senderWallet] ?? _replyingTo!.senderWallet);
-    
+    final isMe = _replyingTo!.senderWallet ==
+        (Provider.of<ProfileProvider>(context, listen: false)
+                .currentUser
+                ?.walletAddress ??
+            '');
+    final senderName = isMe
+        ? l10n.commonYou
+        : (_displayNameCache[_replyingTo!.senderWallet] ??
+            _replyingTo!.senderWallet);
+
     return Container(
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+        border: Border(
+            top: BorderSide(
+                color: Theme.of(context).colorScheme.outlineVariant)),
       ),
       child: Row(
         children: [
-          Icon(Icons.reply, size: 20, color: Theme.of(context).colorScheme.primary),
+          Icon(Icons.reply,
+              size: 20, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
@@ -884,7 +1059,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
     final reactionCounts = <String, int>{};
     final myReactions = <String>{};
-    final currentUserWallet = Provider.of<ProfileProvider>(context, listen: false).currentUser?.walletAddress;
+    final currentUserWallet =
+        Provider.of<ProfileProvider>(context, listen: false)
+            .currentUser
+            ?.walletAddress;
 
     for (final r in message.reactions) {
       reactionCounts[r.emoji] = r.count;
@@ -900,17 +1078,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
       children: reactionCounts.entries.map((entry) {
         final isSelected = myReactions.contains(entry.key);
         return GestureDetector(
-          onTap: () => _chatProvider.toggleReaction(widget.conversation.id, message.id, entry.key),
+          onTap: () => _chatProvider.toggleReaction(
+              widget.conversation.id, message.id, entry.key),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: isSelected 
-                  ? Theme.of(context).colorScheme.primaryContainer 
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primaryContainer
                   : Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected 
-                    ? Theme.of(context).colorScheme.primary 
+                color: isSelected
+                    ? Theme.of(context).colorScheme.primary
                     : Colors.transparent,
                 width: 1,
               ),
@@ -919,8 +1098,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
               '${entry.key} ${entry.value}',
               style: TextStyle(
                 fontSize: 12,
-                color: isSelected 
-                    ? Theme.of(context).colorScheme.onPrimaryContainer 
+                color: isSelected
+                    ? Theme.of(context).colorScheme.onPrimaryContainer
                     : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
@@ -946,7 +1125,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   return GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
-                      _chatProvider.toggleReaction(widget.conversation.id, message.id, emoji);
+                      _chatProvider.toggleReaction(
+                          widget.conversation.id, message.id, emoji);
                     },
                     child: Text(emoji, style: const TextStyle(fontSize: 32)),
                   );
@@ -961,8 +1141,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 setState(() => _replyingTo = message);
                 // Focus text field after a short delay to allow UI to update
                 Future.delayed(const Duration(milliseconds: 100), () {
-                  // We don't have a FocusNode attached to the TextField yet, 
-                  // but the user will likely tap it anyway. 
+                  // We don't have a FocusNode attached to the TextField yet,
+                  // but the user will likely tap it anyway.
                   // Ideally we should add a FocusNode to the TextField.
                 });
               },
@@ -1030,15 +1210,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final title = widget.conversation.title?.trim().isNotEmpty == true
         ? widget.conversation.title!.trim()
         : _conversationMembers.isNotEmpty
-            ? _displayNameCache[_conversationMembers.first] ?? _conversationMembers.first
-        : l10n.messagesFallbackConversationTitle;
+            ? _displayNameCache[_conversationMembers.first] ??
+                _conversationMembers.first
+            : l10n.messagesFallbackConversationTitle;
 
     Widget avatar;
     if (isGroup) {
       if (_conversationAvatar != null && _conversationAvatar!.isNotEmpty) {
         avatar = _buildAvatar(
           _conversationAvatar,
-          _conversationMembers.isNotEmpty ? _conversationMembers.first : widget.conversation.id,
+          _conversationMembers.isNotEmpty
+              ? _conversationMembers.first
+              : widget.conversation.id,
           radius: 18,
         );
       } else if (_conversationMembers.length >= 2) {
@@ -1046,7 +1229,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
           width: 42,
           height: 42,
           child: Stack(
-            children: List.generate(math.min(3, _conversationMembers.length), (index) {
+            children: List.generate(math.min(3, _conversationMembers.length),
+                (index) {
               final wallet = _conversationMembers[index];
               final offset = 12.0 * index;
               return Positioned(
@@ -1058,17 +1242,25 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ),
         );
       } else {
-        avatar = CircleAvatar(radius: 18, child: Text(_headerInitials(), style: const TextStyle(fontWeight: FontWeight.w600)));
+        avatar = CircleAvatar(
+            radius: 18,
+            child: Text(_headerInitials(),
+                style: const TextStyle(fontWeight: FontWeight.w600)));
       }
     } else {
       if (_conversationAvatar != null && _conversationAvatar!.isNotEmpty) {
         avatar = _buildAvatar(
           _conversationAvatar,
-          _conversationMembers.isNotEmpty ? _conversationMembers.first : widget.conversation.id,
+          _conversationMembers.isNotEmpty
+              ? _conversationMembers.first
+              : widget.conversation.id,
           radius: 18,
         );
       } else {
-        avatar = CircleAvatar(radius: 18, child: Text(_headerInitials(), style: const TextStyle(fontWeight: FontWeight.w600)));
+        avatar = CircleAvatar(
+            radius: 18,
+            child: Text(_headerInitials(),
+                style: const TextStyle(fontWeight: FontWeight.w600)));
       }
     }
 
@@ -1092,11 +1284,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final name = widget.conversation.title?.trim().isNotEmpty == true
         ? widget.conversation.title!.trim()
         : _conversationMembers.isNotEmpty
-            ? _displayNameCache[_conversationMembers.first] ?? _conversationMembers.first
+            ? _displayNameCache[_conversationMembers.first] ??
+                _conversationMembers.first
             : l10n.messagesFallbackConversationTitle;
-    final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts =
+        name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     final initials = parts.map((p) => p[0]).take(2).join().toUpperCase();
-    return initials.isNotEmpty ? initials : l10n.messagesFallbackConversationInitial;
+    return initials.isNotEmpty
+        ? initials
+        : l10n.messagesFallbackConversationInitial;
   }
 
   List<Widget> _buildHeaderActions() {
@@ -1110,10 +1306,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
             case 'members':
               try {
                 final dialogContext = context;
-                final profile = Provider.of<ProfileProvider>(dialogContext, listen: false);
-                final isOwner = (widget.conversation.createdBy ?? '') == (profile.currentUser?.walletAddress ?? '');
+                final profile =
+                    Provider.of<ProfileProvider>(dialogContext, listen: false);
+                final isOwner = (widget.conversation.createdBy ?? '') ==
+                    (profile.currentUser?.walletAddress ?? '');
 
-                final members = await _chatProvider.fetchMembers(widget.conversation.id);
+                final members =
+                    await _chatProvider.fetchMembers(widget.conversation.id);
                 if (!mounted) return;
                 final wallets = members
                     .map((m) => (m['wallet_address'] as String?) ?? '')
@@ -1124,15 +1323,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   users = await UserService.getUsersByWallets(wallets);
                   _chatProvider.mergeUserCache(users);
                 } catch (e) {
-                  debugPrint('ConversationScreen: fetching users for members dialog failed: $e');
+                  debugPrint(
+                      'ConversationScreen: fetching users for members dialog failed: $e');
                 }
                 final mappedMembers = members.map((m) {
-                  final wallet = (m['wallet_address'] as String?) ?? (m['wallet'] as String?) ?? (m['walletAddress'] as String?) ?? (m['id'] as String?) ?? '';
-                  final displayNameFromPayload = (m['displayName'] as String?) ?? (m['display_name'] as String?) ?? (m['name'] as String?);
-                  final avatarFromPayload = (m['avatar_url'] as String?) ?? (m['avatar'] as String?) ?? (m['profileImageUrl'] as String?);
+                  final wallet = (m['wallet_address'] as String?) ??
+                      (m['wallet'] as String?) ??
+                      (m['walletAddress'] as String?) ??
+                      (m['id'] as String?) ??
+                      '';
+                  final displayNameFromPayload =
+                      (m['displayName'] as String?) ??
+                          (m['display_name'] as String?) ??
+                          (m['name'] as String?);
+                  final avatarFromPayload = (m['avatar_url'] as String?) ??
+                      (m['avatar'] as String?) ??
+                      (m['profileImageUrl'] as String?);
                   User? matchedUser;
                   for (final candidate in users) {
-                    if (candidate.id == wallet || candidate.username == wallet) {
+                    if (candidate.id == wallet ||
+                        candidate.username == wallet) {
                       matchedUser = candidate;
                       break;
                     }
@@ -1156,7 +1366,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 );
                 if (!mounted) return;
                 if (selected == null || selected.isEmpty) return;
-                await _chatProvider.removeMember(widget.conversation.id, selected);
+                await _chatProvider.removeMember(
+                    widget.conversation.id, selected);
                 if (!mounted) return;
                 await _load();
               } catch (e) {
@@ -1169,22 +1380,29 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   context: context,
                   builder: (ctx) => _AddMemberDialog(),
                 );
-                debugPrint('ConversationScreen: add_member dialog returned: "$identifier"');
+                debugPrint(
+                    'ConversationScreen: add_member dialog returned: "$identifier"');
                 if (!context.mounted) return;
                 if (identifier == null || identifier.trim().isEmpty) return;
-                final newConversation = await _chatProvider.addMember(widget.conversation.id, identifier.trim());
+                final newConversation = await _chatProvider.addMember(
+                    widget.conversation.id, identifier.trim());
                 if (!mounted) return;
-                  if (newConversation != null && newConversation.id != widget.conversation.id) {
-                    scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesCreatedNewGroupChatToast)));
-                    if (!mounted) return;
-                    await navigator.pushReplacement(
-                      MaterialPageRoute(builder: (_) => ConversationScreen(conversation: newConversation)),
-                    );
-                    return;
-                  }
+                if (newConversation != null &&
+                    newConversation.id != widget.conversation.id) {
+                  scaffold.showSnackBar(SnackBar(
+                      content: Text(l10n.messagesCreatedNewGroupChatToast)));
+                  if (!mounted) return;
+                  await navigator.pushReplacement(
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            ConversationScreen(conversation: newConversation)),
+                  );
+                  return;
+                }
                 await _load();
               } catch (e) {
-                debugPrint('ConversationScreen: add member via menu failed: $e');
+                debugPrint(
+                    'ConversationScreen: add member via menu failed: $e');
               }
               break;
             case 'change_group_avatar':
@@ -1196,36 +1414,41 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 if (result == null || result.files.isEmpty) break;
                 final file = result.files.first;
                 if (file.bytes == null) break;
-                
+
                 // Show loading indicator
                 if (!mounted) return;
-                scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesUploadingAvatarToast)));
-                
+                scaffold.showSnackBar(
+                    SnackBar(content: Text(l10n.messagesUploadingAvatarToast)));
+
                 await _chatProvider.uploadConversationAvatar(
                   widget.conversation.id,
                   file.bytes!,
                   file.name,
                   'image/${file.extension ?? 'png'}',
                 );
-                
+
                 // Refresh conversations and reload
                 await _chatProvider.refreshConversations();
                 if (!mounted) return;
-                
+
                 // Clear local avatar cache to force reload
                 _conversationAvatar = null;
                 await _load();
-                
+
                 if (!mounted) return;
-                scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesAvatarUpdatedToast)));
+                scaffold.showSnackBar(
+                    SnackBar(content: Text(l10n.messagesAvatarUpdatedToast)));
                 setState(() {}); // Force rebuild with new avatar
               } catch (e) {
-                debugPrint('ConversationScreen: change group avatar failed: $e');
+                debugPrint(
+                    'ConversationScreen: change group avatar failed: $e');
                 if (kDebugMode) {
-                  debugPrint('ConversationScreen: change group avatar exception: $e');
+                  debugPrint(
+                      'ConversationScreen: change group avatar exception: $e');
                 }
                 if (!mounted) return;
-                scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesUpdateAvatarFailedToast)));
+                scaffold.showSnackBar(SnackBar(
+                    content: Text(l10n.messagesUpdateAvatarFailedToast)));
               }
               break;
             case 'messages_overlay':
@@ -1240,7 +1463,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 transitionBuilder: (ctx, anim1, anim2, child) {
                   final curved = Curves.easeOut.transform(anim1.value);
                   return Transform.translate(
-                    offset: Offset(0, (1 - curved) * MediaQuery.of(context).size.height),
+                    offset: Offset(
+                        0, (1 - curved) * MediaQuery.of(context).size.height),
                     child: Opacity(opacity: anim1.value, child: child),
                   );
                 },
@@ -1250,9 +1474,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
         },
         itemBuilder: (ctx) => [
           PopupMenuItem(value: 'members', child: Text(l10n.commonMembers)),
-          PopupMenuItem(value: 'add_member', child: Text(l10n.messagesMenuAddMember)),
-          PopupMenuItem(value: 'rename', child: Text(l10n.messagesMenuRenameConversation)),
-          PopupMenuItem(value: 'change_group_avatar', child: Text(l10n.messagesMenuChangeGroupAvatar)),
+          PopupMenuItem(
+              value: 'add_member', child: Text(l10n.messagesMenuAddMember)),
+          PopupMenuItem(
+              value: 'rename',
+              child: Text(l10n.messagesMenuRenameConversation)),
+          PopupMenuItem(
+              value: 'change_group_avatar',
+              child: Text(l10n.messagesMenuChangeGroupAvatar)),
         ],
         icon: const Icon(Icons.more_vert),
       ),
@@ -1278,13 +1507,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
       itemBuilder: (context, index) {
         final message = display[index];
         final isMe = _normWallet(message.senderWallet) == _normWallet(myWallet);
-        final showAvatar = index == 0 || display[index - 1].senderWallet != message.senderWallet;
+        final showAvatar = index == 0 ||
+            display[index - 1].senderWallet != message.senderWallet;
         final shouldAnimate = !_animatedMessageIds.contains(message.id);
         final key = _messageKeys.putIfAbsent(message.id, () => GlobalKey());
         final built = _wrapWithAnimation(
           KeyedSubtree(
             key: key,
-            child: _buildMessageItem(message, isMe, showAvatar, chronoIndex: (display.length - 1 - index), chronoLength: display.length),
+            child: _buildMessageItem(message, isMe, showAvatar,
+                chronoIndex: (display.length - 1 - index),
+                chronoLength: display.length),
           ),
           shouldAnimate,
           messageId: message.id,
@@ -1301,11 +1533,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
     if (_scrollController.hasClients) {
       // Debounce visible check
       _scrollDebounce?.cancel();
-      _scrollDebounce = Timer(const Duration(milliseconds: 150), _checkVisibleMessages);
+      _scrollDebounce =
+          Timer(const Duration(milliseconds: 150), _checkVisibleMessages);
     }
   }
 
-  Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar, {int? chronoIndex, int? chronoLength}) {
+  Widget _buildMessageItem(ChatMessage message, bool isMe, bool showAvatar,
+      {int? chronoIndex, int? chronoLength}) {
     final bool isFirst = (chronoIndex != null && chronoLength != null)
         ? chronoIndex == 0
         : (_messages.isNotEmpty ? message == _messages.first : false);
@@ -1316,13 +1550,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     String? displayName;
     if (!isMe) {
       avatarUrl = _avatarUrlCache[message.senderWallet];
-      if (avatarUrl != null && _isPlaceholderAvatar(avatarUrl, message.senderWallet)) {
+      if (avatarUrl != null &&
+          _isPlaceholderAvatar(avatarUrl, message.senderWallet)) {
         avatarUrl = null;
       }
       if (avatarUrl == null || avatarUrl.isEmpty) {
         final cached = _cacheProvider.getAvatar(message.senderWallet);
         if (cached != null && cached.isNotEmpty) {
-          final normalized = _normalizeAndValidateAvatar(message.senderWallet, cached);
+          final normalized =
+              _normalizeAndValidateAvatar(message.senderWallet, cached);
           if (normalized != null) {
             avatarUrl = normalized;
             final current = _avatarUrlCache[message.senderWallet];
@@ -1344,27 +1580,32 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
     final double avatarRadius = 16;
     final bubbleMaxWidth = MediaQuery.of(context).size.width * 0.78;
+    final scheme = Theme.of(context).colorScheme;
 
     final bubble = ConstrainedBox(
       constraints: BoxConstraints(maxWidth: bubbleMaxWidth),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isMe ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surface,
+          color: isMe ? scheme.primary : scheme.tertiaryContainer,
           borderRadius: BorderRadius.circular(16),
-          border: isMe ? null : Border.all(color: Theme.of(context).colorScheme.outline),
+          border: isMe ? null : Border.all(color: scheme.outline),
         ),
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
-            if (!isMe && showAvatar && displayName != null && displayName.isNotEmpty)
+            if (!isMe &&
+                showAvatar &&
+                displayName != null &&
+                displayName.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 2),
                 child: Text(
                   displayName,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: scheme.onTertiaryContainer,
                     fontSize: 12,
                   ),
                 ),
@@ -1401,7 +1642,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   width: avatarRadius * 2,
                   height: avatarRadius * 2,
                   child: showAvatar
-                      ? _buildAvatar(avatarUrl, message.senderWallet, radius: avatarRadius)
+                      ? _buildAvatar(avatarUrl, message.senderWallet,
+                          radius: avatarRadius)
                       : const SizedBox.shrink(),
                 ),
                 const SizedBox(width: 8),
@@ -1446,14 +1688,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
     final senderWallet = reply.senderWallet;
     final fallbackName = reply.senderDisplayName ?? reply.messageId;
     final nameSource = reply.senderDisplayName ??
-      _displayNameCache[senderWallet] ??
-      _cacheProvider.getDisplayName(senderWallet) ??
-      fallbackName;
+        _displayNameCache[senderWallet] ??
+        _cacheProvider.getDisplayName(senderWallet) ??
+        fallbackName;
     final resolvedName = nameSource.isNotEmpty ? nameSource : 'User';
-    final overlayBase = isMe ? scheme.primaryContainer.withValues(alpha: 0.4) : scheme.surfaceContainerHighest;
+    final overlayBase = isMe
+        ? scheme.primaryContainer.withValues(alpha: 0.4)
+        : scheme.surfaceContainerHighest;
     final accent = scheme.primary;
-    final textColor = isMe ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
-    
+    final textColor =
+        isMe ? scheme.onPrimaryContainer : scheme.onSurfaceVariant;
+
     return Container(
       padding: const EdgeInsets.all(10),
       margin: const EdgeInsets.only(bottom: 6),
@@ -1501,15 +1746,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessageContent(ChatMessage message, bool isMe) {
-    final textColor = isMe ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface;
+    final scheme = Theme.of(context).colorScheme;
+    final textColor = isMe ? scheme.onPrimary : scheme.onTertiaryContainer;
     final attachment = message.data?['attachment'] as Map<String, dynamic>?;
-    final hasAttachment = attachment != null && ((attachment['url'] ?? attachment['remoteUrl'] ?? '').toString().isNotEmpty);
+    final hasAttachment = attachment != null &&
+        ((attachment['url'] ?? attachment['remoteUrl'] ?? '')
+            .toString()
+            .isNotEmpty);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (message.replyTo != null) _buildReplyOverlay(message, isMe),
-        if (attachment != null && hasAttachment) _buildAttachmentBubble(attachment, isMe),
+        if (attachment != null && hasAttachment)
+          _buildAttachmentBubble(attachment, isMe),
         if (!hasAttachment || message.message.trim().isNotEmpty)
           SelectableText(
             message.message,
@@ -1528,17 +1778,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
   Widget _buildAttachmentBubble(Map<String, dynamic> attachment, bool isMe) {
     final l10n = AppLocalizations.of(context)!;
     final url = (attachment['url'] ?? attachment['remoteUrl'] ?? '').toString();
-    final fileName = (attachment['filename'] ?? attachment['name'] ?? l10n.messagesAttachmentDefaultFilename).toString();
-    final contentType = (attachment['contentType'] ?? attachment['content_type'] ?? '').toString().toLowerCase();
+    final fileName = (attachment['filename'] ??
+            attachment['name'] ??
+            l10n.messagesAttachmentDefaultFilename)
+        .toString();
+    final contentType =
+        (attachment['contentType'] ?? attachment['content_type'] ?? '')
+            .toString()
+            .toLowerCase();
     final sizeLabel = attachment['size']?.toString();
-    
-    final isImage = contentType.startsWith('image/') || 
-                    url.endsWith('.png') || url.endsWith('.jpg') || 
-                    url.endsWith('.jpeg') || url.endsWith('.webp') || url.endsWith('.gif');
-    final isVideo = contentType.startsWith('video/') || 
-                    url.endsWith('.mp4') || url.endsWith('.mov') || 
-                    url.endsWith('.webm') || url.endsWith('.avi');
-    
+
+    final isImage = contentType.startsWith('image/') ||
+        url.endsWith('.png') ||
+        url.endsWith('.jpg') ||
+        url.endsWith('.jpeg') ||
+        url.endsWith('.webp') ||
+        url.endsWith('.gif');
+    final isVideo = contentType.startsWith('video/') ||
+        url.endsWith('.mp4') ||
+        url.endsWith('.mov') ||
+        url.endsWith('.webm') ||
+        url.endsWith('.avi');
+
     if (isImage) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -1546,7 +1807,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           onTap: () async {
             try {
               final uri = Uri.parse(url);
-              if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
             } catch (e) {
               debugPrint('Failed to open image: $e');
             }
@@ -1562,11 +1825,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     if (loadingProgress == null) return child;
                     return Container(
                       height: 200,
-                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       child: Center(
                         child: CircularProgressIndicator(
                           value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
                               : null,
                         ),
                       ),
@@ -1580,10 +1845,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.broken_image, size: 48, color: Theme.of(context).colorScheme.error),
+                          Icon(Icons.broken_image,
+                              size: 48,
+                              color: Theme.of(context).colorScheme.error),
                           const SizedBox(height: 8),
-                          Text(l10n.messagesAttachmentFailedToLoadImage, style: TextStyle(color: Theme.of(context).colorScheme.onErrorContainer)),
-                          Text(fileName, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onErrorContainer)),
+                          Text(l10n.messagesAttachmentFailedToLoadImage,
+                              style: TextStyle(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer)),
+                          Text(fileName,
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onErrorContainer)),
                         ],
                       ),
                     );
@@ -1593,7 +1869,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   bottom: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.black.withValues(alpha: 0.6),
                       borderRadius: BorderRadius.circular(12),
@@ -1603,7 +1880,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       children: [
                         Icon(Icons.download, size: 16, color: Colors.white),
                         const SizedBox(width: 4),
-                        Text(fileName, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                        Text(fileName,
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -1614,21 +1893,25 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       );
     }
-    
+
     if (isVideo) {
       return Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isMe ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+          color: isMe
+              ? Theme.of(context).colorScheme.primaryContainer
+              : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          border:
+              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.play_circle_outline, size: 48, color: Theme.of(context).colorScheme.primary),
+                Icon(Icons.play_circle_outline,
+                    size: 48, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1646,7 +1929,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           sizeLabel,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       Text(
@@ -1668,7 +1952,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 onPressed: () async {
                   try {
                     final uri = Uri.parse(url);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri,
+                          mode: LaunchMode.externalApplication);
+                    }
                   } catch (e) {
                     debugPrint('Failed to open video: $e');
                   }
@@ -1685,12 +1972,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       );
     }
-    
+
     // Generic file attachment
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isMe ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: isMe
+            ? Theme.of(context).colorScheme.primaryContainer
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
@@ -1699,7 +1988,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.attach_file, size: 32, color: Theme.of(context).colorScheme.primary),
+              Icon(Icons.attach_file,
+                  size: 32, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1732,7 +2022,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
               onPressed: () async {
                 try {
                   final uri = Uri.parse(url);
-                  if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
                 } catch (e) {
                   debugPrint('Failed to open file: $e');
                 }
@@ -1759,7 +2051,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
           padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+            border: Border(
+                top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant)),
           ),
           child: Row(
             children: [
@@ -1778,7 +2072,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.send),
+                icon: Icon(Icons.send, color: AppColorUtils.tealAccent),
                 onPressed: _send,
               ),
             ],
@@ -1796,9 +2090,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
       // to detect changes even when the list instance reference didn't change.
       String buildSig(List<ChatMessage> list) {
         try {
-          return list.map((m) => '${m.id}:${m.readersCount}:${m.readByCurrent}').join('|');
-        } catch (_) { return ''; }
+          return list
+              .map((m) => '${m.id}:${m.readersCount}:${m.readByCurrent}')
+              .join('|');
+        } catch (_) {
+          return '';
+        }
       }
+
       final provSig = buildSig(providerMessages);
       final localSig = buildSig(_messages);
       if (provSig == localSig) return;
@@ -1813,9 +2112,10 @@ class _ConversationScreenState extends State<ConversationScreen> {
           final oldMessageMap = <String, String>{};
           for (final m in _messages) {
             oldMessageIds.add(m.id);
-            oldMessageMap[m.id] = '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
+            oldMessageMap[m.id] =
+                '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
           }
-          
+
           final changedIds = <String>{};
           final newIds = <String>{};
           for (final m in providerMessages) {
@@ -1824,26 +2124,27 @@ class _ConversationScreenState extends State<ConversationScreen> {
               newIds.add(m.id);
             } else {
               // Existing message - check if metadata changed
-              final newSig = '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
+              final newSig =
+                  '${m.readersCount}:${m.readByCurrent}:${m.reactions.length}';
               final oldSig = oldMessageMap[m.id];
               if (oldSig != newSig) {
                 changedIds.add(m.id);
               }
             }
           }
-          
+
           // Clear keys for metadata changes (will rebuild without animation)
           for (final id in changedIds) {
             _messageKeys.remove(id);
             // Keep in _animatedMessageIds so it doesn't re-animate
           }
-          
+
           // Clear animation tracking for truly new messages (will animate once)
           for (final id in newIds) {
             _messageKeys.remove(id);
             _animatedMessageIds.remove(id);
           }
-          
+
           _messages = providerMessages;
         });
       }
@@ -1853,19 +2154,19 @@ class _ConversationScreenState extends State<ConversationScreen> {
           try {
             await _fetchAvatarsForMessages(providerMessages, myWallet);
           } catch (e) {
-            debugPrint('ConversationScreen._syncMessagesFromProvider: avatar refresh failed: $e');
+            debugPrint(
+                'ConversationScreen._syncMessagesFromProvider: avatar refresh failed: $e');
           }
         });
       }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) => _checkVisibleMessages());
+      WidgetsBinding.instance
+          .addPostFrameCallback((_) => _checkVisibleMessages());
       _persistCacheSnapshots();
     } catch (e) {
       debugPrint('ConversationScreen._syncMessagesFromProvider error: $e');
     }
   }
-
-  
 
   void _checkVisibleMessages() {
     if (!mounted) return;
@@ -1902,7 +2203,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   void _queueMarkMessageRead(String messageId) {
     if (_readQueue.contains(messageId)) return;
     _readQueue.add(messageId);
-    _readQueueTimer ??= Timer.periodic(Duration(milliseconds: _readQueueDelayMs), (_) async {
+    _readQueueTimer ??=
+        Timer.periodic(Duration(milliseconds: _readQueueDelayMs), (_) async {
       if (_readQueue.isEmpty) {
         _readQueueTimer?.cancel();
         _readQueueTimer = null;
@@ -1921,10 +2223,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   @override
   void dispose() {
-    try { _chatProvider.removeListener(_onChatProviderUpdated); } catch (_) {}
-    try { _chatProvider.closeConversation(widget.conversation.id); } catch (_) {}
+    try {
+      _chatProvider.removeListener(_onChatProviderUpdated);
+    } catch (_) {}
+    try {
+      _chatProvider.closeConversation(widget.conversation.id);
+    } catch (_) {}
     _scrollDebounce?.cancel();
-    try { _scrollController.removeListener(_onScroll); } catch (_) {}
+    try {
+      _scrollController.removeListener(_onScroll);
+    } catch (_) {}
     _scrollController.dispose();
     _controller.dispose();
     _socketService.removeConnectListener(_onSocketConnected);
@@ -1942,7 +2250,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       try {
         await _chatProvider.openConversation(widget.conversation.id);
       } catch (e) {
-        debugPrint('ConversationScreen._onSocketConnected: openConversation failed: $e');
+        debugPrint(
+            'ConversationScreen._onSocketConnected: openConversation failed: $e');
       }
     });
   }
@@ -1983,86 +2292,107 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(labelText: l10n.messagesAddMemberIdentifierLabel),
-                  onChanged: (value) {
-                    _debounce?.cancel();
-                    final currentValue = value;
-                    _debounce = Timer(const Duration(milliseconds: 300), () async {
-                      if (!mounted) return;
-                      final query = currentValue.trim();
-                      if (query.isEmpty) {
-                        if (_suggestions.isNotEmpty && mounted) {
-                          setState(() {
-                            _suggestions.clear();
-                          });
-                        }
-                        return;
-                      }
-
-                      final int seq = ++_searchCounter;
-                      try {
-                        final resp = await _api.search(query: query, type: 'profiles', limit: 8);
+                    controller: _controller,
+                    decoration: InputDecoration(
+                        labelText: l10n.messagesAddMemberIdentifierLabel),
+                    onChanged: (value) {
+                      _debounce?.cancel();
+                      final currentValue = value;
+                      _debounce =
+                          Timer(const Duration(milliseconds: 300), () async {
                         if (!mounted) return;
-                        // discard if a newer search was issued
-                        if (seq != _searchCounter) return;
-                        final results = <Map<String, dynamic>>[];
-                        if (resp['success'] == true) {
-                          final data = resp['results'] as Map<String, dynamic>?;
-                          final profiles = data != null ? (data['profiles'] as List<dynamic>? ?? []) : (resp['data'] as List<dynamic>? ?? []);
-                          for (final entry in profiles) {
-                            if (entry is Map<String, dynamic>) results.add(entry);
+                        final query = currentValue.trim();
+                        if (query.isEmpty) {
+                          if (_suggestions.isNotEmpty && mounted) {
+                            setState(() {
+                              _suggestions.clear();
+                            });
                           }
+                          return;
                         }
-                        if (!mounted) return;
-                        // avoid applying stale results if the user continued typing
-                        if (_controller.text.trim() != query) return;
-                        setState(() {
-                          _suggestions
-                            ..clear()
-                            ..addAll(results);
-                        });
-                      } catch (e) {
-                        debugPrint('AddMemberDialog: search failed $e');
-                      }
-                    });
-                  },
-                ),
-                if (_suggestions.isNotEmpty)
-                  SizedBox(
-                    height: 200,
-                    child: ListView.builder(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      itemCount: _suggestions.length,
-                      itemBuilder: (itemCtx, index) {
-                        final suggestion = _suggestions[index];
-                        final username = suggestion['username']?.toString() ?? '';
-                        final wallet = suggestion['walletAddress']?.toString() ?? suggestion['wallet_address']?.toString() ?? '';
-                        final displayName = suggestion['displayName']?.toString() ?? suggestion['display_name']?.toString() ?? username;
-                        final avatarCandidate = suggestion['avatar'] ?? suggestion['avatar_url'];
-                        final effectiveAvatar = avatarCandidate != null && avatarCandidate.toString().isNotEmpty
-                            ? avatarCandidate.toString()
-                            : null;
-                                return ListTile(
-                          leading: AvatarWidget(
-                            avatarUrl: effectiveAvatar,
-                            wallet: wallet.isNotEmpty ? wallet : username,
-                            allowFabricatedFallback: false,
-                          ),
-                          title: Text(displayName.isNotEmpty ? displayName : username),
-                          subtitle: Text(wallet.isNotEmpty ? wallet : username),
-                                  onTap: () {
-                                    final ret = wallet.isNotEmpty ? wallet : username;
-                                    debugPrint('AddMemberDialog: tapped suggestion -> username="$username" wallet="$wallet" returning="$ret"');
-                                    Navigator.of(dialogCtx).pop(ret);
-                                  },
-                        );
-                      },
-                    ),
+
+                        final int seq = ++_searchCounter;
+                        try {
+                          final resp = await _api.search(
+                              query: query, type: 'profiles', limit: 8);
+                          if (!mounted) return;
+                          // discard if a newer search was issued
+                          if (seq != _searchCounter) return;
+                          final results = <Map<String, dynamic>>[];
+                          if (resp['success'] == true) {
+                            final data =
+                                resp['results'] as Map<String, dynamic>?;
+                            final profiles = data != null
+                                ? (data['profiles'] as List<dynamic>? ?? [])
+                                : (resp['data'] as List<dynamic>? ?? []);
+                            for (final entry in profiles) {
+                              if (entry is Map<String, dynamic>) {
+                                results.add(entry);
+                              }
+                            }
+                          }
+                          if (!mounted) return;
+                          // avoid applying stale results if the user continued typing
+                          if (_controller.text.trim() != query) return;
+                          setState(() {
+                            _suggestions
+                              ..clear()
+                              ..addAll(results);
+                          });
+                        } catch (e) {
+                          debugPrint('AddMemberDialog: search failed $e');
+                        }
+                      });
+                    },
                   ),
-              ],
-            ),
-          );
+                  if (_suggestions.isNotEmpty)
+                    SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _suggestions.length,
+                        itemBuilder: (itemCtx, index) {
+                          final suggestion = _suggestions[index];
+                          final username =
+                              suggestion['username']?.toString() ?? '';
+                          final wallet =
+                              suggestion['walletAddress']?.toString() ??
+                                  suggestion['wallet_address']?.toString() ??
+                                  '';
+                          final displayName =
+                              suggestion['displayName']?.toString() ??
+                                  suggestion['display_name']?.toString() ??
+                                  username;
+                          final avatarCandidate =
+                              suggestion['avatar'] ?? suggestion['avatar_url'];
+                          final effectiveAvatar = avatarCandidate != null &&
+                                  avatarCandidate.toString().isNotEmpty
+                              ? avatarCandidate.toString()
+                              : null;
+                          return ListTile(
+                            leading: AvatarWidget(
+                              avatarUrl: effectiveAvatar,
+                              wallet: wallet.isNotEmpty ? wallet : username,
+                              allowFabricatedFallback: false,
+                            ),
+                            title: Text(displayName.isNotEmpty
+                                ? displayName
+                                : username),
+                            subtitle:
+                                Text(wallet.isNotEmpty ? wallet : username),
+                            onTap: () {
+                              final ret = wallet.isNotEmpty ? wallet : username;
+                              debugPrint(
+                                  'AddMemberDialog: tapped suggestion -> username="$username" wallet="$wallet" returning="$ret"');
+                              Navigator.of(dialogCtx).pop(ret);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                ],
+              ),
+            );
           } catch (e, st) {
             debugPrint('AddMemberDialog build failed: $e\n$st');
             return SizedBox(
@@ -2070,11 +2400,15 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(l10n.messagesAddMemberDialogLoadFailedTitle, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(l10n.messagesAddMemberDialogLoadFailedTitle,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
-                  Text(l10n.messagesAddMemberDialogLoadFailedBody, maxLines: 6, overflow: TextOverflow.ellipsis),
+                  Text(l10n.messagesAddMemberDialogLoadFailedBody,
+                      maxLines: 6, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 12),
-                  ElevatedButton(onPressed: () => Navigator.of(dialogCtx).pop(), child: Text(l10n.commonClose)),
+                  ElevatedButton(
+                      onPressed: () => Navigator.of(dialogCtx).pop(),
+                      child: Text(l10n.commonClose)),
                 ],
               ),
             );
@@ -2082,8 +2416,12 @@ class _AddMemberDialogState extends State<_AddMemberDialog> {
         },
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonCancel)),
-        TextButton(onPressed: () => Navigator.of(context).pop(_controller.text.trim()), child: Text(l10n.commonAdd)),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonCancel)),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+            child: Text(l10n.commonAdd)),
       ],
     );
   }
@@ -2094,7 +2432,11 @@ class MembersDialog extends StatelessWidget {
   final String conversationId;
   final bool isOwner;
 
-  const MembersDialog({super.key, required this.members, required this.conversationId, this.isOwner = false});
+  const MembersDialog(
+      {super.key,
+      required this.members,
+      required this.conversationId,
+      this.isOwner = false});
 
   @override
   Widget build(BuildContext context) {
@@ -2111,14 +2453,24 @@ class MembersDialog extends StatelessWidget {
             final user = member['user'] as User?;
             final role = member['role'] as String? ?? '';
             final wallet = (member['wallet'] as String?) ?? (user?.id ?? '');
-            final displayName = (member['displayName'] as String?) ?? user?.name ?? wallet;
-            final avatarUrl = (member['avatar'] as String?) ?? user?.profileImageUrl;
-            final effectiveAvatar = (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null;
+            final displayName =
+                (member['displayName'] as String?) ?? user?.name ?? wallet;
+            final avatarUrl =
+                (member['avatar'] as String?) ?? user?.profileImageUrl;
+            final effectiveAvatar =
+                (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null;
 
             return ListTile(
-              leading: AvatarWidget(avatarUrl: effectiveAvatar, wallet: wallet, allowFabricatedFallback: false),
+              leading: AvatarWidget(
+                  avatarUrl: effectiveAvatar,
+                  wallet: wallet,
+                  allowFabricatedFallback: false),
               title: Text(displayName),
-              subtitle: Text(role.isNotEmpty ? role : wallet.isNotEmpty ? wallet : l10n.messagesMemberLabel),
+              subtitle: Text(role.isNotEmpty
+                  ? role
+                  : wallet.isNotEmpty
+                      ? wallet
+                      : l10n.messagesMemberLabel),
               trailing: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (choice) async {
@@ -2130,11 +2482,21 @@ class MembersDialog extends StatelessWidget {
                           context: context,
                           builder: (c) => AlertDialog(
                             title: Text(l10n.messagesMemberOptionsTitle),
-                            content: Text(l10n.messagesMemberOptionsBody(displayName)),
+                            content: Text(
+                                l10n.messagesMemberOptionsBody(displayName)),
                             actions: [
-                              TextButton(onPressed: () => Navigator.of(c).pop('transfer'), child: Text(l10n.messagesTransferOwnershipAction)),
-                              TextButton(onPressed: () => Navigator.of(c).pop('remove'), child: Text(l10n.messagesRemoveMemberAction)),
-                              TextButton(onPressed: () => Navigator.of(c).pop(), child: Text(l10n.commonCancel)),
+                              TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(c).pop('transfer'),
+                                  child: Text(
+                                      l10n.messagesTransferOwnershipAction)),
+                              TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(c).pop('remove'),
+                                  child: Text(l10n.messagesRemoveMemberAction)),
+                              TextButton(
+                                  onPressed: () => Navigator.of(c).pop(),
+                                  child: Text(l10n.commonCancel)),
                             ],
                           ),
                         );
@@ -2152,31 +2514,45 @@ class MembersDialog extends StatelessWidget {
                             context: context,
                             builder: (c) => AlertDialog(
                               title: Text(l10n.messagesTransferOwnershipTitle),
-                              content: Text(l10n.messagesTransferOwnershipBody(displayName, wallet)),
+                              content: Text(l10n.messagesTransferOwnershipBody(
+                                  displayName, wallet)),
                               actions: [
-                                TextButton(onPressed: () => Navigator.of(c).pop(false), child: Text(l10n.commonCancel)),
-                                TextButton(onPressed: () => Navigator.of(c).pop(true), child: Text(l10n.messagesTransferOwnershipAction)),
+                                TextButton(
+                                    onPressed: () => Navigator.of(c).pop(false),
+                                    child: Text(l10n.commonCancel)),
+                                TextButton(
+                                    onPressed: () => Navigator.of(c).pop(true),
+                                    child: Text(
+                                        l10n.messagesTransferOwnershipAction)),
                               ],
                             ),
                           );
                           if (!context.mounted) return;
                           if (confirmed == true) {
                             try {
-                              final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+                              final chatProvider = Provider.of<ChatProvider>(
+                                  context,
+                                  listen: false);
                               final navigator = Navigator.of(context);
                               final scaffold = ScaffoldMessenger.of(context);
-                              await chatProvider.transferOwnership(conversationId, wallet);
+                              await chatProvider.transferOwnership(
+                                  conversationId, wallet);
                               if (!context.mounted) return;
-                              scaffold.showSnackBar(SnackBar(content: Text(l10n.messagesOwnershipTransferredToast)));
+                              scaffold.showSnackBar(SnackBar(
+                                  content: Text(
+                                      l10n.messagesOwnershipTransferredToast)));
                               // Close members dialog to surface updated ownership state
                               navigator.pop();
                             } catch (e) {
                               if (kDebugMode) {
-                                debugPrint('MembersDialog: transfer ownership failed: $e');
+                                debugPrint(
+                                    'MembersDialog: transfer ownership failed: $e');
                               }
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(l10n.messagesTransferFailedToast)),
+                                  SnackBar(
+                                      content: Text(
+                                          l10n.messagesTransferFailedToast)),
                                 );
                               }
                             }
@@ -2189,7 +2565,9 @@ class MembersDialog extends StatelessWidget {
                   }
                 },
                 itemBuilder: (menuCtx) => [
-                  PopupMenuItem(value: 'manage', child: Text(l10n.messagesManageMemberAction)),
+                  PopupMenuItem(
+                      value: 'manage',
+                      child: Text(l10n.messagesManageMemberAction)),
                 ],
               ),
             );
@@ -2197,7 +2575,9 @@ class MembersDialog extends StatelessWidget {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(l10n.commonClose)),
+        TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.commonClose)),
       ],
     );
   }
@@ -2209,7 +2589,8 @@ class _RenameConversationDialog extends StatefulWidget {
   const _RenameConversationDialog({required this.currentTitle});
 
   @override
-  State<_RenameConversationDialog> createState() => _RenameConversationDialogState();
+  State<_RenameConversationDialog> createState() =>
+      _RenameConversationDialogState();
 }
 
 class _RenameConversationDialogState extends State<_RenameConversationDialog> {

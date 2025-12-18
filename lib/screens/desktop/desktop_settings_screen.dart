@@ -22,6 +22,7 @@ import '../web3/wallet/mnemonic_reveal_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import '../../../config/config.dart';
 import '../../providers/locale_provider.dart';
+import '../../utils/app_color_utils.dart';
 
 
 /// Desktop profile and settings screen
@@ -339,8 +340,38 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     );
   }
 
+  /// Returns semantic color based on settings section index
+  Color _getSectionColor(int index, ColorScheme scheme) {
+    switch (index) {
+      case 0: // Profile
+        return scheme.secondary;
+      case 1: // Wallet
+        return AppColorUtils.amberAccent;
+      case 2: // Appearance
+        return scheme.tertiary;
+      case 3: // Notifications
+        return AppColorUtils.amberAccent;
+      case 4: // Privacy
+      case 5: // Security
+        return AppColorUtils.indigoAccent;
+      case 6: // Achievements
+        return Colors.amber;
+      case 7: // Platform
+        return scheme.secondary;
+      case 8: // Help
+      case 9: // About
+        return scheme.secondary;
+      case 10: // Danger Zone
+        return scheme.error;
+      default:
+        return scheme.secondary;
+    }
+  }
+
   Widget _buildSettingsSidebarItem(_SettingsItem item, ThemeProvider themeProvider) {
     final isSelected = _selectedSettingsIndex == item.index;
+    final scheme = Theme.of(context).colorScheme;
+    final sectionColor = _getSectionColor(item.index, scheme);
 
     return Material(
       color: Colors.transparent,
@@ -352,7 +383,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isSelected ? themeProvider.accentColor.withValues(alpha: 0.1) : Colors.transparent,
+            color: isSelected ? sectionColor.withValues(alpha: 0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -361,8 +392,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 item.icon,
                 size: 22,
                 color: isSelected
-                    ? themeProvider.accentColor
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ? sectionColor
+                    : scheme.onSurface.withValues(alpha: 0.6),
               ),
               const SizedBox(width: 16),
               Text(
@@ -371,8 +402,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   fontSize: 15,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                   color: isSelected
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface,
+                      ? sectionColor
+                      : scheme.onSurface,
                 ),
               ),
             ],
@@ -403,6 +434,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
       builder: (context, profileProvider, _) {
         final l10n = AppLocalizations.of(context)!;
         final user = profileProvider.currentUser;
+        final scheme = Theme.of(context).colorScheme;
+        final headerColor = scheme.secondary;
 
         return Container(
           padding: const EdgeInsets.all(32),
@@ -420,8 +453,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        themeProvider.accentColor,
-                        themeProvider.accentColor.withValues(alpha: 0.8),
+                        headerColor,
+                        headerColor.withValues(alpha: 0.8),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(20),
@@ -492,7 +525,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         label: Text(l10n.settingsEditProfileTileTitle),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: themeProvider.accentColor,
+                          foregroundColor: headerColor,
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -609,7 +642,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               OutlinedButton(
-                onPressed: () {},
+                onPressed: () {
+                  _loadSettings();
+                },
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -620,9 +655,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
               ),
               const SizedBox(width: 12),
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () async {
+                  await _saveSettings();
+                },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -664,7 +701,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: Provider.of<ThemeProvider>(context).accentColor,
+                color: Theme.of(context).colorScheme.secondary,
                 width: 2,
               ),
             ),
@@ -765,7 +802,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                           icon: const Icon(Icons.visibility, size: 18),
                           label: Text(l10n.desktopSettingsViewWalletButton),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
+                            backgroundColor: AppColorUtils.amberAccent,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -805,10 +842,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             walletProvider.switchSolanaNetwork(network);
                           }
                         },
-                        selectedColor: themeProvider.accentColor.withValues(alpha: 0.2),
+                        selectedColor: AppColorUtils.amberAccent.withValues(alpha: 0.2),
                         labelStyle: GoogleFonts.inter(
                           color: isSelected 
-                              ? themeProvider.accentColor 
+                              ? AppColorUtils.amberAccent 
                               : Theme.of(context).colorScheme.onSurface,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                         ),
@@ -1037,14 +1074,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             Text(l10n.settingsSupportDialogBody, style: GoogleFonts.inter(color: Theme.of(context).colorScheme.onSurface)),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
               onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningFaqToast))); },
               icon: const Icon(Icons.help_outline),
               label: Text(l10n.settingsViewFaqButton),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
               onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningEmailClientToast))); },
               icon: const Icon(Icons.email),
               label: Text(l10n.settingsContactSupportButton),
@@ -1097,7 +1134,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.settingsMaybeLaterButton)),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.secondary, foregroundColor: Colors.white),
             onPressed: () { Navigator.pop(context); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.settingsOpeningAppStoreToast))); },
             child: Text(l10n.settingsRateNowButton),
           ),
@@ -1108,7 +1145,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   void _showChangePasswordDialog() {
     final l10n = AppLocalizations.of(context)!;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -1160,7 +1196,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: themeProvider.accentColor,
+              backgroundColor: AppColorUtils.indigoAccent,
               foregroundColor: Colors.white,
             ),
             onPressed: () {
@@ -1823,7 +1859,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   Widget _buildThemeModeOption(String label, IconData icon, bool isSelected, VoidCallback onTap) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
+    final themeColor = scheme.tertiary;
 
     return Expanded(
       child: Material(
@@ -1835,11 +1872,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: isSelected
-                  ? themeProvider.accentColor.withValues(alpha: 0.1)
-                  : Theme.of(context).colorScheme.primaryContainer,
+                  ? themeColor.withValues(alpha: 0.1)
+                  : scheme.primaryContainer,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? themeProvider.accentColor : Colors.transparent,
+                color: isSelected ? themeColor : Colors.transparent,
                 width: 2,
               ),
             ),
@@ -1849,8 +1886,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   icon,
                   size: 32,
                   color: isSelected
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ? themeColor
+                      : scheme.onSurface.withValues(alpha: 0.6),
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -1859,8 +1896,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     fontSize: 14,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     color: isSelected
-                        ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface,
+                        ? themeColor
+                        : scheme.onSurface,
                   ),
                 ),
               ],
@@ -2253,17 +2290,18 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     int? total,
     required int reward,
   }) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
+    final achievementColor = Colors.amber;
     
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isUnlocked
-              ? themeProvider.accentColor.withValues(alpha: 0.5)
-              : Theme.of(context).colorScheme.outlineVariant,
+              ? achievementColor.withValues(alpha: 0.5)
+              : scheme.outlineVariant,
         ),
       ),
       child: Row(
@@ -2273,16 +2311,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             height: 56,
             decoration: BoxDecoration(
               color: isUnlocked
-                  ? themeProvider.accentColor.withValues(alpha: 0.2)
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  ? achievementColor.withValues(alpha: 0.2)
+                  : scheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               icon,
               size: 28,
               color: isUnlocked
-                  ? themeProvider.accentColor
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  ? achievementColor
+                  : scheme.onSurface.withValues(alpha: 0.4),
             ),
           ),
           const SizedBox(width: 16),
@@ -2297,7 +2335,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: scheme.onSurface,
                       ),
                     ),
                     if (isUnlocked) ...[
@@ -2305,7 +2343,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                       Icon(
                         Icons.check_circle,
                         size: 18,
-                        color: themeProvider.accentColor,
+                        color: achievementColor,
                       ),
                     ],
                   ],
@@ -2315,22 +2353,22 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   description,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 if (!isUnlocked && progress != null && total != null) ...[
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
                     value: progress / total,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
+                    backgroundColor: scheme.surfaceContainerHighest,
+                    valueColor: AlwaysStoppedAnimation<Color>(achievementColor),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     '$progress / $total',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: scheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -2341,8 +2379,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: isUnlocked
-                  ? themeProvider.accentColor.withValues(alpha: 0.2)
-                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+                  ? achievementColor.withValues(alpha: 0.2)
+                  : scheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -2352,8 +2390,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   Icons.token,
                   size: 16,
                   color: isUnlocked
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ? achievementColor
+                      : scheme.onSurface.withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -2362,8 +2400,8 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: isUnlocked
-                        ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        ? achievementColor
+                        : scheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ],

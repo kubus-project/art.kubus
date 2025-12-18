@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:ui' show PlatformDispatcher;
 
 import '../utils/app_animations.dart';
+import '../utils/kubus_color_roles.dart';
 
 /// Modern theme provider with multiple theme options and persistence
 class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
@@ -220,6 +221,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     ),
     extensions: const <ThemeExtension<dynamic>>[
       AppAnimationTheme.defaults,
+      KubusColorRoles.dark,
     ],
   );
 
@@ -295,6 +297,7 @@ class ThemeProvider with ChangeNotifier, WidgetsBindingObserver {
     ),
     extensions: const <ThemeExtension<dynamic>>[
       AppAnimationTheme.defaults,
+      KubusColorRoles.light,
     ],
   );
 }

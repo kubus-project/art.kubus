@@ -1,10 +1,10 @@
-import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/task_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../models/achievements.dart';
 import '../../../utils/category_accent_color.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../services/achievement_service.dart' as achievement_svc;
 
@@ -75,7 +75,6 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }
 
   Widget _buildStatsHeader(Map<String, AchievementProgress> progressById) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final completedCount = allAchievements.where((achievement) {
       final progress = progressById[achievement.id];
       final required = achievement.requiredProgress > 0 ? achievement.requiredProgress : 1;
@@ -85,6 +84,10 @@ class _AchievementsPageState extends State<AchievementsPage> {
     final completionPercentage =
         allAchievements.isEmpty ? 0.0 : (completedCount / allAchievements.length * 100);
 
+    // Achievements use amber-based gradient (rewards theme)
+    const achievementPrimary = AppColorUtils.amberAccent;
+    final achievementSecondary = AppColorUtils.shiftLightness(achievementPrimary, -0.1);
+
     return Container(
       margin: const EdgeInsets.all(24),
       padding: const EdgeInsets.all(20),
@@ -92,7 +95,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [themeProvider.accentColor, themeProvider.accentColor.withValues(alpha: 0.7)],
+          colors: [achievementPrimary, achievementSecondary],
         ),
         borderRadius: BorderRadius.circular(16),
       ),
@@ -104,12 +107,12 @@ class _AchievementsPageState extends State<AchievementsPage> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
+                  color: const Color(0xFF3E2723).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(30),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.emoji_events,
-                  color: Colors.white,
+                  color: Color(0xFF3E2723),
                   size: 30,
                 ),
               ),
@@ -123,7 +126,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: const Color(0xFF3E2723),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -131,7 +134,7 @@ class _AchievementsPageState extends State<AchievementsPage> {
                       'Collect POAPs and unlock KUB8 token rewards',
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: const Color(0xFF3E2723).withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -162,8 +165,8 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }
 
   Widget _buildStatItem(String label, String value) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final onAccent = themeProvider.onAccentColor;
+    // Use dark text on amber gradient for readability
+    const onAmber = Color(0xFF3E2723); // Brown-black for contrast on amber
     return Column(
       children: [
         Text(
@@ -171,14 +174,14 @@ class _AchievementsPageState extends State<AchievementsPage> {
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: onAccent,
+            color: onAmber,
           ),
         ),
         Text(
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: onAccent.withValues(alpha: 0.8),
+            color: onAmber.withValues(alpha: 0.8),
           ),
         ),
       ],

@@ -23,6 +23,8 @@ import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/app_color_utils.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -44,12 +46,6 @@ class DesktopCommunityScreen extends StatefulWidget {
 
 class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     with TickerProviderStateMixin {
-  // Semantic color palette for varied UI elements (matches governance/artist/institution screens)
-  static const Color _tealAccent = Color(0xFF4ECDC4);
-  static const Color _coralAccent = Color(0xFFFF6B6B);
-  static const Color _amberAccent = Color(0xFFFFB300);
-  static const Color _purpleAccent = Color(0xFF9575CD);
-  
   late AnimationController _animationController;
   late TabController _tabController;
   late ScrollController _scrollController;
@@ -122,7 +118,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   String _discoverSortMode = 'recent';
   String _followingSortMode = 'recent';
   String _artSortMode = 'recent';
-  
+
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
   List<CommunityPost> _followingPosts = [];
@@ -151,7 +147,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     _messageSearchController = TextEditingController();
     _messageSearchController.addListener(_handleMessageSearchChanged);
     _animationController.forward();
-    
+
     // Load community feed data
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadFeed();
@@ -169,7 +165,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final communityProvider = context.read<CommunityHubProvider>();
     // Load art feed with default location (can be updated with user's location)
     await communityProvider.loadArtFeed(
-      latitude: 46.05,  // Default to Ljubljana
+      latitude: 46.05, // Default to Ljubljana
       longitude: 14.50,
       radiusKm: 50,
       limit: 50,
@@ -201,7 +197,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     // If trending wasn't loaded yet (or failed), seed from feed-derived counts.
     if (_trendingTopics.isEmpty) {
       setState(() {
-        _trendingTopics = fallback.length > 12 ? fallback.sublist(0, 12) : List<Map<String, dynamic>>.from(fallback);
+        _trendingTopics = fallback.length > 12
+            ? fallback.sublist(0, 12)
+            : List<Map<String, dynamic>>.from(fallback);
         _trendingFromFeed = true;
       });
       return;
@@ -251,7 +249,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
   }
 
-  Future<List<CommunityPost>> _filterBlockedPosts(List<CommunityPost> posts) async {
+  Future<List<CommunityPost>> _filterBlockedPosts(
+      List<CommunityPost> posts) async {
     final blocked = await BlockListService().loadBlockedWallets();
     if (blocked.isEmpty) return posts;
     return posts.where((post) {
@@ -319,12 +318,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       // Fallback to the search trending endpoint only if the community tag
       // endpoint is empty/unavailable.
-      final searchResults = tagResults.isEmpty ? await backend.getTrendingSearches(limit: 24) : const <Map<String, dynamic>>[];
+      final searchResults = tagResults.isEmpty
+          ? await backend.getTrendingSearches(limit: 24)
+          : const <Map<String, dynamic>>[];
 
-      var normalized = _normalizeTrendingTopics(tagResults.isNotEmpty ? tagResults : searchResults);
+      var normalized = _normalizeTrendingTopics(
+          tagResults.isNotEmpty ? tagResults : searchResults);
       var usedFallback = false;
       final fallback = _buildFallbackTrendingTopics();
-      final fallbackCounts = {for (final item in fallback) (item['tag'] as String).toLowerCase(): item['count'] as int};
+      final fallbackCounts = {
+        for (final item in fallback)
+          (item['tag'] as String).toLowerCase(): item['count'] as int
+      };
 
       if (normalized.isEmpty && fallback.isNotEmpty) {
         normalized = List<Map<String, dynamic>>.from(fallback);
@@ -386,7 +391,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final aggregated = <Map<String, dynamic>>[];
 
       try {
-        final featured = await backend.listArtists(featured: true, limit: 12, offset: 0);
+        final featured =
+            await backend.listArtists(featured: true, limit: 12, offset: 0);
         aggregated.addAll(featured);
       } catch (e) {
         debugPrint('Featured artists fetch failed: $e');
@@ -403,7 +409,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       if (aggregated.length < 8) {
         try {
-          final response = await backend.search(query: 'art', type: 'profiles', limit: 20);
+          final response =
+              await backend.search(query: 'art', type: 'profiles', limit: 20);
           aggregated.addAll(_parseProfileSearchResults(response));
         } catch (e) {
           debugPrint('Profile search fallback failed: $e');
@@ -516,7 +523,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     decoration: BoxDecoration(
                       border: Border(
                         left: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -528,15 +538,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
 
             // Compose dialog
-            if (_showComposeDialog)
-              _buildComposeDialog(themeProvider),
+            if (_showComposeDialog) _buildComposeDialog(themeProvider),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMainFeed(ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+  Widget _buildMainFeed(
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final bool hasPane = _paneStack.isNotEmpty;
     final _PaneRoute? activePane = hasPane ? _paneStack.last : null;
     final Widget homePane = _buildHomeContent(themeProvider);
@@ -564,8 +574,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               layoutBuilder: (currentChild, previousChildren) => Stack(
                 fit: StackFit.expand,
                 children: [
-                  ...previousChildren.map((child) => Positioned.fill(child: child)),
-                  if (currentChild != null) Positioned.fill(child: currentChild),
+                  ...previousChildren
+                      .map((child) => Positioned.fill(child: child)),
+                  if (currentChild != null)
+                    Positioned.fill(child: currentChild),
                 ],
               ),
               child: overlayPane,
@@ -597,7 +609,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: _tabs.map((tab) => _buildFeedList(tab, themeProvider)).toList(),
+                children: _tabs
+                    .map((tab) => _buildFeedList(tab, themeProvider))
+                    .toList(),
               ),
             ),
           ],
@@ -622,11 +636,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         break;
       case _PaneViewType.postDetail:
         final post = route.post;
-        child = post == null ? const SizedBox.shrink() : _buildPostDetailPane(post);
+        child =
+            post == null ? const SizedBox.shrink() : _buildPostDetailPane(post);
         break;
       case _PaneViewType.conversation:
         final conversation = route.conversation;
-        child = conversation == null ? const SizedBox.shrink() : _buildConversationPane(conversation);
+        child = conversation == null
+            ? const SizedBox.shrink()
+            : _buildConversationPane(conversation);
         break;
     }
     return KeyedSubtree(
@@ -777,7 +794,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: themeProvider.accentColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
@@ -913,12 +931,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             ),
           ),
           IconButton(
-            tooltip: sortMode == 'popularity' ? 'Sorted by popularity' : 'Sorted by recent',
+            tooltip: sortMode == 'popularity'
+                ? 'Sorted by popularity'
+                : 'Sorted by recent',
             onPressed: isLoading
                 ? null
                 : () => _updateTagFeedFilters(
                       tagValue,
-                      sortMode: sortMode == 'popularity' ? 'recent' : 'popularity',
+                      sortMode:
+                          sortMode == 'popularity' ? 'recent' : 'popularity',
                     ),
             icon: Icon(
               sortMode == 'popularity' ? Icons.bar_chart : Icons.schedule,
@@ -927,7 +948,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ),
           IconButton(
             tooltip: isLoading ? 'Loading' : 'Refresh',
-            onPressed: isLoading ? null : () => _loadTagFeed(tagValue, forceRefresh: true),
+            onPressed: isLoading
+                ? null
+                : () => _loadTagFeed(tagValue, forceRefresh: true),
             icon: isLoading
                 ? SizedBox(
                     width: 18,
@@ -983,7 +1006,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final tagKey = sanitized.toLowerCase();
     setState(() {
       _paneStack.removeWhere(
-        (route) => route.type == _PaneViewType.tagFeed && (route.tag?.toLowerCase() == tagKey),
+        (route) =>
+            route.type == _PaneViewType.tagFeed &&
+            (route.tag?.toLowerCase() == tagKey),
       );
       _paneStack.add(_PaneRoute.tag(sanitized));
       _activeConversationId = null;
@@ -1021,9 +1046,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final followingOnly = previous.followingOnly;
     final arOnly = previous.arOnly;
     final isFresh = previous.lastFetched != null &&
-        DateTime.now().difference(previous.lastFetched!) < const Duration(minutes: 5);
+        DateTime.now().difference(previous.lastFetched!) <
+            const Duration(minutes: 5);
     if (!forceRefresh && previous.isLoading) return;
-    if (!forceRefresh && isFresh && previous.error == null && previous.posts.isNotEmpty) return;
+    if (!forceRefresh &&
+        isFresh &&
+        previous.error == null &&
+        previous.posts.isNotEmpty) {
+      return;
+    }
 
     if (!mounted) return;
     setState(() {
@@ -1039,7 +1070,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         followingOnly: followingOnly,
         arOnly: arOnly,
       );
-      final chosenPosts = posts.isNotEmpty ? posts : _filterLocalPostsByTag(sanitized);
+      final chosenPosts =
+          posts.isNotEmpty ? posts : _filterLocalPostsByTag(sanitized);
       final filtered = await _filterBlockedPosts(chosenPosts);
       if (!mounted) return;
       setState(() {
@@ -1070,7 +1102,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
+            color:
+                Theme.of(context).colorScheme.outline.withValues(alpha: 0.08),
           ),
         ),
       ),
@@ -1093,7 +1126,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 'Connect with artists and collectors',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -1157,7 +1193,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     child: Icon(
                       icon,
                       size: 16,
-                      color: active ? themeProvider.accentColor : scheme.onSurface.withValues(alpha: 0.7),
+                      color: active
+                          ? themeProvider.accentColor
+                          : scheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 Text(
@@ -1165,7 +1203,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: active ? themeProvider.accentColor : scheme.onSurface.withValues(alpha: 0.7),
+                    color: active
+                        ? themeProvider.accentColor
+                        : scheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -1204,7 +1244,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               tagValue,
               sortMode: sortMode == 'popularity' ? 'recent' : 'popularity',
             ),
-            icon: sortMode == 'popularity' ? Icons.trending_up : Icons.access_time,
+            icon: sortMode == 'popularity'
+                ? Icons.trending_up
+                : Icons.access_time,
           ),
         ],
       ),
@@ -1214,7 +1256,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Widget _buildSearchOverlay(ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
     final trimmedQuery = _searchQuery.trim();
-    if (!_isFetchingSearch && _searchResults.isEmpty && trimmedQuery.length < 2) {
+    if (!_isFetchingSearch &&
+        _searchResults.isEmpty &&
+        trimmedQuery.length < 2) {
       return const SizedBox.shrink();
     }
 
@@ -1261,7 +1305,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Icon(Icons.search_off, color: scheme.onSurface.withValues(alpha: 0.4)),
+                          Icon(Icons.search_off,
+                              color: scheme.onSurface.withValues(alpha: 0.4)),
                           const SizedBox(width: 12),
                           Text(
                             'No results found',
@@ -1322,7 +1367,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             : Text(
                                 subtitleText,
                                 style: GoogleFonts.inter(
-                                  color: scheme.onSurface.withValues(alpha: 0.6),
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                         onTap: () => _handleSearchResultTap(profile),
@@ -1344,7 +1390,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: themeProvider.isDarkMode
-            ? Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+            ? Theme.of(context)
+                .colorScheme
+                .surfaceContainerHighest
+                .withValues(alpha: 0.5)
             : Theme.of(context).colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
@@ -1360,7 +1409,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         isScrollable: true,
         tabAlignment: TabAlignment.start,
         labelColor: Colors.white,
-        unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+        unselectedLabelColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
         labelStyle: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w600,
@@ -1396,13 +1446,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         splashFactory: NoSplash.splashFactory,
         padding: EdgeInsets.zero,
         labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-        tabs: _tabs.map((tab) => Tab(
-          height: 40,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(tab),
-          ),
-        )).toList(),
+        tabs: _tabs
+            .map((tab) => Tab(
+                  height: 40,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(tab),
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
@@ -1420,7 +1472,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: selected ? scheme.onPrimary : scheme.onSurface.withValues(alpha: 0.6)),
+            Icon(icon,
+                size: 16,
+                color: selected
+                    ? scheme.onPrimary
+                    : scheme.onSurface.withValues(alpha: 0.6)),
             const SizedBox(width: 6),
             Text(label),
           ],
@@ -1445,7 +1501,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.sort, size: 18, color: scheme.onSurface.withValues(alpha: 0.65)),
+          Icon(Icons.sort,
+              size: 18, color: scheme.onSurface.withValues(alpha: 0.65)),
           const SizedBox(width: 8),
           Text(
             'Sort',
@@ -1537,7 +1594,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
   }
 
-  List<Map<String, dynamic>> _parseProfileSearchResults(Map<String, dynamic> payload) {
+  List<Map<String, dynamic>> _parseProfileSearchResults(
+      Map<String, dynamic> payload) {
     final results = <Map<String, dynamic>>[];
 
     void addEntries(List<dynamic>? entries) {
@@ -1553,14 +1611,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
     final dynamic resultsNode = payload['results'];
     if (resultsNode is Map<String, dynamic>) {
-      addEntries((resultsNode['profiles'] as List?) ?? (resultsNode['results'] as List?));
+      addEntries((resultsNode['profiles'] as List?) ??
+          (resultsNode['results'] as List?));
     } else if (resultsNode is List) {
       addEntries(resultsNode);
     }
 
     final dynamic dataNode = payload['data'];
     if (dataNode is Map<String, dynamic>) {
-      addEntries((dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
+      addEntries(
+          (dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
     } else if (dataNode is List) {
       addEntries(dataNode);
     }
@@ -1571,7 +1631,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         addEntries(profilesRoot);
       }
       if (payload['data'] is Map<String, dynamic>) {
-        final dynamic nestedProfiles = (payload['data'] as Map<String, dynamic>)['profiles'];
+        final dynamic nestedProfiles =
+            (payload['data'] as Map<String, dynamic>)['profiles'];
         if (nestedProfiles is List) {
           addEntries(nestedProfiles);
         }
@@ -1654,21 +1715,29 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final authorMatch = post.authorName.toLowerCase().contains(query) ||
           (post.authorUsername?.toLowerCase().contains(query) ?? false);
       final tagMatch = post.tags.any((t) => t.toLowerCase().contains(query));
-      final mentionMatch = post.mentions.any((m) => m.toLowerCase().contains(query));
-      final groupMatch = post.group?.name.toLowerCase().contains(query) ?? false;
-      return contentMatch || authorMatch || tagMatch || mentionMatch || groupMatch;
+      final mentionMatch =
+          post.mentions.any((m) => m.toLowerCase().contains(query));
+      final groupMatch =
+          post.group?.name.toLowerCase().contains(query) ?? false;
+      return contentMatch ||
+          authorMatch ||
+          tagMatch ||
+          mentionMatch ||
+          groupMatch;
     }).toList();
   }
 
   Widget _buildDiscoverFeed(ThemeProvider themeProvider) {
-    final posts = _sortPosts(_filterPostsForQuery(_discoverPosts), _discoverSortMode);
+    final posts =
+        _sortPosts(_filterPostsForQuery(_discoverPosts), _discoverSortMode);
 
     if (_isLoadingDiscover && _discoverPosts.isEmpty) {
       return _buildLoadingState(themeProvider, 'Loading posts...');
     }
 
     if (_discoverError != null && _discoverPosts.isEmpty) {
-      return _buildErrorState(themeProvider, _discoverError!, _loadDiscoverFeed);
+      return _buildErrorState(
+          themeProvider, _discoverError!, _loadDiscoverFeed);
     }
 
     if (posts.isEmpty) {
@@ -1687,12 +1756,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       color: themeProvider.accentColor,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        itemCount: posts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
+        itemCount:
+            posts.length + (AppConfig.isFeatureEnabled('season0') ? 1 : 0),
         itemBuilder: (context, index) {
           if (AppConfig.isFeatureEnabled('season0') && index == 0) {
             return _buildSeason0Banner(themeProvider);
           }
-          final postIndex = AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
+          final postIndex =
+              AppConfig.isFeatureEnabled('season0') ? index - 1 : index;
           return _buildPostCard(posts[postIndex], themeProvider);
         },
       ),
@@ -1727,7 +1798,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [accent.withValues(alpha: 0.12), scheme.primaryContainer.withValues(alpha: 0.3)],
+              colors: [
+                accent.withValues(alpha: 0.12),
+                scheme.primaryContainer.withValues(alpha: 0.3)
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -1743,7 +1817,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   color: accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(Icons.rocket_launch_outlined, color: accent, size: 26),
+                child:
+                    Icon(Icons.rocket_launch_outlined, color: accent, size: 26),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1769,7 +1844,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.35)),
+              Icon(Icons.chevron_right,
+                  color: scheme.onSurface.withValues(alpha: 0.35)),
             ],
           ),
         ),
@@ -1778,14 +1854,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildFollowingFeed(ThemeProvider themeProvider) {
-    final posts = _sortPosts(_filterPostsForQuery(_followingPosts), _followingSortMode);
+    final posts =
+        _sortPosts(_filterPostsForQuery(_followingPosts), _followingSortMode);
 
     if (_isLoadingFollowing && _followingPosts.isEmpty) {
       return _buildLoadingState(themeProvider, 'Loading posts...');
     }
 
     if (_followingError != null && _followingPosts.isEmpty) {
-      return _buildErrorState(themeProvider, _followingError!, _loadFollowingFeed);
+      return _buildErrorState(
+          themeProvider, _followingError!, _loadFollowingFeed);
     }
 
     if (posts.isEmpty) {
@@ -1805,7 +1883,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         itemCount: posts.length,
-        itemBuilder: (context, index) => _buildPostCard(posts[index], themeProvider),
+        itemBuilder: (context, index) =>
+            _buildPostCard(posts[index], themeProvider),
       ),
     );
   }
@@ -1885,7 +1964,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: themeProvider.accentColor,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1936,7 +2016,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       onPressed: single.onTap,
       backgroundColor: themeProvider.accentColor,
       icon: Icon(single.icon, color: scheme.onSurface),
-      label: Text(single.label, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+      label: Text(single.label,
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
     );
   }
 
@@ -1949,7 +2030,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             label: 'Create group',
             onTap: () {
               setState(() => _isFabExpanded = false);
-              _showCreateGroupDialog(Provider.of<ThemeProvider>(context, listen: false));
+              _showCreateGroupDialog(
+                  Provider.of<ThemeProvider>(context, listen: false));
             },
           ),
           _FabOption(
@@ -2027,7 +2109,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     return TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
                       duration: Duration(
-                        milliseconds: animationTheme.medium.inMilliseconds + (index * 50),
+                        milliseconds:
+                            animationTheme.medium.inMilliseconds + (index * 50),
                       ),
                       curve: animationTheme.emphasisCurve,
                       builder: (context, value, child) {
@@ -2042,7 +2125,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
                                 color: scheme.surface,
                                 borderRadius: BorderRadius.circular(10),
@@ -2065,7 +2149,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             ),
                             const SizedBox(width: 10),
                             FloatingActionButton.small(
-                              heroTag: 'desktop_comm_fab_option_${option.label}',
+                              heroTag:
+                                  'desktop_comm_fab_option_${option.label}',
                               onPressed: () {
                                 setState(() => _isFabExpanded = false);
                                 option.onTap();
@@ -2086,7 +2171,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         FloatingActionButton.extended(
           heroTag: 'desktop_comm_fab_main',
           onPressed: () => setState(() => _isFabExpanded = !_isFabExpanded),
-          backgroundColor: _isFabExpanded ? scheme.surfaceContainerHighest : themeProvider.accentColor,
+          backgroundColor: _isFabExpanded
+              ? scheme.surfaceContainerHighest
+              : themeProvider.accentColor,
           foregroundColor: _isFabExpanded ? scheme.onSurface : scheme.onPrimary,
           icon: AnimatedRotation(
             turns: _isFabExpanded ? 0.125 : 0,
@@ -2141,7 +2228,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
         return RefreshIndicator(
           onRefresh: () async {
-            await communityProvider.loadGroups(refresh: true, search: _groupSearchController.text);
+            await communityProvider.loadGroups(
+                refresh: true, search: _groupSearchController.text);
           },
           color: themeProvider.accentColor,
           child: ListView.builder(
@@ -2163,7 +2251,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                     icon: const Icon(Icons.close),
                                     onPressed: () {
                                       _groupSearchController.clear();
-                                      communityProvider.loadGroups(refresh: true);
+                                      communityProvider.loadGroups(
+                                          refresh: true);
                                       setState(() {});
                                     },
                                   )
@@ -2176,8 +2265,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           onChanged: (value) {
                             setState(() {});
                             _groupSearchDebounce?.cancel();
-                            _groupSearchDebounce = Timer(const Duration(milliseconds: 300), () {
-                              communityProvider.loadGroups(refresh: true, search: value.trim());
+                            _groupSearchDebounce =
+                                Timer(const Duration(milliseconds: 300), () {
+                              communityProvider.loadGroups(
+                                  refresh: true, search: value.trim());
                             });
                           },
                         ),
@@ -2190,8 +2281,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: themeProvider.accentColor,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 14),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ],
@@ -2209,7 +2302,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   Future<void> _showCreateGroupDialog(ThemeProvider themeProvider) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
-    final communityProvider = Provider.of<CommunityHubProvider>(context, listen: false);
+    final communityProvider =
+        Provider.of<CommunityHubProvider>(context, listen: false);
 
     await showDialog(
       context: context,
@@ -2230,7 +2324,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             const SizedBox(height: 12),
             TextField(
               controller: descController,
-              decoration: const InputDecoration(labelText: 'Description (optional)'),
+              decoration:
+                  const InputDecoration(labelText: 'Description (optional)'),
               maxLines: 2,
             ),
           ],
@@ -2238,14 +2333,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.commonCancel),
           ),
           ElevatedButton(
             onPressed: () async {
               final name = nameController.text.trim();
               if (name.isEmpty) return;
               final navigator = Navigator.of(context);
-              await communityProvider.createGroup(name: name, description: descController.text.trim());
+              await communityProvider.createGroup(
+                  name: name, description: descController.text.trim());
               if (!navigator.mounted) return;
               navigator.pop();
             },
@@ -2253,14 +2349,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               backgroundColor: themeProvider.accentColor,
               foregroundColor: Colors.white,
             ),
-            child: const Text('Create'),
+            child: Text(AppLocalizations.of(context)!.commonCreate),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildGroupCard(CommunityGroupSummary group, ThemeProvider themeProvider) {
+  Widget _buildGroupCard(
+      CommunityGroupSummary group, ThemeProvider themeProvider) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -2306,24 +2403,25 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     color: themeProvider.accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: group.coverImage != null && group.coverImage!.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            group.coverImage!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
+                  child:
+                      group.coverImage != null && group.coverImage!.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.network(
+                                group.coverImage!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  Icons.groups,
+                                  color: themeProvider.accentColor,
+                                  size: 28,
+                                ),
+                              ),
+                            )
+                          : Icon(
                               Icons.groups,
                               color: themeProvider.accentColor,
                               size: 28,
                             ),
-                          ),
-                        )
-                      : Icon(
-                          Icons.groups,
-                          color: themeProvider.accentColor,
-                          size: 28,
-                        ),
                 ),
                 const SizedBox(width: 16),
                 // Group info
@@ -2347,7 +2445,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           group.description!,
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -2359,14 +2460,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           Icon(
                             Icons.people_outline,
                             size: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${group.memberCount} members',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                           if (group.latestPost?.createdAt != null) ...[
@@ -2374,7 +2481,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             Icon(
                               Icons.chat_bubble_outline,
                               size: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                             const SizedBox(width: 4),
                             Expanded(
@@ -2382,7 +2492,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 'Latest: ${_formatTimeAgo(group.latestPost!.createdAt!)}',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -2397,7 +2510,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 const SizedBox(width: 8),
                 Icon(
                   Icons.chevron_right,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
                 ),
               ],
             ),
@@ -2411,7 +2527,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (dateTime == null) return '';
     final now = DateTime.now();
     final difference = now.difference(dateTime);
-    
+
     if (difference.inDays > 365) {
       return '${(difference.inDays / 365).floor()}y ago';
     } else if (difference.inDays > 30) {
@@ -2427,7 +2543,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10}) {
+  List<Widget> _buildAuthorRoleBadges(CommunityPost post,
+      {double fontSize = 10}) {
     final widgets = <Widget>[];
     if (post.authorIsArtist) {
       widgets.add(const SizedBox(width: 6));
@@ -2466,7 +2583,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             message,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -2474,7 +2594,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildErrorState(ThemeProvider themeProvider, String error, VoidCallback onRetry) {
+  Widget _buildErrorState(
+      ThemeProvider themeProvider, String error, VoidCallback onRetry) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2498,7 +2619,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             style: GoogleFonts.inter(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 8),
@@ -2508,7 +2632,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               error,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -2517,13 +2644,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             ),
           ),
           const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh),
-            label: const Text('Retry'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: themeProvider.accentColor,
-              foregroundColor: Colors.white,
+          Builder(
+            builder: (context) => ElevatedButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh),
+              label: Text(AppLocalizations.of(context)!.commonRetry),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: themeProvider.accentColor,
+                foregroundColor: Colors.white,
+              ),
             ),
           ),
         ],
@@ -2531,7 +2660,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildEmptyState(ThemeProvider themeProvider, IconData icon, String title, String subtitle) {
+  Widget _buildEmptyState(ThemeProvider themeProvider, IconData icon,
+      String title, String subtitle) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -2555,7 +2685,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             style: GoogleFonts.inter(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(height: 8),
@@ -2565,7 +2698,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               subtitle,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
                 height: 1.4,
               ),
               textAlign: TextAlign.center,
@@ -2617,7 +2753,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       _formatTimeAgo(post.timestamp),
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -2629,7 +2768,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 },
                 icon: Icon(
                   Icons.more_horiz,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -2652,21 +2794,26 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: post.tags.map((tag) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: themeProvider.accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '#$tag',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: themeProvider.accentColor,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              )).toList(),
+              children: post.tags
+                  .map((tag) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: KubusColorRoles.of(context)
+                              .tagChipBackground
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '#$tag',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: KubusColorRoles.of(context).tagChipBackground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ))
+                  .toList(),
             ),
           ],
 
@@ -2708,7 +2855,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.1),
                 ),
               ),
               child: Row(
@@ -2742,7 +2892,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           'Tap to view in augmented reality',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                       ],
@@ -2751,7 +2904,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   Icon(
                     Icons.arrow_forward_ios,
                     size: 16,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
                   ),
                 ],
               ),
@@ -2768,6 +2924,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 label: _formatTrendingCount(post.likeCount),
                 themeProvider: themeProvider,
                 isActive: post.isLiked,
+                activeColor: AppColorUtils.coralAccent,
                 onPressed: () => _togglePostLike(post),
               ),
               const SizedBox(width: 24),
@@ -2775,6 +2932,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon: Icons.chat_bubble_outline,
                 label: _formatTrendingCount(post.commentCount),
                 themeProvider: themeProvider,
+                activeColor: Theme.of(context).colorScheme.secondary,
                 onPressed: () => _openPostDetail(post),
               ),
               const SizedBox(width: 24),
@@ -2782,17 +2940,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 icon: Icons.repeat,
                 label: _formatTrendingCount(post.shareCount),
                 themeProvider: themeProvider,
+                activeColor: Theme.of(context).colorScheme.tertiary,
                 onPressed: () => _showRepostOptions(post),
               ),
               const Spacer(),
               IconButton(
-                tooltip: post.isBookmarked ? 'Remove bookmark' : 'Save for later',
+                tooltip:
+                    post.isBookmarked ? 'Remove bookmark' : 'Save for later',
                 onPressed: () => _toggleBookmark(post),
                 icon: Icon(
                   post.isBookmarked ? Icons.bookmark : Icons.bookmark_border,
                   color: post.isBookmarked
                       ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
                 ),
               ),
               IconButton(
@@ -2800,7 +2963,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 onPressed: () => _showShareDialog(post),
                 icon: Icon(
                   Icons.share_outlined,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -2817,10 +2983,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     required VoidCallback onPressed,
     bool isActive = false,
     VoidCallback? onLabelTap,
+    Color? activeColor,
   }) {
     final scheme = Theme.of(context).colorScheme;
+    final effectiveActiveColor = activeColor ?? themeProvider.accentColor;
     final color = isActive
-        ? themeProvider.accentColor
+        ? effectiveActiveColor
         : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65);
 
     return Material(
@@ -2828,8 +2996,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       child: InkWell(
         onTap: onPressed,
         borderRadius: BorderRadius.circular(20),
-        hoverColor: themeProvider.accentColor.withValues(alpha: 0.08),
-        splashColor: themeProvider.accentColor.withValues(alpha: 0.12),
+        hoverColor: effectiveActiveColor.withValues(alpha: 0.08),
+        splashColor: effectiveActiveColor.withValues(alpha: 0.12),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(
@@ -2899,7 +3067,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       setState(() {});
       messenger.showSnackBar(
         SnackBar(
-          content: Text(post.isBookmarked ? 'Saved to bookmarks' : 'Removed from bookmarks'),
+          content: Text(post.isBookmarked
+              ? 'Saved to bookmarks'
+              : 'Removed from bookmarks'),
           duration: const Duration(milliseconds: 1500),
         ),
       );
@@ -2940,7 +3110,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   },
                 ),
                 ListTile(
-                  leading: Icon(Icons.share_outlined, color: themeProvider.accentColor),
+                  leading: Icon(Icons.share_outlined,
+                      color: themeProvider.accentColor),
                   title: const Text('Share via...'),
                   onTap: () async {
                     Navigator.of(dialogContext).pop();
@@ -2964,7 +3135,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
+              child: Text(AppLocalizations.of(dialogContext)!.commonClose),
             ),
           ],
         );
@@ -3043,8 +3214,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               ),
               actions: [
                 TextButton(
-                  onPressed: isSubmitting ? null : () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(),
+                  child: Text(AppLocalizations.of(context)!.commonCancel),
                 ),
                 FilledButton(
                   onPressed: isSubmitting
@@ -3052,7 +3225,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       : () async {
                           final navigator = Navigator.of(dialogContext);
                           setDialogState(() => isSubmitting = true);
-                          final success = await _createRepost(post, comment: controller.text.trim());
+                          final success = await _createRepost(post,
+                              comment: controller.text.trim());
                           if (!mounted) return;
                           setDialogState(() => isSubmitting = false);
                           if (success) {
@@ -3084,7 +3258,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     try {
       final createdRepost = await BackendApiService().createRepost(
         originalPostId: post.id,
-        content: comment != null && comment.trim().isNotEmpty ? comment.trim() : null,
+        content: comment != null && comment.trim().isNotEmpty
+            ? comment.trim()
+            : null,
       );
       if (!mounted) return false;
       setState(() {
@@ -3156,10 +3332,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  String _buildPostShareLink(CommunityPost post) => 'https://app.kubus.site/post/${post.id}';
+  String _buildPostShareLink(CommunityPost post) =>
+      'https://app.kubus.site/post/${post.id}';
 
-  List<CommunityPost> _prependUniquePost(List<CommunityPost> source, CommunityPost post) {
-    final filtered = source.where((existing) => existing.id != post.id).toList();
+  List<CommunityPost> _prependUniquePost(
+      List<CommunityPost> source, CommunityPost post) {
+    final filtered =
+        source.where((existing) => existing.id != post.id).toList();
     return [post, ...filtered];
   }
 
@@ -3167,13 +3346,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     setState(() {
       _showMessagesPanel = showMessages;
       if (!showMessages) {
-        _paneStack.removeWhere((route) => route.type == _PaneViewType.conversation);
+        _paneStack
+            .removeWhere((route) => route.type == _PaneViewType.conversation);
         _activeConversationId = null;
       }
     });
   }
 
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: Column(
@@ -3184,7 +3365,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -3192,7 +3376,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               children: [
                 Expanded(
                   child: _buildSidebarTab(
-                    'Feed',
+                    l10n.commonFeed,
                     Icons.dynamic_feed,
                     !_showMessagesPanel,
                     () => _handleSidebarTabChange(false),
@@ -3202,7 +3386,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 const SizedBox(width: 8),
                 Expanded(
                   child: _buildSidebarTab(
-                    'Messages',
+                    l10n.messagesTitle,
                     Icons.mail_outline,
                     _showMessagesPanel,
                     () => _handleSidebarTabChange(true),
@@ -3267,7 +3451,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             border: Border.all(
               color: isSelected
                   ? themeProvider.accentColor.withValues(alpha: 0.4)
-                  : Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                  : Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.1),
               width: isSelected ? 1.5 : 1,
             ),
             boxShadow: isSelected
@@ -3288,7 +3475,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 size: 18,
                 color: isSelected
                     ? themeProvider.accentColor
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
               ),
               const SizedBox(width: 8),
               Text(
@@ -3298,7 +3488,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected
                       ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                   letterSpacing: -0.2,
                 ),
               ),
@@ -3319,6 +3512,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildMessagesPanel(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     return Consumer<ChatProvider>(
       builder: (context, chatProvider, _) {
         final conversations = chatProvider.conversations;
@@ -3327,7 +3522,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         final isSearching = queryVariants.isNotEmpty;
         final highlightMap = <String, String>{};
         final filteredConversations = isSearching
-            ? _applyMessageSearchFilters(conversations, chatProvider, queryVariants, highlightMap)
+            ? _applyMessageSearchFilters(
+                conversations, chatProvider, queryVariants, highlightMap)
             : conversations;
 
         return Column(
@@ -3351,21 +3547,31 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           hintText: 'Search messages...',
                           hintStyle: GoogleFonts.inter(
                             fontSize: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
                           ),
                           border: InputBorder.none,
                           prefixIcon: Icon(
                             Icons.search,
                             size: 20,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.45),
                           ),
                           suffixIcon: trimmedQuery.isEmpty
                               ? null
                               : IconButton(
                                   tooltip: 'Clear search',
                                   icon: const Icon(Icons.close),
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                                  onPressed: () => _messageSearchController.clear(),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                                  onPressed: () =>
+                                      _messageSearchController.clear(),
                                 ),
                         ),
                         style: GoogleFonts.inter(fontSize: 14),
@@ -3377,9 +3583,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     onPressed: _startNewConversation,
                     icon: Icon(
                       Icons.edit_square,
-                      color: themeProvider.accentColor,
+                      color: AppColorUtils.tealAccent,
                     ),
-                    tooltip: 'New message',
+                    tooltip: l10n.messagesEmptyStartChatAction,
                   ),
                 ],
               ),
@@ -3396,7 +3602,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: themeProvider.accentColor,
+                      color: scheme.secondary,
                     ),
                   ),
                 ),
@@ -3406,7 +3612,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               child: conversations.isEmpty
                   ? _buildEmptyMessagesState(themeProvider)
                   : filteredConversations.isEmpty && isSearching
-                      ? _buildNoConversationMatchesState(themeProvider, trimmedQuery)
+                      ? _buildNoConversationMatchesState(
+                          themeProvider, trimmedQuery)
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           itemCount: filteredConversations.length,
@@ -3435,34 +3642,42 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     String? searchHighlight,
     bool showSearchContext = false,
   }) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
     final unreadCount = chatProvider.unreadCounts[conversation.id] ?? 0;
     final hasUnread = unreadCount > 0;
     final isActive = _activeConversationId == conversation.id;
-    final baseColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05);
-    final bool highlightActive = showSearchContext && (searchHighlight?.isNotEmpty ?? false);
+    final baseColor =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05);
+    final bool highlightActive =
+        showSearchContext && (searchHighlight?.isNotEmpty ?? false);
     final Widget? subtitleWidget = highlightActive
         ? Text(
             searchHighlight!,
             style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: themeProvider.accentColor,
+              color: scheme.secondary,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           )
-        : (conversation.lastMessage != null && conversation.lastMessage!.isNotEmpty
+        : (conversation.lastMessage != null &&
+                conversation.lastMessage!.isNotEmpty
             ? Text(
                 conversation.lastMessage!,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               )
             : null);
-    
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -3473,13 +3688,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           margin: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(
             color: isActive
-                ? themeProvider.accentColor.withValues(alpha: 0.12)
+                ? scheme.secondary.withValues(alpha: 0.12)
                 : hasUnread
-                    ? themeProvider.accentColor.withValues(alpha: 0.05)
+                    ? scheme.secondary.withValues(alpha: 0.05)
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: isActive
-                ? Border.all(color: themeProvider.accentColor.withValues(alpha: 0.4), width: 1.2)
+                ? Border.all(
+                    color: scheme.secondary.withValues(alpha: 0.4), width: 1.2)
                 : Border.all(color: baseColor, width: hasUnread ? 1 : 0),
           ),
           child: Row(
@@ -3502,7 +3718,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
-                          color: themeProvider.accentColor,
+                          color: scheme.secondary,
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: Theme.of(context).colorScheme.surface,
@@ -3529,10 +3745,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      conversation.title ?? 'Conversation',
+                      conversation.title ??
+                          l10n.messagesFallbackConversationTitle,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight:
+                            hasUnread ? FontWeight.w600 : FontWeight.w500,
                         color: Theme.of(context).colorScheme.onSurface,
                       ),
                       maxLines: 1,
@@ -3547,7 +3765,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 _formatTimeAgo(conversation.lastMessageAt),
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4),
                 ),
               ),
             ],
@@ -3590,7 +3811,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildNoConversationMatchesState(ThemeProvider themeProvider, String queryLabel) {
+  Widget _buildNoConversationMatchesState(
+      ThemeProvider themeProvider, String queryLabel) {
     final scheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
@@ -3671,7 +3893,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final hits = <_ConversationSearchResult>[];
 
     for (final conversation in conversations) {
-      final match = _matchConversationForSearch(conversation, chatProvider, queryVariants);
+      final match = _matchConversationForSearch(
+          conversation, chatProvider, queryVariants);
       if (match == null) continue;
       if ((match.highlight ?? '').isNotEmpty) {
         highlightMap[conversation.id] = match.highlight!;
@@ -3682,8 +3905,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     hits.sort((a, b) {
       final scoreDiff = b.score.compareTo(a.score);
       if (scoreDiff != 0) return scoreDiff;
-      final aDate = a.conversation.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
-      final bDate = b.conversation.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+      final aDate = a.conversation.lastMessageAt ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bDate = b.conversation.lastMessageAt ??
+          DateTime.fromMillisecondsSinceEpoch(0);
       final dateDiff = bDate.compareTo(aDate);
       if (dateDiff != 0) return dateDiff;
       final aTitle = a.conversation.title ?? a.conversation.rawTitle ?? '';
@@ -3704,7 +3929,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     String? bestHighlight;
 
     void register(double score, String highlight) {
-      if (score > bestScore || (score == bestScore && (bestHighlight == null || highlight.length < bestHighlight!.length))) {
+      if (score > bestScore ||
+          (score == bestScore &&
+              (bestHighlight == null ||
+                  highlight.length < bestHighlight!.length))) {
         bestScore = score;
         bestHighlight = highlight;
       }
@@ -3716,7 +3944,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       register(4.0, 'Title match • $titlePreview');
     }
 
-    final preloaded = chatProvider.getPreloadedProfileMapsForConversation(conversation.id);
+    final preloaded =
+        chatProvider.getPreloadedProfileMapsForConversation(conversation.id);
     final memberNames = <String>{};
     final memberWallets = <String>{};
 
@@ -3775,7 +4004,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
     }
 
-    final lastMessageSnippet = _matchField(conversation.lastMessage, queryVariants);
+    final lastMessageSnippet =
+        _matchField(conversation.lastMessage, queryVariants);
     if (lastMessageSnippet != null) {
       register(2.6, 'Latest message • “$lastMessageSnippet”');
     }
@@ -3785,7 +4015,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       for (final message in cachedMessages) {
         final snippet = _matchField(message.message, queryVariants);
         if (snippet != null) {
-          final sender = (message.senderDisplayName ?? message.senderUsername ?? message.senderWallet).trim();
+          final sender = (message.senderDisplayName ??
+                  message.senderUsername ??
+                  message.senderWallet)
+              .trim();
           final prefix = sender.isNotEmpty ? '$sender • ' : '';
           register(2.4, 'Message • $prefix“$snippet”');
           break;
@@ -3861,7 +4094,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           final chatProvider = context.read<ChatProvider>();
           final messenger = ScaffoldMessenger.of(context);
           try {
-            final conv = await chatProvider.createConversation('', false, [target]);
+            final conv =
+                await chatProvider.createConversation('', false, [target]);
             if (!mounted) return;
             if (conv != null) {
               _openConversation(conv);
@@ -3886,7 +4120,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _showMessagesPanel = true;
       _activeConversationId = conversation.id;
       _paneStack.removeWhere(
-        (route) => route.type == _PaneViewType.conversation && route.conversation?.id == conversation.id,
+        (route) =>
+            route.type == _PaneViewType.conversation &&
+            route.conversation?.id == conversation.id,
       );
       _paneStack.add(_PaneRoute.conversation(conversation));
     });
@@ -3935,7 +4171,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: () => setState(() => _isComposerExpanded = !_isComposerExpanded),
+              onTap: () =>
+                  setState(() => _isComposerExpanded = !_isComposerExpanded),
               borderRadius: BorderRadius.circular(_isComposerExpanded ? 0 : 16),
               child: Padding(
                 padding: const EdgeInsets.all(14),
@@ -3955,16 +4192,23 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             ? CrossFadeState.showSecond
                             : CrossFadeState.showFirst,
                         firstChild: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer
+                                .withValues(alpha: 0.5),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             'What\'s happening?',
                             style: GoogleFonts.inter(
                               fontSize: 13,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ),
@@ -3986,15 +4230,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
                           color: _isComposerExpanded
-                              ? Theme.of(context).colorScheme.surfaceContainerHighest
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
                               : themeProvider.accentColor,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          _isComposerExpanded ? Icons.expand_less : Icons.edit_outlined,
+                          _isComposerExpanded
+                              ? Icons.expand_less
+                              : Icons.edit_outlined,
                           size: 16,
                           color: _isComposerExpanded
-                              ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6)
                               : Colors.white,
                         ),
                       ),
@@ -4050,17 +4301,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             minLines: 2,
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-              hintText: 'Share what you\'re building, discovering, or thinking...',
+              hintText:
+                  'Share what you\'re building, discovering, or thinking...',
               hintStyle: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.4),
               ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
               ),
               filled: true,
-              fillColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              fillColor: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.3),
               contentPadding: const EdgeInsets.all(12),
             ),
             style: GoogleFonts.inter(
@@ -4079,14 +4337,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               spacing: 6,
               runSpacing: 6,
               children: [
-                ...hub.draft.tags.map((tag) => _buildMiniChip('#$tag', themeProvider, () {
-                  hub.removeTag(tag);
-                  setState(() {});
-                })),
-                ...hub.draft.mentions.map((m) => _buildMiniChip('@$m', themeProvider, () {
-                  hub.removeMention(m);
-                  setState(() {});
-                })),
+                ...hub.draft.tags
+                    .map((tag) => _buildMiniChip('#$tag', themeProvider, () {
+                          hub.removeTag(tag);
+                          setState(() {});
+                        })),
+                ...hub.draft.mentions
+                    .map((m) => _buildMiniChip('@$m', themeProvider, () {
+                          hub.removeMention(m);
+                          setState(() {});
+                        })),
               ],
             ),
           ),
@@ -4119,14 +4379,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         top: 2,
                         right: 10,
                         child: GestureDetector(
-                          onTap: () => setState(() => _selectedImages.removeAt(index)),
+                          onTap: () =>
+                              setState(() => _selectedImages.removeAt(index)),
                           child: Container(
                             padding: const EdgeInsets.all(2),
                             decoration: BoxDecoration(
                               color: Colors.black.withValues(alpha: 0.6),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.close, size: 12, color: Colors.white),
+                            child: const Icon(Icons.close,
+                                size: 12, color: Colors.white),
                           ),
                         ),
                       ),
@@ -4150,7 +4412,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.location_on, size: 14, color: themeProvider.accentColor),
+                  Icon(Icons.location_on,
+                      size: 14, color: themeProvider.accentColor),
                   const SizedBox(width: 4),
                   Flexible(
                     child: Text(
@@ -4165,7 +4428,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   const SizedBox(width: 6),
                   GestureDetector(
                     onTap: () => setState(() => _selectedLocation = null),
-                    child: Icon(Icons.close, size: 12, color: themeProvider.accentColor),
+                    child: Icon(Icons.close,
+                        size: 12, color: themeProvider.accentColor),
                   ),
                 ],
               ),
@@ -4211,8 +4475,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   color: remainingChars < 0
                       ? Theme.of(context).colorScheme.error
                       : remainingChars < 20
-                          ? Colors.orange
-                          : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          ? KubusColorRoles.of(context).warningAction
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
                 ),
               ),
               const SizedBox(width: 12),
@@ -4224,8 +4491,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: themeProvider.accentColor.withValues(alpha: 0.4),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  disabledBackgroundColor:
+                      themeProvider.accentColor.withValues(alpha: 0.4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   minimumSize: const Size(60, 32),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -4255,7 +4524,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildMiniChip(String label, ThemeProvider themeProvider, VoidCallback onRemove) {
+  Widget _buildMiniChip(
+      String label, ThemeProvider themeProvider, VoidCallback onRemove) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -4276,7 +4546,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,
-            child: Icon(Icons.close, size: 12, color: themeProvider.accentColor),
+            child:
+                Icon(Icons.close, size: 12, color: themeProvider.accentColor),
           ),
         ],
       ),
@@ -4316,7 +4587,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Add Tag', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text('Add Tag',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         content: TextField(
           controller: controller,
           autofocus: true,
@@ -4335,7 +4607,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context)!.commonCancel),
           ),
           TextButton(
             onPressed: () {
@@ -4372,7 +4644,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       pageBuilder: (modalContext, _, __) {
         final modalShell = Container(
           decoration: BoxDecoration(
-            color: wrapWithSurface ? theme.colorScheme.surface : Colors.transparent,
+            color: wrapWithSurface
+                ? theme.colorScheme.surface
+                : Colors.transparent,
             borderRadius: radius,
             boxShadow: const [
               BoxShadow(
@@ -4441,7 +4715,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   void _openPostDetail(CommunityPost post) {
     // Avoid stacking duplicate instances of the same post detail
     final existingIndex = _paneStack.lastIndexWhere(
-      (route) => route.type == _PaneViewType.postDetail && route.post?.id == post.id,
+      (route) =>
+          route.type == _PaneViewType.postDetail && route.post?.id == post.id,
     );
     if (existingIndex != -1 && existingIndex == _paneStack.length - 1) {
       return;
@@ -4511,7 +4786,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
             return AlertDialog(
               backgroundColor: Theme.of(context).colorScheme.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               title: Text(
                 'Mention someone',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600),
@@ -4560,7 +4836,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     SizedBox(
                       height: 260,
                       child: isLoading
-                          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                          ? const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2))
                           : results.isEmpty
                               ? Center(
                                   child: Text(
@@ -4568,7 +4845,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         ? 'Type at least 2 characters to search'
                                         : (errorMessage ?? 'No profiles found'),
                                     style: GoogleFonts.inter(
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                     textAlign: TextAlign.center,
                                   ),
@@ -4577,22 +4857,38 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                   itemCount: results.length,
                                   separatorBuilder: (_, __) => Divider(
                                     height: 1,
-                                    color: Theme.of(context).colorScheme.outlineVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .outlineVariant,
                                   ),
                                   itemBuilder: (_, index) {
                                     final profile = results[index];
-                                    final displayName = profile['displayName']?.toString() ??
+                                    final displayName = profile['displayName']
+                                            ?.toString() ??
                                         profile['display_name']?.toString() ??
                                         profile['username']?.toString() ??
                                         profile['wallet']?.toString() ??
                                         'Profile';
                                     final handle = _sanitizeHandle(
-                                      profile['username'] ?? profile['handle'] ?? profile['wallet_address'] ?? profile['wallet'] ?? profile['id'] ?? '',
+                                      profile['username'] ??
+                                          profile['handle'] ??
+                                          profile['wallet_address'] ??
+                                          profile['wallet'] ??
+                                          profile['id'] ??
+                                          '',
                                     );
-                                    final wallet = (profile['wallet_address'] ?? profile['wallet'] ?? profile['id'])?.toString() ?? '';
-                                    final avatarUrl = profile['avatar'] ?? profile['avatar_url'] ?? profile['profileImageUrl'];
+                                    final wallet = (profile['wallet_address'] ??
+                                                profile['wallet'] ??
+                                                profile['id'])
+                                            ?.toString() ??
+                                        '';
+                                    final avatarUrl = profile['avatar'] ??
+                                        profile['avatar_url'] ??
+                                        profile['profileImageUrl'];
                                     return ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(vertical: 6),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 6),
                                       leading: AvatarWidget(
                                         avatarUrl: avatarUrl?.toString(),
                                         wallet: wallet,
@@ -4601,18 +4897,31 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                       ),
                                       title: Text(
                                         displayName,
-                                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                        style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w600),
                                       ),
                                       subtitle: Text(
-                                        handle.isNotEmpty ? '@$handle' : _formatWalletPreview(wallet),
+                                        handle.isNotEmpty
+                                            ? '@$handle'
+                                            : _formatWalletPreview(wallet),
                                         style: GoogleFonts.inter(
-                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.6),
                                           fontSize: 12,
                                         ),
                                       ),
-                                      trailing: Icon(Icons.person_add_alt_1_outlined,
-                                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4)),
-                                      onTap: () => Navigator.of(dialogContext).pop(handle.isNotEmpty ? handle : wallet),
+                                      trailing: Icon(
+                                          Icons.person_add_alt_1_outlined,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.4)),
+                                      onTap: () => Navigator.of(dialogContext)
+                                          .pop(handle.isNotEmpty
+                                              ? handle
+                                              : wallet),
                                     );
                                   },
                                 ),
@@ -4628,7 +4937,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 TextButton(
                   onPressed: controller.text.trim().isEmpty
                       ? null
-                      : () => Navigator.of(dialogContext).pop(_sanitizeHandle(controller.text)),
+                      : () => Navigator.of(dialogContext)
+                          .pop(_sanitizeHandle(controller.text)),
                   child: const Text('Add handle'),
                 ),
               ],
@@ -4662,7 +4972,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       final draft = hub.draft;
       final location = draft.location;
-      final locationName = _selectedLocation ?? draft.locationLabel ?? location?.name;
+      final locationName =
+          _selectedLocation ?? draft.locationLabel ?? location?.name;
 
       if (draft.targetGroup != null) {
         await api.createGroupPost(
@@ -4709,7 +5020,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           SnackBar(
             content: const Text('Post published!'),
             behavior: SnackBarBehavior.floating,
-            backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            backgroundColor:
+                Provider.of<ThemeProvider>(context, listen: false).accentColor,
           ),
         );
       }
@@ -4748,7 +5060,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               icon: Icon(
                 Icons.refresh,
                 size: 18,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -4788,17 +5103,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               children: [
                 Icon(
                   Icons.trending_down,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child:
-                Text(
-                  'No trending tags yet. Engage with the community to surface trends.',
-                  style: GoogleFonts.inter(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  child: Text(
+                    'No trending tags yet. Engage with the community to surface trends.',
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
                   ),
-                ),
                 ),
               ],
             ),
@@ -4814,7 +5134,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     'Based on recent posts',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -4833,82 +5156,90 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     onTap: () => _openTagFeed(rawTag),
                     child: Row(
                       children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: _getTrendingRankColor(rank).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text(
-                            '#$rank',
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w700,
-                              color: _getTrendingRankColor(rank),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: _getTrendingRankColor(rank)
+                                .withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '#$rank',
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w700,
+                                color: _getTrendingRankColor(rank),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              displayTag,
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.onSurface,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                displayTag,
+                                style: GoogleFonts.inter(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${_formatTrendingCount(count)} tagged posts',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              const SizedBox(height: 4),
+                              Text(
+                                '${_formatTrendingCount(count)} tagged posts',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'Add to post',
-                        onPressed: () {
-                          final sanitized = _sanitizeTagValue(rawTag);
-                          if (sanitized == null) return;
-                          hub.addTag(sanitized);
+                        IconButton(
+                          tooltip: 'Add to post',
+                          onPressed: () {
+                            final sanitized = _sanitizeTagValue(rawTag);
+                            if (sanitized == null) return;
+                            hub.addTag(sanitized);
 
-                          // Make the action visible immediately by expanding
-                          // the quick composer in the sidebar.
-                          if (!_isComposerExpanded) {
-                            setState(() {
-                              _isComposerExpanded = true;
-                            });
-                          } else {
-                            // Still rebuild so the mini-chip row reflects the
-                            // added tag even if the composer is already open.
-                            setState(() {});
-                          }
+                            // Make the action visible immediately by expanding
+                            // the quick composer in the sidebar.
+                            if (!_isComposerExpanded) {
+                              setState(() {
+                                _isComposerExpanded = true;
+                              });
+                            } else {
+                              // Still rebuild so the mini-chip row reflects the
+                              // added tag even if the composer is already open.
+                              setState(() {});
+                            }
 
-                          _appendComposerToken('#$sanitized');
-                        },
-                        icon: Icon(
-                          Icons.add,
-                          size: 18,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                            _appendComposerToken('#$sanitized');
+                          },
+                          icon: Icon(
+                            Icons.add,
+                            size: 18,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
+                          ),
                         ),
-                      ),
                       ],
                     ),
                   ),
                 );
               }),
-          ],
+            ],
           ),
       ],
     );
@@ -4919,15 +5250,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final scheme = Theme.of(context).colorScheme;
     switch (rank) {
       case 1:
-        return _coralAccent; // Coral for #1
+        return AppColorUtils.coralAccent;
       case 2:
-        return _amberAccent; // Amber for #2
+        return AppColorUtils.amberAccent;
       case 3:
-        return _tealAccent; // Teal for #3
+        return AppColorUtils.tealAccent;
       case 4:
         return scheme.secondary;
       case 5:
-        return _purpleAccent;
+        return AppColorUtils.indigoAccent;
       default:
         return scheme.tertiary;
     }
@@ -4943,7 +5274,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     });
   }
 
-  List<Map<String, dynamic>> _normalizeTrendingTopics(List<Map<String, dynamic>> raw) {
+  List<Map<String, dynamic>> _normalizeTrendingTopics(
+      List<Map<String, dynamic>> raw) {
     final normalized = <Map<String, dynamic>>[];
     final seen = <String>{};
     for (final entry in raw) {
@@ -4958,7 +5290,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           entry['occurrences'] ??
           entry['uses'] ??
           0;
-      final numCount = countValue is num ? countValue : num.tryParse(countValue.toString()) ?? 0;
+      final numCount = countValue is num
+          ? countValue
+          : num.tryParse(countValue.toString()) ?? 0;
       normalized.add({'tag': tag, 'count': numCount});
       seen.add(key);
     }
@@ -4966,14 +5300,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   String? _extractTrendingTag(Map<String, dynamic> topic) {
-    final rawTerm = topic['tag'] ?? topic['term'] ?? topic['query'] ?? topic['search'];
+    final rawTerm =
+        topic['tag'] ?? topic['term'] ?? topic['query'] ?? topic['search'];
     if (rawTerm == null) return null;
-    final type = (topic['type'] ?? topic['category'] ?? topic['kind'] ?? '').toString().toLowerCase();
+    final type = (topic['type'] ?? topic['category'] ?? topic['kind'] ?? '')
+        .toString()
+        .toLowerCase();
     final rawString = rawTerm.toString().trim();
     if (rawString.isEmpty) return null;
     if (rawString.startsWith('@')) return null;
 
-    if (type.isNotEmpty && type != 'tag' && type != 'tags' && type != 'hashtag') {
+    if (type.isNotEmpty &&
+        type != 'tag' &&
+        type != 'tags' &&
+        type != 'hashtag') {
       if (!rawString.startsWith('#') && topic['tag'] == null) {
         return null;
       }
@@ -5011,7 +5351,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         final sanitized = _sanitizeTagValue(tag);
         if (sanitized == null) continue;
         final key = sanitized.toLowerCase();
-        final existing = counts.putIfAbsent(key, () => {'tag': sanitized, 'count': 0});
+        final existing =
+            counts.putIfAbsent(key, () => {'tag': sanitized, 'count': 0});
         existing['count'] = (existing['count'] as int) + 1;
       }
     }
@@ -5040,7 +5381,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final views = post.viewCount.toDouble();
     final hoursOld = DateTime.now().difference(post.timestamp).inMinutes / 60.0;
     final recencyBoost = math.max(0, 72 - hoursOld);
-    return (likes * 4) + (comments * 6) + (shares * 5) + (views * 0.25) + recencyBoost;
+    return (likes * 4) +
+        (comments * 6) +
+        (shares * 5) +
+        (views * 0.25) +
+        recencyBoost;
   }
 
   List<CommunityPost> _filterLocalPostsByTag(String tag) {
@@ -5054,7 +5399,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     } catch (_) {}
     return local.where((post) {
       return post.tags.any((t) {
-        final normalized = _sanitizeTagValue(t)?.toLowerCase() ?? t.toLowerCase();
+        final normalized =
+            _sanitizeTagValue(t)?.toLowerCase() ?? t.toLowerCase();
         return normalized == key;
       });
     }).toList();
@@ -5071,7 +5417,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     return value.toStringAsFixed(0);
   }
 
-  List<Map<String, dynamic>> _dedupeSuggestedProfiles(List<Map<String, dynamic>> source, {int take = 8}) {
+  List<Map<String, dynamic>> _dedupeSuggestedProfiles(
+      List<Map<String, dynamic>> source,
+      {int take = 8}) {
     if (source.isEmpty) return const [];
     final seen = <String>{};
     final deduped = <Map<String, dynamic>>[];
@@ -5112,7 +5460,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               icon: Icon(
                 Icons.refresh,
                 size: 18,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -5152,14 +5503,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               children: [
                 Icon(
                   Icons.people_outline,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'Follow artists to personalize your feed.',
                     style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -5169,17 +5526,31 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         else
           Column(
             children: _suggestedArtists.map((artist) {
-              final displayName = (artist['displayName'] ?? artist['name'] ?? artist['username'] ?? 'Creator').toString();
-              final handle = (artist['username'] ?? artist['walletAddress'] ?? artist['wallet'] ?? '').toString();
-              final avatar = (artist['avatar'] ?? artist['avatarUrl'] ?? artist['profileImage'])?.toString();
-              final walletAddress = (artist['walletAddress'] ?? artist['wallet'])?.toString();
+              final displayName = (artist['displayName'] ??
+                      artist['name'] ??
+                      artist['username'] ??
+                      'Creator')
+                  .toString();
+              final handle = (artist['username'] ??
+                      artist['walletAddress'] ??
+                      artist['wallet'] ??
+                      '')
+                  .toString();
+              final avatar = (artist['avatar'] ??
+                      artist['avatarUrl'] ??
+                      artist['profileImage'])
+                  ?.toString();
+              final walletAddress =
+                  (artist['walletAddress'] ?? artist['wallet'])?.toString();
               final profileId = walletAddress ?? handle;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DesktopCard(
                   onTap: profileId.isEmpty
                       ? null
-                      : () => _openUserProfileModal(userId: profileId, username: handle.isEmpty ? null : handle),
+                      : () => _openUserProfileModal(
+                          userId: profileId,
+                          username: handle.isEmpty ? null : handle),
                   child: Row(
                     children: [
                       AvatarWidget(
@@ -5190,7 +5561,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       ),
                       if (artist['verified'] == true) ...[
                         const SizedBox(width: 6),
-                        Icon(Icons.verified, color: themeProvider.accentColor, size: 16),
+                        Icon(Icons.verified,
+                            color: themeProvider.accentColor, size: 16),
                       ],
                       const SizedBox(width: 12),
                       Expanded(
@@ -5211,7 +5583,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 '@$handle',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -5283,12 +5658,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   'No communities found',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
               )
             else
-              ...groups.take(5).map((group) => _buildCommunityItemFromGroup(group, themeProvider)),
+              ...groups.take(5).map((group) =>
+                  _buildCommunityItemFromGroup(group, themeProvider)),
             if (groups.length > 5)
               TextButton(
                 onPressed: () {
@@ -5309,7 +5688,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildCommunityItemFromGroup(CommunityGroupSummary group, ThemeProvider themeProvider) {
+  Widget _buildCommunityItemFromGroup(
+      CommunityGroupSummary group, ThemeProvider themeProvider) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -5373,7 +5753,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       '${group.memberCount} members',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -5381,7 +5764,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               ),
               if (group.isMember)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
                     color: themeProvider.accentColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -5399,7 +5783,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
                 ),
             ],
           ),
@@ -5445,11 +5832,15 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 children: [
                   // Header
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       border: Border(
                         bottom: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -5477,15 +5868,19 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         ),
                         const Spacer(),
                         ElevatedButton(
-                          onPressed: _composeController.text.trim().isEmpty || _isPosting
+                          onPressed: _composeController.text.trim().isEmpty ||
+                                  _isPosting
                               ? null
                               : _submitPost,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: themeProvider.accentColor,
                             foregroundColor: Colors.white,
-                            disabledBackgroundColor: themeProvider.accentColor.withValues(alpha: 0.4),
-                            disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                            disabledBackgroundColor: themeProvider.accentColor
+                                .withValues(alpha: 0.4),
+                            disabledForegroundColor:
+                                Colors.white.withValues(alpha: 0.7),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -5501,7 +5896,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 )
                               : Text(
                                   'Post',
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600),
                                 ),
                         ),
                       ],
@@ -5537,13 +5933,17 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                     hintText: 'What\'s happening?',
                                     hintStyle: GoogleFonts.inter(
                                       fontSize: 18,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.4),
                                     ),
                                     border: InputBorder.none,
                                   ),
                                   style: GoogleFonts.inter(
                                     fontSize: 18,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -5573,9 +5973,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                         height: 100,
                                         margin: const EdgeInsets.only(right: 8),
                                         decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(12),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
                                           image: DecorationImage(
-                                            image: MemoryImage(_selectedImages[index]),
+                                            image: MemoryImage(
+                                                _selectedImages[index]),
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -5592,7 +5994,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                           child: Container(
                                             padding: const EdgeInsets.all(4),
                                             decoration: BoxDecoration(
-                                              color: Colors.black.withValues(alpha: 0.6),
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.6),
                                               shape: BoxShape.circle,
                                             ),
                                             child: const Icon(
@@ -5620,7 +6023,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     decoration: BoxDecoration(
                       border: Border(
                         top: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -5628,27 +6034,34 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       children: [
                         IconButton(
                           onPressed: _pickImage,
-                          icon: Icon(Icons.image_outlined, color: themeProvider.accentColor),
+                          icon: Icon(Icons.image_outlined,
+                              color: themeProvider.accentColor),
                           tooltip: 'Add image',
                         ),
                         IconButton(
                           onPressed: _showARAttachmentInfo,
-                          icon: Icon(Icons.view_in_ar, color: themeProvider.accentColor),
+                          icon: Icon(Icons.view_in_ar,
+                              color: themeProvider.accentColor),
                           tooltip: 'Add AR content',
                         ),
                         IconButton(
                           onPressed: _pickLocation,
-                          icon: Icon(Icons.location_on_outlined, color: themeProvider.accentColor),
+                          icon: Icon(Icons.location_on_outlined,
+                              color: themeProvider.accentColor),
                           tooltip: 'Add location',
                         ),
                         IconButton(
-                          onPressed: () => _showMentionPicker(Provider.of<CommunityHubProvider>(context, listen: false)),
-                          icon: Icon(Icons.alternate_email_outlined, color: themeProvider.accentColor),
+                          onPressed: () => _showMentionPicker(
+                              Provider.of<CommunityHubProvider>(context,
+                                  listen: false)),
+                          icon: Icon(Icons.alternate_email_outlined,
+                              color: themeProvider.accentColor),
                           tooltip: 'Mention user',
                         ),
                         IconButton(
                           onPressed: _showEmojiPicker,
-                          icon: Icon(Icons.emoji_emotions_outlined, color: themeProvider.accentColor),
+                          icon: Icon(Icons.emoji_emotions_outlined,
+                              color: themeProvider.accentColor),
                           tooltip: 'Add emoji',
                         ),
                         const Spacer(),
@@ -5659,8 +6072,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             color: remainingChars < 0
                                 ? Theme.of(context).colorScheme.error
                                 : remainingChars < 20
-                                    ? Colors.orange
-                                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                    ? KubusColorRoles.of(context).warningAction
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5),
                           ),
                         ),
                       ],
@@ -5710,7 +6126,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(AppLocalizations.of(context)!.commonCancel),
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, controller.text.trim()),
@@ -5790,7 +6206,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     size: 16,
                     color: isSelected
                         ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                   ),
                   const SizedBox(width: 6),
                   Text(option.label),
@@ -5804,7 +6223,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     .setDraftCategory(option.value);
               },
               selectedColor: themeProvider.accentColor.withValues(alpha: 0.14),
-              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .surfaceContainerHighest
+                  .withValues(alpha: 0.5),
               side: BorderSide(
                 color: isSelected
                     ? themeProvider.accentColor.withValues(alpha: 0.5)
@@ -5815,7 +6237,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color: isSelected
                     ? themeProvider.accentColor
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.75),
               ),
             ),
           );
@@ -5836,14 +6261,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               spacing: 8,
               runSpacing: 8,
               children: [
-                ...hub.draft.tags.map((tag) => _buildChip(tag, themeProvider, () {
-                      hub.removeTag(tag);
-                      setState(() {});
-                    })),
-                ...hub.draft.mentions.map((m) => _buildChip('@$m', themeProvider, () {
-                      hub.removeMention(m);
-                      setState(() {});
-                    })),
+                ...hub.draft.tags
+                    .map((tag) => _buildChip(tag, themeProvider, () {
+                          hub.removeTag(tag);
+                          setState(() {});
+                        })),
+                ...hub.draft.mentions
+                    .map((m) => _buildChip('@$m', themeProvider, () {
+                          hub.removeMention(m);
+                          setState(() {});
+                        })),
               ],
             ),
           ),
@@ -5898,7 +6325,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildGroupAttachmentCard(ThemeProvider themeProvider, CommunityHubProvider hub) {
+  Widget _buildGroupAttachmentCard(
+      ThemeProvider themeProvider, CommunityHubProvider hub) {
     final scheme = Theme.of(context).colorScheme;
     final group = hub.draft.targetGroup;
     final animationTheme = context.animationTheme;
@@ -5916,7 +6344,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
           decoration: BoxDecoration(
-            color: group != null ? scheme.primaryContainer.withValues(alpha: 0.2) : scheme.surfaceContainerHighest,
+            color: group != null
+                ? scheme.primaryContainer.withValues(alpha: 0.2)
+                : scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: group != null
@@ -5927,7 +6357,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Icon(Icons.groups_3_outlined, color: scheme.onSurface.withValues(alpha: 0.8)),
+              Icon(Icons.groups_3_outlined,
+                  color: scheme.onSurface.withValues(alpha: 0.8)),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -5973,7 +6404,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildArtworkAttachmentCard(ThemeProvider themeProvider, CommunityHubProvider hub) {
+  Widget _buildArtworkAttachmentCard(
+      ThemeProvider themeProvider, CommunityHubProvider hub) {
     final scheme = Theme.of(context).colorScheme;
     final artwork = hub.draft.artwork;
     final animationTheme = context.animationTheme;
@@ -5991,7 +6423,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
           decoration: BoxDecoration(
-            color: artwork != null ? scheme.primaryContainer.withValues(alpha: 0.2) : scheme.surfaceContainerHighest,
+            color: artwork != null
+                ? scheme.primaryContainer.withValues(alpha: 0.2)
+                : scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: artwork != null
@@ -6010,7 +6444,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(Icons.image_outlined, color: themeProvider.accentColor),
+                    errorBuilder: (_, __, ___) => Icon(Icons.image_outlined,
+                        color: themeProvider.accentColor),
                   ),
                 )
               else
@@ -6021,7 +6456,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     color: themeProvider.accentColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.collections_bookmark_outlined, color: themeProvider.accentColor),
+                  child: Icon(Icons.collections_bookmark_outlined,
+                      color: themeProvider.accentColor),
                 ),
               const SizedBox(width: 12),
               Expanded(
@@ -6067,10 +6503,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildLocationAttachmentCard(ThemeProvider themeProvider, CommunityHubProvider hub) {
+  Widget _buildLocationAttachmentCard(
+      ThemeProvider themeProvider, CommunityHubProvider hub) {
     final scheme = Theme.of(context).colorScheme;
     final location = hub.draft.location;
-    final label = _selectedLocation ?? hub.draft.locationLabel ?? location?.name;
+    final label =
+        _selectedLocation ?? hub.draft.locationLabel ?? location?.name;
     final animationTheme = context.animationTheme;
 
     return AnimatedSwitcher(
@@ -6093,7 +6531,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: themeProvider.accentColor.withValues(alpha: 0.3)),
+                border: Border.all(
+                    color: themeProvider.accentColor.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
@@ -6151,7 +6590,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (groups.isEmpty) {
       if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Join a community group to target your post.')),
+        const SnackBar(
+            content: Text('Join a community group to target your post.')),
       );
       return null;
     }
@@ -6160,8 +6600,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520, maxHeight: 560),
             child: Column(
@@ -6208,7 +6650,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 group.description!,
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -6218,21 +6663,30 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                 '${group.memberCount} members',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                           ],
                         ),
                         trailing: Icon(
                           Icons.chevron_right,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.4),
                         ),
                         onTap: () => Navigator.of(dialogContext).pop(group),
                       );
                     },
                     separatorBuilder: (_, __) => Divider(
                       height: 1,
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -6266,7 +6720,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     if (wallet == null || wallet.isEmpty) {
       if (!mounted) return null;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Connect your wallet to link an artwork.')),
+        const SnackBar(
+            content: Text('Connect your wallet to link an artwork.')),
       );
       return null;
     }
@@ -6275,8 +6730,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       context: context,
       builder: (dialogContext) {
         return Dialog(
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560, maxHeight: 580),
             child: Column(
@@ -6305,10 +6762,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 const Divider(height: 1),
                 Expanded(
                   child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: BackendApiService().getArtistArtworks(wallet, limit: 60),
+                    future: BackendApiService()
+                        .getArtistArtworks(wallet, limit: 60),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState != ConnectionState.done) {
-                        return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                        return const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2));
                       }
                       if (snapshot.hasError) {
                         return Center(
@@ -6330,7 +6789,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                               'No artworks found. Mint or upload an artwork first.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.inter(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
                               ),
                             ),
                           ),
@@ -6342,11 +6804,18 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         itemBuilder: (context, index) {
                           final raw = artworks[index];
                           final reference = CommunityArtworkReference(
-                            id: (raw['id'] ?? raw['artworkId'] ?? raw['uuid']).toString(),
-                            title: (raw['title'] ?? raw['name'] ?? 'Untitled').toString(),
-                            imageUrl: (raw['imageUrl'] ?? raw['image_url'] ?? raw['coverImage'] ?? raw['cover_image'])?.toString(),
+                            id: (raw['id'] ?? raw['artworkId'] ?? raw['uuid'])
+                                .toString(),
+                            title: (raw['title'] ?? raw['name'] ?? 'Untitled')
+                                .toString(),
+                            imageUrl: (raw['imageUrl'] ??
+                                    raw['image_url'] ??
+                                    raw['coverImage'] ??
+                                    raw['cover_image'])
+                                ?.toString(),
                           );
-                          final artist = raw['artistName'] ?? raw['artist_name'];
+                          final artist =
+                              raw['artistName'] ?? raw['artist_name'];
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: reference.imageUrl != null
@@ -6359,7 +6828,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                       fit: BoxFit.cover,
                                       errorBuilder: (_, __, ___) => Icon(
                                         Icons.image_outlined,
-                                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.5),
                                       ),
                                     ),
                                   )
@@ -6367,14 +6839,22 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                     width: 56,
                                     height: 56,
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withValues(alpha: 0.5),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
+                                    child: Icon(Icons.view_in_ar,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6)),
                                   ),
                             title: Text(
                               reference.title,
-                              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w600),
                               overflow: TextOverflow.ellipsis,
                             ),
                             subtitle: artist != null
@@ -6382,17 +6862,24 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                     'by $artist',
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                   )
                                 : null,
                             trailing: const Icon(Icons.add_circle_outline),
-                            onTap: () => Navigator.of(dialogContext).pop(reference),
+                            onTap: () =>
+                                Navigator.of(dialogContext).pop(reference),
                           );
                         },
                         separatorBuilder: (_, __) => Divider(
                           height: 1,
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       );
                     },
@@ -6418,7 +6905,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildChip(String label, ThemeProvider themeProvider, VoidCallback onRemove) {
+  Widget _buildChip(
+      String label, ThemeProvider themeProvider, VoidCallback onRemove) {
     return Chip(
       backgroundColor: themeProvider.accentColor.withValues(alpha: 0.1),
       label: Text(
@@ -6441,7 +6929,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(
           children: [
-            Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.onSurface),
+            Icon(Icons.view_in_ar,
+                color: Theme.of(context).colorScheme.onSurface),
             const SizedBox(width: 8),
             Text(
               'AR attachments',
@@ -6455,7 +6944,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         content: Text(
           'Attach AR assets from your mobile device to ensure ARCore/ARKit compatibility. You can still tag this post and continue editing here.',
           style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
         actions: [
@@ -6486,7 +6976,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
             child: Text(
               'Open mobile app',
               style: GoogleFonts.inter(
-                color: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                color: Provider.of<ThemeProvider>(context, listen: false)
+                    .accentColor,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -6511,7 +7002,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
       final draft = hub.draft;
       final location = draft.location;
-      final locationName = _selectedLocation ?? draft.locationLabel ?? location?.name;
+      final locationName =
+          _selectedLocation ?? draft.locationLabel ?? location?.name;
 
       if (draft.targetGroup != null) {
         await hub.submitGroupPost(
@@ -6551,7 +7043,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Post created successfully!'),
-            backgroundColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            backgroundColor:
+                Provider.of<ThemeProvider>(context, listen: false).accentColor,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -6723,7 +7216,8 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
       if (!mounted) return;
       setState(() => _isLoading = true);
       try {
-        final resp = await _backendApi.search(query: query, type: 'profiles', limit: 20);
+        final resp =
+            await _backendApi.search(query: query, type: 'profiles', limit: 20);
         final parsed = _parseProfileSearchResults(resp);
         if (!mounted) return;
         setState(() {
@@ -6740,7 +7234,8 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
     });
   }
 
-  List<Map<String, dynamic>> _parseProfileSearchResults(Map<String, dynamic> payload) {
+  List<Map<String, dynamic>> _parseProfileSearchResults(
+      Map<String, dynamic> payload) {
     final results = <Map<String, dynamic>>[];
 
     void addEntries(List<dynamic>? entries) {
@@ -6760,14 +7255,16 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
 
     final dynamic resultsNode = payload['results'];
     if (resultsNode is Map<String, dynamic>) {
-      addEntries((resultsNode['profiles'] as List?) ?? (resultsNode['results'] as List?));
+      addEntries((resultsNode['profiles'] as List?) ??
+          (resultsNode['results'] as List?));
     } else if (resultsNode is List) {
       addEntries(resultsNode);
     }
 
     final dynamic dataNode = payload['data'];
     if (dataNode is Map<String, dynamic>) {
-      addEntries((dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
+      addEntries(
+          (dataNode['profiles'] as List?) ?? (dataNode['results'] as List?));
     } else if (dataNode is List) {
       addEntries(dataNode);
     }
@@ -6821,13 +7318,19 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
                   hintText: 'Search users...',
                   hintStyle: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   icon: Icon(
                     Icons.search,
                     size: 20,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
                 style: GoogleFonts.inter(fontSize: 14),
@@ -6841,52 +7344,72 @@ class _NewConversationDialogState extends State<_NewConversationDialog> {
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _isSearching && _searchResults.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.person_search,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.person_search,
+                                size: 48,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.3),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Search for users to message',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Search for users to message',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: _searchResults.length,
-                      itemBuilder: (context, index) {
-                        final user = _searchResults[index];
-                        final wallet = (user['wallet_address'] ?? user['walletAddress'] ?? user['wallet'] ?? user['id'])?.toString() ?? '';
-                        final name = user['displayName']?.toString() ??
-                            user['display_name']?.toString() ??
-                            user['username']?.toString() ??
-                            (wallet.isNotEmpty ? wallet : 'User');
-                        final username = user['username']?.toString();
-                        final subtitle = username != null && username.isNotEmpty ? '@$username' : wallet;
-                        final avatarUrl = user['avatar'] ?? user['avatar_url'] ?? user['profileImageUrl'] ?? user['profileImage'];
-                        return ListTile(
-                          leading: AvatarWidget(
-                            wallet: wallet,
-                            avatarUrl: avatarUrl?.toString(),
-                            radius: 20,
-                            allowFabricatedFallback: true,
-                          ),
-                          title: Text(name),
-                          subtitle: subtitle.isNotEmpty ? Text(subtitle) : null,
-                          onTap: wallet.isEmpty ? null : () => widget.onStartConversation(wallet),
-                        );
-                      },
-                    ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, index) {
+                            final user = _searchResults[index];
+                            final wallet = (user['wallet_address'] ??
+                                        user['walletAddress'] ??
+                                        user['wallet'] ??
+                                        user['id'])
+                                    ?.toString() ??
+                                '';
+                            final name = user['displayName']?.toString() ??
+                                user['display_name']?.toString() ??
+                                user['username']?.toString() ??
+                                (wallet.isNotEmpty ? wallet : 'User');
+                            final username = user['username']?.toString();
+                            final subtitle =
+                                username != null && username.isNotEmpty
+                                    ? '@$username'
+                                    : wallet;
+                            final avatarUrl = user['avatar'] ??
+                                user['avatar_url'] ??
+                                user['profileImageUrl'] ??
+                                user['profileImage'];
+                            return ListTile(
+                              leading: AvatarWidget(
+                                wallet: wallet,
+                                avatarUrl: avatarUrl?.toString(),
+                                radius: 20,
+                                allowFabricatedFallback: true,
+                              ),
+                              title: Text(name),
+                              subtitle:
+                                  subtitle.isNotEmpty ? Text(subtitle) : null,
+                              onTap: wallet.isEmpty
+                                  ? null
+                                  : () => widget.onStartConversation(wallet),
+                            );
+                          },
+                        ),
             ),
           ],
         ),

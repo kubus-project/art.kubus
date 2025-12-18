@@ -16,7 +16,10 @@ import '../../providers/tile_providers.dart';
 import '../../providers/wallet_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/art_marker.dart';
+import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
+import '../../config/config.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../utils/map_marker_subject_loader.dart';
@@ -28,10 +31,12 @@ import '../../widgets/map_marker_dialog.dart';
 import '../../utils/grid_utils.dart';
 import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
 import '../art/art_detail_screen.dart';
+import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../services/search_service.dart';
 
@@ -52,6 +57,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   final MapMarkerService _mapMarkerService = MapMarkerService();
 
   Artwork? _selectedArtwork;
+  Exhibition? _selectedExhibition;
   ArtMarker? _activeMarker;
   bool _showFiltersPanel = false;
   String _selectedFilter = 'all';
@@ -85,7 +91,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _showSearchOverlay = false;
   final SearchService _searchService = SearchService();
 
-  final List<String> _filterOptions = ['all', 'nearby', 'discovered', 'undiscovered', 'ar', 'favorites'];
+  final List<String> _filterOptions = [
+    'all',
+    'nearby',
+    'discovered',
+    'undiscovered',
+    'ar',
+    'favorites'
+  ];
   String _selectedSort = 'distance';
 
   @override
@@ -101,7 +114,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       vsync: this,
     );
     _animationController.forward();
-    _markerStreamSub = _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
+    _markerStreamSub =
+        _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
     _cameraCenter = const LatLng(46.0569, 14.5058);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -111,8 +125,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     });
   }
 
-  LatLng get _effectiveCenter => _mapReady ? _mapController.camera.center : _cameraCenter;
-  double get _effectiveZoom => _mapReady ? _mapController.camera.zoom : _cameraZoom;
+  LatLng get _effectiveCenter =>
+      _mapReady ? _mapController.camera.center : _cameraCenter;
+  double get _effectiveZoom =>
+      _mapReady ? _mapController.camera.zoom : _cameraZoom;
 
   void _handleMapReady() {
     setState(() {
@@ -169,17 +185,23 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           // Search suggestions overlay
           if (_showSearchOverlay) _buildSearchOverlay(themeProvider),
 
-          // Left side panel (artwork details or filters)
+          // Left side panel (artwork/exhibition details or filters)
           AnimatedPositioned(
             duration: animationTheme.medium,
             curve: animationTheme.defaultCurve,
-            left: _selectedArtwork != null || _showFiltersPanel ? 0 : -400,
+            left: _selectedArtwork != null ||
+                    _selectedExhibition != null ||
+                    _showFiltersPanel
+                ? 0
+                : -400,
             top: 80,
             bottom: 24,
             width: 380,
-            child: _selectedArtwork != null
-                ? _buildArtworkDetailPanel(themeProvider, animationTheme)
-                : _buildFiltersPanel(themeProvider),
+            child: _selectedExhibition != null
+                ? _buildExhibitionDetailPanel(themeProvider, animationTheme)
+                : _selectedArtwork != null
+                    ? _buildArtworkDetailPanel(themeProvider, animationTheme)
+                    : _buildFiltersPanel(themeProvider),
           ),
 
           // Right side controls
@@ -191,7 +213,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
           // Bottom info bar
           Positioned(
-            left: _selectedArtwork != null ? 400 : 24,
+            left: _selectedArtwork != null || _selectedExhibition != null
+                ? 400
+                : 24,
             right: 24,
             bottom: 24,
             child: _buildBottomInfoBar(themeProvider),
@@ -206,7 +230,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       builder: (context, artworkProvider, _) {
         _getFilteredArtworks(artworkProvider.artworks);
         // TileProviders centralizes tile logic (tiles + optional grid overlay) just like mobile MapScreen
-        final tileProviders = Provider.of<TileProviders?>(context, listen: false);
+        final tileProviders =
+            Provider.of<TileProviders?>(context, listen: false);
         final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
         final isRetina = devicePixelRatio >= 2.0;
         final markers = <Marker>[
@@ -216,7 +241,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (_activeMarker != null)
             _buildMarkerOverlay(
               _activeMarker!,
-              context.read<ArtworkProvider>().getArtworkById(_activeMarker!.artworkId ?? ''),
+              context
+                  .read<ArtworkProvider>()
+                  .getArtworkById(_activeMarker!.artworkId ?? ''),
               themeProvider,
             ),
           if (_pendingMarkerLocation != null)
@@ -237,6 +264,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           onTap: (_, __) {
             setState(() {
               _selectedArtwork = null;
+              _selectedExhibition = null;
               _showFiltersPanel = false;
               _showSearchOverlay = false;
               _pendingMarkerLocation = null;
@@ -300,7 +328,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Marker _buildUserLocationMarker(ThemeProvider themeProvider) {
-    final accent = themeProvider.accentColor;
+    const accent = AppColorUtils.tealAccent;
     final position = _userLocation ?? _cameraCenter;
     return Marker(
       point: position,
@@ -325,7 +353,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildTopBar(ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+  Widget _buildTopBar(
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final l10n = AppLocalizations.of(context)!;
     return Positioned(
       top: 0,
@@ -393,13 +422,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     onSelected: (selected) {
                       setState(() => _selectedFilter = filter);
                     },
-                    selectedColor: themeProvider.accentColor,
+                    selectedColor: AppColorUtils.tealAccent,
                     labelStyle: GoogleFonts.inter(
                       fontSize: 13,
-                      fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                      color: isActive ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                      fontWeight:
+                          isActive ? FontWeight.w600 : FontWeight.normal,
+                      color: isActive
+                          ? Colors.white
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.primaryContainer,
                     side: BorderSide.none,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
@@ -417,6 +450,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 setState(() {
                   _showFiltersPanel = !_showFiltersPanel;
                   _selectedArtwork = null;
+                  _selectedExhibition = null;
                 });
               },
               icon: Icon(
@@ -440,7 +474,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final trimmedQuery = _searchQuery.trim();
-    if (!_isFetchingSearch && _searchSuggestions.isEmpty && trimmedQuery.length < 2) {
+    if (!_isFetchingSearch &&
+        _searchSuggestions.isEmpty &&
+        trimmedQuery.length < 2) {
       return const SizedBox.shrink();
     }
 
@@ -458,7 +494,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             elevation: 12,
             borderRadius: BorderRadius.circular(12),
             color: scheme.surface,
-            shadowColor: themeProvider.accentColor.withValues(alpha: 0.15),
+            shadowColor: AppColorUtils.tealAccent.withValues(alpha: 0.15),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Builder(
@@ -514,10 +550,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       final suggestion = _searchSuggestions[index];
                       return ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: themeProvider.accentColor.withValues(alpha: 0.1),
+                          backgroundColor:
+                              AppColorUtils.tealAccent.withValues(alpha: 0.1),
                           child: Icon(
                             suggestion.icon,
-                            color: themeProvider.accentColor,
+                            color: AppColorUtils.tealAccent,
                           ),
                         ),
                         title: Text(
@@ -529,7 +566,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             : Text(
                                 suggestion.subtitle!,
                                 style: GoogleFonts.inter(
-                                  color: scheme.onSurface.withValues(alpha: 0.6),
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                         onTap: () => _handleSuggestionTap(suggestion),
@@ -545,7 +583,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildArtworkDetailPanel(ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+  Widget _buildArtworkDetailPanel(
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final artwork = _selectedArtwork!;
     final scheme = Theme.of(context).colorScheme;
     final coverUrl = ArtworkMediaResolver.resolveCover(
@@ -586,13 +625,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              themeProvider.accentColor,
-                              themeProvider.accentColor.withValues(alpha: 0.7),
+                              AppColorUtils.tealAccent,
+                              AppColorUtils.tealAccent.withValues(alpha: 0.7),
                             ],
                           ),
                         ),
                         child: const Center(
-                          child: Icon(Icons.image_not_supported, color: Colors.white70, size: 40),
+                          child: Icon(Icons.image_not_supported,
+                              color: Colors.white70, size: 40),
                         ),
                       ),
                     )
@@ -603,13 +643,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            themeProvider.accentColor,
-                            themeProvider.accentColor.withValues(alpha: 0.7),
+                            AppColorUtils.tealAccent,
+                            AppColorUtils.tealAccent.withValues(alpha: 0.7),
                           ],
                         ),
                       ),
                       child: const Center(
-                        child: Icon(Icons.image_outlined, color: Colors.white70, size: 40),
+                        child: Icon(Icons.image_outlined,
+                            color: Colors.white70, size: 40),
                       ),
                     ),
                   Container(
@@ -642,7 +683,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       top: 12,
                       left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(20),
@@ -653,7 +695,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             Icon(
                               Icons.view_in_ar,
                               size: 16,
-                              color: themeProvider.accentColor,
+                              color: AppColorUtils.tealAccent,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -661,7 +703,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
-                                color: themeProvider.accentColor,
+                                color: AppColorUtils.tealAccent,
                               ),
                             ),
                           ],
@@ -697,7 +739,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: themeProvider.accentColor,
+                      color: scheme.tertiary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -708,7 +750,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         height: 1.6,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -720,15 +765,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     runSpacing: 12,
                     children: [
                       _buildDetailStat(Icons.favorite, '${artwork.likesCount}'),
-                      _buildDetailStat(Icons.visibility, '${artwork.viewsCount}'),
+                      _buildDetailStat(
+                          Icons.visibility, '${artwork.viewsCount}'),
                       if (artwork.discoveryCount > 0)
                         _buildDetailStat(
                           Icons.explore,
-                          AppLocalizations.of(context)!.desktopMapDiscoveriesCount(artwork.discoveryCount),
+                          AppLocalizations.of(context)!
+                              .desktopMapDiscoveriesCount(
+                                  artwork.discoveryCount),
                         ),
                       if (artwork.actualRewards > 0)
-                        _buildDetailStat(Icons.token, '${artwork.actualRewards} KUB8'),
-                      if (distanceLabel != null) _buildDetailStat(Icons.location_on, distanceLabel),
+                        _buildDetailStat(
+                            Icons.token, '${artwork.actualRewards} KUB8'),
+                      if (distanceLabel != null)
+                        _buildDetailStat(Icons.location_on, distanceLabel),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -759,11 +809,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             ));
                           },
                           icon: const Icon(Icons.view_in_ar, size: 20),
-                          label: Text(AppLocalizations.of(context)!.commonViewInAr),
+                          label: Text(
+                              AppLocalizations.of(context)!.commonViewInAr),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: themeProvider.accentColor,
+                            backgroundColor: AppColorUtils.tealAccent,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -784,14 +836,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           } else {
                             unawaited(Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => ArtDetailScreen(artworkId: artwork.id),
+                                builder: (_) =>
+                                    ArtDetailScreen(artworkId: artwork.id),
                               ),
                             ));
                           }
                         },
                         icon: const Icon(Icons.favorite_border, size: 20),
                         style: IconButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
                           padding: const EdgeInsets.all(12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -812,14 +866,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           } else {
                             unawaited(Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (_) => ArtDetailScreen(artworkId: artwork.id),
+                                builder: (_) =>
+                                    ArtDetailScreen(artworkId: artwork.id),
                               ),
                             ));
                           }
                         },
                         icon: const Icon(Icons.share, size: 20),
                         style: IconButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primaryContainer,
                           padding: const EdgeInsets.all(12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -836,14 +892,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       final uri = Uri.parse(
                           'https://www.google.com/maps/dir/?api=1&destination=${artwork.position.latitude},${artwork.position.longitude}');
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(uri,
+                            mode: LaunchMode.externalApplication);
                       }
                     },
                     icon: const Icon(Icons.directions),
-                    label: Text(AppLocalizations.of(context)!.commonGetDirections),
+                    label:
+                        Text(AppLocalizations.of(context)!.commonGetDirections),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide(color: themeProvider.accentColor),
+                      side: BorderSide(color: AppColorUtils.tealAccent),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -879,6 +937,312 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
+  Widget _buildExhibitionDetailPanel(
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+    final exhibition = _selectedExhibition!;
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
+    final exhibitionAccent = AppColorUtils.exhibitionColor;
+
+    // Format date range
+    String? dateRange;
+    if (exhibition.startsAt != null || exhibition.endsAt != null) {
+      final start = exhibition.startsAt != null
+          ? _formatExhibitionDate(exhibition.startsAt!)
+          : null;
+      final end = exhibition.endsAt != null
+          ? _formatExhibitionDate(exhibition.endsAt!)
+          : null;
+      dateRange = [start, end].whereType<String>().join(' – ');
+      if (dateRange.trim().isEmpty) dateRange = null;
+    }
+
+    final location = (exhibition.locationName ?? '').trim().isNotEmpty
+        ? exhibition.locationName!.trim()
+        : null;
+    final coverUrl = exhibition.coverUrl;
+
+    return Container(
+      margin: const EdgeInsets.only(left: 24),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header image
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            child: SizedBox(
+              height: 200,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (coverUrl != null && coverUrl.isNotEmpty)
+                    Image.network(
+                      coverUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              exhibitionAccent,
+                              exhibitionAccent.withValues(alpha: 0.7),
+                            ],
+                          ),
+                        ),
+                        child: const Center(
+                          child: Icon(Icons.museum,
+                              color: Colors.white70, size: 48),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            exhibitionAccent,
+                            exhibitionAccent.withValues(alpha: 0.7),
+                          ],
+                        ),
+                      ),
+                      child: const Center(
+                        child:
+                            Icon(Icons.museum, color: Colors.white70, size: 48),
+                      ),
+                    ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.black.withValues(alpha: 0.35),
+                          Colors.black.withValues(alpha: 0.15),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: IconButton(
+                      onPressed: () {
+                        setState(() => _selectedExhibition = null);
+                      },
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withValues(alpha: 0.2),
+                      ),
+                    ),
+                  ),
+                  // Exhibition badge
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            AppColorUtils.exhibitionIcon,
+                            size: 16,
+                            color: exhibitionAccent,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Exhibition',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: exhibitionAccent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    exhibition.title,
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  if (exhibition.host != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Hosted by ${exhibition.host!.displayName ?? exhibition.host!.username ?? 'Unknown'}',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: exhibitionAccent,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  // Info rows
+                  if (dateRange != null)
+                    _buildExhibitionInfoRow(Icons.schedule, dateRange, scheme),
+                  if (location != null)
+                    _buildExhibitionInfoRow(
+                        Icons.place_outlined, location, scheme),
+                  _buildExhibitionInfoRow(
+                    Icons.event_available_outlined,
+                    'Status: ${_labelForExhibitionStatus(exhibition.status)}',
+                    scheme,
+                  ),
+
+                  if ((exhibition.description ?? '').trim().isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      exhibition.description!,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // Action buttons
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final shellScope = DesktopShellScope.of(context);
+                            if (shellScope != null) {
+                              shellScope.pushScreen(
+                                DesktopSubScreen(
+                                  title: exhibition.title,
+                                  child: ExhibitionDetailScreen(
+                                      exhibitionId: exhibition.id),
+                                ),
+                              );
+                            } else {
+                              unawaited(Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => ExhibitionDetailScreen(
+                                      exhibitionId: exhibition.id),
+                                ),
+                              ));
+                            }
+                          },
+                          icon: Icon(AppColorUtils.exhibitionIcon, size: 20),
+                          label: Text(l10n.commonViewDetails),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: exhibitionAccent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14, horizontal: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (exhibition.lat != null && exhibition.lng != null) ...[
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        final uri = Uri.parse(
+                            'https://www.google.com/maps/dir/?api=1&destination=${exhibition.lat},${exhibition.lng}');
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri,
+                              mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      icon: const Icon(Icons.directions),
+                      label: Text(l10n.commonGetDirections),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: exhibitionAccent),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExhibitionInfoRow(
+      IconData icon, String label, ColorScheme scheme) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: scheme.onSurface.withValues(alpha: 0.7)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatExhibitionDate(DateTime dt) {
+    final d = dt.toLocal();
+    final mm = d.month.toString().padLeft(2, '0');
+    final dd = d.day.toString().padLeft(2, '0');
+    return '${d.year}-$mm-$dd';
+  }
+
+  String _labelForExhibitionStatus(String? raw) {
+    final v = (raw ?? '').trim().toLowerCase();
+    if (v.isEmpty) return 'Unknown';
+    if (v == 'published') return 'Published';
+    if (v == 'draft') return 'Draft';
+    return v;
+  }
+
   Widget _buildFiltersPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
@@ -903,7 +1267,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -956,17 +1323,19 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                           onChanged: (value) {
                             setState(() => _searchRadius = value);
                           },
-                          activeColor: themeProvider.accentColor,
+                          activeColor: AppColorUtils.tealAccent,
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primaryContainer,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          l10n.commonDistanceKm(_searchRadius.toInt().toString()),
+                          l10n.commonDistanceKm(
+                              _searchRadius.toInt().toString()),
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -992,10 +1361,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     runSpacing: 8,
                     children: [
                       _buildFilterChip(l10n.mapFilterAll, true, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeArArt, false, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeNfts, false, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeModels3d, false, themeProvider),
-                      _buildFilterChip(l10n.desktopMapArtworkTypeSculptures, false, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeArArt, false,
+                          themeProvider),
+                      _buildFilterChip(
+                          l10n.desktopMapArtworkTypeNfts, false, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeModels3d,
+                          false, themeProvider),
+                      _buildFilterChip(l10n.desktopMapArtworkTypeSculptures,
+                          false, themeProvider),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -1010,10 +1383,20 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildSortOption(l10n.desktopMapSortDistance, _selectedSort == 'distance', Icons.near_me, themeProvider),
-                  _buildSortOption(l10n.desktopMapSortPopularity, _selectedSort == 'popularity', Icons.trending_up, themeProvider),
-                  _buildSortOption(l10n.desktopMapSortNewest, _selectedSort == 'newest', Icons.schedule, themeProvider),
-                  _buildSortOption(l10n.desktopMapSortRating, _selectedSort == 'rating', Icons.star, themeProvider),
+                  _buildSortOption(
+                      l10n.desktopMapSortDistance,
+                      _selectedSort == 'distance',
+                      Icons.near_me,
+                      themeProvider),
+                  _buildSortOption(
+                      l10n.desktopMapSortPopularity,
+                      _selectedSort == 'popularity',
+                      Icons.trending_up,
+                      themeProvider),
+                  _buildSortOption(l10n.desktopMapSortNewest,
+                      _selectedSort == 'newest', Icons.schedule, themeProvider),
+                  _buildSortOption(l10n.desktopMapSortRating,
+                      _selectedSort == 'rating', Icons.star, themeProvider),
                 ],
               ),
             ),
@@ -1025,7 +1408,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.1),
                 ),
               ),
             ),
@@ -1058,7 +1444,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       _loadMarkers(force: true);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: themeProvider.accentColor,
+                      backgroundColor: AppColorUtils.tealAccent,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -1076,27 +1462,33 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildFilterChip(String label, bool isSelected, ThemeProvider themeProvider) {
+  Widget _buildFilterChip(
+      String label, bool isSelected, ThemeProvider themeProvider) {
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
         final normalized = label.toLowerCase();
-        final filterKey =
-            normalized.contains('ar') ? 'ar' : normalized.contains('all') ? 'all' : _selectedFilter;
+        final filterKey = normalized.contains('ar')
+            ? 'ar'
+            : normalized.contains('all')
+                ? 'all'
+                : _selectedFilter;
         setState(() {
           _selectedFilter = filterKey;
         });
       },
-      selectedColor: themeProvider.accentColor.withValues(alpha: 0.2),
-      checkmarkColor: themeProvider.accentColor,
+      selectedColor: AppColorUtils.tealAccent.withValues(alpha: 0.2),
+      checkmarkColor: AppColorUtils.tealAccent,
       labelStyle: GoogleFonts.inter(
         fontSize: 13,
-        color: isSelected ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface,
+        color: isSelected
+            ? AppColorUtils.tealAccent
+            : Theme.of(context).colorScheme.onSurface,
       ),
       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       side: BorderSide(
-        color: isSelected ? themeProvider.accentColor : Colors.transparent,
+        color: isSelected ? AppColorUtils.tealAccent : Colors.transparent,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -1104,7 +1496,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _buildSortOption(String label, bool isSelected, IconData icon, ThemeProvider themeProvider) {
+  Widget _buildSortOption(String label, bool isSelected, IconData icon,
+      ThemeProvider themeProvider) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Material(
@@ -1120,13 +1513,16 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isSelected
-                  ? themeProvider.accentColor.withValues(alpha: 0.1)
+                  ? AppColorUtils.tealAccent.withValues(alpha: 0.1)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
                 color: isSelected
-                    ? themeProvider.accentColor
-                    : Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                    ? AppColorUtils.tealAccent
+                    : Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.2),
               ),
             ),
             child: Row(
@@ -1135,17 +1531,21 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   icon,
                   size: 20,
                   color: isSelected
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ? AppColorUtils.tealAccent
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 12),
                 Text(
                   label,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
                     color: isSelected
-                        ? themeProvider.accentColor
+                        ? AppColorUtils.tealAccent
                         : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
@@ -1154,7 +1554,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   Icon(
                     Icons.check_circle,
                     size: 20,
-                    color: themeProvider.accentColor,
+                    color: AppColorUtils.tealAccent,
                   ),
               ],
             ),
@@ -1193,7 +1593,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               Container(
                 height: 1,
                 width: 32,
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
               ),
               IconButton(
                 onPressed: () {
@@ -1216,7 +1619,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               final target = _pendingMarkerLocation ?? _effectiveCenter;
               _startMarkerCreationFlow(position: target);
             },
-            icon: const Icon(Icons.add_location_alt_outlined, color: Colors.white),
+            icon: const Icon(Icons.add_location_alt_outlined,
+                color: Colors.white),
             tooltip: l10n.mapCreateMarkerHereTooltip,
           ),
         ),
@@ -1225,7 +1629,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         Container(
           decoration: BoxDecoration(
             color: _autoFollow
-                ? themeProvider.accentColor.withValues(alpha: 0.15)
+                ? AppColorUtils.tealAccent.withValues(alpha: 0.15)
                 : Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
@@ -1246,9 +1650,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             },
             icon: Icon(
               Icons.my_location,
-              color: _autoFollow ? Colors.white : themeProvider.accentColor,
+              color: _autoFollow ? Colors.white : AppColorUtils.tealAccent,
             ),
-            color: _autoFollow ? themeProvider.accentColor : null,
+            color: _autoFollow ? AppColorUtils.tealAccent : null,
           ),
         ),
       ],
@@ -1280,7 +1684,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             children: [
               Row(
                 children: [
-                  Icon(Icons.auto_awesome, color: themeProvider.accentColor, size: 18),
+                  Icon(Icons.auto_awesome,
+                      color: AppColorUtils.tealAccent, size: 18),
                   const SizedBox(width: 8),
                   Text(
                     AppLocalizations.of(context)!.arNearbyArtworksTitle,
@@ -1311,7 +1716,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       AppLocalizations.of(context)!.mapEmptyNoArtworksTitle,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ),
@@ -1321,14 +1729,17 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   spacing: 10,
                   runSpacing: 10,
                   children: displayArtworks.take(10).map((artwork) {
-                    final cover = ArtworkMediaResolver.resolveCover(artwork: artwork);
+                    final cover =
+                        ArtworkMediaResolver.resolveCover(artwork: artwork);
                     final distance = _userLocation != null
                         ? _calculateDistance(_userLocation!, artwork.position)
                         : null;
-                    final distanceText = distance != null ? _formatDistance(distance) : null;
+                    final distanceText =
+                        distance != null ? _formatDistance(distance) : null;
 
                     return SizedBox(
-                      width: (380 - 32 - 10) / 2, // Half panel width minus padding and spacing
+                      width: (380 - 32 - 10) /
+                          2, // Half panel width minus padding and spacing
                       child: Material(
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
@@ -1341,7 +1752,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                               orElse: () => _artMarkers.first,
                             );
                             // Center on marker and show floating card only
-                            _moveCamera(artwork.position, math.max(_effectiveZoom, 15.0));
+                            _moveCamera(artwork.position,
+                                math.max(_effectiveZoom, 15.0));
                             setState(() => _activeMarker = marker);
                           },
                           borderRadius: BorderRadius.circular(8),
@@ -1368,8 +1780,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                         child: Container(
                                           padding: const EdgeInsets.all(4),
                                           decoration: BoxDecoration(
-                                            color: themeProvider.accentColor,
-                                            borderRadius: BorderRadius.circular(4),
+                                            color: AppColorUtils.tealAccent,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
                                           ),
                                           child: const Icon(
                                             Icons.view_in_ar,
@@ -1389,7 +1802,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -1397,21 +1811,26 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                 Text(
                                   artwork.artist.isNotEmpty
                                       ? artwork.artist
-                                      : AppLocalizations.of(context)!.commonUnknown,
+                                      : AppLocalizations.of(context)!
+                                          .commonUnknown,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(
                                     fontSize: 10,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
                                   ),
                                 ),
                                 if (distanceText != null) ...[
                                   const SizedBox(height: 4),
                                   // Distance badge
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: themeProvider.accentColor.withValues(alpha: 0.1),
+                                      color: AppColorUtils.tealAccent
+                                          .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(3),
                                     ),
                                     child: Text(
@@ -1419,7 +1838,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                                       style: GoogleFonts.inter(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w500,
-                                        color: themeProvider.accentColor,
+                                        color: AppColorUtils.tealAccent,
                                       ),
                                     ),
                                   ),
@@ -1460,15 +1879,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             itemBuilder: (context, index) {
               final artwork = artworks[index];
               return ListTile(
-                leading: Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
-                title: Text(artwork.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                leading: Icon(Icons.auto_awesome,
+                    color: Theme.of(context).colorScheme.primary),
+                title: Text(artwork.title,
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 subtitle: Text(
                   artwork.artist.isNotEmpty
                       ? artwork.artist
                       : AppLocalizations.of(context)!.commonUnknown,
                   style: GoogleFonts.inter(fontSize: 12),
                 ),
-                trailing: Text('${artwork.rewards} KUB8', style: GoogleFonts.inter(fontSize: 12)),
+                trailing: Text('${artwork.rewards} KUB8',
+                    style: GoogleFonts.inter(fontSize: 12)),
                 onTap: () {
                   Navigator.of(context).pop();
                   unawaited(_selectArtwork(
@@ -1586,12 +2008,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Artwork? _artworkFromMarkerMetadata(ArtMarker marker) {
     final metaArt = marker.metadata?['artwork'];
     if (metaArt is! Map) return null;
-    final map = Map<String, dynamic>.from(metaArt.map((key, value) => MapEntry(key.toString(), value)));
-    map['id'] ??= marker.artworkId ?? map['_id'] ?? map['artworkId'] ?? map['artwork_id'] ?? '';
+    final map = Map<String, dynamic>.from(
+        metaArt.map((key, value) => MapEntry(key.toString(), value)));
+    map['id'] ??= marker.artworkId ??
+        map['_id'] ??
+        map['artworkId'] ??
+        map['artwork_id'] ??
+        '';
     map['title'] ??= marker.name;
-    map['artist'] ??= map['artistName'] ?? map['artist'] ?? map['creator'] ?? '';
+    map['artist'] ??=
+        map['artistName'] ?? map['artist'] ?? map['creator'] ?? '';
     map['description'] ??= marker.description;
-    map['imageUrl'] ??= map['coverImage'] ?? map['cover_image'] ?? map['image'] ?? map['coverUrl'] ?? map['cover_url'];
+    map['imageUrl'] ??= map['coverImage'] ??
+        map['cover_image'] ??
+        map['image'] ??
+        map['coverUrl'] ??
+        map['cover_url'];
     map['latitude'] ??= marker.position.latitude;
     map['longitude'] ??= marker.position.longitude;
     map['rarity'] ??= ArtworkRarity.common.name;
@@ -1779,7 +2211,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     switch (_selectedSort) {
       case 'distance':
         final center = basePosition;
-        filtered.sort((a, b) => a.getDistanceFrom(center).compareTo(b.getDistanceFrom(center)));
+        filtered.sort((a, b) =>
+            a.getDistanceFrom(center).compareTo(b.getDistanceFrom(center)));
         break;
       case 'popularity':
         filtered.sort((a, b) => b.viewsCount.compareTo(a.viewsCount));
@@ -1788,7 +2221,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         break;
       case 'rating':
-        filtered.sort((a, b) => (b.averageRating ?? 0).compareTo(a.averageRating ?? 0));
+        filtered.sort(
+            (a, b) => (b.averageRating ?? 0).compareTo(a.averageRating ?? 0));
         break;
       default:
         break;
@@ -1805,36 +2239,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Color _resolveArtMarkerColor(ArtMarker marker, ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
-    final subjectType = (marker.metadata?['subjectType'] ?? marker.metadata?['subject_type'])
-        ?.toString()
-        .toLowerCase();
-    if (subjectType != null && subjectType.isNotEmpty) {
-      if (subjectType.contains('institution') || subjectType.contains('museum')) {
-        return scheme.secondary;
-      }
-      if (subjectType.contains('event')) {
-        return scheme.tertiary;
-      }
-      if (subjectType.contains('group') || subjectType.contains('dao') || subjectType.contains('collective')) {
-        return scheme.primaryContainer;
-      }
-    }
-    switch (marker.type) {
-      case ArtMarkerType.artwork:
-        return themeProvider.accentColor;
-      case ArtMarkerType.institution:
-        return scheme.secondary;
-      case ArtMarkerType.event:
-        return scheme.tertiary;
-      case ArtMarkerType.residency:
-        return scheme.primaryContainer;
-      case ArtMarkerType.drop:
-        return scheme.error;
-      case ArtMarkerType.experience:
-        return scheme.primary;
-      case ArtMarkerType.other:
-        return scheme.outline;
-    }
+    // Delegate to centralized marker color utility for consistency with mobile
+    return AppColorUtils.markerSubjectColor(
+      markerType: marker.type.name,
+      metadata: marker.metadata,
+      scheme: scheme,
+    );
   }
 
   IconData _resolveArtMarkerIcon(ArtMarkerType type) {
@@ -1894,7 +2304,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     _markerRefreshDebounce?.cancel();
     final shouldForce = shouldRefresh;
-    _markerRefreshDebounce = Timer(fromGesture ? const Duration(milliseconds: 350) : Duration.zero, () {
+    _markerRefreshDebounce = Timer(
+        fromGesture ? const Duration(milliseconds: 350) : Duration.zero, () {
       _loadMarkers(force: shouldForce);
     });
   }
@@ -1907,12 +2318,12 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: themeProvider.accentColor.withValues(alpha: 0.85),
+          color: AppColorUtils.tealAccent.withValues(alpha: 0.85),
           shape: BoxShape.rectangle,
           border: Border.all(color: Colors.white, width: 3),
           boxShadow: [
             BoxShadow(
-              color: themeProvider.accentColor.withValues(alpha: 0.35),
+              color: AppColorUtils.tealAccent.withValues(alpha: 0.35),
               blurRadius: 10,
               spreadRadius: 2,
             ),
@@ -1931,7 +2342,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     if (!useClustering) {
       final scale = _scaleForZoom(zoom);
       return _artMarkers
-          .map((marker) => _buildArtMarkerPin(marker, themeProvider, scaleOverride: scale))
+          .map((marker) =>
+              _buildArtMarkerPin(marker, themeProvider, scaleOverride: scale))
           .toList();
     }
 
@@ -1947,7 +2359,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final baseScale = _scaleForZoom(zoom);
     for (final bucket in buckets.values) {
       if (bucket.markers.length == 1) {
-        markers.add(_buildArtMarkerPin(bucket.markers.first, themeProvider, scaleOverride: baseScale));
+        markers.add(_buildArtMarkerPin(bucket.markers.first, themeProvider,
+            scaleOverride: baseScale));
       } else {
         markers.add(_buildClusterMarker(bucket, themeProvider, baseScale));
       }
@@ -1955,7 +2368,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     return markers;
   }
 
-  Marker _buildArtMarkerPin(ArtMarker marker, ThemeProvider themeProvider, {double? scaleOverride}) {
+  Marker _buildArtMarkerPin(ArtMarker marker, ThemeProvider themeProvider,
+      {double? scaleOverride}) {
     final Color color = _resolveArtMarkerColor(marker, themeProvider);
     final IconData icon = _resolveArtMarkerIcon(marker.type);
     final double scale = scaleOverride ?? _scaleForZoom(_effectiveZoom);
@@ -1984,8 +2398,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Marker _buildClusterMarker(_ClusterBucket bucket, ThemeProvider themeProvider, double scale) {
-    final dominant = _resolveArtMarkerColor(bucket.markers.first, themeProvider);
+  Marker _buildClusterMarker(
+      _ClusterBucket bucket, ThemeProvider themeProvider, double scale) {
+    final dominant =
+        _resolveArtMarkerColor(bucket.markers.first, themeProvider);
     final count = bucket.markers.length;
     final size = (56 * scale) + (count > 9 ? 10 : 0);
     return Marker(
@@ -1993,7 +2409,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       width: size,
       height: size,
       child: GestureDetector(
-        onTap: () => _moveCamera(bucket.cell.center, math.min(18.0, _effectiveZoom + 2)),
+        onTap: () =>
+            _moveCamera(bucket.cell.center, math.min(18.0, _effectiveZoom + 2)),
         child: Container(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -2047,8 +2464,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Marker _buildMarkerOverlay(
       ArtMarker marker, Artwork? artwork, ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
+    final primaryExhibition = marker.primaryExhibitionSummary;
+    final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
+    final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
+    final canPresentExhibition = exhibitionsFeatureEnabled &&
+        primaryExhibition != null &&
+        primaryExhibition.id.isNotEmpty &&
+        exhibitionsApiAvailable != false;
+
+    final exhibitionTitle = (primaryExhibition?.title ?? '').trim();
     final distanceText = _userLocation != null
         ? _formatDistance(_calculateDistance(_userLocation!, marker.position))
         : null;
@@ -2057,20 +2484,27 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       metadata: marker.metadata,
     );
 
-    // Use artwork title if available, otherwise marker name
-    final displayTitle = artwork?.title.isNotEmpty == true ? artwork!.title : marker.name;
+    // Use exhibition title if available, then artwork title, then marker name
+    final displayTitle = canPresentExhibition && exhibitionTitle.isNotEmpty
+        ? exhibitionTitle
+        : (artwork?.title.isNotEmpty == true ? artwork!.title : marker.name);
     final description = marker.description.isNotEmpty
         ? marker.description
         : (artwork?.description ?? '');
+
+    final showChips =
+        _hasMetadataChips(marker, artwork) || canPresentExhibition;
 
     final markerHeight = _computeMarkerOverlayHeight(
       title: displayTitle,
       distanceText: distanceText,
       description: description,
-      hasChips: _hasMetadataChips(marker, artwork),
+      hasChips: showChips,
       imageHeight: 90,
       buttonVerticalPadding: 8,
-      buttonTextStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+      buttonTextStyle:
+          GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+      showTypeLabel: canPresentExhibition,
     );
 
     return Marker(
@@ -2079,7 +2513,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       height: markerHeight,
       alignment: Alignment.topCenter,
       child: GestureDetector(
-        onTap: () => _openMarkerDetail(marker, artwork),
+        onTap: () => canPresentExhibition
+            ? _openExhibitionFromMarker(marker, primaryExhibition, artwork)
+            : _openMarkerDetail(marker, artwork),
         child: Material(
           color: Colors.transparent,
           child: Container(
@@ -2107,21 +2543,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        displayTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          height: 1.2,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (canPresentExhibition) ...[
+                            Text(
+                              'Exhibition',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: baseColor,
+                                height: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                          ],
+                          Text(
+                            displayTitle,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
+                              height: 1.2,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),
                     if (distanceText != null) ...[
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
                           color: baseColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(6),
@@ -2147,7 +2601,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     InkWell(
                       onTap: () => setState(() => _activeMarker = null),
                       borderRadius: BorderRadius.circular(4),
-                      child: Icon(Icons.close, size: 18, color: scheme.onSurfaceVariant),
+                      child: Icon(Icons.close,
+                          size: 18, color: scheme.onSurfaceVariant),
                     ),
                   ],
                 ),
@@ -2162,13 +2617,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                         ? Image.network(
                             imageUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => _markerImageFallback(baseColor, scheme, marker),
+                            errorBuilder: (_, __, ___) =>
+                                _markerImageFallback(baseColor, scheme, marker),
                             loadingBuilder: (context, child, progress) {
                               if (progress == null) return child;
                               return Container(
                                 color: baseColor.withValues(alpha: 0.12),
                                 child: const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 ),
                               );
                             },
@@ -2180,7 +2637,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                 if (description.isNotEmpty) ...[
                   const SizedBox(height: 10),
                   Text(
-                    description.length > 180 ? '${description.substring(0, 180)}...' : description,
+                    description.length > 180
+                        ? '${description.substring(0, 180)}...'
+                        : description,
                     style: GoogleFonts.inter(
                       fontSize: 11,
                       color: scheme.onSurfaceVariant,
@@ -2189,37 +2648,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   ),
                 ],
                 // Metadata chips
-                if (_hasMetadataChips(marker, artwork)) ...[
+                if (showChips) ...[
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
                     runSpacing: 4,
                     children: [
-                      if (artwork != null && artwork.category.isNotEmpty && artwork.category != 'General')
-                        _compactChip(scheme, Icons.palette, artwork.category, baseColor),
-                      if (marker.metadata?['subjectCategory'] != null || marker.metadata?['subject_category'] != null)
+                      if (canPresentExhibition)
+                        _attendanceProofChip(scheme, baseColor),
+                      if (artwork != null &&
+                          artwork.category.isNotEmpty &&
+                          artwork.category != 'General')
+                        _compactChip(
+                            scheme, Icons.palette, artwork.category, baseColor),
+                      if (marker.metadata?['subjectCategory'] != null ||
+                          marker.metadata?['subject_category'] != null)
                         _compactChip(
                           scheme,
                           Icons.category_outlined,
-                          (marker.metadata!['subjectCategory'] ?? marker.metadata!['subject_category']).toString(),
+                          (marker.metadata!['subjectCategory'] ??
+                                  marker.metadata!['subject_category'])
+                              .toString(),
                           baseColor,
                         ),
-                      if (marker.metadata?['subjectLabel'] != null || marker.metadata?['subject_type'] != null)
-                        _compactChip(
-                          scheme,
-                          Icons.label_outline,
-                          (marker.metadata!['subjectLabel'] ?? marker.metadata!['subject_type']).toString(),
-                          baseColor,
-                        ),
-                      if (marker.metadata?['locationName'] != null || marker.metadata?['location'] != null)
+                      if (marker.metadata?['locationName'] != null ||
+                          marker.metadata?['location'] != null)
                         _compactChip(
                           scheme,
                           Icons.place_outlined,
-                          (marker.metadata!['locationName'] ?? marker.metadata!['location']).toString(),
+                          (marker.metadata!['locationName'] ??
+                                  marker.metadata!['location'])
+                              .toString(),
                           baseColor,
                         ),
                       if (artwork != null && artwork.rewards > 0)
-                        _compactChip(scheme, Icons.card_giftcard, '+${artwork.rewards}', baseColor),
+                        _compactChip(scheme, Icons.card_giftcard,
+                            '+${artwork.rewards}', baseColor),
                     ],
                   ),
                 ],
@@ -2230,13 +2694,25 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
                       backgroundColor: baseColor,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                     ),
-                    onPressed: () => _openMarkerDetail(marker, artwork),
-                    icon: const Icon(Icons.arrow_forward, size: 16),
+                    onPressed: canPresentExhibition
+                        ? () => _openExhibitionFromMarker(
+                            marker, primaryExhibition, artwork)
+                        : () => _openMarkerDetail(marker, artwork),
+                    icon: Icon(
+                      canPresentExhibition
+                          ? Icons.museum_outlined
+                          : Icons.arrow_forward,
+                      size: 16,
+                    ),
                     label: Text(
-                      'View details',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
+                      canPresentExhibition
+                          ? 'Open exhibition'
+                          : l10n.commonViewDetails,
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600, fontSize: 12),
                     ),
                   ),
                 ),
@@ -2244,6 +2720,32 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _attendanceProofChip(ColorScheme scheme, Color baseColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: baseColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: baseColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.verified_outlined, size: 12, color: baseColor),
+          const SizedBox(width: 4),
+          Text(
+            'POAP',
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              color: baseColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2256,11 +2758,30 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     required double imageHeight,
     required double buttonVerticalPadding,
     required TextStyle buttonTextStyle,
+    bool showTypeLabel = false,
   }) {
     const double cardWidth = 240;
     const double horizontalPadding = 12;
     const double verticalPadding = 12;
     final double contentWidth = cardWidth - (horizontalPadding * 2);
+
+    // Type label height (e.g. "Exhibition")
+    double typeLabelHeight = 0;
+    if (showTypeLabel) {
+      final typeLabelPainter = TextPainter(
+        text: TextSpan(
+          text: 'Exhibition',
+          style: GoogleFonts.inter(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            height: 1.0,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout(maxWidth: contentWidth);
+      typeLabelHeight =
+          typeLabelPainter.size.height + 2; // +2 for SizedBox spacing
+    }
 
     // Title height (max 2 lines)
     final titlePainter = TextPainter(
@@ -2274,8 +2795,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       ),
       maxLines: 2,
       textDirection: TextDirection.ltr,
-    )
-      ..layout(maxWidth: contentWidth);
+    )..layout(maxWidth: contentWidth);
     final double titleHeight = titlePainter.size.height;
 
     // Distance badge height
@@ -2290,15 +2810,18 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           ),
         ),
         textDirection: TextDirection.ltr,
-      )
-        ..layout(maxWidth: contentWidth);
+      )..layout(maxWidth: contentWidth);
       // padding vertical 2 + icon size 10 -> height is max(text, icon) + padding*2
       distanceBadgeHeight = (distancePainter.size.height).clamp(10, 20) + 4;
     }
 
     // Close icon height (18)
     const double closeIconHeight = 18;
-    final double headerHeight = [titleHeight, distanceBadgeHeight, closeIconHeight].reduce((a, b) => a > b ? a : b);
+    final double headerHeight = [
+      titleHeight,
+      distanceBadgeHeight,
+      closeIconHeight
+    ].reduce((a, b) => a > b ? a : b);
 
     // Description height (wrap, no maxLines since text trimmed already)
     double descriptionHeight = 0;
@@ -2314,8 +2837,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
         textDirection: TextDirection.ltr,
         maxLines: null,
-      )
-        ..layout(maxWidth: contentWidth);
+      )..layout(maxWidth: contentWidth);
       descriptionHeight = descriptionPainter.size.height;
     }
 
@@ -2326,9 +2848,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final buttonTextPainter = TextPainter(
       text: TextSpan(text: 'View details', style: buttonTextStyle),
       textDirection: TextDirection.ltr,
-    )
-      ..layout();
-    final double buttonHeight = buttonTextPainter.size.height + (buttonVerticalPadding * 2);
+    )..layout();
+    final double buttonHeight =
+        buttonTextPainter.size.height + (buttonVerticalPadding * 2);
 
     // Spacing between sections
     double spacing = 0;
@@ -2340,6 +2862,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     // Total container height
     final double containerHeight = verticalPadding * 2 +
+        typeLabelHeight +
         headerHeight +
         imageHeight +
         descriptionHeight +
@@ -2353,7 +2876,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   /// Check if marker has any metadata chips to display
   bool _hasMetadataChips(ArtMarker marker, Artwork? artwork) {
-    return (artwork != null && artwork.category.isNotEmpty && artwork.category != 'General') ||
+    return (artwork != null &&
+            artwork.category.isNotEmpty &&
+            artwork.category != 'General') ||
         marker.metadata?['subjectCategory'] != null ||
         marker.metadata?['subject_category'] != null ||
         marker.metadata?['subjectLabel'] != null ||
@@ -2398,7 +2923,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   /// Build a thumbnail widget for artwork cover images with error fallback
-  Widget _buildArtworkThumbnail(String? imageUrl, {
+  Widget _buildArtworkThumbnail(
+    String? imageUrl, {
     required double width,
     required double height,
     required double borderRadius,
@@ -2430,7 +2956,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     );
   }
 
-  Widget _markerImageFallback(Color baseColor, ColorScheme scheme, ArtMarker marker) {
+  Widget _markerImageFallback(
+      Color baseColor, ColorScheme scheme, ArtMarker marker) {
+    // Determine the appropriate icon - use exhibition icon if marker has exhibitions
+    final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
+    final icon = hasExhibitions
+        ? AppColorUtils.exhibitionIcon
+        : _resolveArtMarkerIcon(marker.type);
+
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -2443,7 +2976,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       ),
       child: Icon(
-        _resolveArtMarkerIcon(marker.type),
+        icon,
         color: scheme.onPrimary,
         size: 42,
       ),
@@ -2451,7 +2984,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _openMarkerDetail(ArtMarker marker, Artwork? artwork) async {
-    final resolvedArtwork = await _ensureLinkedArtworkLoaded(marker, initial: artwork);
+    final resolvedArtwork =
+        await _ensureLinkedArtworkLoaded(marker, initial: artwork);
     if (!mounted) return;
 
     if (resolvedArtwork == null) {
@@ -2462,11 +2996,66 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     // Open the left side panel with artwork details
     setState(() {
       _selectedArtwork = resolvedArtwork;
+      _selectedExhibition = null;
       _showFiltersPanel = false;
     });
   }
 
-  Future<Artwork?> _ensureLinkedArtworkLoaded(ArtMarker marker, {Artwork? initial}) async {
+  Future<void> _openExhibitionFromMarker(
+    ArtMarker marker,
+    ExhibitionSummaryDto? exhibition,
+    Artwork? artwork,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final api = BackendApiService();
+
+    if (exhibition == null || exhibition.id.isEmpty) {
+      await _openMarkerDetail(marker, artwork);
+      return;
+    }
+
+    if (!AppConfig.isFeatureEnabled('exhibitions') ||
+        api.exhibitionsApiAvailable == false) {
+      await _openMarkerDetail(marker, artwork);
+      return;
+    }
+
+    final fetched = await (() async {
+      try {
+        return await api.getExhibition(exhibition.id);
+      } catch (_) {
+        return null;
+      }
+    })();
+
+    if (!mounted) return;
+
+    if (fetched == null) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            'Exhibition not available at the moment.',
+            style: GoogleFonts.inter(),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
+      setState(() {});
+      await _openMarkerDetail(marker, artwork);
+      return;
+    }
+
+    // Open the left side panel with exhibition details
+    setState(() {
+      _selectedExhibition = fetched;
+      _selectedArtwork = null;
+      _showFiltersPanel = false;
+    });
+  }
+
+  Future<Artwork?> _ensureLinkedArtworkLoaded(ArtMarker marker,
+      {Artwork? initial}) async {
     Artwork? resolvedArtwork = initial;
     final artworkProvider = context.read<ArtworkProvider>();
 
@@ -2482,7 +3071,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             setState(() {});
           }
         } catch (e) {
-          debugPrint('DesktopMapScreen: failed to fetch artwork $artworkId for marker ${marker.id}: $e');
+          debugPrint(
+              'DesktopMapScreen: failed to fetch artwork $artworkId for marker ${marker.id}: $e');
         }
       }
     }
@@ -2494,7 +3084,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       }
       if (mounted && _activeMarker?.id == marker.id) {
         setState(() {
-          if (_selectedArtwork == null || _selectedArtwork?.id == resolvedArtwork!.id) {
+          if (_selectedArtwork == null ||
+              _selectedArtwork?.id == resolvedArtwork!.id) {
             _selectedArtwork = resolvedArtwork;
           }
         });
@@ -2533,8 +3124,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                   width: double.infinity,
                   height: 160,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
-                      _markerImageFallback(_resolveArtMarkerColor(marker, context.read<ThemeProvider>()), scheme, marker),
+                  errorBuilder: (_, __, ___) => _markerImageFallback(
+                      _resolveArtMarkerColor(
+                          marker, context.read<ThemeProvider>()),
+                      scheme,
+                      marker),
                 ),
               ),
             const SizedBox(height: 12),
@@ -2571,8 +3165,10 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }
 
   Future<void> _startMarkerCreationFlow({LatLng? position}) async {
-    final targetPosition = position ?? _pendingMarkerLocation ?? _effectiveCenter;
-    final subjectData = await _refreshMarkerSubjectData(force: true) ?? _snapshotMarkerSubjectData();
+    final targetPosition =
+        position ?? _pendingMarkerLocation ?? _effectiveCenter;
+    final subjectData = await _refreshMarkerSubjectData(force: true) ??
+        _snapshotMarkerSubjectData();
     if (!mounted) return;
 
     final l10n = AppLocalizations.of(context)!;
@@ -2599,7 +3195,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       if (subjectData.delegates.isNotEmpty) MarkerSubjectType.group,
     };
 
-    final initialSubjectType = allowedSubjectTypes.contains(MarkerSubjectType.artwork)
+    final initialSubjectType = allowedSubjectTypes
+            .contains(MarkerSubjectType.artwork)
         ? MarkerSubjectType.artwork
         : allowedSubjectTypes.contains(MarkerSubjectType.exhibition)
             ? MarkerSubjectType.exhibition
@@ -2612,7 +3209,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final MapMarkerFormResult? result = await MapMarkerDialog.show(
       context: context,
       subjectData: subjectData,
-      onRefreshSubjects: ({bool force = false}) => _refreshMarkerSubjectData(force: force),
+      onRefreshSubjects: ({bool force = false}) =>
+          _refreshMarkerSubjectData(force: force),
       initialPosition: targetPosition,
       allowManualPosition: true,
       mapCenter: _effectiveCenter,
@@ -2682,12 +3280,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       final currentZoom = _effectiveZoom;
       final gridCell = GridUtils.gridCellForZoom(position, currentZoom);
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
-      final LatLng snappedPosition = tileProviders?.snapToVisibleGrid(position, currentZoom) ??
-          gridCell.center;
+      final LatLng snappedPosition =
+          tileProviders?.snapToVisibleGrid(position, currentZoom) ??
+              gridCell.center;
 
       final resolvedCategory = form.category.isNotEmpty
           ? form.category
-          : form.subject?.type.defaultCategory ?? form.subjectType.defaultCategory;
+          : form.subject?.type.defaultCategory ??
+              form.subjectType.defaultCategory;
 
       final marker = await _mapMarkerService.createMarker(
         location: snappedPosition,
@@ -2729,7 +3329,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           final exhibitionId = (form.subject?.id ?? '').trim();
           if (exhibitionId.isNotEmpty) {
             try {
-              await exhibitionsProvider.linkExhibitionMarkers(exhibitionId, [marker.id]);
+              await exhibitionsProvider
+                  .linkExhibitionMarkers(exhibitionId, [marker.id]);
             } catch (_) {
               // Non-fatal.
             }
@@ -2737,7 +3338,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             final linkedArtworkId = (form.linkedArtwork?.id ?? '').trim();
             if (linkedArtworkId.isNotEmpty) {
               try {
-                await exhibitionsProvider.linkExhibitionArtworks(exhibitionId, [linkedArtworkId]);
+                await exhibitionsProvider
+                    .linkExhibitionArtworks(exhibitionId, [linkedArtworkId]);
               } catch (_) {
                 // Non-fatal.
               }
@@ -2800,4 +3402,3 @@ class _ClusterBucket {
   final GridCell cell;
   final List<ArtMarker> markers;
 }
-

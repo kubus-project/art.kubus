@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'inline_loading.dart';
 import '../services/push_notification_service.dart';
+import '../utils/kubus_color_roles.dart';
 
 class PermissionsRequestWidget extends StatefulWidget {
   final VoidCallback? onPermissionsGranted;
@@ -174,6 +175,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final roles = KubusColorRoles.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
@@ -184,7 +186,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
             title: 'Camera Access',
             description: 'Required for AR experiences and scanning artworks',
             isGranted: _cameraGranted,
-            color: Colors.blue,
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: 16),
           _buildPermissionTile(
@@ -192,7 +194,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
             title: 'Location Access',
             description: 'Find nearby artworks and enable location-based features',
             isGranted: _locationGranted,
-            color: Colors.green,
+            color: roles.positiveAction,
           ),
           const SizedBox(height: 16),
           _buildPermissionTile(
@@ -200,7 +202,7 @@ class _PermissionsRequestWidgetState extends State<PermissionsRequestWidget> {
             title: 'Notifications',
             description: 'Get alerts when you\'re near AR artworks',
             isGranted: _notificationGranted,
-            color: Colors.orange,
+            color: roles.warningAction,
           ),
           const SizedBox(height: 32),
           SizedBox(

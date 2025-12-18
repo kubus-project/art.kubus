@@ -284,9 +284,10 @@ class _DesktopShellState extends State<DesktopShell>
     final profileProvider = Provider.of<ProfileProvider>(context);
     final isSignedIn = profileProvider.isSignedIn;
     final navItems = _navItemsForState(isSignedIn);
+    final isWalletRoute = _activeRoute == _walletRoute;
     final hasActiveRoute = navItems.any((item) => item.route == _activeRoute);
-    final effectiveRoute = hasActiveRoute ? _activeRoute : navItems.first.route;
-    if (!hasActiveRoute && _activeRoute != navItems.first.route) {
+    final effectiveRoute = hasActiveRoute || isWalletRoute ? _activeRoute : navItems.first.route;
+    if (!hasActiveRoute && !isWalletRoute && _activeRoute != navItems.first.route) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {

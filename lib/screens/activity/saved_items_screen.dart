@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
-import '../../providers/themeprovider.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../models/artwork.dart';
 import '../../community/community_interactions.dart';
 import '../../services/backend_api_service.dart';
+import '../../utils/app_color_utils.dart';
 
 enum SavedItemsCategory { artworks, posts, all }
 
@@ -106,7 +106,6 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   Widget _buildOverviewSection(SavedItemsProvider savedProvider) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final theme = Theme.of(context);
     final captionColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final lastSaved = savedProvider.mostRecentSave;
@@ -166,14 +165,14 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withValues(alpha: 0.12),
+                    color: AppColorUtils.tealAccent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Text(
                     '${savedProvider.totalSavedCount} items',
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.w600,
-                      color: themeProvider.accentColor,
+                      color: AppColorUtils.tealAccent,
                     ),
                   ),
                 ),
@@ -226,18 +225,17 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
     required bool isSelected,
     required VoidCallback onTap,
   }) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final theme = Theme.of(context);
 
     final backgroundColor = isSelected
-        ? themeProvider.accentColor.withValues(alpha: 0.18)
+        ? AppColorUtils.tealAccent.withValues(alpha: 0.18)
         : theme.colorScheme.surfaceContainerHighest;
     final borderColor = isSelected
-        ? themeProvider.accentColor.withValues(alpha: 0.4)
+        ? AppColorUtils.tealAccent.withValues(alpha: 0.4)
         : theme.colorScheme.outline.withValues(alpha: 0.2);
     final iconBgColor = isSelected
-        ? themeProvider.accentColor.withValues(alpha: 0.24)
-        : themeProvider.accentColor.withValues(alpha: 0.12);
+        ? AppColorUtils.tealAccent.withValues(alpha: 0.24)
+        : AppColorUtils.tealAccent.withValues(alpha: 0.12);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
@@ -265,7 +263,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   ),
                   child: Icon(
                     icon,
-                    color: themeProvider.accentColor,
+                    color: AppColorUtils.tealAccent,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -481,16 +479,16 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   Widget _buildArtworkCard(Artwork artwork, SavedItemsProvider savedProvider) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(artwork.id);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+          color: scheme.outline,
         ),
       ),
       child: InkWell(
@@ -508,7 +506,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: themeProvider.accentColor.withValues(alpha: 0.1),
+                  color: scheme.tertiary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   image: artwork.imageUrl != null
                       ? DecorationImage(
@@ -520,7 +518,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 child: artwork.imageUrl == null
                     ? Icon(
                         Icons.palette,
-                        color: themeProvider.accentColor,
+                        color: scheme.tertiary,
                         size: 32,
                       )
                     : null,
@@ -601,7 +599,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 onPressed: () => _confirmUnsave(artwork.id, 'artwork', savedProvider),
                 icon: Icon(
                   Icons.bookmark,
-                  color: themeProvider.accentColor,
+                  color: AppColorUtils.tealAccent,
                 ),
               ),
             ],
@@ -612,16 +610,16 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   Widget _buildPlaceholderArtworkCard(String artworkId, SavedItemsProvider savedProvider) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(artworkId);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+          color: scheme.outline,
         ),
       ),
       child: Padding(
@@ -632,12 +630,12 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
+                color: scheme.tertiary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.palette,
-                color: themeProvider.accentColor,
+                color: scheme.tertiary,
                 size: 32,
               ),
             ),
@@ -679,7 +677,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               onPressed: () => _confirmUnsave(artworkId, 'artwork', savedProvider),
               icon: Icon(
                 Icons.bookmark,
-                color: themeProvider.accentColor,
+                color: AppColorUtils.tealAccent,
               ),
             ),
           ],
@@ -689,13 +687,13 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   Widget _buildPostCard(CommunityPost post, SavedItemsProvider savedProvider) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(post.id);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: Theme.of(context).colorScheme.outline,
@@ -710,12 +708,12 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               children: [
                 CircleAvatar(
                   radius: 20,
-                  backgroundColor: themeProvider.accentColor.withValues(alpha: 0.2),
+                  backgroundColor: scheme.secondary.withValues(alpha: 0.2),
                   child: Text(
                     post.authorName[0].toUpperCase(),
                     style: GoogleFonts.inter(
                       fontWeight: FontWeight.bold,
-                      color: themeProvider.accentColor,
+                      color: scheme.secondary,
                     ),
                   ),
                 ),
@@ -729,14 +727,14 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
+                          color: scheme.onSurface,
                         ),
                       ),
                       Text(
                         _formatTimestamp(post.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                          color: scheme.onSurface.withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -746,7 +744,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   onPressed: () => _confirmUnsave(post.id, 'post', savedProvider),
                   icon: Icon(
                     Icons.bookmark,
-                    color: themeProvider.accentColor,
+                    color: AppColorUtils.tealAccent,
                   ),
                 ),
               ],
@@ -756,7 +754,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               post.content,
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
@@ -772,10 +770,10 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
                     height: 150,
-                    color: themeProvider.accentColor.withValues(alpha: 0.1),
+                    color: scheme.secondary.withValues(alpha: 0.1),
                     child: Icon(
                       Icons.image_not_supported,
-                      color: themeProvider.accentColor,
+                      color: scheme.secondary,
                     ),
                   ),
                 ),
@@ -787,14 +785,14 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                 Icon(
                   Icons.favorite_border,
                   size: 18,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: scheme.onSurface.withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   '${post.likeCount}',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -829,16 +827,16 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   Widget _buildPlaceholderPostCard(String postId, SavedItemsProvider savedProvider) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     final savedTimestamp = savedProvider.getSavedTimestamp(postId);
     
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+          color: scheme.outline,
         ),
       ),
       child: Padding(
@@ -849,12 +847,12 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
+                color: scheme.secondary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.article,
-                color: themeProvider.accentColor,
+                color: scheme.secondary,
                 size: 32,
               ),
             ),
@@ -868,7 +866,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
+                      color: scheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -876,7 +874,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     'Community post',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: scheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                   if (savedTimestamp != null) ...[
@@ -885,7 +883,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       'Saved ${_formatTimestamp(savedTimestamp)}',
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        color: scheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                   ],
@@ -896,7 +894,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
               onPressed: () => _confirmUnsave(postId, 'post', savedProvider),
               icon: Icon(
                 Icons.bookmark,
-                color: themeProvider.accentColor,
+                color: AppColorUtils.tealAccent,
               ),
             ),
           ],
@@ -972,7 +970,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   void _showArtworkDetails(Artwork artwork) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final scheme = Theme.of(context).colorScheme;
     
     showDialog(
       context: context,
@@ -981,7 +979,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 500),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: scheme.surface,
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -998,11 +996,11 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
                       height: 200,
-                      color: themeProvider.accentColor.withValues(alpha: 0.1),
+                      color: scheme.tertiary.withValues(alpha: 0.1),
                       child: Icon(
                         Icons.palette,
                         size: 64,
-                        color: themeProvider.accentColor,
+                        color: scheme.tertiary,
                       ),
                     ),
                   ),
@@ -1018,7 +1016,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: scheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1026,7 +1024,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       'by ${artwork.artist}',
                       style: GoogleFonts.inter(
                         fontSize: 16,
-                        color: themeProvider.accentColor,
+                        color: scheme.tertiary,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -1034,7 +1032,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       artwork.description,
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                        color: scheme.onSurface.withValues(alpha: 0.8),
                         height: 1.5,
                       ),
                     ),
@@ -1053,8 +1051,8 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       child: ElevatedButton(
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: themeProvider.accentColor,
-                          foregroundColor: Colors.white,
+                          backgroundColor: scheme.primary,
+                          foregroundColor: scheme.onPrimary,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1080,13 +1078,13 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
   }
 
   Widget _buildDetailStat(IconData icon, String value) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final scheme = Theme.of(context).colorScheme;
     
     return Column(
       children: [
         Icon(
           icon,
-          color: themeProvider.accentColor,
+          color: scheme.tertiary,
           size: 24,
         ),
         const SizedBox(height: 4),
@@ -1095,7 +1093,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
           style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: scheme.onSurface,
           ),
         ),
       ],

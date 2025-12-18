@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/platform_provider.dart';
+import '../utils/kubus_color_roles.dart';
 
 /// A helper widget that shows platform-aware buttons and features
 class PlatformAwareFeatureButton extends StatelessWidget {
@@ -68,7 +69,7 @@ class PlatformAwareFeatureButton extends StatelessWidget {
       SnackBar(
         content: Text(platformProvider.getUnsupportedFeatureMessage(feature)),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.orange,
+        backgroundColor: KubusColorRoles.of(context).warningAction,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -201,16 +202,23 @@ class PlatformDebugWidget extends StatelessWidget {
                   ...platformProvider.capabilities.entries.map(
                     (entry) => Padding(
                       padding: const EdgeInsets.only(left: 16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            entry.value ? Icons.check : Icons.close,
-                            color: entry.value ? Colors.green : Colors.red,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(entry.key.toString().split('.').last),
-                        ],
+                      child: Builder(
+                        builder: (context) {
+                          final roles = KubusColorRoles.of(context);
+                          return Row(
+                            children: [
+                              Icon(
+                                entry.value ? Icons.check : Icons.close,
+                                color: entry.value
+                                    ? roles.positiveAction
+                                    : roles.negativeAction,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(entry.key.toString().split('.').last),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),

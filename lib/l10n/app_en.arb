@@ -22,6 +22,7 @@
   "commonSearch": "Search",
   "commonNotifications": "Notifications",
   "commonShare": "Share",
+  "commonFeed": "Feed",
   "commonGroup": "Group",
   "commonImage": "Image",
   "commonVideo": "Video",
@@ -1321,6 +1322,48 @@
   "userProfileCollectionFallbackTitle": "Collection",
   "userProfileEventFallbackTitle": "Event",
 
+  "collectionSettingsTitle": "Collection Settings",
+  "collectionDetailAddArtwork": "Add Artwork",
+  "collectionDetailManage": "Manage",
+  "collectionDetailArtworks": "Artworks",
+  "collectionDetailDescription": "Description",
+  "collectionDetailByYou": "by You",
+  "collectionDetailSharingToast": "Sharing collection...",
+  "collectionDetailOpeningEditorToast": "Opening collection editor...",
+  "collectionSettingsBasicInfo": "Basic Information",
+  "collectionSettingsName": "Collection Name",
+  "collectionSettingsNameHint": "Enter collection name",
+  "collectionSettingsDescriptionLabel": "Description",
+  "collectionSettingsDescriptionHint": "Describe your collection...",
+  "collectionSettingsCategory": "Category",
+  "collectionSettingsPrivacy": "Privacy Settings",
+  "collectionSettingsPublic": "Public Collection",
+  "collectionSettingsPublicSubtitle": "Make this collection visible to everyone",
+  "collectionSettingsCollaboration": "Collaboration",
+  "collectionSettingsAllowContributions": "Allow Contributions",
+  "collectionSettingsAllowContributionsSubtitle": "Let other artists contribute to this collection",
+  "collectionSettingsNotifications": "Notifications",
+  "collectionSettingsUpdates": "Collection Updates",
+  "collectionSettingsUpdatesSubtitle": "Get notified when artworks are added or removed",
+  "collectionSettingsDangerZone": "Danger Zone",
+  "collectionSettingsDeleteTitle": "Delete Collection",
+  "collectionSettingsDeleteWarning": "Once you delete a collection, there is no going back. This action cannot be undone.",
+  "collectionSettingsDeleteButton": "Delete Collection",
+  "collectionSettingsSavedToast": "Collection settings saved for \"{name}\"",
+  "@collectionSettingsSavedToast": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "collectionSettingsDeleteDialogTitle": "Delete Collection",
+  "collectionSettingsDeleteDialogContent": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+  "@collectionSettingsDeleteDialogContent": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "collectionSettingsDeletedToast": "Collection deleted",
+
   "userProfileMoreOptionsBlockUser": "Block user",
   "userProfileMoreOptionsReportUser": "Report user",
   "userProfileMoreOptionsCopyLink": "Copy profile link",
@@ -1943,6 +1986,7 @@
 
   "artistStudioTabGallery": "Gallery",
   "artistStudioTabCreate": "Create",
+  "artistStudioTabExhibitions": "Exhibitions",
   "artistStudioTabAnalytics": "Analytics",
   "artistStudioUnlocksAfterDaoApprovalToast": "Artist Studio unlocks after DAO approval.",
 
@@ -1973,6 +2017,12 @@
 
   "desktopArtistStudioOverviewTitle": "Studio Overview",
   "desktopArtistStudioQuickActionsTitle": "Quick Actions",
+  "desktopArtistStudioQuickActionInvitesTitle": "Invites",
+  "desktopArtistStudioQuickActionInvitesSubtitle": "View collaboration invites",
+  "desktopArtistStudioQuickActionInvitesPendingSubtitle": "You have pending collaboration invites",
+  "desktopArtistStudioQuickActionCollaborationInvitesTitle": "Collaboration Invites",
+  "desktopArtistStudioQuickActionExhibitionsTitle": "My Exhibitions",
+  "desktopArtistStudioQuickActionExhibitionsSubtitle": "View exhibitions you collaborate on",
   "desktopArtistStudioQuickActionCreateArtworkTitle": "Create Artwork",
   "desktopArtistStudioQuickActionCreateArtworkSubtitle": "Upload and mint new art",
   "desktopArtistStudioQuickActionMyGalleryTitle": "My Gallery",
@@ -2324,6 +2374,8 @@
     }
   },
   "postDetailWriteCommentHint": "Write a comment…",
+  "postDetailLinkedArtworkLabel": "Linked artwork",
+  "postDetailOriginalUnavailableMessage": "Original post is no longer available",
 
   "communityGroupsRefreshFailedToast": "Could not refresh groups.",
   "communityGroupMembershipUpdateFailedToast": "Could not update group membership.",
@@ -2718,5 +2770,20 @@
   "season0NewsletterSubtitle": "Get updates on progress and events",
   "season0PointsLabel": "KUB8 points",
   "season0PointsTooltip": "Off-chain progress tokens",
-  "season0OnChainNote": "On-chain features available in Labs"
+  "season0OnChainNote": "On-chain features available in Labs",
+
+  "mnemonicRevealTitle": "Reveal Recovery Phrase",
+  "mnemonicRevealPrivacyWarning": "Your recovery phrase (keep it private)",
+  "mnemonicRevealBiometricUnavailable": "Biometric unlock unavailable. Enter PIN to reveal your recovery phrase.",
+  "mnemonicRevealPinError": "PIN must be at least 4 digits",
+  "mnemonicRevealPinLockedError": "PIN locked for {seconds} seconds",
+  "@mnemonicRevealPinLockedError": {
+    "placeholders": {
+      "seconds": {}
+    }
+  },
+  "mnemonicRevealIncorrectPinError": "Incorrect PIN",
+  "mnemonicRevealCopiedToast": "Mnemonic copied to clipboard",
+  "mnemonicRevealShowButton": "Show",
+  "mnemonicRevealEnterPinDialogTitle": "Enter PIN"
 }

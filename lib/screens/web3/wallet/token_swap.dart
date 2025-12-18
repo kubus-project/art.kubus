@@ -7,8 +7,8 @@ import 'package:provider/provider.dart';
 import '../../../config/api_keys.dart';
 import '../../../models/swap_quote.dart';
 import '../../../models/wallet.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../utils/app_color_utils.dart';
 
 class TokenSwap extends StatefulWidget {
   const TokenSwap({super.key});
@@ -60,7 +60,7 @@ class _TokenSwapState extends State<TokenSwap> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accent = context.watch<ThemeProvider>().accentColor;
+    const swapColor = AppColorUtils.greenAccent;
     final walletProvider = context.watch<WalletProvider>();
     final tokens = _availableTokens(walletProvider);
     final hasTokens = tokens.isNotEmpty;
@@ -110,13 +110,13 @@ class _TokenSwapState extends State<TokenSwap> {
                   final content = Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _buildSwapCard(theme, accent, walletProvider, tokens),
+                      _buildSwapCard(theme, swapColor, walletProvider, tokens),
                       const SizedBox(height: 20),
-                      _buildQuoteDetails(theme, accent),
+                      _buildQuoteDetails(theme, swapColor),
                       const SizedBox(height: 20),
-                      _buildSlippageSelector(theme, accent),
+                      _buildSlippageSelector(theme, swapColor),
                       const SizedBox(height: 24),
-                      _buildSwapButton(theme, accent, walletProvider),
+                      _buildSwapButton(theme, swapColor, walletProvider),
                       const SizedBox(height: 24),
                       Expanded(child: _buildRecentSwaps(theme, walletProvider)),
                     ],
@@ -131,19 +131,19 @@ class _TokenSwapState extends State<TokenSwap> {
                   );
                 },
               )
-            : _buildEmptyState(theme, accent),
+            : _buildEmptyState(theme, swapColor),
       ),
     );
   }
 
-  Widget _buildEmptyState(ThemeData theme, Color accent) {
+  Widget _buildEmptyState(ThemeData theme, Color swapColor) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.account_balance_wallet_outlined, size: 64, color: accent),
+            Icon(Icons.account_balance_wallet_outlined, size: 64, color: swapColor),
             const SizedBox(height: 20),
             Text(
               'No tradable tokens yet',
@@ -169,7 +169,7 @@ class _TokenSwapState extends State<TokenSwap> {
 
   Widget _buildSwapCard(
     ThemeData theme,
-    Color accent,
+    Color swapColor,
     WalletProvider walletProvider,
     List<Token> tokens,
   ) {
@@ -193,7 +193,7 @@ class _TokenSwapState extends State<TokenSwap> {
             label: 'You pay',
             isFrom: true,
             theme: theme,
-            accent: accent,
+            swapColor: swapColor,
             walletProvider: walletProvider,
             tokens: tokens,
           ),
@@ -202,7 +202,7 @@ class _TokenSwapState extends State<TokenSwap> {
             label: 'You receive',
             isFrom: false,
             theme: theme,
-            accent: accent,
+            swapColor: swapColor,
             walletProvider: walletProvider,
             tokens: tokens,
           ),
@@ -215,7 +215,7 @@ class _TokenSwapState extends State<TokenSwap> {
     required String label,
     required bool isFrom,
     required ThemeData theme,
-    required Color accent,
+    required Color swapColor,
     required WalletProvider walletProvider,
     required List<Token> tokens,
   }) {
@@ -286,12 +286,12 @@ class _TokenSwapState extends State<TokenSwap> {
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: accent.withValues(alpha: 0.6)),
+                    border: Border.all(color: swapColor.withValues(alpha: 0.6)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _TokenAvatar(symbol: symbol, token: token, accent: accent),
+                      _TokenAvatar(symbol: symbol, token: token, swapColor: swapColor),
                       const SizedBox(width: 8),
                       Text(
                         symbol ?? 'Select',
@@ -335,11 +335,11 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  Widget _buildQuoteDetails(ThemeData theme, Color accent) {
+  Widget _buildQuoteDetails(ThemeData theme, Color swapColor) {
     if (_amountError != null) {
       return _infoCard(
         theme,
-        accent,
+        swapColor,
         icon: Icons.info_outline,
         iconColor: theme.colorScheme.error,
         title: 'Invalid amount',
@@ -349,7 +349,7 @@ class _TokenSwapState extends State<TokenSwap> {
     if (_quoteError != null) {
       return _infoCard(
         theme,
-        accent,
+        swapColor,
         icon: Icons.error_outline,
         iconColor: theme.colorScheme.error,
         title: 'Unable to fetch route',
@@ -366,7 +366,7 @@ class _TokenSwapState extends State<TokenSwap> {
             SizedBox(
               width: 22,
               height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2.4, color: accent),
+              child: CircularProgressIndicator(strokeWidth: 2.4, color: swapColor),
             ),
             const SizedBox(width: 12),
             Text(
@@ -380,7 +380,7 @@ class _TokenSwapState extends State<TokenSwap> {
     if (_quote == null) {
       return _infoCard(
         theme,
-        accent,
+        swapColor,
         icon: Icons.route,
         title: 'Enter an amount',
         subtitle: 'We will fetch live quotes with fees and min received once you type an amount.',
@@ -402,7 +402,7 @@ class _TokenSwapState extends State<TokenSwap> {
         children: [
           Row(
             children: [
-              Icon(Icons.swap_horiz, color: accent),
+              Icon(Icons.swap_horiz, color: swapColor),
               const SizedBox(width: 10),
               Text(
                 'Quote preview',
@@ -512,7 +512,7 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  Widget _buildSlippageSelector(ThemeData theme, Color accent) {
+  Widget _buildSlippageSelector(ThemeData theme, Color swapColor) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: _infoDecoration(theme),
@@ -526,7 +526,7 @@ class _TokenSwapState extends State<TokenSwap> {
                 'Slippage tolerance',
                 style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface),
               ),
-              Text('${_slippagePercent.toStringAsFixed(2)}%', style: GoogleFonts.inter(color: accent)),
+              Text('${_slippagePercent.toStringAsFixed(2)}%', style: GoogleFonts.inter(color: swapColor)),
             ],
           ),
           Slider(
@@ -534,7 +534,7 @@ class _TokenSwapState extends State<TokenSwap> {
             min: 0.1,
             max: 3.0,
             divisions: 29,
-            activeColor: accent,
+            activeColor: swapColor,
             label: '${_slippagePercent.toStringAsFixed(2)}%',
             onChanged: (value) {
               setState(() => _slippagePercent = value);
@@ -546,7 +546,7 @@ class _TokenSwapState extends State<TokenSwap> {
     );
   }
 
-  Widget _buildSwapButton(ThemeData theme, Color accent, WalletProvider walletProvider) {
+  Widget _buildSwapButton(ThemeData theme, Color swapColor, WalletProvider walletProvider) {
     final isDisabled = _isSubmitting ||
       _fromTokenSymbol == null ||
       _toTokenSymbol == null ||
@@ -558,7 +558,7 @@ class _TokenSwapState extends State<TokenSwap> {
       child: ElevatedButton(
         onPressed: isDisabled ? null : () => _handleSwap(walletProvider),
         style: ElevatedButton.styleFrom(
-          backgroundColor: accent,
+          backgroundColor: swapColor,
           foregroundColor: theme.colorScheme.onPrimary,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -830,11 +830,11 @@ class _TokenSwapState extends State<TokenSwap> {
 }
 
 class _TokenAvatar extends StatelessWidget {
-  const _TokenAvatar({required this.symbol, required this.token, required this.accent});
+  const _TokenAvatar({required this.symbol, required this.token, required this.swapColor});
 
   final String? symbol;
   final Token? token;
-  final Color accent;
+  final Color swapColor;
 
   @override
   Widget build(BuildContext context) {
@@ -843,7 +843,7 @@ class _TokenAvatar extends StatelessWidget {
       width: 28,
       height: 28,
       decoration: BoxDecoration(
-        color: token != null ? accent.withValues(alpha: 0.2) : theme.colorScheme.primaryContainer,
+        color: token != null ? swapColor.withValues(alpha: 0.2) : theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Center(
