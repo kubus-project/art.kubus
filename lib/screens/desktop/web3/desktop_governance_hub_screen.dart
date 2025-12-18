@@ -6,6 +6,7 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../web3/dao/governance_hub.dart';
@@ -18,7 +19,8 @@ class DesktopGovernanceHubScreen extends StatefulWidget {
   const DesktopGovernanceHubScreen({super.key});
 
   @override
-  State<DesktopGovernanceHubScreen> createState() => _DesktopGovernanceHubScreenState();
+  State<DesktopGovernanceHubScreen> createState() =>
+      _DesktopGovernanceHubScreenState();
 }
 
 class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
@@ -71,7 +73,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                       color: Theme.of(context).scaffoldBackgroundColor,
                       border: Border(
                         right: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -190,6 +195,7 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
   Widget _buildVotingPowerCard(ThemeProvider themeProvider) {
     return Consumer<Web3Provider>(
       builder: (context, web3Provider, _) {
+        final daoAccent = KubusColorRoles.of(context).web3DaoAccent;
         final votingPower = web3Provider.kub8Balance;
         final hasVotingPower = votingPower > 0;
 
@@ -203,12 +209,12 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: themeProvider.accentColor.withValues(alpha: 0.15),
+                      color: daoAccent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       Icons.how_to_vote,
-                      color: themeProvider.accentColor,
+                      color: daoAccent,
                       size: 24,
                     ),
                   ),
@@ -221,7 +227,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                           'Your Voting Power',
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -262,7 +271,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                           'Acquire KUB8 tokens to participate in governance',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.8),
                           ),
                         ),
                       ),
@@ -328,7 +340,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                         subtitle,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -337,7 +352,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4),
                 ),
               ],
             ),
@@ -351,7 +369,8 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     return Consumer<DAOProvider>(
       builder: (context, daoProvider, _) {
         final proposals = daoProvider.proposals;
-        final activeProposals = proposals.where((p) => p.status == ProposalStatus.active).length;
+        final activeProposals =
+            proposals.where((p) => p.status == ProposalStatus.active).length;
         final totalMembers = daoProvider.delegates.length;
 
         return Column(
@@ -405,7 +424,8 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -432,7 +452,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -449,7 +472,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
           return Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -457,14 +483,20 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                 Icon(
                   Icons.inbox_outlined,
                   size: 40,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'No recent activity',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -479,7 +511,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -513,7 +548,10 @@ class _DesktopGovernanceHubScreenState extends State<DesktopGovernanceHubScreen>
                           proposal.status.name,
                           style: GoogleFonts.inter(
                             fontSize: 11,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                       ],

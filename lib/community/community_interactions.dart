@@ -74,6 +74,7 @@ class CommunityPost {
   });
 
   CommunityPost copyWith({
+    String? content,
     int? likeCount,
     int? shareCount,
     int? viewCount,
@@ -105,7 +106,7 @@ class CommunityPost {
       authorName: authorName,
       authorAvatar: authorAvatar ?? this.authorAvatar,
       authorUsername: authorUsername ?? this.authorUsername,
-      content: content,
+      content: content ?? this.content,
       imageUrl: imageUrl ?? this.imageUrl,
       mediaUrls: mediaUrls ?? this.mediaUrls,
       timestamp: timestamp,

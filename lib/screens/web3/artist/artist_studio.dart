@@ -4,9 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
-import 'artwork_creator.dart';
 import 'artwork_gallery.dart';
 import 'artist_analytics.dart';
+import 'artist_studio_create_screen.dart';
 import 'package:provider/provider.dart';
 
 import '../../../config/config.dart';
@@ -17,7 +17,7 @@ import '../../../providers/web3provider.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
 import '../../../utils/wallet_utils.dart';
-import '../../../utils/app_color_utils.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
@@ -59,7 +59,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
     if (!walletChanged && _hasFetchedReviewForWallet) return;
 
     final daoProvider = context.read<DAOProvider>();
-    final cachedReview = wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null;
+    final cachedReview =
+        wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null;
 
     setState(() {
       _artistReview = cachedReview;
@@ -97,8 +98,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   String _resolveWalletAddress({bool listen = false}) {
-    final profileProvider = listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
-    final web3Provider = listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
+    final profileProvider = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
+    final web3Provider =
+        listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
     return WalletUtils.coalesce(
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
@@ -108,7 +112,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
   Future<void> _loadArtistReviewStatus({bool forceRefresh = false}) async {
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh && _hasFetchedReviewForWallet && wallet == _lastReviewWallet) return;
+    if (!forceRefresh &&
+        _hasFetchedReviewForWallet &&
+        wallet == _lastReviewWallet) {
+      return;
+    }
 
     final requestedWallet = wallet;
     setState(() {
@@ -117,14 +125,17 @@ class _ArtistStudioState extends State<ArtistStudio> {
     });
     try {
       final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet, forceRefresh: forceRefresh);
+      final review = await daoProvider.loadReviewForWallet(requestedWallet,
+          forceRefresh: forceRefresh);
       if (!mounted || requestedWallet != _lastReviewWallet) return;
       setState(() {
-        _artistReview = review ?? daoProvider.findReviewForWallet(requestedWallet);
+        _artistReview =
+            review ?? daoProvider.findReviewForWallet(requestedWallet);
         _hasFetchedReviewForWallet = true;
       });
       final isArtistReview = _artistReview?.isArtistApplication ?? false;
-      final isApproved = isArtistReview && (_artistReview?.status.toLowerCase() == 'approved');
+      final isApproved =
+          isArtistReview && (_artistReview?.status.toLowerCase() == 'approved');
       if (isApproved) {
         try {
           context.read<ProfileProvider>().setRoleFlags(isArtist: true);
@@ -152,22 +163,31 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-    final review = _artistReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final review = _artistReview ??
+        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
     final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
-    final hasInstitutionBadge = profileProvider.currentUser?.isInstitution ?? false;
+    final hasInstitutionBadge =
+        profileProvider.currentUser?.isInstitution ?? false;
     final reviewStatus = review?.status.toLowerCase() ?? '';
     final reviewIsArtist = review?.isArtistApplication ?? false;
     final reviewIsInstitution = review?.isInstitutionApplication ?? false;
-    final isApprovedArtist = hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
+    final isApprovedArtist =
+        hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
     final isReviewRejected = reviewStatus == 'rejected';
-    final hasConflictingInstitutionReview = reviewIsInstitution && !isReviewRejected;
-    final isCrossRoleBlocked = hasInstitutionBadge || hasConflictingInstitutionReview;
+    final hasConflictingInstitutionReview =
+        reviewIsInstitution && !isReviewRejected;
+    final isCrossRoleBlocked =
+        hasInstitutionBadge || hasConflictingInstitutionReview;
 
     // Build pages list - Exhibitions tab is optional based on feature flag
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final pages = <Widget>[
-      ArtworkGallery(onCreateRequested: () => setState(() => _selectedIndex = 1)),
-      ArtworkCreator(onCreated: () => setState(() => _selectedIndex = 0)),
+      ArtworkGallery(
+          onCreateRequested: () => setState(() => _selectedIndex = 1)),
+      ArtistStudioCreateScreen(
+        onArtworkCreated: () => setState(() => _selectedIndex = 0),
+        onCollectionCreated: () => setState(() => _selectedIndex = 0),
+      ),
       if (exhibitionsEnabled)
         const ExhibitionListScreen(embedded: true, canCreate: true),
       const ArtistAnalytics(),
@@ -189,7 +209,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
         ),
         actions: [
           IconButton(
-            icon:  Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.help_outline,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
           ),
           if (AppConfig.isFeatureEnabled('collabInvites'))
@@ -201,10 +222,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
                   children: [
                     IconButton(
                       tooltip: 'Invites',
-                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onSurface),
+                      icon: Icon(Icons.inbox_outlined,
+                          color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const InvitesInboxScreen()),
                         );
                       },
                     ),
@@ -213,11 +236,14 @@ class _ArtistStudioState extends State<ArtistStudio> {
                         right: 8,
                         top: 6,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.error,
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
+                            border: Border.all(
+                                color: Theme.of(context).colorScheme.surface,
+                                width: 1.5),
                           ),
                           child: Text(
                             pendingCount > 99 ? '99+' : pendingCount.toString(),
@@ -234,7 +260,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
               },
             ),
           IconButton(
-            icon:  Icon(Icons.settings, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.settings,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showSettings,
           ),
         ],
@@ -251,7 +278,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                     isApprovedArtist,
                     isCrossRoleBlocked: isCrossRoleBlocked,
                     hasInstitutionBadge: hasInstitutionBadge,
-                    hasConflictingInstitutionReview: hasConflictingInstitutionReview,
+                    hasConflictingInstitutionReview:
+                        hasConflictingInstitutionReview,
                   ),
                   if (!isCrossRoleBlocked)
                     _buildNavigationTabs(isApprovedArtist),
@@ -262,12 +290,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
         },
         body: isCrossRoleBlocked
             ? _buildRoleBlockedContent(
-            title: hasInstitutionBadge
-              ? l10n.artistStudioInstitutionRoleActiveTitle
-              : l10n.artistStudioInstitutionReviewInProgressTitle,
-            description: hasInstitutionBadge
-              ? l10n.artistStudioInstitutionRoleActiveDescription
-              : l10n.artistStudioInstitutionReviewInProgressDescription,
+                title: hasInstitutionBadge
+                    ? l10n.artistStudioInstitutionRoleActiveTitle
+                    : l10n.artistStudioInstitutionReviewInProgressTitle,
+                description: hasInstitutionBadge
+                    ? l10n.artistStudioInstitutionRoleActiveDescription
+                    : l10n.artistStudioInstitutionReviewInProgressDescription,
                 icon: Icons.domain_disabled,
               )
             : isApprovedArtist
@@ -278,19 +306,23 @@ class _ArtistStudioState extends State<ArtistStudio> {
   }
 
   Widget _buildStudioHeader() {
+    final studioAccent = KubusColorRoles.of(context).web3ArtistStudioAccent;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFF59E0B), Color(0xFFF97316)],
+          colors: [
+            studioAccent,
+            studioAccent.withValues(alpha: 0.85),
+          ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+            color: studioAccent.withValues(alpha: 0.3),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -371,7 +403,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     }
 
     final scheme = Theme.of(context).colorScheme;
-    final studioColor = AppColorUtils.purpleAccent; // Artist/creative semantic color
+    final studioColor = KubusColorRoles.of(context).web3ArtistStudioAccent;
     final wallet = _resolveWalletAddress();
     final status = review?.status.toLowerCase() ?? '';
     final isPending = status == 'pending';
@@ -393,8 +425,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
             : studioColor;
     final hasWallet = wallet.isNotEmpty;
     final canSubmit = hasWallet &&
-      !_reviewLoading &&
-      (!isPending && !isApproved || isRejected);
+        !_reviewLoading &&
+        (!isPending && !isApproved || isRejected);
     final ctaLabel = !hasWallet
         ? l10n.artistStudioCtaConnectWalletToApply
         : isApproved
@@ -463,7 +495,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
@@ -490,7 +523,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 else if (review != null)
                   Text(
                     l10n.artistStudioStatusSyncedFromDao,
-                    style: GoogleFonts.inter(fontSize: 11, color: scheme.onSurface.withValues(alpha: 0.6)),
+                    style: GoogleFonts.inter(
+                        fontSize: 11,
+                        color: scheme.onSurface.withValues(alpha: 0.6)),
                   ),
               ],
             ),
@@ -498,7 +533,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
               const SizedBox(height: 8),
               Text(
                 review!.reviewerNotes!,
-                style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+                style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: scheme.onSurface.withValues(alpha: 0.75)),
               ),
             ] else if (review != null) ...[
               const SizedBox(height: 8),
@@ -510,14 +547,18 @@ class _ArtistStudioState extends State<ArtistStudio> {
                         : isRejected
                             ? l10n.artistStudioReviewRejectedInfo
                             : '',
-                style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: scheme.onSurface.withValues(alpha: 0.7)),
               ),
             ],
           ] else if (!hasWallet) ...[
             const SizedBox(height: 8),
             Text(
               l10n.artistStudioConnectWalletToSubmitForDaoReview,
-              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.65)),
+              style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: scheme.onSurface.withValues(alpha: 0.65)),
             ),
           ],
           const SizedBox(height: 16),
@@ -525,19 +566,27 @@ class _ArtistStudioState extends State<ArtistStudio> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: canSubmit ? () => _showArtistApplicationModal() : null,
-              icon: Icon(ctaIcon, color: canSubmit ? studioColor : scheme.onSurface.withValues(alpha: 0.6), size: 20),
+              icon: Icon(ctaIcon,
+                  color: canSubmit
+                      ? studioColor
+                      : scheme.onSurface.withValues(alpha: 0.6),
+                  size: 20),
               label: Text(
                 ctaLabel,
                 style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: canSubmit ? studioColor : scheme.onSurface.withValues(alpha: 0.6),
+                  color: canSubmit
+                      ? studioColor
+                      : scheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: studioColor, width: 1.5),
-                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),
@@ -548,7 +597,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
   Widget _buildNavigationTabs(bool isApprovedArtist) {
     final l10n = AppLocalizations.of(context)!;
-    final studioColor = AppColorUtils.purpleAccent; // Artist/creative semantic color
+    final studioColor = KubusColorRoles.of(context).web3ArtistStudioAccent;
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -558,23 +607,42 @@ class _ArtistStudioState extends State<ArtistStudio> {
       ),
       child: Row(
         children: [
-          Expanded(child: _buildTabButton(l10n.artistStudioTabGallery, Icons.collections, 0, isApprovedArtist, studioColor)),
-          Expanded(child: _buildTabButton(l10n.artistStudioTabCreate, Icons.add_circle_outline, 1, isApprovedArtist, studioColor)),
+          Expanded(
+              child: _buildTabButton(l10n.artistStudioTabGallery,
+                  Icons.collections, 0, isApprovedArtist, studioColor)),
+          Expanded(
+              child: _buildTabButton(l10n.artistStudioTabCreate,
+                  Icons.add_circle_outline, 1, isApprovedArtist, studioColor)),
           if (exhibitionsEnabled)
-            Expanded(child: _buildTabButton(l10n.artistStudioTabExhibitions, Icons.collections_bookmark, 2, isApprovedArtist, studioColor)),
-          Expanded(child: _buildTabButton(l10n.artistStudioTabAnalytics, Icons.analytics, exhibitionsEnabled ? 3 : 2, isApprovedArtist, studioColor)),
+            Expanded(
+                child: _buildTabButton(
+                    l10n.artistStudioTabExhibitions,
+                    Icons.collections_bookmark,
+                    2,
+                    isApprovedArtist,
+                    studioColor)),
+          Expanded(
+              child: _buildTabButton(
+                  l10n.artistStudioTabAnalytics,
+                  Icons.analytics,
+                  exhibitionsEnabled ? 3 : 2,
+                  isApprovedArtist,
+                  studioColor)),
         ],
       ),
     );
   }
 
-  Widget _buildTabButton(String label, IconData icon, int index, bool enabled, Color studioColor) {
+  Widget _buildTabButton(
+      String label, IconData icon, int index, bool enabled, Color studioColor) {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: enabled
           ? () => setState(() => _selectedIndex = index)
           : () => ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(AppLocalizations.of(context)!.artistStudioUnlocksAfterDaoApprovalToast)),
+                SnackBar(
+                    content: Text(AppLocalizations.of(context)!
+                        .artistStudioUnlocksAfterDaoApprovalToast)),
               ),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -590,7 +658,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
               icon,
               color: enabled && isSelected
                   ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.3),
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: enabled ? 0.6 : 0.3),
               size: 20,
             ),
             const SizedBox(height: 4),
@@ -601,7 +672,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 fontWeight: FontWeight.w500,
                 color: enabled && isSelected
                     ? Theme.of(context).colorScheme.onSurface
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: enabled ? 0.6 : 0.3),
+                    : Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: enabled ? 0.6 : 0.3),
               ),
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
@@ -654,7 +728,9 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 const SizedBox(height: 6),
                 Text(
                   message,
-                  style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.75)),
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: scheme.onSurface.withValues(alpha: 0.75)),
                 ),
               ],
             ),
@@ -689,18 +765,23 @@ class _ArtistStudioState extends State<ArtistStudio> {
             Text(
               title,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface),
             ),
             const SizedBox(height: 8),
             Text(
               description,
-              style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: GoogleFonts.inter(
+                  fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             Text(
               l10n.artistStudioSeparateWalletsTip,
-              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
+              style: GoogleFonts.inter(
+                  fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
               textAlign: TextAlign.center,
             ),
           ],
@@ -724,17 +805,22 @@ class _ArtistStudioState extends State<ArtistStudio> {
                 color: scheme.secondaryContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.lock_outline, color: scheme.onSecondaryContainer, size: 28),
+              child: Icon(Icons.lock_outline,
+                  color: scheme.onSecondaryContainer, size: 28),
             ),
             const SizedBox(height: 12),
             Text(
               l10n.artistStudioLockedTitle,
-              style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: scheme.onSurface),
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface),
             ),
             const SizedBox(height: 8),
             Text(
               l10n.artistStudioLockedDescription,
-              style: GoogleFonts.inter(fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
+              style: GoogleFonts.inter(
+                  fontSize: 14, color: scheme.onSurface.withValues(alpha: 0.7)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -803,7 +889,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
             return Padding(
               padding: EdgeInsets.only(bottom: viewInsets),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
                 child: Form(
                   key: formKey,
                   child: Column(
@@ -815,7 +902,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -834,17 +924,22 @@ class _ArtistStudioState extends State<ArtistStudio> {
                         l10n.artistStudioApplicationModalSubtitle,
                         style: GoogleFonts.inter(
                           fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                       const SizedBox(height: 24),
                       TextFormField(
                         controller: portfolioController,
                         decoration: InputDecoration(
-                          labelText: l10n.artistStudioApplicationFieldPortfolioLabel,
+                          labelText:
+                              l10n.artistStudioApplicationFieldPortfolioLabel,
                           border: const OutlineInputBorder(),
                         ),
-                        validator: (value) => (value == null || value.trim().isEmpty)
+                        validator: (value) => (value == null ||
+                                value.trim().isEmpty)
                             ? l10n.artistStudioApplicationValidationPortfolio
                             : null,
                       ),
@@ -852,24 +947,30 @@ class _ArtistStudioState extends State<ArtistStudio> {
                       TextFormField(
                         controller: mediumController,
                         decoration: InputDecoration(
-                          labelText: l10n.artistStudioApplicationFieldMediumLabel,
+                          labelText:
+                              l10n.artistStudioApplicationFieldMediumLabel,
                           border: const OutlineInputBorder(),
                         ),
-                        validator: (value) => (value == null || value.trim().isEmpty)
-                            ? l10n.artistStudioApplicationValidationMedium
-                            : null,
+                        validator: (value) =>
+                            (value == null || value.trim().isEmpty)
+                                ? l10n.artistStudioApplicationValidationMedium
+                                : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: statementController,
                         maxLines: 4,
                         decoration: InputDecoration(
-                          labelText: l10n.artistStudioApplicationFieldStatementLabel,
+                          labelText:
+                              l10n.artistStudioApplicationFieldStatementLabel,
                           alignLabelWithHint: true,
                           border: const OutlineInputBorder(),
                         ),
-                        validator: (value) => (value == null || value.trim().length < 20)
-                            ? l10n.artistStudioApplicationValidationStatementMinChars(20)
+                        validator: (value) => (value == null ||
+                                value.trim().length < 20)
+                            ? l10n
+                                .artistStudioApplicationValidationStatementMinChars(
+                                    20)
                             : null,
                       ),
                       const SizedBox(height: 24),
@@ -880,26 +981,38 @@ class _ArtistStudioState extends State<ArtistStudio> {
                               ? null
                               : () async {
                                   if (!formKey.currentState!.validate()) return;
-                                  final profileProvider = context.read<ProfileProvider>();
-                                  final web3Provider = context.read<Web3Provider>();
-                                  final daoProvider = context.read<DAOProvider>();
+                                  final profileProvider =
+                                      context.read<ProfileProvider>();
+                                  final web3Provider =
+                                      context.read<Web3Provider>();
+                                  final daoProvider =
+                                      context.read<DAOProvider>();
                                   final navigator = Navigator.of(sheetContext);
-                                  final colorScheme = Theme.of(context).colorScheme;
-                                  final wallet = profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress;
+                                  final colorScheme =
+                                      Theme.of(context).colorScheme;
+                                  final wallet = profileProvider
+                                          .currentUser?.walletAddress ??
+                                      web3Provider.walletAddress;
                                   if (wallet.isEmpty) {
                                     scaffold.showSnackBar(
-                                      SnackBar(content: Text(l10n.artistStudioApplicationWalletRequiredToast)),
+                                      SnackBar(
+                                          content: Text(l10n
+                                              .artistStudioApplicationWalletRequiredToast)),
                                     );
                                     return;
                                   }
                                   setModalState(() => isSubmitting = true);
                                   try {
-                                    final review = await daoProvider.submitReview(
+                                    final review =
+                                        await daoProvider.submitReview(
                                       walletAddress: wallet,
-                                      portfolioUrl: portfolioController.text.trim(),
+                                      portfolioUrl:
+                                          portfolioController.text.trim(),
                                       medium: mediumController.text.trim(),
-                                      statement: statementController.text.trim(),
-                                      title: l10n.artistStudioApplicationReviewTitle,
+                                      statement:
+                                          statementController.text.trim(),
+                                      title: l10n
+                                          .artistStudioApplicationReviewTitle,
                                       metadata: {
                                         'role': 'artist',
                                         'source': 'artist_studio',
@@ -907,7 +1020,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                     );
                                     if (!mounted) return;
                                     if (review != null) {
-                                      await _loadArtistReviewStatus(forceRefresh: true);
+                                      await _loadArtistReviewStatus(
+                                          forceRefresh: true);
                                       if (!mounted) return;
                                     }
                                     if (!mounted) return;
@@ -917,8 +1031,10 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                       SnackBar(
                                         content: Text(
                                           review != null
-                                              ? l10n.artistStudioApplicationSubmittedToast
-                                              : l10n.artistStudioApplicationUnableToSubmitToast,
+                                              ? l10n
+                                                  .artistStudioApplicationSubmittedToast
+                                              : l10n
+                                                  .artistStudioApplicationUnableToSubmitToast,
                                         ),
                                         backgroundColor: review != null
                                             ? colorScheme.primary
@@ -927,12 +1043,14 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                     );
                                   } catch (err) {
                                     if (kDebugMode) {
-                                      debugPrint('ArtistStudio: submission failed: $err');
+                                      debugPrint(
+                                          'ArtistStudio: submission failed: $err');
                                     }
                                     if (!mounted) return;
                                     scaffold.showSnackBar(
                                       SnackBar(
-                                        content: Text(l10n.artistStudioApplicationSubmissionFailedToast),
+                                        content: Text(l10n
+                                            .artistStudioApplicationSubmissionFailedToast),
                                         backgroundColor: colorScheme.error,
                                       ),
                                     );
@@ -944,7 +1062,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                 },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           child: isSubmitting
                               ? SizedBox(
@@ -959,7 +1078,8 @@ class _ArtistStudioState extends State<ArtistStudio> {
                                 )
                               : Text(
                                   l10n.artistStudioApplicationSubmitButton,
-                                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600),
                                 ),
                         ),
                       ),
@@ -978,10 +1098,3 @@ class _ArtistStudioState extends State<ArtistStudio> {
     statementController.dispose();
   }
 }
-
-
-
-
-
-
-

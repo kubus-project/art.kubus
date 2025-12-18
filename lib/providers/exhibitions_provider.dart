@@ -169,8 +169,44 @@ class ExhibitionsProvider extends ChangeNotifier {
     _setLoading(true);
     _error = null;
     try {
-      await _api.linkExhibitionArtworks(exhibitionId, artworkIds);
-      // Caller can decide whether to refresh exhibition details.
+      final result = await _api.linkExhibitionArtworks(exhibitionId, artworkIds);
+
+      // Update local exhibition immediately so the UI reflects linked artworks
+      // even if the backend detail endpoint doesn't yet return artworkIds.
+      final payload = (result['data'] is Map<String, dynamic>)
+          ? (result['data'] as Map<String, dynamic>)
+          : result;
+
+      final addedRaw = payload['addedArtworkIds'] ?? payload['added_artwork_ids'];
+      final requestedRaw = payload['requestedArtworkIds'] ?? payload['requested_artwork_ids'] ?? artworkIds;
+
+      final added = <String>[];
+      if (addedRaw is List) {
+        for (final v in addedRaw) {
+          final s = v?.toString().trim();
+          if (s != null && s.isNotEmpty) added.add(s);
+        }
+      }
+
+      final requested = <String>[];
+      if (requestedRaw is List) {
+        for (final v in requestedRaw) {
+          final s = v?.toString().trim();
+          if (s != null && s.isNotEmpty) requested.add(s);
+        }
+      } else if (requestedRaw is String) {
+        final s = requestedRaw.trim();
+        if (s.isNotEmpty) requested.add(s);
+      }
+
+      final current = _byId[exhibitionId];
+      if (current != null) {
+        final merged = <String>{...current.artworkIds, ...requested, ...added}.toList();
+        final updated = current.copyWith(artworkIds: merged);
+        _upsert(updated, notify: false);
+        if (_selected?.id == exhibitionId) _selected = updated;
+        notifyListeners();
+      }
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -185,6 +221,16 @@ class ExhibitionsProvider extends ChangeNotifier {
     _error = null;
     try {
       await _api.unlinkExhibitionArtwork(exhibitionId, artworkId);
+
+      // Keep UI responsive by updating local cache immediately.
+      final current = _byId[exhibitionId];
+      if (current != null) {
+        final nextIds = current.artworkIds.where((id) => id != artworkId).toList();
+        final updated = current.copyWith(artworkIds: nextIds);
+        _upsert(updated, notify: false);
+        if (_selected?.id == exhibitionId) _selected = updated;
+        notifyListeners();
+      }
     } catch (e) {
       _error = e.toString();
       notifyListeners();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/recent_activity.dart';
+import 'kubus_color_roles.dart';
 
 /// Semantic color palette for UI elements throughout the app.
 /// These provide visual variety while maintaining design consistency.
@@ -24,7 +25,8 @@ class AppColorUtils {
   }
 
   /// Get semantic color for a feature/section key
-  static Color featureColor(String key, ColorScheme scheme) {
+  static Color featureColor(String key, ColorScheme scheme,
+      {KubusColorRoles? roles}) {
     switch (key.toLowerCase()) {
       // Exploration / Discovery
       case 'map':
@@ -48,7 +50,8 @@ class AppColorUtils {
       case 'create':
       case 'artwork':
       case 'gallery':
-        return scheme.tertiary;
+        // Requested: Artist Studio should have red accents.
+        return roles?.web3ArtistStudioAccent ?? coralAccent;
 
       // Institutions / Organizations
       case 'institution':
@@ -56,7 +59,8 @@ class AppColorUtils {
       case 'organize':
       case 'museum':
       case 'event':
-        return scheme.primary;
+        // Requested: Institutions should be deep purple.
+        return roles?.web3InstitutionAccent ?? const Color(0xFF7E57C2);
 
       // Governance / DAO
       case 'dao':
@@ -64,7 +68,8 @@ class AppColorUtils {
       case 'govern':
       case 'vote':
       case 'proposal':
-        return purpleAccent;
+        // Requested: DAO should be all green accents.
+        return roles?.web3DaoAccent ?? greenAccent;
 
       // Marketplace / Trade
       case 'marketplace':
@@ -72,7 +77,8 @@ class AppColorUtils {
       case 'buy':
       case 'sell':
       case 'nft':
-        return greenAccent;
+        // Requested: Marketplace should be orange.
+        return roles?.web3MarketplaceAccent ?? orangeAccent;
 
       // Wallet / Finance
       case 'wallet':
@@ -187,13 +193,19 @@ class AppColorUtils {
       case 'community':
         return [purpleAccent, purpleAccent.withValues(alpha: 0.7)];
       case 'marketplace':
-        return [greenAccent, greenAccent.withValues(alpha: 0.7)];
+        return [orangeAccent, orangeAccent.withValues(alpha: 0.7)];
       case 'wallet':
         return [amberAccent, amberAccent.withValues(alpha: 0.7)];
       case 'achievements':
         return [Colors.amber, Colors.amber.withValues(alpha: 0.7)];
       case 'dao':
-        return [indigoAccent, indigoAccent.withValues(alpha: 0.7)];
+        return [greenAccent, greenAccent.withValues(alpha: 0.7)];
+      case 'institution':
+      case 'institution_hub':
+        return [
+          const Color(0xFF7E57C2),
+          const Color(0xFF7E57C2).withValues(alpha: 0.7)
+        ];
       default:
         return [fallback, fallback.withValues(alpha: 0.8)];
     }
@@ -262,9 +274,10 @@ class AppColorUtils {
     final subjectType = (metadata?['subjectType'] ?? metadata?['subject_type'])
         ?.toString()
         .toLowerCase();
-    final category = (metadata?['subjectCategory'] ?? metadata?['subject_category'])
-        ?.toString()
-        .toLowerCase();
+    final category =
+        (metadata?['subjectCategory'] ?? metadata?['subject_category'])
+            ?.toString()
+            .toLowerCase();
 
     // Check if this is an exhibition marker
     if (_isExhibitionMarker(markerType, subjectType, category, metadata)) {
@@ -273,13 +286,16 @@ class AppColorUtils {
 
     // Check subject type metadata first
     if (subjectType != null && subjectType.isNotEmpty) {
-      if (subjectType.contains('institution') || subjectType.contains('museum')) {
+      if (subjectType.contains('institution') ||
+          subjectType.contains('museum')) {
         return institutionColor;
       }
       if (subjectType.contains('event')) {
         return eventColor;
       }
-      if (subjectType.contains('group') || subjectType.contains('dao') || subjectType.contains('collective')) {
+      if (subjectType.contains('group') ||
+          subjectType.contains('dao') ||
+          subjectType.contains('collective')) {
         return purpleAccent;
       }
     }

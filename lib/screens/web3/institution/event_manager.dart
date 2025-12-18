@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
-import '../../../utils/app_color_utils.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import 'event_creator.dart';
@@ -139,7 +139,8 @@ class _EventManagerState extends State<EventManager>
                   ),
                 ),
                 backgroundColor: Colors.transparent,
-                selectedColor: AppColorUtils.purpleAccent,
+                selectedColor:
+                    KubusColorRoles.of(context).web3InstitutionAccent,
                 onSelected: (selected) {
                   setState(() {
                     _selectedFilter = filter;
@@ -380,7 +381,8 @@ class _EventManagerState extends State<EventManager>
                             tileSize: 6.0,
                             color: occupancyPercentage > 0.8
                                 ? scheme.error
-                                : AppColorUtils.purpleAccent,
+                                : KubusColorRoles.of(context)
+                                    .web3InstitutionAccent,
                             duration: const Duration(milliseconds: 700),
                           ),
                         ),
@@ -394,7 +396,7 @@ class _EventManagerState extends State<EventManager>
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: AppColorUtils.purpleAccent,
+                  color: KubusColorRoles.of(context).web3InstitutionAccent,
                 ),
               ),
             ],
@@ -456,7 +458,7 @@ class _EventManagerState extends State<EventManager>
       case _EventStatus.upcoming:
         return scheme.primary;
       case _EventStatus.active:
-        return AppColorUtils.purpleAccent;
+        return KubusColorRoles.of(context).web3InstitutionAccent;
       case _EventStatus.completed:
         return scheme.outline;
     }
@@ -558,7 +560,7 @@ class _EventManagerState extends State<EventManager>
             width: 8,
             height: 8,
             decoration: BoxDecoration(
-              color: AppColorUtils.purpleAccent,
+              color: KubusColorRoles.of(context).web3InstitutionAccent,
               shape: BoxShape.circle,
             ),
           ),

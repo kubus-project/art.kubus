@@ -5,6 +5,7 @@ import 'inline_loading.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/artwork.dart';
 import '../services/ar_integration_service.dart';
+import 'artwork_creator_byline.dart';
 
 /// Card widget displaying AR-enabled artwork with interaction options
 class ARArtworkCard extends StatefulWidget {
@@ -200,12 +201,13 @@ class _ARArtworkCardState extends State<ARArtworkCard> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  widget.artwork.artist,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.secondary,
-                  ),
-                ),
+                        ArtworkCreatorByline(
+                          artwork: widget.artwork,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.secondary,
+                          ),
+                          maxLines: 1,
+                        ),
                 const SizedBox(height: 8),
                 
                 // Category chip

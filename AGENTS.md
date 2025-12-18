@@ -141,10 +141,6 @@ Core widgets:
 - `lib/widgets/app_loading.dart`
 - `lib/widgets/gradient_icon_card.dart`
 
-Desktop shared components:
-- `lib/screens/desktop/components/desktop_widgets.dart`
-- `lib/screens/desktop/community/components/*` (if present)
-
 ---
 
 ## 9) Backend Notes (For Full-Stack Changes)

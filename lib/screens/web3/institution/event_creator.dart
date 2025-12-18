@@ -7,7 +7,7 @@ import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/web3provider.dart';
-import '../../../utils/app_color_utils.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 
 class EventCreator extends StatefulWidget {
@@ -190,7 +190,7 @@ class _EventCreatorState extends State<EventCreator>
               margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
               decoration: BoxDecoration(
                 color: index <= _currentStep
-                    ? AppColorUtils.purpleAccent
+                    ? KubusColorRoles.of(context).web3InstitutionAccent
                     : Theme.of(context)
                         .colorScheme
                         .onPrimary
@@ -418,17 +418,21 @@ class _EventCreatorState extends State<EventCreator>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColorUtils.purpleAccent.withValues(alpha: 0.1),
+              color: KubusColorRoles.of(context)
+                  .web3InstitutionAccent
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColorUtils.purpleAccent.withValues(alpha: 0.3),
+                color: KubusColorRoles.of(context)
+                    .web3InstitutionAccent
+                    .withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.info_outline,
-                  color: AppColorUtils.purpleAccent,
+                  color: KubusColorRoles.of(context).web3InstitutionAccent,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -611,7 +615,7 @@ class _EventCreatorState extends State<EventCreator>
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: AppColorUtils.purpleAccent,
+                color: KubusColorRoles.of(context).web3InstitutionAccent,
               ),
             ),
           ),
@@ -940,7 +944,7 @@ class _EventCreatorState extends State<EventCreator>
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: AppColorUtils.purpleAccent,
+            activeThumbColor: KubusColorRoles.of(context).web3InstitutionAccent,
           ),
         ],
       ),
@@ -980,7 +984,8 @@ class _EventCreatorState extends State<EventCreator>
             child: ElevatedButton(
               onPressed: _currentStep < 3 ? _nextStep : _createEvent,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColorUtils.purpleAccent,
+                backgroundColor:
+                    KubusColorRoles.of(context).web3InstitutionAccent,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),

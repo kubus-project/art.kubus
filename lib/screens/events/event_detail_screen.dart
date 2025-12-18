@@ -2,12 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/event.dart';
 import '../../providers/events_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
+import '../../utils/map_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 class EventDetailScreen extends StatefulWidget {
   final String eventId;
@@ -45,6 +48,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final events = context.watch<EventsProvider>();
 
@@ -59,6 +63,19 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       appBar: AppBar(
         title: Text(event.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         actions: [
+          if (event.lat != null && event.lng != null)
+            IconButton(
+              tooltip: l10n.commonOpenOnMap,
+              onPressed: () {
+                MapNavigation.open(
+                  context,
+                  center: LatLng(event.lat!, event.lng!),
+                  zoom: 16,
+                  autoFollow: false,
+                );
+              },
+              icon: const Icon(Icons.map_outlined),
+            ),
           IconButton(
             tooltip: 'Invites',
             onPressed: () {

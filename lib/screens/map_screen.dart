@@ -29,6 +29,7 @@ import '../services/push_notification_service.dart';
 import '../services/achievement_service.dart';
 import '../models/art_marker.dart';
 import '../widgets/art_marker_cube.dart';
+import '../widgets/artwork_creator_byline.dart';
 import 'art/art_detail_screen.dart';
 import 'art/ar_screen.dart';
 import 'community/user_profile_screen.dart';
@@ -683,10 +684,12 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleMarkerTap(ArtMarker marker) {
     setState(() => _activeMarker = marker);
+    if (marker.isExhibitionSubject) return;
     _ensureLinkedArtworkLoaded(marker);
   }
 
   Future<void> _ensureLinkedArtworkLoaded(ArtMarker marker) async {
+    if (marker.isExhibitionSubject) return;
     final artworkId = marker.artworkId;
     if (artworkId == null || artworkId.isEmpty) return;
 
@@ -1402,10 +1405,12 @@ class _MapScreenState extends State<MapScreen>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
-            Text(
-              l10n.commonByArtist(artwork.artist),
-              style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
+            Center(
+              child: ArtworkCreatorByline(
+                artwork: artwork,
+                style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
+                maxLines: 1,
+              ),
             ),
             const SizedBox(height: 16),
             Container(
@@ -2267,7 +2272,7 @@ class _MapScreenState extends State<MapScreen>
     setState(() => _activeMarker = marker);
 
     Artwork? resolvedArtwork = artwork;
-    final artworkId = marker.artworkId;
+    final artworkId = marker.isExhibitionSubject ? null : marker.artworkId;
     if (resolvedArtwork == null && artworkId != null && artworkId.isNotEmpty) {
       try {
         final artworkProvider = context.read<ArtworkProvider>();

@@ -56,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
   bool _profilePrefsListenerAttached = false;
+  String? _failedCoverImageUrl;
   
   // Privacy settings state
   bool _showActivityStatus = true;
@@ -219,7 +220,12 @@ class _ProfileScreenState extends State<ProfileScreen>
           bool isVerySmallScreen = constraints.maxWidth < 320;
           
           final coverImageUrl = _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
-          final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
+          final coverUrlIsKnownBad = coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
+          final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty && !coverUrlIsKnownBad;
+          final coverHeight = hasCoverImage ? 160.0 : 100.0;
+          final dpr = MediaQuery.of(context).devicePixelRatio;
+          final cacheWidth = (constraints.maxWidth * dpr).round();
+          final cacheHeight = (coverHeight * dpr).round();
           
           return Column(
             children: [
@@ -228,34 +234,61 @@ class _ProfileScreenState extends State<ProfileScreen>
                 clipBehavior: Clip.none,
                 children: [
                   // Cover image or gradient background
-                  Container(
+                  SizedBox(
                     width: double.infinity,
-                    height: hasCoverImage ? 160 : 100,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      gradient: !hasCoverImage ? LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          themeProvider.accentColor.withValues(alpha: 0.3),
-                          themeProvider.accentColor.withValues(alpha: 0.1),
-                        ],
-                      ) : null,
-                      image: hasCoverImage ? DecorationImage(
-                        image: NetworkImage(coverImageUrl),
-                        fit: BoxFit.cover,
-                        onError: (error, stackTrace) {
-                          // Swallow cover image load errors so Flutter web doesn't
-                          // surface them as unhandled zone errors.
-                        },
-                      ) : null,
-                    ),
+                    height: coverHeight,
                     child: Stack(
+                      fit: StackFit.expand,
                       children: [
+                        // Base background (always present)
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            gradient: !hasCoverImage
+                                ? LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      themeProvider.accentColor.withValues(alpha: 0.3),
+                                      themeProvider.accentColor.withValues(alpha: 0.1),
+                                    ],
+                                  )
+                                : null,
+                          ),
+                        ),
+
+                        // Cover image layer (explicit Image widget so we can downscale/catch errors)
+                        if (hasCoverImage)
+                          Image.network(
+                            coverImageUrl,
+                            fit: BoxFit.cover,
+                            cacheWidth: cacheWidth > 0 ? cacheWidth : null,
+                            cacheHeight: cacheHeight > 0 ? cacheHeight : null,
+                            filterQuality: FilterQuality.medium,
+                            errorBuilder: (context, error, stackTrace) {
+                              if (_failedCoverImageUrl != coverImageUrl) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (!mounted) return;
+                                  setState(() => _failedCoverImageUrl = coverImageUrl);
+                                });
+                              }
+                              return const SizedBox.expand();
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surface,
+                                ),
+                                child: const SizedBox.expand(),
+                              );
+                            },
+                          ),
+
                         // Gradient overlay for better text readability
                         if (hasCoverImage)
                           Positioned.fill(
-                            child: Container(
+                            child: DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: LinearGradient(
                                   begin: Alignment.topCenter,
@@ -269,6 +302,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                             ),
                           ),
+
                         // Top bar with title and actions
                         Positioned(
                           top: 0,
@@ -285,14 +319,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     style: GoogleFonts.inter(
                                       fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 26 : 28,
                                       fontWeight: FontWeight.bold,
-                                      color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                                      shadows: hasCoverImage ? [
-                                        Shadow(
-                                          offset: const Offset(0, 1),
-                                          blurRadius: 3,
-                                          color: Colors.black.withValues(alpha: 0.5),
-                                        ),
-                                      ] : null,
+                                      color: hasCoverImage
+                                          ? Colors.white
+                                          : Theme.of(context).colorScheme.onSurface,
+                                      shadows: hasCoverImage
+                                          ? [
+                                              Shadow(
+                                                offset: const Offset(0, 1),
+                                                blurRadius: 3,
+                                                color: Colors.black.withValues(alpha: 0.5),
+                                              ),
+                                            ]
+                                          : null,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -303,7 +341,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     TopBarIcon(
                                       icon: Icon(
                                         Icons.share_outlined,
-                                        color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                        color: hasCoverImage
+                                            ? Colors.white
+                                            : Theme.of(context).colorScheme.onSurface,
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () => _shareProfile(),
@@ -313,7 +353,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     TopBarIcon(
                                       icon: Icon(
                                         Icons.inbox_outlined,
-                                        color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                        color: hasCoverImage
+                                            ? Colors.white
+                                            : Theme.of(context).colorScheme.onSurface,
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () {
@@ -328,7 +370,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     TopBarIcon(
                                       icon: Icon(
                                         Icons.settings_outlined,
-                                        color: hasCoverImage ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                                        color: hasCoverImage
+                                            ? Colors.white
+                                            : Theme.of(context).colorScheme.onSurface,
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () {

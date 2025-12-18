@@ -411,6 +411,25 @@ class ArtMarker {
     if (exhibitionSummaries.isEmpty) return null;
     return exhibitionSummaries.first;
   }
+
+  String? get subjectType {
+    final raw = metadata?['subjectType'] ?? metadata?['subject_type'];
+    final value = raw?.toString().trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  String? get subjectId {
+    final raw = metadata?['subjectId'] ?? metadata?['subject_id'];
+    final value = raw?.toString().trim();
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  bool get isExhibitionSubject {
+    final normalized = subjectType?.toLowerCase();
+    return normalized != null && normalized.contains('exhibition');
+  }
 }
 
 /// Lightweight summary for exhibition linkage on markers.
@@ -467,6 +486,29 @@ List<ExhibitionSummaryDto> _parseExhibitionSummaries(
     final dto = ExhibitionSummaryDto.fromJson(Map<String, dynamic>.from(raw));
     if (dto.id.trim().isEmpty) return const <ExhibitionSummaryDto>[];
     return <ExhibitionSummaryDto>[dto];
+  }
+
+  final subjectType =
+      (normalizedMetadata?['subjectType'] ?? normalizedMetadata?['subject_type'] ?? map['subjectType'] ?? map['subject_type'])
+          ?.toString()
+          .toLowerCase();
+  if (subjectType != null && subjectType.contains('exhibition')) {
+    final subjectId =
+        (normalizedMetadata?['subjectId'] ?? normalizedMetadata?['subject_id'] ?? map['subjectId'] ?? map['subject_id'])
+            ?.toString()
+            .trim();
+    if (subjectId != null && subjectId.isNotEmpty) {
+      final subjectTitle =
+          (normalizedMetadata?['subjectTitle'] ?? normalizedMetadata?['subject_title'] ?? map['subjectTitle'] ?? map['subject_title'])
+              ?.toString()
+              .trim();
+      return <ExhibitionSummaryDto>[
+        ExhibitionSummaryDto(
+          id: subjectId,
+          title: subjectTitle != null && subjectTitle.isNotEmpty ? subjectTitle : null,
+        ),
+      ];
+    }
   }
 
   return const <ExhibitionSummaryDto>[];

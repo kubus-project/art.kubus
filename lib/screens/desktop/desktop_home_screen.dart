@@ -27,6 +27,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/inline_loading.dart';
+import '../../widgets/artwork_creator_byline.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -118,6 +119,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     if (_artFeedLoadQueued) return;
     _artFeedLoadQueued = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       _artFeedLoadQueued = false;
       final provider = context.read<CommunityHubProvider>();
       unawaited(provider.loadArtFeed(
@@ -226,27 +228,24 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
   }
 
-  Future<void> _refreshCommunitySidebarData({bool force = true}) async {
-    final artworkProvider = context.read<ArtworkProvider>();
+  void _refreshTrendingArtFeed() {
     final communityProvider = context.read<CommunityHubProvider>();
-    final configProvider = context.read<ConfigProvider>();
-
-    if (!artworkProvider.isLoading('load_artworks')) {
-      unawaited(artworkProvider.loadArtworks(refresh: force));
-    }
-
-    unawaited(communityProvider.loadGroups(refresh: force));
-    unawaited(_loadPopularCommunityPosts(force: force));
-
-    final center = await _resolveArtFeedLocation(configProvider);
-    if (!mounted) return;
-
-    unawaited(communityProvider.loadArtFeed(
-      latitude: center.lat ?? communityProvider.artFeedCenter?.lat ?? 46.05,
-      longitude: center.lng ?? communityProvider.artFeedCenter?.lng ?? 14.50,
-      radiusKm: configProvider.useMockData ? 200 : 50,
+    _queueArtFeedLoad(
+      lat: communityProvider.artFeedCenter?.lat,
+      lng: communityProvider.artFeedCenter?.lng,
+      radiusKm: communityProvider.artFeedRadiusKm,
       limit: 50,
-    ));
+    );
+  }
+
+  void _refreshTopCreators() {
+    unawaited(_loadPopularCommunityPosts(force: true));
+  }
+
+  void _refreshPlatformStats() {
+    final communityProvider = context.read<CommunityHubProvider>();
+    unawaited(communityProvider.loadGroups(refresh: true));
+    unawaited(_loadPopularCommunityPosts(force: true));
   }
 
   Future<CommunityLocation> _resolveArtFeedLocation(
@@ -1095,58 +1094,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   /// Get semantic color for a screen/section key (varied palette like governance/artist screens)
   Color _getScreenColor(String key, ColorScheme scheme) {
-    switch (key.toLowerCase()) {
-      case 'map':
-      case 'explore':
-        return AppColorUtils.tealAccent;
-      case 'community':
-      case 'connect':
-        return scheme.secondary;
-      case 'studio':
-      case 'artist':
-      case 'create':
-        return scheme.tertiary;
-      case 'institution_hub':
-      case 'institution':
-      case 'organize':
-        return scheme.primary;
-      case 'dao_hub':
-      case 'dao':
-      case 'govern':
-        return AppColorUtils.purpleAccent;
-      case 'marketplace':
-      case 'trade':
-        return AppColorUtils.greenAccent;
-      case 'wallet':
-        return AppColorUtils.amberAccent;
-      case 'profile':
-      case 'settings':
-        return scheme.onSurface.withValues(alpha: 0.7);
-      case 'analytics':
-        return AppColorUtils.coralAccent;
-      case 'achievements':
-        return KubusColorRoles.of(context).achievementGold;
-      case 'ar':
-        return AppColorUtils.tealAccent;
-      default:
-        return scheme.primary;
+    final lower = key.toLowerCase();
+    if (lower == 'achievements') {
+      return KubusColorRoles.of(context).achievementGold;
     }
-  }
-
-  void _openFullActivity() {
-    final shellScope = DesktopShellScope.of(context);
-    if (shellScope != null) {
-      shellScope.pushScreen(
-        DesktopSubScreen(
-          title: 'Activity',
-          child: const ActivityScreen(),
-        ),
-      );
-    } else {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const ActivityScreen()),
-      );
-    }
+    return AppColorUtils.featureColor(
+      key,
+      scheme,
+      roles: KubusColorRoles.of(context),
+    );
   }
 
   void _showARInfo() {
@@ -1317,7 +1273,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildArtworkCard(Artwork artwork, int index) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    final l10n = AppLocalizations.of(context)!;
 
     return DesktopCard(
       width: 200,
@@ -1370,8 +1325,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  l10n.commonByArtist(artwork.artist),
+                ArtworkCreatorByline(
+                  artwork: artwork,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     color: Theme.of(context)
@@ -1380,7 +1335,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         .withValues(alpha: 0.6),
                   ),
                   maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -1594,123 +1548,148 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildSidebarSectionHeader({
-    required ThemeProvider themeProvider,
-    required IconData icon,
-    required Color iconColor,
     required String title,
-    required bool isRefreshing,
     required VoidCallback onRefresh,
-    Widget? trailing,
+    bool isLoading = false,
+    VoidCallback? onTitleTap,
   }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: scheme.onSurface,
+        if (onTitleTap != null)
+          InkWell(
+            onTap: onTitleTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              child: Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: scheme.onSurface,
+                ),
               ),
             ),
-          ],
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              tooltip: l10n.commonRefresh,
-              onPressed: isRefreshing ? null : onRefresh,
-              icon: isRefreshing
-                  ? SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: themeProvider.accentColor,
-                      ),
-                    )
-                  : Icon(
-                      Icons.refresh,
-                      color: scheme.onSurface.withValues(alpha: 0.6),
-                    ),
+          )
+        else
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: scheme.onSurface,
             ),
-            if (trailing != null) ...[
-              const SizedBox(width: 4),
-              trailing,
-            ],
-          ],
+          ),
+        const Spacer(),
+        IconButton(
+          tooltip: l10n.commonRefresh,
+          onPressed: isLoading ? null : onRefresh,
+          icon: Icon(
+            Icons.refresh,
+            size: 18,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
         ),
       ],
     );
+  }
+
+  void _openFullActivity() {
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: 'Activity',
+          child: const ActivityScreen(),
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ActivityScreen()),
+      );
+    }
   }
 
   Widget _buildTrendingArtSection(ThemeProvider themeProvider) {
     return Consumer2<ArtworkProvider, CommunityHubProvider>(
       builder: (context, artworkProvider, communityProvider, _) {
         final l10n = AppLocalizations.of(context)!;
-        final communityPosts = _popularCommunityPosts.isNotEmpty
-            ? _popularCommunityPosts
-            : communityProvider.artFeedPosts;
+        final feedPosts = communityProvider.artFeedPosts;
 
-        final trendingEntries =
-            _getTrendingEntries(artworkProvider, communityPosts);
+        final trendingEntries = _getTrendingEntries(artworkProvider, feedPosts);
         final isLoading = (artworkProvider.isLoading('load_artworks') ||
-                (_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
-                (communityProvider.artFeedLoading && communityPosts.isEmpty)) &&
+                communityProvider.artFeedLoading) &&
             trendingEntries.isEmpty;
-        final hasPopularError =
-            _popularCommunityFetchFailed && _popularCommunityPosts.isEmpty;
-        final hasArtFeedError =
-            communityProvider.artFeedError != null && trendingEntries.isEmpty;
-        final hasError = hasPopularError || hasArtFeedError;
-        final isRefreshing = artworkProvider.isLoading('load_artworks') ||
-            _popularCommunityLoading ||
-            communityProvider.artFeedLoading;
+        final hasError = communityProvider.artFeedError != null &&
+            feedPosts.isEmpty &&
+            trendingEntries.isEmpty;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSidebarSectionHeader(
-              themeProvider: themeProvider,
-              icon: Icons.local_fire_department,
-              iconColor: AppColorUtils.amberAccent,
               title: l10n.desktopHomeTrendingArtTitle,
-              isRefreshing: isRefreshing,
-              onRefresh: () =>
-                  unawaited(_refreshCommunitySidebarData(force: true)),
-              trailing: TextButton(
-                onPressed: () => _navigateToTab(3), // Marketplace
-                child: Text(
-                  l10n.commonViewAll,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              ),
+              isLoading: communityProvider.artFeedLoading,
+              onRefresh: _refreshTrendingArtFeed,
+              onTitleTap: () => _navigateToTab(6),
             ),
             const SizedBox(height: 12),
             if (isLoading)
-              const InlineLoading()
-            else if (hasError && trendingEntries.isEmpty)
-              EmptyStateCard(
-                icon: Icons.wifi_off,
-                title: l10n.desktopHomeTrendingArtLoadFailed,
-                description: l10n.commonSomethingWentWrong,
+              Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: themeProvider.accentColor,
+                ),
+              )
+            else if (hasError)
+              DesktopCard(
+                onTap: _refreshTrendingArtFeed,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.desktopHomeTrendingArtLoadFailed,
+                        style: GoogleFonts.inter(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               )
             else if (trendingEntries.isEmpty)
-              EmptyStateCard(
-                icon: Icons.view_in_ar,
-                title: l10n.communityDiscoverEmptyTitle,
-                description: l10n.desktopHomeTrendingArtEmpty,
+              DesktopCard(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.view_in_ar_outlined,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.desktopHomeTrendingArtEmpty,
+                        style: GoogleFonts.inter(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               )
             else
               ...trendingEntries
@@ -1724,207 +1703,221 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   Widget _buildTrendingArtItem(
       _TrendingArtEntry entry, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          if (entry.artworkId != null && entry.artworkId!.isNotEmpty) {
-            final shellScope = DesktopShellScope.of(context);
-            if (shellScope != null) {
-              shellScope.pushScreen(
-                DesktopSubScreen(
-                  title: entry.title,
-                  child: ArtDetailScreen(artworkId: entry.artworkId!),
-                ),
-              );
-            } else {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) =>
-                      ArtDetailScreen(artworkId: entry.artworkId!),
-                ),
-              );
-            }
+    return DesktopCard(
+      onTap: () {
+        if (entry.artworkId != null && entry.artworkId!.isNotEmpty) {
+          final shellScope = DesktopShellScope.of(context);
+          if (shellScope != null) {
+            shellScope.pushScreen(
+              DesktopSubScreen(
+                title: entry.title,
+                child: ArtDetailScreen(artworkId: entry.artworkId!),
+              ),
+            );
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) =>
+                    ArtDetailScreen(artworkId: entry.artworkId!),
+              ),
+            );
           }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        }
+      },
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 8),
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColorUtils.tealAccent.withValues(alpha: 0.4),
+                  AppColorUtils.tealAccent.withValues(alpha: 0.15),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Icon(
+                Icons.view_in_ar,
+                color: AppColorUtils.tealAccent,
+                size: 24,
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      AppColorUtils.tealAccent.withValues(alpha: 0.4),
-                      AppColorUtils.tealAccent.withValues(alpha: 0.15),
-                    ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entry.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  borderRadius: BorderRadius.circular(10),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Center(
-                  child: Icon(Icons.view_in_ar,
-                      color: AppColorUtils.tealAccent, size: 24),
+                Text(
+                  entry.subtitle ?? l10n.commonNotAvailableShort,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.favorite,
+                    size: 14,
+                    color: KubusColorRoles.of(context)
+                        .likeAction
+                        .withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    entry.likes.toString(),
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                     ),
-                    Text(
-                      entry.subtitle ?? l10n.commonNotAvailableShort,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
+                  ),
+                ],
+              ),
+              if (entry.hasAR)
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColorUtils.tealAccent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    l10n.commonArShort,
+                    style: GoogleFonts.inter(
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                      color: AppColorUtils.tealAccent,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopCreatorsSection(ThemeProvider themeProvider) {
+    return Consumer<ArtworkProvider>(
+      builder: (context, artworkProvider, _) {
+        final l10n = AppLocalizations.of(context)!;
+        final communityPosts = _popularCommunityPosts;
+
+        final creators =
+            _buildTopCreatorSummaries(communityPosts, artworkProvider);
+        final isLoading = _popularCommunityLoading &&
+            _popularCommunityPosts.isEmpty &&
+            creators.isEmpty;
+        final hasError = _popularCommunityFetchFailed &&
+            _popularCommunityPosts.isEmpty &&
+            creators.isEmpty;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildSidebarSectionHeader(
+              title: l10n.desktopHomeTopCreatorsTitle,
+              isLoading: _popularCommunityLoading,
+              onRefresh: _refreshTopCreators,
+              onTitleTap: () => _navigateToTab(2),
+            ),
+            const SizedBox(height: 12),
+            if (isLoading)
+              Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: themeProvider.accentColor,
+                ),
+              )
+            else if (hasError)
+              DesktopCard(
+                onTap: _refreshTopCreators,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.desktopHomeTopCreatorsLoadFailed,
+                        style: GoogleFonts.inter(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.favorite,
-                          size: 14, color: KubusColorRoles.of(context).likeAction.withValues(alpha: 0.7)),
-                      const SizedBox(width: 4),
-                      Text(
-                        entry.likes.toString(),
+              )
+            else if (creators.isEmpty)
+              DesktopCard(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.desktopHomeTopCreatorsEmpty,
                         style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
                               .withValues(alpha: 0.7),
                         ),
                       ),
-                    ],
-                  ),
-                  if (entry.hasAR)
-                    Container(
-                      margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppColorUtils.tealAccent.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        l10n.commonArShort,
-                        style: GoogleFonts.inter(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: AppColorUtils.tealAccent,
-                        ),
-                      ),
                     ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopCreatorsSection(ThemeProvider themeProvider) {
-    return Consumer<CommunityHubProvider>(
-      builder: (context, communityProvider, _) {
-        final l10n = AppLocalizations.of(context)!;
-        final communityPosts = _popularCommunityPosts.isNotEmpty
-            ? _popularCommunityPosts
-            : communityProvider.artFeedPosts;
-
-        final creators = _buildTopCreatorSummaries(communityPosts);
-        final isLoading = ((communityProvider.artFeedLoading &&
-                    communityPosts.isEmpty) ||
-                (_popularCommunityLoading && _popularCommunityPosts.isEmpty)) &&
-            creators.isEmpty;
-        final hasPopularError =
-            _popularCommunityFetchFailed && _popularCommunityPosts.isEmpty;
-        final hasArtFeedError =
-            communityProvider.artFeedError != null && creators.isEmpty;
-        final hasError = hasPopularError || hasArtFeedError;
-        final isRefreshing =
-            _popularCommunityLoading || communityProvider.artFeedLoading;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSidebarSectionHeader(
-              themeProvider: themeProvider,
-              icon: Icons.star,
-              iconColor: KubusColorRoles.of(context).achievementGold,
-              title: l10n.desktopHomeTopCreatorsTitle,
-              isRefreshing: isRefreshing,
-              onRefresh: () =>
-                  unawaited(_refreshCommunitySidebarData(force: true)),
-              trailing: TextButton(
-                onPressed: () => _navigateToTab(2), // Community
-                child: Text(
-                  l10n.commonExplore,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: themeProvider.accentColor,
-                  ),
+                  ],
                 ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (isLoading)
-              const InlineLoading()
-            else if (hasError && creators.isEmpty)
-              EmptyStateCard(
-                icon: Icons.wifi_off,
-                title: l10n.desktopHomeTopCreatorsLoadFailed,
-                description: l10n.commonSomethingWentWrong,
-              )
-            else if (creators.isEmpty)
-              EmptyStateCard(
-                icon: Icons.people_outline,
-                title: l10n.communityDiscoverEmptyTitle,
-                description: l10n.desktopHomeTopCreatorsEmpty,
               )
             else
-              ...creators
-                  .map((creator) => _buildCreatorItem(creator, themeProvider)),
+              ...creators.map((creator) => _buildCreatorItem(creator)),
           ],
         );
       },
     );
   }
 
-  Widget _buildCreatorItem(
-      Map<String, dynamic> creator, ThemeProvider themeProvider) {
+  Widget _buildCreatorItem(Map<String, dynamic> creator) {
     final l10n = AppLocalizations.of(context)!;
     final userId = (creator['id'] ?? creator['wallet'] ?? '').toString();
     final wallet = (creator['wallet'] ?? '').toString().isNotEmpty
@@ -1933,102 +1926,88 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final avatarUrl = creator['avatar'] ?? creator['avatarUrl'];
     final displayName =
         (creator['displayName'] ?? creator['username'] ?? 'Artist').toString();
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          if (userId.isNotEmpty) {
-            final shellScope = DesktopShellScope.of(context);
-            if (shellScope != null) {
-              shellScope.pushScreen(
-                DesktopSubScreen(
-                  title: displayName,
-                  child: UserProfileScreen(userId: userId),
-                ),
-              );
-            } else {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => UserProfileScreen(userId: userId),
-                ),
-              );
-            }
+    return DesktopCard(
+      onTap: () {
+        if (userId.isNotEmpty) {
+          final shellScope = DesktopShellScope.of(context);
+          if (shellScope != null) {
+            shellScope.pushScreen(
+              DesktopSubScreen(
+                title: displayName,
+                child: UserProfileScreen(userId: userId),
+              ),
+            );
+          } else {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => UserProfileScreen(userId: userId),
+              ),
+            );
           }
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          margin: const EdgeInsets.only(bottom: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        }
+      },
+      padding: const EdgeInsets.all(10),
+      margin: const EdgeInsets.only(bottom: 8),
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        children: [
+          AvatarWidget(
+            avatarUrl: avatarUrl,
+            wallet: wallet,
+            radius: 20,
+            allowFabricatedFallback: true,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  (creator['name'] ?? l10n.desktopHomeCreatorFallbackName)
+                      .toString(),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (creator['username'] != null)
+                  Text(
+                    '@${creator['username']}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              AvatarWidget(
-                avatarUrl: avatarUrl,
-                wallet: wallet,
-                radius: 20,
-                allowFabricatedFallback: true,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .secondary
+                  .withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.secondary,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      (creator['name'] ?? l10n.desktopHomeCreatorFallbackName)
-                          .toString(),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (creator['username'] != null)
-                      Text(
-                        '@${creator['username']}',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurface
-                              .withValues(alpha: 0.6),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .secondary
-                      .withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -2038,45 +2017,57 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final communityProvider = Provider.of<CommunityHubProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final communityPostsCount = _popularCommunityPosts.isNotEmpty
-        ? _popularCommunityPosts.length
-        : communityProvider.artFeedPosts.length;
-    final isLoading = (artworkProvider.isLoading('load_artworks') ||
+    final communityPostsCount = _popularCommunityPosts.length;
+    final hasArtworksLoading = artworkProvider.isLoading('load_artworks') &&
+        artworkProvider.artworks.isEmpty;
+    final isLoading = hasArtworksLoading ||
         ((_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
-            (communityProvider.artFeedLoading && communityPostsCount == 0) ||
             (communityProvider.groupsLoading &&
-                communityProvider.groups.isEmpty)));
-    final hasCommunityPostsError =
+                communityProvider.groups.isEmpty));
+    final hasError =
         (_popularCommunityFetchFailed && _popularCommunityPosts.isEmpty) ||
-            (communityProvider.artFeedError != null &&
-                communityPostsCount == 0);
-    final hasGroupsError = communityProvider.groupsError != null &&
-        communityProvider.groups.isEmpty;
-    final hasError = hasCommunityPostsError || hasGroupsError;
-    final isRefreshing = artworkProvider.isLoading('load_artworks') ||
-        _popularCommunityLoading ||
-        communityProvider.artFeedLoading ||
-        communityProvider.groupsLoading;
+            (communityProvider.groupsError != null &&
+                communityProvider.groups.isEmpty);
+    final isRefreshing =
+        _popularCommunityLoading || communityProvider.groupsLoading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSidebarSectionHeader(
-          themeProvider: themeProvider,
-          icon: Icons.analytics,
-          iconColor: AppColorUtils.coralAccent,
           title: l10n.desktopHomePlatformStatsTitle,
-          isRefreshing: isRefreshing,
-          onRefresh: () => unawaited(_refreshCommunitySidebarData(force: true)),
+          isLoading: isRefreshing,
+          onRefresh: _refreshPlatformStats,
+          onTitleTap: () => _navigateToTab(2),
         ),
         const SizedBox(height: 12),
         if (isLoading)
-          const InlineLoading()
+          Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: themeProvider.accentColor,
+            ),
+          )
         else if (hasError)
-          EmptyStateCard(
-            icon: Icons.wifi_off,
-            title: l10n.desktopHomePlatformStatsLoadFailed,
-            description: l10n.commonSomethingWentWrong,
+          DesktopCard(
+            onTap: _refreshPlatformStats,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.desktopHomePlatformStatsLoadFailed,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           )
         else
           Container(
@@ -2172,23 +2163,63 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
         Widget content;
         if (isLoading) {
-          content = const InlineLoading();
+          content = Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: themeProvider.accentColor,
+            ),
+          );
         } else if (error != null && activities.isEmpty) {
-          content = EmptyStateCard(
-            icon: Icons.wifi_off,
-            title: l10n.homeUnableToLoadActivityTitle,
-            description: l10n.commonSomethingWentWrong,
+          content = DesktopCard(
+            onTap: () => unawaited(activityProvider.refresh(force: true)),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.homeUnableToLoadActivityTitle,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         } else if (activities.isEmpty) {
-          content = EmptyStateCard(
-            icon: Icons.timeline,
-            title: l10n.homeNoRecentActivityTitle,
-            description: l10n.homeNoRecentActivityDescription,
+          content = DesktopCard(
+            child: Row(
+              children: [
+                Icon(
+                  Icons.timeline,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.5),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    l10n.homeNoRecentActivityDescription,
+                    style: GoogleFonts.inter(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         } else {
           content = Column(
             children: activities
-                .map((activity) => _buildActivityItem(activity, themeProvider))
+                .map((activity) => _buildActivityItem(activity))
                 .toList(),
           );
         }
@@ -2197,23 +2228,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildSidebarSectionHeader(
-              themeProvider: themeProvider,
-              icon: Icons.history,
-              iconColor: themeProvider.accentColor,
               title: l10n.homeRecentActivityTitle,
-              isRefreshing: activityProvider.isLoading,
-              onRefresh: () =>
-                  unawaited(activityProvider.refresh(force: true)),
-              trailing: TextButton(
-                onPressed: _openFullActivity,
-                child: Text(
-                  l10n.commonViewAll,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: themeProvider.accentColor,
-                  ),
-                ),
-              ),
+              isLoading: activityProvider.isLoading,
+              onRefresh: () => unawaited(activityProvider.refresh(force: true)),
+              onTitleTap: _openFullActivity,
             ),
             const SizedBox(height: 12),
             content,
@@ -2223,72 +2241,59 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildActivityItem(
-      RecentActivity activity, ThemeProvider themeProvider) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => ActivityNavigation.open(context, activity),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+  Widget _buildActivityItem(RecentActivity activity) {
+    final activityColor = _getActivityColor(activity.category);
+    return DesktopCard(
+      onTap: () => ActivityNavigation.open(context, activity),
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      borderRadius: BorderRadius.circular(12),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: activityColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              _getActivityIcon(activity.category),
+              color: activityColor,
+              size: 18,
             ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: themeProvider.accentColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  activity.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Icon(
-                  _getActivityIcon(activity.category),
-                  color: themeProvider.accentColor,
-                  size: 18,
+                Text(
+                  activity.description,
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      activity.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    Text(
-                      activity.description,
-                      style: GoogleFonts.inter(
-                        fontSize: 11,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -3166,7 +3171,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   List<Map<String, dynamic>> _buildTopCreatorSummaries(
-      List<CommunityPost> communityPosts) {
+      List<CommunityPost> communityPosts, ArtworkProvider artworkProvider) {
     final creatorsMap = <String, _CreatorStats>{};
     final posts = communityPosts.take(50);
 
@@ -3190,7 +3195,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     // Fallback when no community posts: derive creators from artworks
     if (creatorsMap.isEmpty) {
-      final artworkProvider = context.read<ArtworkProvider>();
       for (final art in artworkProvider.artworks) {
         final key = art.artist;
         final stats = creatorsMap.putIfAbsent(

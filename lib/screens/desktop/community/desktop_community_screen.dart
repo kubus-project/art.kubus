@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../../config/config.dart';
@@ -21,7 +22,10 @@ import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/artist_badge.dart';
+import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/institution_badge.dart';
+import '../../../widgets/inline_loading.dart';
+import '../../../widgets/community/community_post_card.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -33,6 +37,7 @@ import '../../community/conversation_screen.dart';
 import 'desktop_user_profile_screen.dart';
 import '../../community/post_detail_screen.dart';
 import '../../download_app_screen.dart';
+import '../../map_screen.dart';
 import '../../season0/season0_screen.dart';
 
 /// Desktop community screen with Twitter/Instagram-style feed
@@ -2713,6 +2718,37 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Widget _buildPostCard(CommunityPost post, ThemeProvider themeProvider) {
+    if (MediaQuery.of(context).size.width >= 0) {
+      return CommunityPostCard(
+        post: post,
+        accentColor: themeProvider.accentColor,
+        onOpenPostDetail: _openPostDetail,
+        onOpenAuthorProfile: () => unawaited(
+          _openUserProfileModal(
+            userId: post.authorId,
+            username: post.authorUsername,
+          ),
+        ),
+        onToggleLike: () => _togglePostLike(post),
+        onOpenComments: () => _openPostDetail(post),
+        onRepost: () => _handleRepostTap(post),
+        onShare: () => _showShareDialog(post),
+        onToggleBookmark: () => _toggleBookmark(post),
+        onShowLikes: () => _showPostLikes(post.id),
+        onShowReposts: () => _viewRepostsList(post),
+        onTagTap: (tag) => unawaited(_openTagFeed(tag)),
+        onMentionTap: (mention) => unawaited(
+          _openUserProfileModal(
+            userId: mention,
+            username: mention,
+          ),
+        ),
+        onOpenLocation: _openLocationOnMap,
+        onOpenArtwork: _openArtworkDetail,
+        onOpenGroup: _openGroupFromPost,
+      );
+    }
+
     return DesktopCard(
       onTap: () => _openPostDetail(post),
       margin: const EdgeInsets.only(bottom: 16),
@@ -3334,6 +3370,437 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   String _buildPostShareLink(CommunityPost post) =>
       'https://app.kubus.site/post/${post.id}';
+
+  void _openLocationOnMap(CommunityLocation location) {
+    final lat = location.lat;
+    final lng = location.lng;
+    if (lat == null || lng == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapScreen(
+          initialCenter: LatLng(lat, lng),
+          initialZoom: 15,
+          autoFollow: false,
+        ),
+      ),
+    );
+  }
+
+  void _openArtworkDetail(CommunityArtworkReference artwork) {
+    Navigator.pushNamed(context, '/artwork', arguments: {'artworkId': artwork.id});
+  }
+
+  void _openGroupFromPost(CommunityGroupReference group) {
+    final summary = CommunityGroupSummary(
+      id: group.id,
+      name: group.name,
+      slug: group.slug,
+      coverImage: group.coverImage,
+      description: group.description,
+      isPublic: true,
+      ownerWallet: '',
+      memberCount: 0,
+      isMember: false,
+      isOwner: false,
+    );
+
+    final shellScope = DesktopShellScope.of(context);
+    if (shellScope != null) {
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: summary.name,
+          child: GroupFeedScreen(group: summary),
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => GroupFeedScreen(group: summary)),
+    );
+  }
+
+  void _handleRepostTap(CommunityPost post) {
+    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+    final currentWallet = walletProvider.currentWalletAddress;
+    final authorWallet = post.authorWallet ?? post.authorId;
+    if (post.postType == 'repost' && WalletUtils.equals(authorWallet, currentWallet)) {
+      unawaited(_showUnrepostOptions(post));
+      return;
+    }
+    unawaited(_showRepostOptions(post));
+  }
+
+  Future<void> _showUnrepostOptions(CommunityPost post) async {
+    final l10n = AppLocalizations.of(context)!;
+    await showDialog(
+      context: context,
+      builder: (dialogContext) => SimpleDialog(
+        title: Text(l10n.communityUnrepostTitle),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              unawaited(_unrepostPost(post));
+            },
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+                const SizedBox(width: 10),
+                Text(
+                  l10n.communityUnrepostAction,
+                  style: GoogleFonts.inter(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+            ),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Row(
+              children: [
+                Icon(Icons.cancel, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65)),
+                const SizedBox(width: 10),
+                Text(l10n.commonCancel),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _unrepostPost(CommunityPost post) async {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
+        content: Text(l10n.communityUnrepostConfirmBody, style: GoogleFonts.inter()),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(dialogContext).colorScheme.error,
+            ),
+            child: Text(l10n.communityUnrepostAction, style: GoogleFonts.inter()),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await BackendApiService().deleteRepost(post.id);
+      BackendApiService().trackAnalyticsEvent(
+        eventType: 'repost_deleted',
+        postId: post.originalPostId ?? post.id,
+        metadata: {'repost_id': post.id},
+      );
+
+      await Future.wait([_loadDiscoverFeed(), _loadFollowingFeed()]);
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.communityRepostRemovedToast)));
+    } catch (e) {
+      if (!mounted) return;
+      messenger.showSnackBar(SnackBar(content: Text(l10n.communityUnrepostFailedToast)));
+    }
+  }
+
+  void _showPostLikes(String postId) {
+    final l10n = AppLocalizations.of(context)!;
+    _showLikesDialog(
+      title: l10n.communityPostLikesTitle,
+      loader: () => BackendApiService().getPostLikes(postId),
+    );
+  }
+
+  void _showLikesDialog({
+    required String title,
+    required Future<List<CommunityLikeUser>> Function() loader,
+  }) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final future = loader();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      color: theme.colorScheme.onSurface,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<CommunityLikeUser>>(
+                  future: future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return Center(
+                        child: SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: InlineLoading(
+                            expand: true,
+                            shape: BoxShape.circle,
+                            tileSize: 4.0,
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            l10n.postDetailLoadLikesFailedMessage,
+                            style: GoogleFonts.inter(color: theme.colorScheme.onSurface),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final likes = snapshot.data ?? <CommunityLikeUser>[];
+                    if (likes.isEmpty) {
+                      return Center(
+                        child: EmptyStateCard(
+                          icon: Icons.favorite_border,
+                          title: l10n.postDetailNoLikesTitle,
+                          description: l10n.postDetailNoLikesDescription,
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      itemCount: likes.length,
+                      separatorBuilder: (_, __) => Divider(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                      itemBuilder: (context, index) {
+                        final user = likes[index];
+                        final subtitleParts = <String>[];
+                        if (user.username != null && user.username!.isNotEmpty) {
+                          subtitleParts.add('@${user.username}');
+                        }
+                        if (user.walletAddress != null && user.walletAddress!.isNotEmpty) {
+                          subtitleParts.add(user.walletAddress!);
+                        }
+                        if (user.likedAt != null) {
+                          subtitleParts.add(_formatTimeAgo(user.likedAt));
+                        }
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: AvatarWidget(
+                            wallet: user.walletAddress ?? user.userId,
+                            avatarUrl: user.avatarUrl,
+                            radius: 20,
+                            enableProfileNavigation: true,
+                          ),
+                          title: Text(
+                            user.displayName.isNotEmpty ? user.displayName : l10n.commonUnnamed,
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: subtitleParts.isNotEmpty
+                              ? Text(
+                                  subtitleParts.join(' ƒ?› '),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _viewRepostsList(CommunityPost post) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final future = BackendApiService().getPostReposts(postId: post.id);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l10n.communityRepostedByTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        l10n.communityRepostsLoadFailedMessage,
+                        style: GoogleFonts.inter(),
+                      ),
+                    );
+                  }
+                  final reposts = snapshot.data ?? [];
+                  if (reposts.isEmpty) {
+                    return Center(
+                      child: EmptyStateCard(
+                        icon: Icons.repeat,
+                        title: l10n.communityNoRepostsTitle,
+                        description: l10n.communityNoRepostsDescription,
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: reposts.length,
+                    itemBuilder: (ctx, idx) {
+                      final repost = reposts[idx];
+                      final user = repost['user'] as Map<String, dynamic>?;
+                      final username = user?['username'] ??
+                          user?['walletAddress'] ??
+                          l10n.commonUnknown;
+                      final displayName = user?['displayName'] ?? username;
+                      final avatar = user?['avatar'];
+                      final comment = repost['repostComment'] as String?;
+                      final createdAt = DateTime.tryParse(repost['createdAt'] ?? '');
+
+                      return ListTile(
+                        leading: AvatarWidget(
+                          wallet: username,
+                          avatarUrl: avatar,
+                          radius: 20,
+                        ),
+                        title: Text(
+                          displayName,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
+                            if (comment != null && comment.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                comment,
+                                style: GoogleFonts.inter(fontSize: 12),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                        trailing: createdAt != null
+                            ? Text(
+                                _formatTimeAgo(createdAt),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   List<CommunityPost> _prependUniquePost(
       List<CommunityPost> source, CommunityPost post) {

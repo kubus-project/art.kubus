@@ -63,6 +63,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonNavigate => 'Navigate';
 
   @override
+  String get commonOpenOnMap => 'Open on map';
+
+  @override
   String get commonReplace => 'Replace';
 
   @override
@@ -3022,6 +3025,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionSettingsTitle => 'Collection Settings';
 
   @override
+  String get artistStudioCreatePrompt => 'What would you like to create?';
+
+  @override
+  String get artistStudioCreateOptionArtworkTitle => 'Create artwork';
+
+  @override
+  String get artistStudioCreateOptionArtworkSubtitle => 'Upload media, set details, and publish.';
+
+  @override
+  String get artistStudioCreateOptionCollectionTitle => 'Create collection';
+
+  @override
+  String get artistStudioCreateOptionCollectionSubtitle => 'Curate a set of artworks into a collection.';
+
+  @override
+  String get collectionCreatorTitle => 'Create collection';
+
+  @override
+  String get collectionCreatorNameRequiredError => 'Collection name is required';
+
+  @override
+  String get collectionCreatorCreateFailed => 'Failed to create collection.';
+
+  @override
+  String collectionCreatorCreateFailedWithError(Object error) {
+    return 'Failed to create collection: $error';
+  }
+
+  @override
+  String get collectionDetailLoadFailedMessage => 'Failed to load collection details. Please try again.';
+
+  @override
+  String get collectionDetailNoArtworksYet => 'No artworks yet.';
+
+  @override
   String get collectionDetailAddArtwork => 'Add Artwork';
 
   @override
@@ -4971,6 +5009,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailLoadPostFailedMessage => 'Failed to load post.';
 
   @override
+  String get postDetailMoreOptionsReportAction => 'Report';
+
+  @override
+  String get postDetailReportPostDialogTitle => 'Report post';
+
+  @override
+  String get postDetailReportPostDialogQuestion =>
+      'Why are you reporting this post?';
+
+  @override
+  String get postDetailEditPostTitle => 'Edit post';
+
+  @override
+  String get postDetailPostUpdatedToast => 'Post updated';
+
+  @override
+  String get postDetailUpdatePostFailedToast => 'Failed to update post.';
+
+  @override
+  String get postDetailDeletePostTitle => 'Delete post';
+
+  @override
+  String get postDetailDeletePostBody =>
+      'Are you sure you want to delete this post? This action cannot be undone.';
+
+  @override
+  String get postDetailPostDeletedToast => 'Post deleted';
+
+  @override
+  String get postDetailDeletePostFailedToast => 'Failed to delete post.';
+
+  @override
   String get postDetailPostLikedToast => 'Post liked';
 
   @override
@@ -5459,6 +5529,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityCommentAuthRequiredToast => 'Sign in to comment.';
+
+  @override
+  String get communityRepostedByTitle => 'Reposted by';
 
   @override
   String get communityRepostsLoadFailedMessage => 'Failed to load reposts.';

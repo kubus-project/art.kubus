@@ -28,6 +28,7 @@ import '../widgets/topbar_icon.dart';
 import '../utils/activity_navigation.dart';
 import '../widgets/artist_badge.dart';
 import '../widgets/institution_badge.dart';
+import '../widgets/artwork_creator_byline.dart';
 import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
@@ -585,7 +586,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               def.name,
                               def.icon,
                               AppColorUtils.featureColor(
-                                  key, Theme.of(context).colorScheme),
+                                key,
+                                Theme.of(context).colorScheme,
+                                roles: KubusColorRoles.of(context),
+                              ),
                               false,
                               onTap: () => navigationProvider.navigateToScreen(
                                   context, key),
@@ -609,7 +613,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         screen.name,
                         screen.icon,
                         AppColorUtils.featureColor(
-                            screen.key, Theme.of(context).colorScheme),
+                          screen.key,
+                          Theme.of(context).colorScheme,
+                          roles: KubusColorRoles.of(context),
+                        ),
                         false,
                         onTap: () => navigationProvider.navigateToScreen(
                             context, screen.key),
@@ -1001,14 +1008,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           color: roles.lockedFeature.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                              color: roles.lockedFeature.withValues(alpha: 0.3)),
+                              color:
+                                  roles.lockedFeature.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.lock,
                                 size: 12, color: roles.lockedFeature),
-                            const SizedBox(width: 4),
                             Text(
                               l10n.homeAccountRequiredLabel,
                               style: GoogleFonts.inter(
@@ -1032,7 +1039,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3DaoTitle,
                     l10n.homeWeb3DaoSubtitle,
                     Icons.how_to_vote,
-                    AppColorUtils.tealAccent,
+                    KubusColorRoles.of(context).web3DaoAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1049,7 +1056,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3ArtistTitle,
                     l10n.homeWeb3ArtistSubtitle,
                     Icons.palette,
-                    AppColorUtils.pinkAccent,
+                    KubusColorRoles.of(context).web3ArtistStudioAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1070,7 +1077,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3InstitutionTitle,
                     l10n.homeWeb3InstitutionSubtitle,
                     Icons.museum,
-                    AppColorUtils.indigoAccent,
+                    KubusColorRoles.of(context).web3InstitutionAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1087,7 +1094,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     l10n.homeWeb3MarketplaceTitle,
                     l10n.homeWeb3MarketplaceSubtitle,
                     Icons.store,
-                    AppColorUtils.coralAccent,
+                    KubusColorRoles.of(context).web3MarketplaceAccent,
                     isEffectivelyConnected
                         ? () => Navigator.push(
                               context,
@@ -1420,7 +1427,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildArtworkCard(Artwork artwork, int index) {
-    final l10n = AppLocalizations.of(context)!;
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return GestureDetector(
@@ -1464,8 +1470,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    l10n.commonByArtist(artwork.artist),
+                  ArtworkCreatorByline(
+                    artwork: artwork,
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       color: Theme.of(context)
@@ -1474,7 +1480,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           .withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

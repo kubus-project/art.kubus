@@ -14,6 +14,7 @@ import '../../widgets/app_loading.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/community/community_post_card.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2190,6 +2191,40 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
 
     final post = _communityPosts[index];
+
+    if (MediaQuery.of(context).size.width >= 0) {
+      return CommunityPostCard(
+        post: post,
+        accentColor: themeProvider.accentColor,
+        onOpenPostDetail: (target) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => PostDetailScreen(post: target)),
+          );
+        },
+        onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+        onToggleLike: () => _toggleLike(index),
+        onOpenComments: () => _showComments(index),
+        onRepost: () {
+          final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+          final currentWallet = walletProvider.currentWalletAddress;
+          if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+            _showRepostOptions(post);
+          } else {
+            _showRepostModal(post);
+          }
+        },
+        onShare: () => _sharePost(index),
+        onToggleBookmark: () => _toggleBookmark(index),
+        onShowLikes: () => _showPostLikes(post.id),
+        onShowReposts: () => _viewRepostsList(post),
+        onTagTap: _filterByTag,
+        onMentionTap: _searchMention,
+        onOpenLocation: _openLocationOnMap,
+        onOpenArtwork: _openArtworkDetail,
+        onOpenGroup: _openGroupFromPost,
+      );
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -7478,7 +7513,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Reposted by',
+                  Text(l10n.communityRepostedByTitle,
                       style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

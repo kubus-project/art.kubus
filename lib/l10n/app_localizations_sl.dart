@@ -63,6 +63,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonNavigate => 'Navigiraj';
 
   @override
+  String get commonOpenOnMap => 'Odpri na zemljevidu';
+
+  @override
   String get commonReplace => 'Zamenjaj';
 
   @override
@@ -2619,7 +2622,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $minutes minutama',
       one: 'pred $minutes minuto',
     );
-    return '{minutes, plural, one{pred $minutes minuto} two{pred $minutes minutama} few{pred $minutes minutami} other{pred $minutes minutami}}';
+    return _temp0;
   }
 
   @override
@@ -2632,7 +2635,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $hours urama',
       one: 'pred $hours uro',
     );
-    return '{hours, plural, one{pred $hours uro} two{pred $hours urama} few{pred $hours urami} other{pred $hours urami}}';
+    return _temp0;
   }
 
   @override
@@ -2645,7 +2648,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $days dnevoma',
       one: 'pred $days dnem',
     );
-    return '{days, plural, one{pred $days dnem} two{pred $days dnevoma} few{pred $days dnevi} other{pred $days dnevi}}';
+    return _temp0;
   }
 
   @override
@@ -2658,7 +2661,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $weeks tednoma',
       one: 'pred $weeks tednom',
     );
-    return '{weeks, plural, one{pred $weeks tednom} two{pred $weeks tednoma} few{pred $weeks tedni} other{pred $weeks tedni}}';
+    return _temp0;
   }
 
   @override
@@ -3034,6 +3037,41 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get collectionSettingsTitle => 'Nastavitve zbirke';
+
+  @override
+  String get artistStudioCreatePrompt => 'Kaj želiš ustvariti?';
+
+  @override
+  String get artistStudioCreateOptionArtworkTitle => 'Ustvari umetnino';
+
+  @override
+  String get artistStudioCreateOptionArtworkSubtitle => 'Naloži medij, nastavi podrobnosti in objavi.';
+
+  @override
+  String get artistStudioCreateOptionCollectionTitle => 'Ustvari zbirko';
+
+  @override
+  String get artistStudioCreateOptionCollectionSubtitle => 'Združi umetnine v zbirko.';
+
+  @override
+  String get collectionCreatorTitle => 'Ustvari zbirko';
+
+  @override
+  String get collectionCreatorNameRequiredError => 'Ime zbirke je obvezno';
+
+  @override
+  String get collectionCreatorCreateFailed => 'Ustvarjanje zbirke ni uspelo.';
+
+  @override
+  String collectionCreatorCreateFailedWithError(Object error) {
+    return 'Ustvarjanje zbirke ni uspelo: $error';
+  }
+
+  @override
+  String get collectionDetailLoadFailedMessage => 'Nalaganje podrobnosti zbirke ni uspelo. Poskusi znova.';
+
+  @override
+  String get collectionDetailNoArtworksYet => 'Zaenkrat ni umetnin.';
 
   @override
   String get collectionDetailAddArtwork => 'Dodaj umetnino';
@@ -4991,6 +5029,37 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postDetailLoadPostFailedMessage => 'Objave ni bilo mogoče naložiti.';
 
   @override
+  String get postDetailMoreOptionsReportAction => 'Prijavi';
+
+  @override
+  String get postDetailReportPostDialogTitle => 'Prijavi objavo';
+
+  @override
+  String get postDetailReportPostDialogQuestion => 'Zakaj prijavljaš to objavo?';
+
+  @override
+  String get postDetailEditPostTitle => 'Uredi objavo';
+
+  @override
+  String get postDetailPostUpdatedToast => 'Objava posodobljena';
+
+  @override
+  String get postDetailUpdatePostFailedToast => 'Objave ni bilo mogoče posodobiti.';
+
+  @override
+  String get postDetailDeletePostTitle => 'Izbriši objavo';
+
+  @override
+  String get postDetailDeletePostBody =>
+      'Ali res želiš izbrisati to objavo? Tega dejanja ni mogoče razveljaviti.';
+
+  @override
+  String get postDetailPostDeletedToast => 'Objava izbrisana';
+
+  @override
+  String get postDetailDeletePostFailedToast => 'Objave ni bilo mogoče izbrisati.';
+
+  @override
   String get postDetailPostLikedToast => 'Objava je všečkana';
 
   @override
@@ -5479,6 +5548,9 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get communityCommentAuthRequiredToast => 'Za komentiranje se prijavi.';
+
+  @override
+  String get communityRepostedByTitle => 'Ponovno objavili';
 
   @override
   String get communityRepostsLoadFailedMessage => 'Ponovnih objav ni bilo mogoče naložiti.';

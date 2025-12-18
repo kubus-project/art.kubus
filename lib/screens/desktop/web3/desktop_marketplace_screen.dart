@@ -6,6 +6,8 @@ import '../../../providers/web3provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../models/artwork.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/kubus_color_roles.dart';
+import '../../../widgets/artwork_creator_byline.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/ar_screen.dart';
 import 'desktop_wallet_screen.dart';
@@ -16,7 +18,8 @@ class DesktopMarketplaceScreen extends StatefulWidget {
   const DesktopMarketplaceScreen({super.key});
 
   @override
-  State<DesktopMarketplaceScreen> createState() => _DesktopMarketplaceScreenState();
+  State<DesktopMarketplaceScreen> createState() =>
+      _DesktopMarketplaceScreenState();
 }
 
 class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
@@ -25,7 +28,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   late TabController _tabController;
   late ScrollController _scrollController;
 
-  final List<String> _tabs = ['All NFTs', 'Art', 'Photography', 'Music', 'Virtual Worlds'];
+  final List<String> _tabs = [
+    'All NFTs',
+    'Art',
+    'Photography',
+    'Music',
+    'Virtual Worlds'
+  ];
   String _selectedSort = 'recent';
   String _selectedView = 'grid';
   bool _showFilters = false;
@@ -144,12 +153,16 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     : () {
                         Navigator.of(context).pushNamed('/connect-wallet');
                       },
-                icon: Icon(web3Provider.isConnected ? Icons.add : Icons.account_balance_wallet),
-                label: Text(web3Provider.isConnected ? 'Create' : 'Connect Wallet'),
+                icon: Icon(web3Provider.isConnected
+                    ? Icons.add
+                    : Icons.account_balance_wallet),
+                label: Text(
+                    web3Provider.isConnected ? 'Create' : 'Connect Wallet'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: themeProvider.accentColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -177,7 +190,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         isScrollable: true,
         tabAlignment: TabAlignment.start,
         labelColor: themeProvider.accentColor,
-        unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        unselectedLabelColor:
+            Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         labelStyle: GoogleFonts.inter(
           fontSize: 15,
           fontWeight: FontWeight.w600,
@@ -212,16 +226,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
       child: Consumer<ArtworkProvider>(
         builder: (context, artworkProvider, _) {
           final totalArtworks = artworkProvider.artworks.length;
-          final arEnabled = artworkProvider.artworks.where((a) => a.arEnabled).length;
-          
+          final arEnabled =
+              artworkProvider.artworks.where((a) => a.arEnabled).length;
+
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('Total Artworks', totalArtworks.toString(), Icons.collections),
+              _buildStatItem('Total Artworks', totalArtworks.toString(),
+                  Icons.collections),
               _buildVerticalDivider(),
-              _buildStatItem('AR Ready', arEnabled.toString(), Icons.view_in_ar),
+              _buildStatItem(
+                  'AR Ready', arEnabled.toString(), Icons.view_in_ar),
               _buildVerticalDivider(),
-              _buildStatItem('Available', totalArtworks.toString(), Icons.storefront),
+              _buildStatItem(
+                  'Available', totalArtworks.toString(), Icons.storefront),
             ],
           );
         },
@@ -280,7 +298,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             style: OutlinedButton.styleFrom(
               foregroundColor: Theme.of(context).colorScheme.onSurface,
               side: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.3),
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(
@@ -297,7 +318,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 '${artworkProvider.artworks.length} items',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               );
             },
@@ -311,7 +335,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
               ),
             ),
             child: DropdownButton<String>(
@@ -319,9 +346,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               underline: const SizedBox.shrink(),
               icon: const Icon(Icons.keyboard_arrow_down),
               items: const [
-                DropdownMenuItem(value: 'recent', child: Text('Recently Listed')),
-                DropdownMenuItem(value: 'price_low', child: Text('Price: Low to High')),
-                DropdownMenuItem(value: 'price_high', child: Text('Price: High to Low')),
+                DropdownMenuItem(
+                    value: 'recent', child: Text('Recently Listed')),
+                DropdownMenuItem(
+                    value: 'price_low', child: Text('Price: Low to High')),
+                DropdownMenuItem(
+                    value: 'price_high', child: Text('Price: High to Low')),
                 DropdownMenuItem(value: 'popular', child: Text('Most Popular')),
                 DropdownMenuItem(value: 'ending', child: Text('Ending Soon')),
               ],
@@ -352,7 +382,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
     );
   }
 
-  Widget _buildViewToggle(String view, IconData icon, ThemeProvider themeProvider) {
+  Widget _buildViewToggle(
+      String view, IconData icon, ThemeProvider themeProvider) {
     final isActive = _selectedView == view;
     return Material(
       color: Colors.transparent,
@@ -370,7 +401,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
           child: Icon(
             icon,
             size: 20,
-            color: isActive ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: isActive
+                ? Colors.white
+                : Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
           ),
         ),
       ),
@@ -453,14 +489,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 '${_priceRange.start.toInt()} SOL',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
               Text(
                 '${_priceRange.end.toInt()} SOL',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -504,7 +546,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
     );
   }
 
-  Widget _buildCheckboxFilter(String label, bool checked, ThemeProvider themeProvider) {
+  Widget _buildCheckboxFilter(
+      String label, bool checked, ThemeProvider themeProvider) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -547,7 +590,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 Icon(
                   Icons.collections,
                   size: 64,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
                 ),
                 const SizedBox(height: 16),
                 Text(
@@ -555,7 +601,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                   style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -563,7 +612,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                   'Try adjusting your filters',
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.4),
                   ),
                 ),
               ],
@@ -590,6 +642,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   }
 
   Widget _buildNFTCard(Artwork artwork, ThemeProvider themeProvider) {
+    final marketplaceAccent = KubusColorRoles.of(context).web3MarketplaceAccent;
     return DesktopCard(
       padding: EdgeInsets.zero,
       onTap: () {
@@ -607,11 +660,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    themeProvider.accentColor.withValues(alpha: 0.4),
-                    themeProvider.accentColor.withValues(alpha: 0.1),
+                    marketplaceAccent.withValues(alpha: 0.4),
+                    marketplaceAccent.withValues(alpha: 0.1),
                   ],
                 ),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Stack(
                 children: [
@@ -628,7 +682,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                       top: 12,
                       right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4ECDC4),
                           borderRadius: BorderRadius.circular(6),
@@ -636,13 +691,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.view_in_ar, size: 12, color: Colors.white),
+                            Icon(Icons.view_in_ar,
+                                size: 12, color: Colors.white),
                             SizedBox(width: 4),
-                            Text('AR', style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            )),
+                            Text('AR',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                )),
                           ],
                         ),
                       ),
@@ -658,7 +715,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        artwork.isDiscovered ? Icons.favorite : Icons.favorite_border,
+                        artwork.isDiscovered
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         size: 16,
                         color: artwork.isDiscovered ? Colors.red : Colors.white,
                       ),
@@ -688,14 +747,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    'by ${artwork.artist}',
+                  ArtworkCreatorByline(
+                    artwork: artwork,
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: themeProvider.accentColor,
+                      color: marketplaceAccent,
                     ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
                   const Spacer(),
                   Row(
@@ -708,7 +766,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                             'Price',
                             style: GoogleFonts.inter(
                               fontSize: 11,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                           Text(
@@ -726,14 +787,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                           Icon(
                             Icons.favorite,
                             size: 14,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.4),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${artwork.likesCount}',
                             style: GoogleFonts.inter(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -776,7 +843,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                           themeProvider.accentColor.withValues(alpha: 0.1),
                         ],
                       ),
-                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+                      borderRadius: const BorderRadius.horizontal(
+                          left: Radius.circular(20)),
                     ),
                     child: Stack(
                       children: [
@@ -805,7 +873,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
                                 foregroundColor: themeProvider.accentColor,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -859,7 +928,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   height: 1.6,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                               ),
                             ),
@@ -870,7 +942,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primaryContainer,
+                            color:
+                                Theme.of(context).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
@@ -883,7 +956,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                     'Current Price',
                                     style: GoogleFonts.inter(
                                       fontSize: 13,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
@@ -892,7 +968,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                     style: GoogleFonts.inter(
                                       fontSize: 28,
                                       fontWeight: FontWeight.bold,
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurface,
                                     ),
                                   ),
                                 ],
@@ -901,7 +979,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 children: [
                                   Row(
                                     children: [
-                                      Icon(Icons.favorite, size: 16, color: Colors.red.withValues(alpha: 0.7)),
+                                      Icon(Icons.favorite,
+                                          size: 16,
+                                          color: Colors.red
+                                              .withValues(alpha: 0.7)),
                                       const SizedBox(width: 4),
                                       Text('${artwork.likesCount}'),
                                     ],
@@ -909,7 +990,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      Icon(Icons.visibility, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+                                      Icon(Icons.visibility,
+                                          size: 16,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.5)),
                                       const SizedBox(width: 4),
                                       Text('${artwork.viewsCount}'),
                                     ],
@@ -937,7 +1023,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: themeProvider.accentColor,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -956,8 +1043,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 );
                               },
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-                                side: BorderSide(color: themeProvider.accentColor),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 16, horizontal: 20),
+                                side: BorderSide(
+                                    color: themeProvider.accentColor),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
