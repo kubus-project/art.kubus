@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/themeprovider.dart';
+import '../utils/app_color_utils.dart';
 import '../providers/notification_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/wallet_provider.dart';
@@ -230,8 +231,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildUserSection(AppLocalizations l10n) {
     final web3Provider = Provider.of<Web3Provider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
+    final headerColor = scheme.secondary;
     
     return Container(
       padding: const EdgeInsets.all(24),
@@ -240,14 +242,14 @@ class _SettingsScreenState extends State<SettingsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            themeProvider.accentColor,
-            themeProvider.accentColor.withValues(alpha: 0.8),
+            headerColor,
+            headerColor.withValues(alpha: 0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: themeProvider.accentColor.withValues(alpha: 0.3),
+            color: headerColor.withValues(alpha: 0.3),
             blurRadius: 20,
             spreadRadius: 0,
             offset: const Offset(0, 10),
@@ -399,6 +401,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildThemeSection(AppLocalizations l10n) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     
     return _buildSection(
       l10n.settingsAppearanceSectionTitle,
@@ -408,6 +411,7 @@ class _SettingsScreenState extends State<SettingsScreen>
         const SizedBox(height: 12),
         _buildAccentColorTile(l10n, themeProvider),
       ],
+      sectionColor: scheme.tertiary,
     );
   }
 
@@ -480,13 +484,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildThemeModeTile(AppLocalizations l10n, ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+          color: scheme.outline,
         ),
       ),
       child: Column(
@@ -496,7 +501,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             children: [
               Icon(
                 Icons.brightness_6,
-                color: themeProvider.accentColor,
+                color: scheme.tertiary,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -586,6 +591,8 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildThemeOption(String label, IconData icon, ThemeMode mode, ThemeProvider themeProvider, {bool isSmallScreen = false}) {
     final isSelected = themeProvider.themeMode == mode;
+    final scheme = Theme.of(context).colorScheme;
+    final themeColor = scheme.tertiary;
     
     return GestureDetector(
       onTap: () => themeProvider.setThemeMode(mode),
@@ -597,13 +604,13 @@ class _SettingsScreenState extends State<SettingsScreen>
         ),
         decoration: BoxDecoration(
           color: isSelected 
-              ? themeProvider.accentColor.withValues(alpha: 0.1)
+              ? themeColor.withValues(alpha: 0.1)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected 
-                ? themeProvider.accentColor
-                : Theme.of(context).colorScheme.outline,
+                ? themeColor
+                : scheme.outline,
           ),
         ),
         child: isSmallScreen 
@@ -612,8 +619,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Icon(
                   icon,
                   color: isSelected 
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ? themeColor
+                      : scheme.onSurface.withValues(alpha: 0.6),
                   size: 20,
                 ),
                 const SizedBox(width: 12),
@@ -623,8 +630,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     fontSize: 14,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     color: isSelected 
-                        ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ? themeColor
+                        : scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -634,8 +641,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                 Icon(
                   icon,
                   color: isSelected 
-                      ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ? themeColor
+                      : scheme.onSurface.withValues(alpha: 0.6),
                   size: 20,
                 ),
                 const SizedBox(height: 4),
@@ -645,8 +652,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                     fontSize: 12,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                     color: isSelected 
-                        ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ? themeColor
+                        : scheme.onSurface.withValues(alpha: 0.6),
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 1,
@@ -659,13 +666,14 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   Widget _buildAccentColorTile(AppLocalizations l10n, ThemeProvider themeProvider) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
+        color: scheme.primaryContainer,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline,
+          color: scheme.outline,
         ),
       ),
       child: Column(
@@ -675,7 +683,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             children: [
               Icon(
                 Icons.color_lens,
-                color: themeProvider.accentColor,
+                color: scheme.tertiary,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -749,7 +757,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         platformProvider.isMobile ? Icons.phone_android :
                         platformProvider.isDesktop ? Icons.computer :
                         Icons.web,
-                        color: Provider.of<ThemeProvider>(context).accentColor,
+                        color: Theme.of(context).colorScheme.secondary,
                         size: 20,
                       ),
                       const SizedBox(width: 12),
@@ -782,7 +790,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                         children: [
                           Icon(
                             entry.value ? Icons.check_circle : Icons.cancel,
-                            color: entry.value ? Provider.of<ThemeProvider>(context).accentColor : Theme.of(context).colorScheme.error,
+                            color: entry.value ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.error,
                             size: 16,
                           ),
                           const SizedBox(width: 12),
@@ -1014,7 +1022,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   title: Text(l10n.settingsRoleArtistTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
                   subtitle: Text(l10n.settingsRoleArtistSubtitle, style: GoogleFonts.inter(fontSize: 13)),
                   value: artist,
-                  activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  activeThumbColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (val) {
                     setState(() => artist = val);
                     profileProvider.setRoleFlags(isArtist: val, isInstitution: institution);
@@ -1024,7 +1032,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                   title: Text(l10n.settingsRoleInstitutionTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600)),
                   subtitle: Text(l10n.settingsRoleInstitutionSubtitle, style: GoogleFonts.inter(fontSize: 13)),
                   value: institution,
-                  activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+                  activeThumbColor: Theme.of(context).colorScheme.secondary,
                   onChanged: (val) {
                     setState(() => institution = val);
                     profileProvider.setRoleFlags(isArtist: artist, isInstitution: val);
@@ -1050,6 +1058,7 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildWalletSection(AppLocalizations l10n) {
     final web3Provider = Provider.of<Web3Provider>(context);
+    final scheme = Theme.of(context).colorScheme;
     return _buildSection(
       l10n.settingsWalletSectionTitle,
       Icons.account_balance_wallet,
@@ -1067,8 +1076,8 @@ class _SettingsScreenState extends State<SettingsScreen>
             }
           },
           trailing: web3Provider.isConnected 
-              ? Icon(Icons.check_circle, color: Provider.of<ThemeProvider>(context).accentColor)
-              : Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+              ? Icon(Icons.check_circle, color: AppColorUtils.amberAccent)
+              : Icon(Icons.error_outline, color: scheme.error),
         ),
         _buildSettingsTile(
           l10n.settingsNetworkTileTitle,
@@ -1101,6 +1110,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           onTap: _showImportWarningDialog,
         ),
       ],
+      sectionColor: AppColorUtils.amberAccent,
     );
   }
 
@@ -1118,7 +1128,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             onChanged: (value) {
               _toggleBiometric(value);
             },
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),
         _buildSettingsTile(
@@ -1145,7 +1155,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),
         _buildSettingsTile(
@@ -1155,6 +1165,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           onTap: () => _showClearCacheDialog(),
         ),
       ],
+      sectionColor: AppColorUtils.indigoAccent,
     );
   }
 
@@ -1176,7 +1187,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),
         _buildSettingsTile(
@@ -1191,7 +1202,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),
         _buildSettingsTile(
@@ -1206,7 +1217,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               });
               _saveAllSettings();
             },
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: AppColorUtils.indigoAccent,
           ),
         ),
         _buildSettingsTile(
@@ -1222,6 +1233,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           onTap: () => _showResetPermissionFlagsDialog(),
         ),
       ],
+      sectionColor: AppColorUtils.indigoAccent,
     );
   }
 
@@ -1300,7 +1312,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     );
   }
 
-  Widget _buildSection(String title, IconData icon, List<Widget> children) {
+  Widget _buildSection(String title, IconData icon, List<Widget> children, {Color? sectionColor}) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = sectionColor ?? scheme.secondary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1308,7 +1322,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           children: [
             Icon(
               icon,
-              color: Provider.of<ThemeProvider>(context).accentColor,
+              color: color,
               size: 24,
             ),
             const SizedBox(width: 12),

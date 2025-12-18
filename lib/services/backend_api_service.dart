@@ -63,10 +63,24 @@ class BackendApiService {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   Future<void>? _authInitFuture;
   final Map<String, DateTime> _rateLimitResets = {};
+  final Map<String, DateTime> _debugLogThrottle = <String, DateTime>{};
 
   bool? _exhibitionsApiAvailable;
 
   bool? get exhibitionsApiAvailable => _exhibitionsApiAvailable;
+
+  void _debugLogThrottled(
+    String key,
+    String message, {
+    Duration throttle = const Duration(seconds: 8),
+  }) {
+    if (!kDebugMode) return;
+    final now = DateTime.now();
+    final lastAt = _debugLogThrottle[key];
+    if (lastAt != null && now.difference(lastAt) < throttle) return;
+    _debugLogThrottle[key] = now;
+    debugPrint(message);
+  }
 
   bool _isExhibitionsPath(Uri uri) {
     final path = uri.path;
@@ -114,7 +128,11 @@ class BackendApiService {
     } catch (_) {}
     final resetAt = DateTime.now().add(Duration(milliseconds: windowMs));
     _rateLimitResets[key] = resetAt;
-    debugPrint('BackendApiService: rate limit set for $key until $resetAt (window ${windowMs}ms)');
+    _debugLogThrottled(
+      'rate_limit_set:$key',
+      'BackendApiService: rate limit set for $key until $resetAt (window ${windowMs}ms)',
+      throttle: const Duration(seconds: 20),
+    );
   }
 
   String _rateLimitMessage(String key) {
@@ -337,7 +355,11 @@ class BackendApiService {
     final key = _rateLimitKey('GET', uri);
     if (_isRateLimited(key)) {
       final message = _rateLimitMessage(key);
-      debugPrint('BackendApiService: skipping $key because of active rate limit');
+      _debugLogThrottled(
+        'rate_limit_skip:$key',
+        'BackendApiService: skipping $key because of active rate limit',
+        throttle: const Duration(seconds: 20),
+      );
       throw Exception(message);
     }
 
@@ -360,7 +382,10 @@ class BackendApiService {
         _exhibitionsApiAvailable = false;
       }
 
-      debugPrint('BackendApiService: ${uri.path} failed with status ${primaryResponse.statusCode}');
+      _debugLogThrottled(
+        'fetch_json_status:${uri.path}:${primaryResponse.statusCode}',
+        'BackendApiService: ${uri.path} failed with status ${primaryResponse.statusCode}',
+      );
       if (!allowOrbitFallback) {
         throw Exception('Request failed: ${primaryResponse.statusCode}');
       }
@@ -369,10 +394,16 @@ class BackendApiService {
         rethrow; // Do not attempt Orbit fallback when rate limited.
       }
       if (!allowOrbitFallback) {
-        debugPrint('BackendApiService: request error for ${uri.path}: $e');
+        _debugLogThrottled(
+          'fetch_json_error:${uri.path}',
+          'BackendApiService: request error for ${uri.path}: $e',
+        );
         rethrow;
       }
-      debugPrint('BackendApiService: primary request error for ${uri.path}, trying Orbit fallback -> $e');
+      _debugLogThrottled(
+        'fetch_json_fallback_error:${uri.path}',
+        'BackendApiService: primary request error for ${uri.path}, trying Orbit fallback -> $e',
+      );
     }
 
     if (!allowOrbitFallback) {
@@ -390,7 +421,10 @@ class BackendApiService {
       _markRateLimited(key, fallbackResponse, defaultWindowMs: 900000);
       throw Exception(_rateLimitMessage(key));
     }
-    debugPrint('BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}');
+    _debugLogThrottled(
+      'fetch_json_orbit_failed:${fallbackUri.path}:${fallbackResponse.statusCode}',
+      'BackendApiService: Orbit fallback failed ${fallbackResponse.statusCode} for ${fallbackUri.path}',
+    );
     throw Exception('Orbit fallback failed: ${fallbackResponse.statusCode}');
   }
 
@@ -1567,7 +1601,10 @@ class BackendApiService {
       final posts = data['data'] as List<dynamic>? ?? <dynamic>[];
       return posts.map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
-      debugPrint('Error getting community posts: $e');
+      _debugLogThrottled(
+        'get_community_posts:error',
+        'BackendApiService: getCommunityPosts failed: $e',
+      );
       rethrow;
     }
   }
@@ -1595,7 +1632,10 @@ class BackendApiService {
       if (list == null) return const [];
       return list.whereType<Map<String, dynamic>>().toList();
     } catch (e) {
-      debugPrint('Error fetching trending community tags: $e');
+      _debugLogThrottled(
+        'get_trending_community_tags:error',
+        'BackendApiService: getTrendingCommunityTags failed: $e',
+      );
       return const [];
     }
   }
@@ -1787,7 +1827,10 @@ class BackendApiService {
         }
         return <CommunityPost>[];
       }
-      debugPrint('Error loading art feed: $e');
+      _debugLogThrottled(
+        'get_community_art_feed:error',
+        'BackendApiService: getCommunityArtFeed failed: $e',
+      );
       rethrow;
     }
   }

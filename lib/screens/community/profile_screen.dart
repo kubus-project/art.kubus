@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/app_loading.dart';
 import 'package:provider/provider.dart';
 import '../../utils/wallet_utils.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/web3provider.dart';
@@ -230,6 +232,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     width: double.infinity,
                     height: hasCoverImage ? 160 : 100,
                     decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
                       gradient: !hasCoverImage ? LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -241,6 +244,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                       image: hasCoverImage ? DecorationImage(
                         image: NetworkImage(coverImageUrl),
                         fit: BoxFit.cover,
+                        onError: (error, stackTrace) {
+                          // Swallow cover image load errors so Flutter web doesn't
+                          // surface them as unhandled zone errors.
+                        },
                       ) : null,
                     ),
                     child: Stack(
@@ -459,7 +466,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                       title: 'No bio yet',
                       description: 'Tap "Edit Profile" to add a short bio about yourself.',
                       showAction: true,
-                      actionLabel: 'Edit Profile',
+                      actionLabel:
+                          AppLocalizations.of(context)!.settingsEditProfileTileTitle,
                       onAction: _editProfile,
                     ),
                   ),
@@ -484,7 +492,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                             ),
                             child: Text(
-                              'Edit Profile',
+                              AppLocalizations.of(context)!.settingsEditProfileTileTitle,
                               style: GoogleFonts.inter(
                                 fontSize: isVerySmallScreen ? 14 : 16,
                                 fontWeight: FontWeight.w600,
@@ -539,7 +547,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               ),
                             ),
                             child: Text(
-                              'Edit Profile',
+                              AppLocalizations.of(context)!.settingsEditProfileTileTitle,
                               style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -1575,7 +1583,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         border: Border.all(color: accent, width: 1),
                       ),
                       child: Text(
-                        'View All',
+                        AppLocalizations.of(context)!.commonViewAll,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1647,7 +1655,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         border: Border.all(color: accent, width: 1),
                       ),
                       child: Text(
-                        'View All',
+                        AppLocalizations.of(context)!.commonViewAll,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1830,20 +1838,26 @@ class _ProfileScreenState extends State<ProfileScreen>
             ),
           ),
           if (change != null)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                change,
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green,
-                ),
-              ),
+            Builder(
+              builder: (context) {
+                final positiveColor = KubusColorRoles.of(context).positiveAction;
+                return Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: positiveColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    change,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: positiveColor,
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ),
@@ -2322,190 +2336,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Close', style: GoogleFonts.inter()),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Edit Profile Screen
-class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
-
-  @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
-}
-
-class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _nameController = TextEditingController(text: 'Anonymous Artist');
-  final _bioController = TextEditingController(
-    text: 'Digital artist exploring the intersection of AR, blockchain, and creativity.',
-  );
-  final _websiteController = TextEditingController();
-  final _twitterController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Edit Profile',
-          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: Text(
-              'Save',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                color: Provider.of<ThemeProvider>(context).accentColor,
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            // Profile picture
-            Stack(
-              children: [
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Provider.of<ThemeProvider>(context).accentColor,
-                        Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(60),
-                  ),
-                  child: const Icon(Icons.person, color: Colors.white, size: 60),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Provider.of<ThemeProvider>(context).accentColor,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Theme.of(context).colorScheme.surface, width: 2),
-                    ),
-                    child: const Icon(Icons.edit, color: Colors.white, size: 20),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            
-            // Form fields
-            _buildTextField('Display Name', _nameController),
-            const SizedBox(height: 16),
-            _buildTextField('Bio', _bioController, maxLines: 3),
-            const SizedBox(height: 16),
-            _buildTextField('Website', _websiteController),
-            const SizedBox(height: 16),
-            _buildTextField('Twitter', _twitterController, prefix: '@'),
-            const SizedBox(height: 32),
-            
-            // Account settings
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.outline),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Account Settings',
-                    style: GoogleFonts.inter(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSettingItem('Private Profile', false),
-                  _buildSettingItem('Show Activity', true),
-                  _buildSettingItem('Email Notifications', true),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1, String? prefix}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          decoration: InputDecoration(
-            prefixText: prefix,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.outline),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Provider.of<ThemeProvider>(context).accentColor),
-            ),
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.primaryContainer,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingItem(String title, bool value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          Switch(
-            value: value,
-            onChanged: (newValue) {},
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
           ),
         ],
       ),

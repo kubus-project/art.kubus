@@ -30,6 +30,7 @@ import '../../widgets/inline_loading.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/kubus_color_roles.dart';
 import 'components/desktop_widgets.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import 'web3/desktop_wallet_screen.dart';
@@ -44,6 +45,7 @@ import '../activity/advanced_analytics_screen.dart';
 import '../../services/search_service.dart';
 import '../home_screen.dart' show ActivityScreen;
 import '../../services/backend_api_service.dart';
+import '../../utils/app_color_utils.dart';
 
 /// Desktop home screen with spacious layout and proper grid systems
 /// Inspired by Twitter/X feed presentation and Google Maps panels
@@ -54,15 +56,11 @@ class DesktopHomeScreen extends StatefulWidget {
   State<DesktopHomeScreen> createState() => _DesktopHomeScreenState();
 }
 
-class _DesktopHomeScreenState extends State<DesktopHomeScreen> 
+class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     with TickerProviderStateMixin {
-  // Semantic color palette for varied UI elements (matches governance/artist/institution screens)
-  static const Color _tealAccent = Color(0xFF4ECDC4);
-  static const Color _coralAccent = Color(0xFFFF6B6B);
-  static const Color _greenAccent = Color(0xFF4CAF50);
-  static const Color _amberAccent = Color(0xFFFFB300);
-  static const Color _purpleAccent = Color(0xFF9575CD);
-  
+  // Semantic colors now come from AppColorUtils - use:
+  // AppColorUtils.tealAccent, .coralAccent, .greenAccent, .amberAccent, .purpleAccent
+
   static const double _searchBarWidth = 280;
   late AnimationController _animationController;
   late ScrollController _scrollController;
@@ -99,11 +97,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
     // Initialize providers
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final recentActivity = Provider.of<RecentActivityProvider>(context, listen: false);
+      final recentActivity =
+          Provider.of<RecentActivityProvider>(context, listen: false);
       if (!recentActivity.initialized) {
         recentActivity.initialize();
       }
-      final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+      final navigationProvider =
+          Provider.of<NavigationProvider>(context, listen: false);
       navigationProvider.initialize();
       _loadInitialData();
     });
@@ -160,11 +160,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       await artworkProvider.loadArtworks();
     }
 
-    if (!communityProvider.groupsInitialized && !communityProvider.groupsLoading) {
+    if (!communityProvider.groupsInitialized &&
+        !communityProvider.groupsLoading) {
       await communityProvider.loadGroups();
     }
 
-    if (communityProvider.artFeedPosts.isEmpty && !communityProvider.artFeedLoading) {
+    if (communityProvider.artFeedPosts.isEmpty &&
+        !communityProvider.artFeedLoading) {
       final center = await _resolveArtFeedLocation(configProvider);
       await communityProvider.loadArtFeed(
         latitude: center.lat ?? 46.05,
@@ -199,7 +201,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     });
 
     try {
-      final posts = await _backendApi.getCommunityPosts(limit: 50, sort: 'popularity');
+      final posts =
+          await _backendApi.getCommunityPosts(limit: 50, sort: 'popularity');
       if (!mounted) return;
       setState(() {
         _popularCommunityPosts = posts;
@@ -207,7 +210,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       });
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('DesktopHomeScreen: failed to load popular community posts: $e');
+        debugPrint(
+            'DesktopHomeScreen: failed to load popular community posts: $e');
       }
       if (!mounted) return;
       setState(() {
@@ -222,7 +226,31 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
   }
 
-  Future<CommunityLocation> _resolveArtFeedLocation(ConfigProvider configProvider) async {
+  Future<void> _refreshCommunitySidebarData({bool force = true}) async {
+    final artworkProvider = context.read<ArtworkProvider>();
+    final communityProvider = context.read<CommunityHubProvider>();
+    final configProvider = context.read<ConfigProvider>();
+
+    if (!artworkProvider.isLoading('load_artworks')) {
+      unawaited(artworkProvider.loadArtworks(refresh: force));
+    }
+
+    unawaited(communityProvider.loadGroups(refresh: force));
+    unawaited(_loadPopularCommunityPosts(force: force));
+
+    final center = await _resolveArtFeedLocation(configProvider);
+    if (!mounted) return;
+
+    unawaited(communityProvider.loadArtFeed(
+      latitude: center.lat ?? communityProvider.artFeedCenter?.lat ?? 46.05,
+      longitude: center.lng ?? communityProvider.artFeedCenter?.lng ?? 14.50,
+      radiusKm: configProvider.useMockData ? 200 : 50,
+      limit: 50,
+    ));
+  }
+
+  Future<CommunityLocation> _resolveArtFeedLocation(
+      ConfigProvider configProvider) async {
     if (_isResolvingLocation) return CommunityLocation(lat: 46.05, lng: 14.50);
     _isResolvingLocation = true;
     try {
@@ -278,7 +306,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 flex: isLarge ? 3 : 2,
                 child: _buildMainContent(animationTheme),
               ),
-              
+
               // Right sidebar (activity feed, trending, etc.)
               if (isMedium || isLarge)
                 Container(
@@ -286,7 +314,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   decoration: BoxDecoration(
                     border: Border(
                       left: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.1),
                       ),
                     ),
                   ),
@@ -294,7 +325,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ),
             ],
           ),
-          
+
           // Floating header on scroll
           if (_showFloatingHeader)
             _buildFloatingHeader(themeProvider, animationTheme),
@@ -327,7 +358,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 SliverToBoxAdapter(
                   child: _buildHeader(),
                 ),
-                
+
                 // Welcome card
                 SliverToBoxAdapter(
                   child: Padding(
@@ -335,7 +366,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: _buildWelcomeCard(),
                   ),
                 ),
-                
+
                 // Stats grid
                 SliverToBoxAdapter(
                   child: Padding(
@@ -343,7 +374,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: _buildStatsGrid(),
                   ),
                 ),
-                
+
                 // Quick actions
                 SliverToBoxAdapter(
                   child: Padding(
@@ -351,20 +382,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     child: _buildQuickActions(),
                   ),
                 ),
-                
+
                 // Featured artworks
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
-                    child: _buildFeaturedArtworks(),
-                  ),
-                ),
-                
-                // Web3 section
-                SliverToBoxAdapter(
-                  child: Padding(
                     padding: const EdgeInsets.fromLTRB(32, 0, 32, 48),
-                    child: _buildWeb3Section(),
+                    child: _buildFeaturedArtworks(),
                   ),
                 ),
               ],
@@ -405,7 +428,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             _getGreeting(l10n),
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
                             ),
                           ),
                           Row(
@@ -414,11 +440,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                               Flexible(
                                 fit: FlexFit.loose,
                                 child: Text(
-                                  user?.displayName ?? l10n.desktopHomeWelcomeFallbackName,
+                                  user?.displayName ??
+                                      l10n.desktopHomeWelcomeFallbackName,
                                   style: GoogleFonts.inter(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color:
+                                        Theme.of(context).colorScheme.onSurface,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   softWrap: false,
@@ -442,7 +470,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ],
             ),
           ),
-          
+
           // Right side - search and actions
           Row(
             children: [
@@ -485,7 +513,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .outline
+                      .withValues(alpha: 0.2),
                 ),
               ),
               child: Stack(
@@ -501,7 +532,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: themeProvider.accentColor,
+                          color: AppColorUtils.amberAccent,
                           shape: BoxShape.circle,
                         ),
                         child: Text(
@@ -623,9 +654,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
         return Row(
           children: [
-            _buildBalanceChip('KUB8', kub8?.balance.toStringAsFixed(2) ?? '0.00'),
+            _buildBalanceChip(
+                'KUB8', kub8?.balance.toStringAsFixed(2) ?? '0.00'),
             const SizedBox(width: 16),
-            _buildBalanceChip('SOL', sol?.balance.toStringAsFixed(3) ?? '0.000'),
+            _buildBalanceChip(
+                'SOL', sol?.balance.toStringAsFixed(3) ?? '0.000'),
           ],
         );
       },
@@ -687,14 +720,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         activityProvider.isLoading && activityProvider.activities.isEmpty;
 
     final discoveredCount = profileProvider.artworksCount > 0
-      ? profileProvider.artworksCount
-      : artworkProvider.artworks.where((a) => a.isDiscovered).length;
+        ? profileProvider.artworksCount
+        : artworkProvider.artworks.where((a) => a.isDiscovered).length;
     final arSessions = activityProvider.activities
         .where((a) => a.category == ActivityCategory.ar)
         .length;
-    final nftCount = walletProvider.tokens
-        .where((t) => t.type == TokenType.nft)
-        .length;
+    final nftCount =
+        walletProvider.tokens.where((t) => t.type == TokenType.nft).length;
     final kub8Token = walletProvider.tokens
         .where((t) => t.symbol.toUpperCase() == 'KUB8')
         .cast<Token?>()
@@ -710,7 +742,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           title: l10n.desktopHomeYourActivityTitle,
           subtitle: l10n.desktopHomeYourActivitySubtitle,
           icon: Icons.analytics_outlined,
-          iconColor: _coralAccent,
+          iconColor: AppColorUtils.coralAccent,
         ),
         const SizedBox(height: 16),
         if (isLoadingArtworks || isLoadingActivity)
@@ -723,7 +755,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         LayoutBuilder(
           builder: (context, constraints) {
             final cardWidth = (constraints.maxWidth - 48) / 4;
-            
+
             return Wrap(
               spacing: 16,
               runSpacing: 16,
@@ -790,11 +822,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       children: [
         DesktopSectionHeader(
           title: l10n.homeQuickActionsTitle,
-          subtitle: quickScreens.isEmpty 
+          subtitle: quickScreens.isEmpty
               ? l10n.desktopHomeQuickActionsEmptySubtitle
               : l10n.desktopHomeQuickActionsSubtitle,
           icon: Icons.flash_on,
-          iconColor: _amberAccent,
+          iconColor: AppColorUtils.amberAccent,
         ),
         const SizedBox(height: 16),
         if (quickScreens.isEmpty)
@@ -806,7 +838,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   children: [
                     Icon(
                       Icons.touch_app,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
                       size: 40,
                     ),
                     const SizedBox(width: 20),
@@ -827,7 +862,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             l10n.desktopHomeQuickActionsEmptyDescription,
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
                             ),
                           ),
                         ],
@@ -892,7 +930,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   void _handleQuickAction(String screenKey) {
     if (screenKey.isEmpty) return;
-    final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final navigationProvider =
+        Provider.of<NavigationProvider>(context, listen: false);
 
     switch (screenKey) {
       case 'map':
@@ -951,7 +990,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   void _pushScreen(Widget screen, String screenKey) {
-    Provider.of<NavigationProvider>(context, listen: false).trackScreenVisit(screenKey);
+    Provider.of<NavigationProvider>(context, listen: false)
+        .trackScreenVisit(screenKey);
     // Use in-shell navigation if available, otherwise fallback to fullscreen
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
@@ -977,16 +1017,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       case 'wallet':
         return 'Wallet';
       default:
-        return key.split('_').map((w) => w.isNotEmpty 
-            ? '${w[0].toUpperCase()}${w.substring(1)}' 
-            : w).join(' ');
+        return key
+            .split('_')
+            .map((w) =>
+                w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
+            .join(' ');
     }
   }
 
   void _openShellTab(int index) {
-    final navigationProvider = Provider.of<NavigationProvider>(context, listen: false);
+    final navigationProvider =
+        Provider.of<NavigationProvider>(context, listen: false);
     navigationProvider.trackScreenVisit(_indexToKey(index));
-    
+
     // Use shell scope navigation if available, otherwise fallback to pushing new shell
     final shellScope = DesktopShellScope.of(context);
     if (shellScope != null) {
@@ -1055,7 +1098,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     switch (key.toLowerCase()) {
       case 'map':
       case 'explore':
-        return _tealAccent;
+        return AppColorUtils.tealAccent;
       case 'community':
       case 'connect':
         return scheme.secondary;
@@ -1070,21 +1113,21 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       case 'dao_hub':
       case 'dao':
       case 'govern':
-        return _purpleAccent;
+        return AppColorUtils.purpleAccent;
       case 'marketplace':
       case 'trade':
-        return _greenAccent;
+        return AppColorUtils.greenAccent;
       case 'wallet':
-        return _amberAccent;
+        return AppColorUtils.amberAccent;
       case 'profile':
       case 'settings':
         return scheme.onSurface.withValues(alpha: 0.7);
       case 'analytics':
-        return _coralAccent;
+        return AppColorUtils.coralAccent;
       case 'achievements':
-        return Colors.amber;
+        return KubusColorRoles.of(context).achievementGold;
       case 'ar':
-        return _tealAccent;
+        return AppColorUtils.tealAccent;
       default:
         return scheme.primary;
     }
@@ -1115,7 +1158,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.view_in_ar, color: Theme.of(context).colorScheme.tertiary),
+            Icon(Icons.view_in_ar,
+                color: Theme.of(context).colorScheme.tertiary),
             const SizedBox(width: 12),
             Text(
               l10n.arWebFallbackFeature,
@@ -1133,7 +1177,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             Text(
               l10n.arWebFallbackDescription,
               style: GoogleFonts.inter(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -1216,7 +1263,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           Icon(
             Icons.arrow_forward_ios,
             size: 14,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
           ),
         ],
       ),
@@ -1236,7 +1284,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               title: l10n.homeFeaturedArtworksTitle,
               subtitle: l10n.desktopHomeFeaturedArtworksSubtitle,
               icon: Icons.auto_awesome,
-              iconColor: _tealAccent,
+              iconColor: AppColorUtils.tealAccent,
               action: TextButton.icon(
                 onPressed: () => _openShellTab(1), // Explore tab
                 icon: const Icon(Icons.arrow_forward, size: 18),
@@ -1299,11 +1347,12 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           SizedBox(
             height: 140,
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
               child: _buildDesktopCardCover(artwork, themeProvider),
             ),
           ),
-          
+
           // Info
           Padding(
             padding: const EdgeInsets.all(16),
@@ -1325,7 +1374,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   l10n.commonByArtist(artwork.artist),
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1336,28 +1388,40 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     Icon(
                       Icons.favorite,
                       size: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       artwork.likesCount.toString(),
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Icon(
                       Icons.visibility,
                       size: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       artwork.viewsCount.toString(),
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -1470,96 +1534,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildWeb3Section() {
-    final web3Provider = Provider.of<Web3Provider>(context);
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isConnected = web3Provider.isConnected;
-    final l10n = AppLocalizations.of(context)!;
-    final scheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        DesktopSectionHeader(
-          title: l10n.desktopHomeWeb3HubTitle,
-          subtitle: l10n.desktopHomeWeb3HubSubtitle,
-          icon: Icons.hub,
-          iconColor: _purpleAccent,
-          action: isConnected ? null : TextButton.icon(
-            onPressed: _showWalletOnboarding,
-            icon: const Icon(Icons.link, size: 18),
-            label: Text(l10n.authConnectWalletButton),
-          ),
-        ),
-        const SizedBox(height: 16),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final cardWidth = (constraints.maxWidth - 48) / 4;
-            
-            return Wrap(
-              spacing: 16,
-              runSpacing: 16,
-              children: [
-                SizedBox(
-                  width: cardWidth,
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3DaoTitle,
-                    l10n.homeWeb3DaoSubtitle,
-                    Icons.how_to_vote,
-                    scheme.tertiary,
-                    isConnected,
-                    () => _navigateToWeb3Tab(5, isConnected), // Govern tab
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3ArtistTitle,
-                    l10n.homeWeb3ArtistSubtitle,
-                    Icons.palette,
-                    scheme.secondary,
-                    isConnected,
-                    () => _navigateToWeb3Tab(3, isConnected), // Create tab
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3InstitutionTitle,
-                    l10n.homeWeb3InstitutionSubtitle,
-                    Icons.museum,
-                    scheme.primary,
-                    isConnected,
-                    () => _navigateToWeb3Tab(4, isConnected), // Organize tab
-                  ),
-                ),
-                SizedBox(
-                  width: cardWidth,
-                  child: _buildWeb3Card(
-                    l10n.homeWeb3MarketplaceTitle,
-                    l10n.homeWeb3MarketplaceSubtitle,
-                    Icons.store,
-                    themeProvider.accentColor,
-                    isConnected,
-                    () => _navigateToWeb3Tab(6, isConnected), // Trade tab
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  void _navigateToWeb3Tab(int tabIndex, bool isConnected) {
-    if (isConnected) {
-      _openShellTab(tabIndex);
-    } else {
-      _showWalletOnboarding();
-    }
-  }
-
   void _showWalletOnboarding() {
     final l10n = AppLocalizations.of(context)!;
     final navigator = Navigator.of(context);
@@ -1583,76 +1557,6 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return Web3FeaturesOnboardingData.pages(l10n);
   }
 
-  Widget _buildWeb3Card(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    bool isUnlocked,
-    VoidCallback onTap,
-  ) {
-    return DesktopCard(
-      onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: isUnlocked ? 0.15 : 0.05),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(
-                  icon,
-                  color: color.withValues(alpha: isUnlocked ? 1.0 : 0.4),
-                  size: 24,
-                ),
-              ),
-              if (!isUnlocked)
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.lock,
-                    size: 14,
-                    color: Theme.of(context).colorScheme.tertiary,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(
-                alpha: isUnlocked ? 1.0 : 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: Theme.of(context).colorScheme.onSurface.withValues(
-                alpha: isUnlocked ? 0.6 : 0.3,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildRightSidebar(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
@@ -1669,23 +1573,82 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ),
           ),
           const SizedBox(height: 20),
-          
+
           // Recent activity from provider
           _buildRecentActivitySection(themeProvider),
           const SizedBox(height: 24),
-          
+
           // Trending Art Section
           _buildTrendingArtSection(themeProvider),
           const SizedBox(height: 24),
-          
+
           // Top Creators Section
           _buildTopCreatorsSection(themeProvider),
           const SizedBox(height: 24),
-          
+
           // Platform Stats Section
           _buildPlatformStatsSection(themeProvider),
         ],
       ),
+    );
+  }
+
+  Widget _buildSidebarSectionHeader({
+    required ThemeProvider themeProvider,
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required bool isRefreshing,
+    required VoidCallback onRefresh,
+    Widget? trailing,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: scheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              tooltip: l10n.commonRefresh,
+              onPressed: isRefreshing ? null : onRefresh,
+              icon: isRefreshing
+                  ? SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: themeProvider.accentColor,
+                      ),
+                    )
+                  : Icon(
+                      Icons.refresh,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+            ),
+            if (trailing != null) ...[
+              const SizedBox(width: 4),
+              trailing,
+            ],
+          ],
+        ),
+      ],
     );
   }
 
@@ -1697,141 +1660,69 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             ? _popularCommunityPosts
             : communityProvider.artFeedPosts;
 
-        if (communityPosts.isEmpty && !communityProvider.artFeedLoading && !_popularCommunityLoading) {
-          // Ensure we have some data to show
-          _queueArtFeedLoad(
-            lat: communityProvider.artFeedCenter?.lat,
-            lng: communityProvider.artFeedCenter?.lng,
-            radiusKm: communityProvider.artFeedRadiusKm,
-            limit: 50,
-          );
-          unawaited(_loadPopularCommunityPosts());
-        }
-
-        final trendingEntries = _getTrendingEntries(artworkProvider, communityPosts);
-        final isLoading =
-            (artworkProvider.isLoading('load_artworks') ||
-                    (_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
-                    (communityProvider.artFeedLoading && communityPosts.isEmpty)) &&
-                trendingEntries.isEmpty;
-        final hasPopularError = _popularCommunityFetchFailed && _popularCommunityPosts.isEmpty;
-        final hasArtFeedError = communityProvider.artFeedError != null && trendingEntries.isEmpty;
+        final trendingEntries =
+            _getTrendingEntries(artworkProvider, communityPosts);
+        final isLoading = (artworkProvider.isLoading('load_artworks') ||
+                (_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
+                (communityProvider.artFeedLoading && communityPosts.isEmpty)) &&
+            trendingEntries.isEmpty;
+        final hasPopularError =
+            _popularCommunityFetchFailed && _popularCommunityPosts.isEmpty;
+        final hasArtFeedError =
+            communityProvider.artFeedError != null && trendingEntries.isEmpty;
         final hasError = hasPopularError || hasArtFeedError;
+        final isRefreshing = artworkProvider.isLoading('load_artworks') ||
+            _popularCommunityLoading ||
+            communityProvider.artFeedLoading;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.local_fire_department,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.desktopHomeTrendingArtTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => _navigateToTab(3), // Marketplace
-                  child: Text(
-                    l10n.commonViewAll,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: themeProvider.accentColor,
-                    ),
+            _buildSidebarSectionHeader(
+              themeProvider: themeProvider,
+              icon: Icons.local_fire_department,
+              iconColor: AppColorUtils.amberAccent,
+              title: l10n.desktopHomeTrendingArtTitle,
+              isRefreshing: isRefreshing,
+              onRefresh: () =>
+                  unawaited(_refreshCommunitySidebarData(force: true)),
+              trailing: TextButton(
+                onPressed: () => _navigateToTab(3), // Marketplace
+                child: Text(
+                  l10n.commonViewAll,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: themeProvider.accentColor,
                   ),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 12),
             if (isLoading)
               const InlineLoading()
             else if (hasError && trendingEntries.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l10n.desktopHomeTrendingArtLoadFailed,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => hasPopularError
-                          ? _loadPopularCommunityPosts(force: true)
-                          : _queueArtFeedLoad(
-                              lat: communityProvider.artFeedCenter?.lat,
-                              lng: communityProvider.artFeedCenter?.lng,
-                              radiusKm: communityProvider.artFeedRadiusKm,
-                              limit: 50,
-                            ),
-                      child: Text(
-                        l10n.commonRetry,
-                        style: GoogleFonts.inter(
-                          color: themeProvider.accentColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              EmptyStateCard(
+                icon: Icons.wifi_off,
+                title: l10n.desktopHomeTrendingArtLoadFailed,
+                description: l10n.commonSomethingWentWrong,
               )
             else if (trendingEntries.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.view_in_ar,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      l10n.desktopHomeTrendingArtEmpty,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
+              EmptyStateCard(
+                icon: Icons.view_in_ar,
+                title: l10n.communityDiscoverEmptyTitle,
+                description: l10n.desktopHomeTrendingArtEmpty,
               )
             else
-              ...trendingEntries.map((entry) => _buildTrendingArtItem(entry, themeProvider)),
+              ...trendingEntries
+                  .map((entry) => _buildTrendingArtItem(entry, themeProvider)),
           ],
         );
       },
     );
   }
 
-  Widget _buildTrendingArtItem(_TrendingArtEntry entry, ThemeProvider themeProvider) {
+  Widget _buildTrendingArtItem(
+      _TrendingArtEntry entry, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     return Material(
       color: Colors.transparent,
@@ -1849,7 +1740,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             } else {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => ArtDetailScreen(artworkId: entry.artworkId!),
+                  builder: (context) =>
+                      ArtDetailScreen(artworkId: entry.artworkId!),
                 ),
               );
             }
@@ -1863,7 +1755,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -1874,14 +1767,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _tealAccent.withValues(alpha: 0.4),
-                      _tealAccent.withValues(alpha: 0.15),
+                      AppColorUtils.tealAccent.withValues(alpha: 0.4),
+                      AppColorUtils.tealAccent.withValues(alpha: 0.15),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Center(
-                  child: Icon(Icons.view_in_ar, color: _tealAccent, size: 24),
+                  child: Icon(Icons.view_in_ar,
+                      color: AppColorUtils.tealAccent, size: 24),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1900,10 +1794,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      entry.subtitle ?? '—',
+                      entry.subtitle ?? l10n.commonNotAvailableShort,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -1916,24 +1813,29 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.favorite, size: 14, color: Colors.red.withValues(alpha: 0.7)),
+                      Icon(Icons.favorite,
+                          size: 14, color: KubusColorRoles.of(context).likeAction.withValues(alpha: 0.7)),
                       const SizedBox(width: 4),
                       Text(
-                          entry.likes.toString(),
+                        entry.likes.toString(),
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                         ),
                       ),
                     ],
                   ),
-                    if (entry.hasAR)
+                  if (entry.hasAR)
                     Container(
                       margin: const EdgeInsets.only(top: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: _tealAccent.withValues(alpha: 0.12),
+                        color: AppColorUtils.tealAccent.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -1941,7 +1843,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         style: GoogleFonts.inter(
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
-                          color: _tealAccent,
+                          color: AppColorUtils.tealAccent,
                         ),
                       ),
                     ),
@@ -1961,146 +1863,76 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         final communityPosts = _popularCommunityPosts.isNotEmpty
             ? _popularCommunityPosts
             : communityProvider.artFeedPosts;
-        if (communityPosts.isEmpty && !communityProvider.artFeedLoading && !_popularCommunityLoading) {
-          _queueArtFeedLoad(
-            lat: communityProvider.artFeedCenter?.lat,
-            lng: communityProvider.artFeedCenter?.lng,
-            radiusKm: communityProvider.artFeedRadiusKm,
-            limit: 50,
-          );
-          unawaited(_loadPopularCommunityPosts());
-        }
 
         final creators = _buildTopCreatorSummaries(communityPosts);
-        final isLoading =
-            ((communityProvider.artFeedLoading && communityPosts.isEmpty) ||
-                    (_popularCommunityLoading && _popularCommunityPosts.isEmpty)) &&
-                creators.isEmpty;
-        final hasPopularError = _popularCommunityFetchFailed && _popularCommunityPosts.isEmpty;
-        final hasArtFeedError = communityProvider.artFeedError != null && creators.isEmpty;
+        final isLoading = ((communityProvider.artFeedLoading &&
+                    communityPosts.isEmpty) ||
+                (_popularCommunityLoading && _popularCommunityPosts.isEmpty)) &&
+            creators.isEmpty;
+        final hasPopularError =
+            _popularCommunityFetchFailed && _popularCommunityPosts.isEmpty;
+        final hasArtFeedError =
+            communityProvider.artFeedError != null && creators.isEmpty;
         final hasError = hasPopularError || hasArtFeedError;
+        final isRefreshing =
+            _popularCommunityLoading || communityProvider.artFeedLoading;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.star,
-                      color: Colors.amber,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      l10n.desktopHomeTopCreatorsTitle,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-                TextButton(
-                  onPressed: () => _navigateToTab(2), // Community
-                  child: Text(
-                    l10n.commonExplore,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: themeProvider.accentColor,
-                    ),
+            _buildSidebarSectionHeader(
+              themeProvider: themeProvider,
+              icon: Icons.star,
+              iconColor: KubusColorRoles.of(context).achievementGold,
+              title: l10n.desktopHomeTopCreatorsTitle,
+              isRefreshing: isRefreshing,
+              onRefresh: () =>
+                  unawaited(_refreshCommunitySidebarData(force: true)),
+              trailing: TextButton(
+                onPressed: () => _navigateToTab(2), // Community
+                child: Text(
+                  l10n.commonExplore,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: themeProvider.accentColor,
                   ),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 12),
             if (isLoading)
               const InlineLoading()
             else if (hasError && creators.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        l10n.desktopHomeTopCreatorsLoadFailed,
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => hasPopularError
-                          ? _loadPopularCommunityPosts(force: true)
-                          : _queueArtFeedLoad(
-                              lat: communityProvider.artFeedCenter?.lat,
-                              lng: communityProvider.artFeedCenter?.lng,
-                              radiusKm: communityProvider.artFeedRadiusKm,
-                              limit: 50,
-                            ),
-                      child: Text(
-                        l10n.commonRetry,
-                        style: GoogleFonts.inter(
-                          color: themeProvider.accentColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              EmptyStateCard(
+                icon: Icons.wifi_off,
+                title: l10n.desktopHomeTopCreatorsLoadFailed,
+                description: l10n.commonSomethingWentWrong,
               )
             else if (creators.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.people,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      l10n.desktopHomeTopCreatorsEmpty,
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
+              EmptyStateCard(
+                icon: Icons.people_outline,
+                title: l10n.communityDiscoverEmptyTitle,
+                description: l10n.desktopHomeTopCreatorsEmpty,
               )
             else
-              ...creators.map((creator) => _buildCreatorItem(creator, themeProvider)),
+              ...creators
+                  .map((creator) => _buildCreatorItem(creator, themeProvider)),
           ],
         );
       },
     );
   }
 
-  Widget _buildCreatorItem(Map<String, dynamic> creator, ThemeProvider themeProvider) {
+  Widget _buildCreatorItem(
+      Map<String, dynamic> creator, ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final userId = (creator['id'] ?? creator['wallet'] ?? '').toString();
     final wallet = (creator['wallet'] ?? '').toString().isNotEmpty
         ? creator['wallet'].toString()
         : userId;
     final avatarUrl = creator['avatar'] ?? creator['avatarUrl'];
-    final displayName = (creator['displayName'] ?? creator['username'] ?? 'Artist').toString();
+    final displayName =
+        (creator['displayName'] ?? creator['username'] ?? 'Artist').toString();
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -2131,7 +1963,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -2148,7 +1981,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      (creator['name'] ?? l10n.desktopHomeCreatorFallbackName).toString(),
+                      (creator['name'] ?? l10n.desktopHomeCreatorFallbackName)
+                          .toString(),
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -2162,7 +1996,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         '@${creator['username']}',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -2171,9 +2008,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .secondary
+                      .withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -2201,79 +2042,41 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ? _popularCommunityPosts.length
         : communityProvider.artFeedPosts.length;
     final isLoading = (artworkProvider.isLoading('load_artworks') ||
-      ((_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
-        (communityProvider.artFeedLoading && communityPostsCount == 0)));
-
-    // Ensure feed data is requested if missing
-    if (communityPostsCount == 0 && !communityProvider.artFeedLoading && !_popularCommunityLoading) {
-      // Fire and forget with a safe fallback location
-      _queueArtFeedLoad(
-        lat: communityProvider.artFeedCenter?.lat,
-        lng: communityProvider.artFeedCenter?.lng,
-        radiusKm: communityProvider.artFeedRadiusKm,
-        limit: 50,
-      );
-      unawaited(_loadPopularCommunityPosts());
-    }
+        ((_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
+            (communityProvider.artFeedLoading && communityPostsCount == 0) ||
+            (communityProvider.groupsLoading &&
+                communityProvider.groups.isEmpty)));
+    final hasCommunityPostsError =
+        (_popularCommunityFetchFailed && _popularCommunityPosts.isEmpty) ||
+            (communityProvider.artFeedError != null &&
+                communityPostsCount == 0);
+    final hasGroupsError = communityProvider.groupsError != null &&
+        communityProvider.groups.isEmpty;
+    final hasError = hasCommunityPostsError || hasGroupsError;
+    final isRefreshing = artworkProvider.isLoading('load_artworks') ||
+        _popularCommunityLoading ||
+        communityProvider.artFeedLoading ||
+        communityProvider.groupsLoading;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.analytics,
-              color: _coralAccent,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-                  l10n.desktopHomePlatformStatsTitle,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-          ],
+        _buildSidebarSectionHeader(
+          themeProvider: themeProvider,
+          icon: Icons.analytics,
+          iconColor: AppColorUtils.coralAccent,
+          title: l10n.desktopHomePlatformStatsTitle,
+          isRefreshing: isRefreshing,
+          onRefresh: () => unawaited(_refreshCommunitySidebarData(force: true)),
         ),
         const SizedBox(height: 12),
         if (isLoading)
           const InlineLoading()
-        else if ((_popularCommunityFetchFailed && _popularCommunityPosts.isEmpty) ||
-            (communityProvider.artFeedError != null && communityPostsCount == 0))
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    l10n.desktopHomePlatformStatsLoadFailed,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => _popularCommunityFetchFailed
-                      ? _loadPopularCommunityPosts(force: true)
-                      : _queueArtFeedLoad(
-                          lat: communityProvider.artFeedCenter?.lat,
-                          lng: communityProvider.artFeedCenter?.lng,
-                          radiusKm: communityProvider.artFeedRadiusKm,
-                          limit: 50,
-                        ),
-                  child: Text(l10n.commonRetry, style: GoogleFonts.inter(color: themeProvider.accentColor)),
-                ),
-              ],
-            ),
+        else if (hasError)
+          EmptyStateCard(
+            icon: Icons.wifi_off,
+            title: l10n.desktopHomePlatformStatsLoadFailed,
+            description: l10n.commonSomethingWentWrong,
           )
         else
           Container(
@@ -2288,12 +2091,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   l10n.desktopHomePlatformStatsTotalArtworks,
                   artworkProvider.artworks.length.toString(),
                   Icons.view_in_ar,
-                  _tealAccent,
+                  AppColorUtils.tealAccent,
                 ),
                 const Divider(height: 24),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsArEnabled,
-                  artworkProvider.artworks.where((a) => a.arEnabled).length.toString(),
+                  artworkProvider.artworks
+                      .where((a) => a.arEnabled)
+                      .length
+                      .toString(),
                   Icons.visibility,
                   scheme.tertiary,
                 ),
@@ -2309,7 +2115,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   l10n.desktopHomePlatformStatsActiveGroups,
                   communityProvider.groups.length.toString(),
                   Icons.groups,
-                  _purpleAccent,
+                  AppColorUtils.purpleAccent,
                 ),
               ],
             ),
@@ -2318,7 +2124,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildPlatformStatRow(String label, String value, IconData icon, Color color) {
+  Widget _buildPlatformStatRow(
+      String label, String value, IconData icon, Color color) {
     return Row(
       children: [
         Container(
@@ -2336,7 +2143,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             label,
             style: GoogleFonts.inter(
               fontSize: 13,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
         ),
@@ -2357,20 +2167,24 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       builder: (context, activityProvider, _) {
         final l10n = AppLocalizations.of(context)!;
         final activities = activityProvider.activities.take(5).toList();
-        final isLoading = activityProvider.isLoading && activities.isEmpty;
         final error = activityProvider.error;
+        final isLoading = activityProvider.isLoading && activities.isEmpty;
 
         Widget content;
         if (isLoading) {
-          content = _buildRecentActivityLoading(themeProvider);
+          content = const InlineLoading();
         } else if (error != null && activities.isEmpty) {
-          content = _buildRecentActivityError(
-            themeProvider,
-            error,
-            () => activityProvider.refresh(force: true),
+          content = EmptyStateCard(
+            icon: Icons.wifi_off,
+            title: l10n.homeUnableToLoadActivityTitle,
+            description: l10n.commonSomethingWentWrong,
           );
         } else if (activities.isEmpty) {
-          content = _buildRecentActivityEmpty(themeProvider);
+          content = EmptyStateCard(
+            icon: Icons.timeline,
+            title: l10n.homeNoRecentActivityTitle,
+            description: l10n.homeNoRecentActivityDescription,
+          );
         } else {
           content = Column(
             children: activities
@@ -2382,28 +2196,24 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.homeRecentActivityTitle,
+            _buildSidebarSectionHeader(
+              themeProvider: themeProvider,
+              icon: Icons.history,
+              iconColor: themeProvider.accentColor,
+              title: l10n.homeRecentActivityTitle,
+              isRefreshing: activityProvider.isLoading,
+              onRefresh: () =>
+                  unawaited(activityProvider.refresh(force: true)),
+              trailing: TextButton(
+                onPressed: _openFullActivity,
+                child: Text(
+                  l10n.commonViewAll,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 12,
+                    color: themeProvider.accentColor,
                   ),
                 ),
-                TextButton(
-                  onPressed: _openFullActivity,
-                  child: Text(
-                    l10n.commonViewAll,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: themeProvider.accentColor,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 12),
             content,
@@ -2413,89 +2223,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  Widget _buildRecentActivityLoading(ThemeProvider themeProvider) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24),
-      alignment: Alignment.center,
-      child: SizedBox(
-        width: 28,
-        height: 28,
-        child: CircularProgressIndicator(
-          strokeWidth: 2.5,
-          valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentColor),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRecentActivityError(
-    ThemeProvider themeProvider,
-    String error,
-    VoidCallback onRetry,
-  ) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.homeUnableToLoadActivityTitle,
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            l10n.commonSomethingWentWrong,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: onRetry,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: themeProvider.accentColor,
-              side: BorderSide(color: themeProvider.accentColor.withValues(alpha: 0.5)),
-            ),
-            child: Text(l10n.commonRetry),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivityEmpty(ThemeProvider themeProvider) {
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Text(
-          l10n.homeNoRecentActivityTitle,
-          style: GoogleFonts.inter(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActivityItem(RecentActivity activity, ThemeProvider themeProvider) {
+  Widget _buildActivityItem(
+      RecentActivity activity, ThemeProvider themeProvider) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -2508,7 +2237,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -2545,7 +2275,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       activity.description,
                       style: GoogleFonts.inter(
                         fontSize: 11,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -2560,66 +2293,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  IconData _getActivityIcon(ActivityCategory category) {
-    switch (category) {
-      case ActivityCategory.discovery:
-        return Icons.explore;
-      case ActivityCategory.like:
-        return Icons.favorite;
-      case ActivityCategory.comment:
-        return Icons.chat_bubble;
-      case ActivityCategory.follow:
-        return Icons.person_add;
-      case ActivityCategory.nft:
-        return Icons.collections;
-      case ActivityCategory.ar:
-        return Icons.view_in_ar;
-      case ActivityCategory.reward:
-        return Icons.stars;
-      case ActivityCategory.share:
-        return Icons.share;
-      case ActivityCategory.mention:
-        return Icons.alternate_email;
-      case ActivityCategory.achievement:
-        return Icons.emoji_events;
-      case ActivityCategory.save:
-        return Icons.bookmark;
-      case ActivityCategory.system:
-        return Icons.info;
-    }
-  }
+  /// Returns icon for activity category - delegates to centralized AppColorUtils
+  /// Returns icon for activity category - delegates to centralized AppColorUtils
+  IconData _getActivityIcon(ActivityCategory category) =>
+      AppColorUtils.activityIcon(category);
 
-  /// Get semantic color for activity/notification category
-  Color _getActivityColor(ActivityCategory category) {
-    switch (category) {
-      case ActivityCategory.discovery:
-        return _tealAccent;
-      case ActivityCategory.like:
-        return _coralAccent;
-      case ActivityCategory.comment:
-        return Theme.of(context).colorScheme.secondary;
-      case ActivityCategory.follow:
-        return _purpleAccent;
-      case ActivityCategory.nft:
-        return _amberAccent;
-      case ActivityCategory.ar:
-        return _tealAccent;
-      case ActivityCategory.reward:
-        return _greenAccent;
-      case ActivityCategory.share:
-        return Theme.of(context).colorScheme.tertiary;
-      case ActivityCategory.mention:
-        return Theme.of(context).colorScheme.primary;
-      case ActivityCategory.achievement:
-        return Colors.amber;
-      case ActivityCategory.save:
-        return Theme.of(context).colorScheme.secondary;
-      case ActivityCategory.system:
-        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
-    }
-  }
+  /// Get semantic color for activity/notification category - delegates to AppColorUtils
+  Color _getActivityColor(ActivityCategory category) =>
+      AppColorUtils.activityColorFor(category, Theme.of(context).colorScheme);
 
-  Widget _buildFloatingHeader(ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
+  Widget _buildFloatingHeader(
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme) {
     final l10n = AppLocalizations.of(context)!;
     return AnimatedPositioned(
       duration: animationTheme.short,
@@ -2633,7 +2317,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
           border: Border(
             bottom: BorderSide(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
             ),
           ),
           boxShadow: [
@@ -2727,7 +2412,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Theme.of(dialogContext).colorScheme.outline.withValues(alpha: 0.2),
+                      color: Theme.of(dialogContext)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.2),
                     ),
                   ),
                 ),
@@ -2748,7 +2436,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         child: Text(
                           l10n.homeMarkAllReadButton,
                           style: GoogleFonts.inter(
-                            color: themeProvider.accentColor,
+                            color: AppColorUtils.greenAccent,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -2772,13 +2460,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                             Icon(
                               Icons.notifications_none,
                               size: 64,
-                              color: Theme.of(dialogContext).colorScheme.onSurface.withValues(alpha: 0.3),
+                              color: Theme.of(dialogContext)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.3),
                             ),
                             const SizedBox(height: 16),
                             Text(
                               l10n.homeNoNotificationsTitle,
                               style: GoogleFonts.inter(
-                                color: Theme.of(dialogContext).colorScheme.onSurface.withValues(alpha: 0.6),
+                                color: Theme.of(dialogContext)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -2786,7 +2480,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                               l10n.homeAllCaughtUpDescription,
                               style: GoogleFonts.inter(
                                 fontSize: 12,
-                                color: Theme.of(dialogContext).colorScheme.onSurface.withValues(alpha: 0.4),
+                                color: Theme.of(dialogContext)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.4),
                               ),
                             ),
                           ],
@@ -2807,7 +2504,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                     width: 80,
                                     height: 80,
                                     decoration: BoxDecoration(
-                                      color: themeProvider.accentColor.withValues(alpha: 0.1),
+                                      color: AppColorUtils.amberAccent
+                                          .withValues(alpha: 0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Center(
@@ -2816,7 +2514,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                         style: GoogleFonts.inter(
                                           fontSize: 28,
                                           fontWeight: FontWeight.bold,
-                                          color: themeProvider.accentColor,
+                                          color: AppColorUtils.amberAccent,
                                         ),
                                       ),
                                     ),
@@ -2826,7 +2524,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                     l10n.desktopHomeUnreadNotificationsLabel,
                                     style: GoogleFonts.inter(
                                       fontSize: 14,
-                                      color: Theme.of(dialogInnerContext).colorScheme.onSurface.withValues(alpha: 0.6),
+                                      color: Theme.of(dialogInnerContext)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
@@ -2850,7 +2551,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                     margin: const EdgeInsets.only(bottom: 8),
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(dialogInnerContext).colorScheme.primaryContainer.withValues(alpha: 0.5),
+                                      color: Theme.of(dialogInnerContext)
+                                          .colorScheme
+                                          .primaryContainer
+                                          .withValues(alpha: 0.5),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Row(
@@ -2859,26 +2563,34 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                           width: 40,
                                           height: 40,
                                           decoration: BoxDecoration(
-                                            color: _getActivityColor(activity.category).withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(10),
+                                            color: _getActivityColor(
+                                                    activity.category)
+                                                .withValues(alpha: 0.12),
+                                            borderRadius:
+                                                BorderRadius.circular(10),
                                           ),
                                           child: Icon(
                                             _getActivityIcon(activity.category),
-                                            color: _getActivityColor(activity.category),
+                                            color: _getActivityColor(
+                                                activity.category),
                                             size: 20,
                                           ),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 activity.title,
                                                 style: GoogleFonts.inter(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
-                                                  color: Theme.of(dialogInnerContext).colorScheme.onSurface,
+                                                  color: Theme.of(
+                                                          dialogInnerContext)
+                                                      .colorScheme
+                                                      .onSurface,
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -2887,7 +2599,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                                 activity.description,
                                                 style: GoogleFonts.inter(
                                                   fontSize: 12,
-                                                  color: Theme.of(dialogInnerContext).colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  color: Theme.of(
+                                                          dialogInnerContext)
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withValues(alpha: 0.6),
                                                 ),
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
@@ -2923,28 +2639,28 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         'description': l10n.homeMockNotificationNewArtworkBody,
         'icon': Icons.location_on,
         'time': l10n.commonTimeAgoMinutes(5),
-        'color': _tealAccent, // Discovery
+        'color': AppColorUtils.tealAccent, // Discovery
       },
       {
         'title': l10n.homeMockNotificationRewardsTitle,
         'description': l10n.homeMockNotificationRewardsBody,
         'icon': Icons.account_balance_wallet,
         'time': l10n.commonTimeAgoHours(1),
-        'color': _greenAccent, // Reward
+        'color': AppColorUtils.greenAccent, // Reward
       },
       {
         'title': l10n.homeMockNotificationFriendRequestTitle,
         'description': l10n.homeMockNotificationFriendRequestBody,
         'icon': Icons.person_add,
         'time': l10n.commonTimeAgoHours(2),
-        'color': _purpleAccent, // Follow
+        'color': AppColorUtils.purpleAccent, // Follow
       },
       {
         'title': l10n.homeMockNotificationFeaturedTitle,
         'description': l10n.homeMockNotificationFeaturedBody,
         'icon': Icons.star,
         'time': l10n.commonTimeAgoHours(4),
-        'color': Colors.amber, // Achievement
+        'color': KubusColorRoles.of(context).achievementGold, // Achievement
       },
     ];
 
@@ -2971,11 +2687,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           child: Column(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: Theme.of(dialogContext).colorScheme.outline.withValues(alpha: 0.1),
+                      color: Theme.of(dialogContext)
+                          .colorScheme
+                          .outline
+                          .withValues(alpha: 0.1),
                     ),
                   ),
                 ),
@@ -3037,12 +2757,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: (notification['color'] as Color? ?? themeProvider.accentColor).withValues(alpha: 0.12),
+              color:
+                  (notification['color'] as Color? ?? AppColorUtils.amberAccent)
+                      .withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               notification['icon'] as IconData,
-              color: notification['color'] as Color? ?? themeProvider.accentColor,
+              color:
+                  notification['color'] as Color? ?? AppColorUtils.amberAccent,
               size: 20,
             ),
           ),
@@ -3064,7 +2787,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   notification['description'] as String,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -3072,7 +2798,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   notification['time'] as String,
                   style: GoogleFonts.inter(
                     fontSize: 11,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -3328,7 +3057,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         final suggestion = _searchSuggestions[index];
         return ListTile(
           leading: CircleAvatar(
-            backgroundColor: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+            backgroundColor:
+                scheme.surfaceContainerHighest.withValues(alpha: 0.6),
             child: Icon(
               suggestion.icon,
               color: scheme.primary,
@@ -3358,7 +3088,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     List<CommunityPost> communityPosts,
   ) {
     final entries = <_TrendingArtEntry>[];
-    final artworkMap = {for (final art in artworkProvider.artworks) art.id: art};
+    final artworkMap = {
+      for (final art in artworkProvider.artworks) art.id: art
+    };
 
     for (final art in artworkProvider.artworks) {
       entries.add(_TrendingArtEntry(
@@ -3395,9 +3127,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             id: artId,
             artworkId: artId,
             title: ref.title,
-            subtitle: post.authorUsername != null && post.authorUsername!.isNotEmpty
-                ? '@${post.authorUsername}'
-                : post.authorName,
+            subtitle:
+                post.authorUsername != null && post.authorUsername!.isNotEmpty
+                    ? '@${post.authorUsername}'
+                    : post.authorName,
             likes: post.likeCount,
             hasAR: artworkMap[artId]?.arEnabled ?? true,
             score: boost,
@@ -3411,7 +3144,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   double _trendingScore(Artwork artwork) {
-    final recencyDays = DateTime.now().difference(artwork.createdAt).inDays.clamp(0, 30);
+    final recencyDays =
+        DateTime.now().difference(artwork.createdAt).inDays.clamp(0, 30);
     final recencyBoost = 1 + (30 - recencyDays) / 30;
     return (artwork.likesCount * 2 +
             artwork.viewsCount +
@@ -3421,7 +3155,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   double _communityEngagementScore(CommunityPost post) {
-    final recencyDays = DateTime.now().difference(post.timestamp).inDays.clamp(0, 30);
+    final recencyDays =
+        DateTime.now().difference(post.timestamp).inDays.clamp(0, 30);
     final recencyBoost = 1 + (30 - recencyDays) / 30;
     return (post.likeCount * 2 +
             post.shareCount * 3 +
@@ -3430,7 +3165,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         recencyBoost;
   }
 
-  List<Map<String, dynamic>> _buildTopCreatorSummaries(List<CommunityPost> communityPosts) {
+  List<Map<String, dynamic>> _buildTopCreatorSummaries(
+      List<CommunityPost> communityPosts) {
     final creatorsMap = <String, _CreatorStats>{};
     final posts = communityPosts.take(50);
 

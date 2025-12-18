@@ -75,6 +75,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonShare => 'Share';
 
   @override
+  String get commonFeed => 'Feed';
+
+  @override
   String get commonGroup => 'Group';
 
   @override
@@ -3016,6 +3019,103 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userProfileEventFallbackTitle => 'Event';
 
   @override
+  String get collectionSettingsTitle => 'Collection Settings';
+
+  @override
+  String get collectionDetailAddArtwork => 'Add Artwork';
+
+  @override
+  String get collectionDetailManage => 'Manage';
+
+  @override
+  String get collectionDetailArtworks => 'Artworks';
+
+  @override
+  String get collectionDetailDescription => 'Description';
+
+  @override
+  String get collectionDetailByYou => 'by You';
+
+  @override
+  String get collectionDetailSharingToast => 'Sharing collection...';
+
+  @override
+  String get collectionDetailOpeningEditorToast => 'Opening collection editor...';
+
+  @override
+  String get collectionSettingsBasicInfo => 'Basic Information';
+
+  @override
+  String get collectionSettingsName => 'Collection Name';
+
+  @override
+  String get collectionSettingsNameHint => 'Enter collection name';
+
+  @override
+  String get collectionSettingsDescriptionLabel => 'Description';
+
+  @override
+  String get collectionSettingsDescriptionHint => 'Describe your collection...';
+
+  @override
+  String get collectionSettingsCategory => 'Category';
+
+  @override
+  String get collectionSettingsPrivacy => 'Privacy Settings';
+
+  @override
+  String get collectionSettingsPublic => 'Public Collection';
+
+  @override
+  String get collectionSettingsPublicSubtitle => 'Make this collection visible to everyone';
+
+  @override
+  String get collectionSettingsCollaboration => 'Collaboration';
+
+  @override
+  String get collectionSettingsAllowContributions => 'Allow Contributions';
+
+  @override
+  String get collectionSettingsAllowContributionsSubtitle => 'Let other artists contribute to this collection';
+
+  @override
+  String get collectionSettingsNotifications => 'Notifications';
+
+  @override
+  String get collectionSettingsUpdates => 'Collection Updates';
+
+  @override
+  String get collectionSettingsUpdatesSubtitle => 'Get notified when artworks are added or removed';
+
+  @override
+  String get collectionSettingsDangerZone => 'Danger Zone';
+
+  @override
+  String get collectionSettingsDeleteTitle => 'Delete Collection';
+
+  @override
+  String get collectionSettingsDeleteWarning => 'Once you delete a collection, there is no going back. This action cannot be undone.';
+
+  @override
+  String get collectionSettingsDeleteButton => 'Delete Collection';
+
+  @override
+  String collectionSettingsSavedToast(Object name) {
+    return 'Collection settings saved for \"$name\"';
+  }
+
+  @override
+  String get collectionSettingsDeleteDialogTitle => 'Delete Collection';
+
+  @override
+  String collectionSettingsDeleteDialogContent(Object name) {
+    return 'Are you sure you want to delete \"$name\"? This action cannot be undone.';
+  }
+
+  @override
+  String get collectionSettingsDeletedToast => 'Collection deleted';
+
+  @override
   String get userProfileMoreOptionsBlockUser => 'Block user';
 
   @override
@@ -4199,6 +4299,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artistStudioTabCreate => 'Create';
 
   @override
+  String get artistStudioTabExhibitions => 'Exhibitions';
+
+  @override
   String get artistStudioTabAnalytics => 'Analytics';
 
   @override
@@ -4265,6 +4368,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get desktopArtistStudioQuickActionsTitle => 'Quick Actions';
+
+  @override
+  String get desktopArtistStudioQuickActionInvitesTitle => 'Invites';
+
+  @override
+  String get desktopArtistStudioQuickActionInvitesSubtitle => 'View collaboration invites';
+
+  @override
+  String get desktopArtistStudioQuickActionInvitesPendingSubtitle => 'You have pending collaboration invites';
+
+  @override
+  String get desktopArtistStudioQuickActionCollaborationInvitesTitle => 'Collaboration Invites';
+
+  @override
+  String get desktopArtistStudioQuickActionExhibitionsTitle => 'My Exhibitions';
+
+  @override
+  String get desktopArtistStudioQuickActionExhibitionsSubtitle => 'View exhibitions you collaborate on';
 
   @override
   String get desktopArtistStudioQuickActionCreateArtworkTitle => 'Create Artwork';
@@ -4948,6 +5069,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get postDetailWriteCommentHint => 'Write a comment…';
+
+  @override
+  String get postDetailLinkedArtworkLabel => 'Linked artwork';
+
+  @override
+  String get postDetailOriginalUnavailableMessage =>
+      'Original post is no longer available';
 
   @override
   String get communityGroupsRefreshFailedToast => 'Could not refresh groups.';
@@ -5800,4 +5928,33 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get season0OnChainNote => 'On-chain features available in Labs';
+
+  @override
+  String get mnemonicRevealTitle => 'Reveal Recovery Phrase';
+
+  @override
+  String get mnemonicRevealPrivacyWarning => 'Your recovery phrase (keep it private)';
+
+  @override
+  String get mnemonicRevealBiometricUnavailable => 'Biometric unlock unavailable. Enter PIN to reveal your recovery phrase.';
+
+  @override
+  String get mnemonicRevealPinError => 'PIN must be at least 4 digits';
+
+  @override
+  String mnemonicRevealPinLockedError(Object seconds) {
+    return 'PIN locked for $seconds seconds';
+  }
+
+  @override
+  String get mnemonicRevealIncorrectPinError => 'Incorrect PIN';
+
+  @override
+  String get mnemonicRevealCopiedToast => 'Mnemonic copied to clipboard';
+
+  @override
+  String get mnemonicRevealShowButton => 'Show';
+
+  @override
+  String get mnemonicRevealEnterPinDialogTitle => 'Enter PIN';
 }

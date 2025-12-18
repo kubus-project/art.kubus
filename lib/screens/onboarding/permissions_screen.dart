@@ -323,7 +323,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Colors.green,
+                              color: AppColorUtils.greenAccent,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
@@ -499,10 +499,10 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
+                    color: AppColorUtils.greenAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: Colors.green.withValues(alpha: 0.3),
+                      color: AppColorUtils.greenAccent.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Row(
@@ -510,7 +510,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                     children: [
                       Icon(
                         Icons.check_circle,
-                        color: Colors.green,
+                        color: AppColorUtils.greenAccent,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -519,7 +519,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: Colors.green,
+                          color: AppColorUtils.greenAccent,
                         ),
                       ),
                     ],
@@ -582,9 +582,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
       height: 8,
       decoration: BoxDecoration(
         color: isGranted
-            ? Colors.green
+            ? AppColorUtils.greenAccent
             : (isActive 
-                ? Theme.of(context).colorScheme.primary
+                ? AppColorUtils.amberAccent
                 : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(4),
       ),
@@ -686,7 +686,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
             l10n.permissionsPermissionGrantedToast(_getPermissionName(l10n, type)),
             style: GoogleFonts.inter(),
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: AppColorUtils.greenAccent,
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(

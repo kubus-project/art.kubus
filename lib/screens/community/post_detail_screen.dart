@@ -5,10 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../utils/app_color_utils.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../services/backend_api_service.dart';
-import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/artist_badge.dart';
@@ -144,13 +145,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       // Show undo option
       if (!mounted) return;
-      final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+      final roles = KubusColorRoles.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_post!.isLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast),
           action: SnackBarAction(
             label: l10n.commonUndo,
-            textColor: accent,
+            textColor: roles.likeAction,
             onPressed: () async {
               try {
                 await CommunityService.togglePostLike(
@@ -179,12 +180,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         if (mounted) setState(() {});
       } catch (_) {}
       if (!mounted) return;
+      final retryRoles = KubusColorRoles.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.postDetailUpdateLikeFailedToast),
           action: SnackBarAction(
             label: l10n.commonRetry,
-            textColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            textColor: retryRoles.likeAction,
             onPressed: () async {
               try {
                 await CommunityService.togglePostLike(
@@ -245,12 +247,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
       // Show undo snackbar which attempts to delete the comment from backend and locally
       if (!mounted) return;
+      final scheme = Theme.of(context).colorScheme;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.postDetailCommentAddedToast),
           action: SnackBarAction(
             label: l10n.commonUndo,
-            textColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
+            textColor: scheme.secondary,
             onPressed: () async {
               try {
                 // Attempt server delete
@@ -683,7 +686,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildPostDetailCard(CommunityPost post) {
     final scheme = Theme.of(context).colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final textColor = scheme.onSurface;
     final isRepost = (post.postType ?? '').toLowerCase() == 'repost';
 
@@ -706,7 +708,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.12),
+                color: scheme.primary.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -715,7 +717,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   Icon(
                     _getCategoryIcon(post.category),
                     size: 14,
-                    color: themeProvider.accentColor,
+                    color: scheme.primary,
                   ),
                   const SizedBox(width: 6),
                   Text(
@@ -723,7 +725,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: themeProvider.accentColor,
+                      color: scheme.primary,
                     ),
                   ),
                 ],
@@ -763,13 +765,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             ],
           ],
           // Metadata section
-          if (!isRepost) _buildPostMetadataSection(post, scheme, themeProvider),
+          if (!isRepost) _buildPostMetadataSection(post, scheme),
         ],
       ),
     );
   }
 
-  Widget _buildPostMetadataSection(CommunityPost post, ColorScheme scheme, ThemeProvider themeProvider) {
+  Widget _buildPostMetadataSection(CommunityPost post, ColorScheme scheme) {
     final hasMetadata = post.tags.isNotEmpty ||
         post.mentions.isNotEmpty ||
         post.location != null ||
@@ -792,7 +794,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             children: post.tags.map((tag) => Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: themeProvider.accentColor.withValues(alpha: 0.1),
+                color: scheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
@@ -800,7 +802,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                 style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: themeProvider.accentColor,
+                  color: scheme.primary,
                 ),
               ),
             )).toList(),
@@ -888,7 +890,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: themeProvider.accentColor.withValues(alpha: 0.15),
+                    color: scheme.tertiary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: post.artwork!.imageUrl != null
@@ -899,14 +901,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => Icon(
                               Icons.view_in_ar,
-                              color: themeProvider.accentColor,
+                              color: scheme.tertiary,
                               size: 24,
                             ),
                           ),
                         )
                       : Icon(
                           Icons.view_in_ar,
-                          color: themeProvider.accentColor,
+                          color: scheme.tertiary,
                           size: 24,
                         ),
                 ),
@@ -925,7 +927,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Linked artwork',
+                        AppLocalizations.of(context)!.postDetailLinkedArtworkLabel,
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           color: scheme.onSurface.withValues(alpha: 0.6),
@@ -1097,7 +1099,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildOriginalPostCard(CommunityPost originalPost) {
     final scheme = Theme.of(context).colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
     final originalHandle = originalPost.authorUsername?.trim();
 
@@ -1185,8 +1186,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     height: 180,
-                    color: themeProvider.accentColor.withValues(alpha: 0.1),
-                    child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+                    color: scheme.onSurface.withValues(alpha: 0.1),
+                    child: Icon(Icons.image_not_supported, color: scheme.onSurface.withValues(alpha: 0.5)),
                   ),
                 ),
               ),
@@ -1199,6 +1200,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   Widget _buildMissingOriginalNotice() {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       width: double.infinity,
@@ -1214,7 +1216,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Original post is no longer available',
+              l10n.postDetailOriginalUnavailableMessage,
               style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.7)),
             ),
           ),
@@ -1224,7 +1226,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Widget _buildPostImage(String imageUrl) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final scheme = Theme.of(context).colorScheme;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
@@ -1235,8 +1237,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => Container(
           height: 220,
-          color: themeProvider.accentColor.withValues(alpha: 0.1),
-          child: Icon(Icons.image_not_supported, color: themeProvider.accentColor),
+          color: scheme.onSurface.withValues(alpha: 0.1),
+          child: Icon(Icons.image_not_supported, color: scheme.onSurface.withValues(alpha: 0.5)),
         ),
       ),
     );
@@ -1249,8 +1251,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     bool highlight = false,
   }) {
     final scheme = Theme.of(context).colorScheme;
-    final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    final color = highlight ? accent : scheme.onSurface.withValues(alpha: 0.7);
+    final color = highlight ? AppColorUtils.coralAccent : scheme.onSurface.withValues(alpha: 0.7);
 
     return Expanded(
       child: InkWell(

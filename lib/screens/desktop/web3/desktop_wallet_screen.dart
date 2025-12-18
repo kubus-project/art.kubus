@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../config/config.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
@@ -14,6 +15,7 @@ import '../../../utils/media_url_resolver.dart';
 import '../components/desktop_widgets.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../web3/wallet/token_swap.dart';
+import '../../web3/wallet/connectwallet_screen.dart';
 
 /// Desktop wallet screen with professional dashboard layout
 /// Web-optimized with hover states and keyboard shortcuts
@@ -246,7 +248,20 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             ),
             const SizedBox(height: 24),
             TextButton.icon(
-              onPressed: () {},
+              onPressed: () {
+                final l10n = AppLocalizations.of(context)!;
+                if (!AppConfig.enableWalletConnect || !AppConfig.enableWeb3) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.authWalletConnectionDisabled)),
+                  );
+                  return;
+                }
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ConnectWallet(initialStep: 3),
+                  ),
+                );
+              },
               icon: const Icon(Icons.qr_code_scanner, size: 20),
               label: const Text('Connect with WalletConnect'),
             ),
@@ -385,9 +400,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: () {
+                          final l10n = AppLocalizations.of(context)!;
                           Clipboard.setData(ClipboardData(text: web3Provider.walletAddress));
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Address copied to clipboard')),
+                            SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
                           );
                         },
                         borderRadius: BorderRadius.circular(8),
@@ -501,7 +517,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       ),
                       const Spacer(),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const TokenSwap(),
+                            ),
+                          );
+                        },
                         child: Text(
                           'Buy KUB8',
                           style: GoogleFonts.inter(
@@ -1372,9 +1394,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                 ),
                 IconButton(
                   onPressed: () {
+                    final l10n = AppLocalizations.of(context)!;
                     Clipboard.setData(ClipboardData(text: web3Provider.walletAddress));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Address copied')),
+                      SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
                     );
                   },
                   icon: const Icon(Icons.copy, size: 20),
@@ -1453,36 +1476,41 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   content,
                   if (onConfirm != null) ...[
                     const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: onCancel,
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                    Builder(
+                      builder: (context) {
+                        final l10n = AppLocalizations.of(context)!;
+                        return Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: onCancel,
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(l10n.commonCancel),
                               ),
                             ),
-                            child: const Text('Cancel'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: onConfirm,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeProvider.accentColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: onConfirm,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: themeProvider.accentColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: Text(l10n.commonSend),
                               ),
                             ),
-                            child: const Text('Send'),
-                          ),
-                        ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ],

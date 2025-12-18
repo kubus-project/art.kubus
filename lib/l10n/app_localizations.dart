@@ -227,6 +227,12 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get commonShare;
 
+  /// No description provided for @commonFeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Feed'**
+  String get commonFeed;
+
   /// No description provided for @commonGroup.
   ///
   /// In en, this message translates to:
@@ -5765,6 +5771,192 @@ abstract class AppLocalizations {
   /// **'Event'**
   String get userProfileEventFallbackTitle;
 
+  /// No description provided for @collectionSettingsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection Settings'**
+  String get collectionSettingsTitle;
+
+  /// No description provided for @collectionDetailAddArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Artwork'**
+  String get collectionDetailAddArtwork;
+
+  /// No description provided for @collectionDetailManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage'**
+  String get collectionDetailManage;
+
+  /// No description provided for @collectionDetailArtworks.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks'**
+  String get collectionDetailArtworks;
+
+  /// No description provided for @collectionDetailDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get collectionDetailDescription;
+
+  /// No description provided for @collectionDetailByYou.
+  ///
+  /// In en, this message translates to:
+  /// **'by You'**
+  String get collectionDetailByYou;
+
+  /// No description provided for @collectionDetailSharingToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing collection...'**
+  String get collectionDetailSharingToast;
+
+  /// No description provided for @collectionDetailOpeningEditorToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening collection editor...'**
+  String get collectionDetailOpeningEditorToast;
+
+  /// No description provided for @collectionSettingsBasicInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Basic Information'**
+  String get collectionSettingsBasicInfo;
+
+  /// No description provided for @collectionSettingsName.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection Name'**
+  String get collectionSettingsName;
+
+  /// No description provided for @collectionSettingsNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter collection name'**
+  String get collectionSettingsNameHint;
+
+  /// No description provided for @collectionSettingsDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get collectionSettingsDescriptionLabel;
+
+  /// No description provided for @collectionSettingsDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe your collection...'**
+  String get collectionSettingsDescriptionHint;
+
+  /// No description provided for @collectionSettingsCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get collectionSettingsCategory;
+
+  /// No description provided for @collectionSettingsPrivacy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy Settings'**
+  String get collectionSettingsPrivacy;
+
+  /// No description provided for @collectionSettingsPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public Collection'**
+  String get collectionSettingsPublic;
+
+  /// No description provided for @collectionSettingsPublicSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Make this collection visible to everyone'**
+  String get collectionSettingsPublicSubtitle;
+
+  /// No description provided for @collectionSettingsCollaboration.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration'**
+  String get collectionSettingsCollaboration;
+
+  /// No description provided for @collectionSettingsAllowContributions.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow Contributions'**
+  String get collectionSettingsAllowContributions;
+
+  /// No description provided for @collectionSettingsAllowContributionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let other artists contribute to this collection'**
+  String get collectionSettingsAllowContributionsSubtitle;
+
+  /// No description provided for @collectionSettingsNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get collectionSettingsNotifications;
+
+  /// No description provided for @collectionSettingsUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection Updates'**
+  String get collectionSettingsUpdates;
+
+  /// No description provided for @collectionSettingsUpdatesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get notified when artworks are added or removed'**
+  String get collectionSettingsUpdatesSubtitle;
+
+  /// No description provided for @collectionSettingsDangerZone.
+  ///
+  /// In en, this message translates to:
+  /// **'Danger Zone'**
+  String get collectionSettingsDangerZone;
+
+  /// No description provided for @collectionSettingsDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Collection'**
+  String get collectionSettingsDeleteTitle;
+
+  /// No description provided for @collectionSettingsDeleteWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Once you delete a collection, there is no going back. This action cannot be undone.'**
+  String get collectionSettingsDeleteWarning;
+
+  /// No description provided for @collectionSettingsDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Collection'**
+  String get collectionSettingsDeleteButton;
+
+  /// No description provided for @collectionSettingsSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection settings saved for \"{name}\"'**
+  String collectionSettingsSavedToast(Object name);
+
+  /// No description provided for @collectionSettingsDeleteDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Collection'**
+  String get collectionSettingsDeleteDialogTitle;
+
+  /// No description provided for @collectionSettingsDeleteDialogContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete \"{name}\"? This action cannot be undone.'**
+  String collectionSettingsDeleteDialogContent(Object name);
+
+  /// No description provided for @collectionSettingsDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection deleted'**
+  String get collectionSettingsDeletedToast;
+
   /// No description provided for @userProfileMoreOptionsBlockUser.
   ///
   /// In en, this message translates to:
@@ -7967,6 +8159,12 @@ abstract class AppLocalizations {
   /// **'Create'**
   String get artistStudioTabCreate;
 
+  /// No description provided for @artistStudioTabExhibitions.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibitions'**
+  String get artistStudioTabExhibitions;
+
   /// No description provided for @artistStudioTabAnalytics.
   ///
   /// In en, this message translates to:
@@ -8098,6 +8296,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Quick Actions'**
   String get desktopArtistStudioQuickActionsTitle;
+
+  /// No description provided for @desktopArtistStudioQuickActionInvitesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invites'**
+  String get desktopArtistStudioQuickActionInvitesTitle;
+
+  /// No description provided for @desktopArtistStudioQuickActionInvitesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View collaboration invites'**
+  String get desktopArtistStudioQuickActionInvitesSubtitle;
+
+  /// No description provided for @desktopArtistStudioQuickActionInvitesPendingSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You have pending collaboration invites'**
+  String get desktopArtistStudioQuickActionInvitesPendingSubtitle;
+
+  /// No description provided for @desktopArtistStudioQuickActionCollaborationInvitesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collaboration Invites'**
+  String get desktopArtistStudioQuickActionCollaborationInvitesTitle;
+
+  /// No description provided for @desktopArtistStudioQuickActionExhibitionsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Exhibitions'**
+  String get desktopArtistStudioQuickActionExhibitionsTitle;
+
+  /// No description provided for @desktopArtistStudioQuickActionExhibitionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'View exhibitions you collaborate on'**
+  String get desktopArtistStudioQuickActionExhibitionsSubtitle;
 
   /// No description provided for @desktopArtistStudioQuickActionCreateArtworkTitle.
   ///
@@ -9352,6 +9586,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Write a comment…'**
   String get postDetailWriteCommentHint;
+
+  /// No description provided for @postDetailLinkedArtworkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked artwork'**
+  String get postDetailLinkedArtworkLabel;
+
+  /// No description provided for @postDetailOriginalUnavailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Original post is no longer available'**
+  String get postDetailOriginalUnavailableMessage;
 
   /// No description provided for @communityGroupsRefreshFailedToast.
   ///
@@ -10972,6 +11218,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'On-chain features available in Labs'**
   String get season0OnChainNote;
+
+  /// No description provided for @mnemonicRevealTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reveal Recovery Phrase'**
+  String get mnemonicRevealTitle;
+
+  /// No description provided for @mnemonicRevealPrivacyWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Your recovery phrase (keep it private)'**
+  String get mnemonicRevealPrivacyWarning;
+
+  /// No description provided for @mnemonicRevealBiometricUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Biometric unlock unavailable. Enter PIN to reveal your recovery phrase.'**
+  String get mnemonicRevealBiometricUnavailable;
+
+  /// No description provided for @mnemonicRevealPinError.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN must be at least 4 digits'**
+  String get mnemonicRevealPinError;
+
+  /// No description provided for @mnemonicRevealPinLockedError.
+  ///
+  /// In en, this message translates to:
+  /// **'PIN locked for {seconds} seconds'**
+  String mnemonicRevealPinLockedError(Object seconds);
+
+  /// No description provided for @mnemonicRevealIncorrectPinError.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN'**
+  String get mnemonicRevealIncorrectPinError;
+
+  /// No description provided for @mnemonicRevealCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Mnemonic copied to clipboard'**
+  String get mnemonicRevealCopiedToast;
+
+  /// No description provided for @mnemonicRevealShowButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get mnemonicRevealShowButton;
+
+  /// No description provided for @mnemonicRevealEnterPinDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter PIN'**
+  String get mnemonicRevealEnterPinDialogTitle;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

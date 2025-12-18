@@ -7,6 +7,8 @@ import '../../../providers/artwork_provider.dart';
 import '../../../models/artwork.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
+import '../../art/ar_screen.dart';
+import 'desktop_wallet_screen.dart';
 
 /// Desktop marketplace screen with OpenSea-style NFT grid
 /// Features advanced filtering, sorting, and collection browsing
@@ -791,7 +793,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                             left: 20,
                             right: 20,
                             child: ElevatedButton.icon(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const ARScreen(),
+                                  ),
+                                );
+                              },
                               icon: const Icon(Icons.view_in_ar),
                               label: const Text('View in AR'),
                               style: ElevatedButton.styleFrom(
@@ -918,7 +926,14 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                           children: [
                             Expanded(
                               child: ElevatedButton(
-                                onPressed: () {},
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const DesktopWalletScreen(),
+                                    ),
+                                  );
+                                },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: themeProvider.accentColor,
                                   foregroundColor: Colors.white,
@@ -932,7 +947,14 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                             ),
                             const SizedBox(width: 12),
                             OutlinedButton(
-                              onPressed: () {},
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const DesktopWalletScreen(),
+                                  ),
+                                );
+                              },
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
                                 side: BorderSide(color: themeProvider.accentColor),

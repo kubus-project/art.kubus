@@ -5,10 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../../config/config.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../models/collectible.dart';
 import '../../../providers/collectibles_provider.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../utils/rarity_ui.dart';
 import '../../../widgets/app_loading.dart';
@@ -39,13 +40,14 @@ class _NFTGalleryState extends State<NFTGallery> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         title: Text(
-          'NFT Gallery',
+          l10n.walletHomeActionNfts,
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -63,7 +65,7 @@ class _NFTGalleryState extends State<NFTGallery> {
               final provider = Provider.of<CollectiblesProvider>(context, listen: false);
               unawaited(provider.initialize(loadMockIfEmpty: AppConfig.isDevelopment));
             },
-            tooltip: 'Refresh',
+            tooltip: l10n.commonRefresh,
           ),
         ],
       ),
@@ -145,14 +147,13 @@ class _NFTGalleryState extends State<NFTGallery> {
     CollectibleSeries? series,
     bool isSmallScreen,
   ) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final scheme = Theme.of(context).colorScheme;
     final title = series?.name ?? 'Collectible';
     final rawImage = series?.imageUrl ?? series?.animationUrl;
     final resolvedImage = rawImage == null ? null : (MediaUrlResolver.resolve(rawImage) ?? rawImage);
     final rarityColor = series != null
         ? RarityUi.collectibleColor(context, series.rarity)
-        : themeProvider.accentColor;
+        : AppColorUtils.tealAccent;
 
     return Container(
       decoration: BoxDecoration(
@@ -174,10 +175,10 @@ class _NFTGalleryState extends State<NFTGallery> {
                     Image.network(
                       resolvedImage,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _imageFallback(themeProvider, rarityColor),
+                      errorBuilder: (_, __, ___) => _imageFallback(rarityColor, scheme),
                     )
                   else
-                    _imageFallback(themeProvider, rarityColor),
+                    _imageFallback(rarityColor, scheme),
                   Positioned(
                     top: 12,
                     right: 12,
@@ -264,7 +265,7 @@ class _NFTGalleryState extends State<NFTGallery> {
     );
   }
 
-  Widget _imageFallback(ThemeProvider themeProvider, Color rarityColor) {
+  Widget _imageFallback(Color rarityColor, ColorScheme scheme) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -272,7 +273,7 @@ class _NFTGalleryState extends State<NFTGallery> {
           end: Alignment.bottomRight,
           colors: [
             rarityColor.withValues(alpha: 0.25),
-            themeProvider.accentColor.withValues(alpha: 0.10),
+            scheme.tertiary.withValues(alpha: 0.10),
           ],
         ),
       ),
@@ -280,7 +281,7 @@ class _NFTGalleryState extends State<NFTGallery> {
         child: Icon(
           Icons.diamond_outlined,
           size: 42,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.65),
+          color: scheme.onSurface.withValues(alpha: 0.65),
         ),
       ),
     );

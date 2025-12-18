@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../utils/category_accent_color.dart';
 import '../../../utils/wallet_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -468,7 +469,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ElevatedButton.icon(
                   onPressed: _editProfile,
                   icon: const Icon(Icons.edit_outlined, size: 20),
-                  label: const Text('Edit Profile'),
+                  label: Text(AppLocalizations.of(context)!.settingsEditProfileTileTitle),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: Colors.white,
@@ -533,7 +534,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showArtworks(context),
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('View All'),
+                  label: Text(AppLocalizations.of(context)!.commonViewAll),
                 )
               : null,
         ),
@@ -580,7 +581,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showCollections(context),
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('View All'),
+                  label: Text(AppLocalizations.of(context)!.commonViewAll),
                 )
               : null,
         ),
@@ -707,7 +708,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ? TextButton.icon(
                   onPressed: () => ProfileScreenMethods.showCollections(context),
                   icon: const Icon(Icons.arrow_forward, size: 18),
-                  label: const Text('View All'),
+                  label: Text(AppLocalizations.of(context)!.commonViewAll),
                 )
               : null,
         ),
@@ -1268,7 +1269,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   );
                 },
                 icon: const Icon(Icons.arrow_forward, size: 18),
-                label: const Text('View All'),
+                label: Text(AppLocalizations.of(context)!.commonViewAll),
               ),
             ),
             const SizedBox(height: 16),

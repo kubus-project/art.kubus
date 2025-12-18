@@ -186,7 +186,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
+            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
           ),
           if (AppConfig.isFeatureEnabled('collabInvites'))
@@ -198,7 +198,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   children: [
                     IconButton(
                       tooltip: 'Invites',
-                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onPrimary),
+                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
@@ -231,7 +231,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
               },
             ),
           IconButton(
-            icon: Icon(Icons.notifications, color: Theme.of(context).colorScheme.onPrimary),
+            icon: Icon(Icons.notifications, color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showNotifications,
           ),
         ],
@@ -302,12 +302,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: scheme.onPrimary.withValues(alpha: 0.2),
+              color: scheme.onSurface.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(25),
             ),
             child: Icon(
               Icons.location_city,
-              color: scheme.onPrimary,
+              color: scheme.onSurface,
               size: 26,
             ),
           ),
@@ -321,7 +321,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: scheme.onPrimary,
+                    color: scheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -329,7 +329,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: scheme.onPrimary.withValues(alpha: 0.9),
+                    color: scheme.onSurface.withValues(alpha: 0.9),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -344,34 +344,34 @@ class _InstitutionHubState extends State<InstitutionHub> {
                         OutlinedButton.icon(
                           // "Create" tab index depends on exhibitions feature
                           onPressed: () => setState(() => _selectedIndex = AppConfig.isFeatureEnabled('exhibitions') ? 2 : 1),
-                          icon: Icon(Icons.add, size: 16, color: scheme.onPrimary),
+                          icon: Icon(Icons.add, size: 16, color: scheme.onSurface),
                           label: Text(
                             'Create event',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: scheme.onPrimary,
+                              color: scheme.onSurface,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: scheme.onPrimary.withValues(alpha: 0.35)),
+                            side: BorderSide(color: scheme.onSurface.withValues(alpha: 0.35)),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           ),
                         ),
                       if (AppConfig.isFeatureEnabled('exhibitions'))
                         OutlinedButton.icon(
                           onPressed: () => setState(() => _selectedIndex = 1),
-                          icon: Icon(Icons.collections_bookmark_outlined, size: 16, color: scheme.onPrimary),
+                          icon: Icon(Icons.collections_bookmark_outlined, size: 16, color: scheme.onSurface),
                           label: Text(
                             'Exhibitions',
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: scheme.onPrimary,
+                              color: scheme.onSurface,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: scheme.onPrimary.withValues(alpha: 0.35)),
+                            side: BorderSide(color: scheme.onSurface.withValues(alpha: 0.35)),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           ),
                         ),
@@ -914,7 +914,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        foregroundColor: Theme.of(context).colorScheme.onSurface,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),

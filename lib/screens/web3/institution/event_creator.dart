@@ -6,8 +6,8 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/themeprovider.dart';
 import '../../../providers/web3provider.dart';
+import '../../../utils/app_color_utils.dart';
 import '../../../utils/wallet_utils.dart';
 
 class EventCreator extends StatefulWidget {
@@ -19,12 +19,12 @@ class EventCreator extends StatefulWidget {
   State<EventCreator> createState() => _EventCreatorState();
 }
 
-class _EventCreatorState extends State<EventCreator> 
+class _EventCreatorState extends State<EventCreator>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -33,7 +33,7 @@ class _EventCreatorState extends State<EventCreator>
   final _capacityController = TextEditingController();
 
   String? _institutionId;
-  
+
   DateTime? _startDate;
   DateTime? _endDate;
   TimeOfDay? _startTime;
@@ -53,7 +53,7 @@ class _EventCreatorState extends State<EventCreator>
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -61,7 +61,7 @@ class _EventCreatorState extends State<EventCreator>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -69,7 +69,7 @@ class _EventCreatorState extends State<EventCreator>
       parent: _animationController,
       curve: Curves.easeOut,
     ));
-    
+
     _animationController.forward();
 
     final initial = widget.initialEvent;
@@ -80,8 +80,10 @@ class _EventCreatorState extends State<EventCreator>
       _locationController.text = initial.location;
       _priceController.text = initial.price?.toString() ?? '';
       _capacityController.text = initial.capacity?.toString() ?? '';
-      _startDate = DateTime(initial.startDate.year, initial.startDate.month, initial.startDate.day);
-      _endDate = DateTime(initial.endDate.year, initial.endDate.month, initial.endDate.day);
+      _startDate = DateTime(initial.startDate.year, initial.startDate.month,
+          initial.startDate.day);
+      _endDate = DateTime(
+          initial.endDate.year, initial.endDate.month, initial.endDate.day);
       _startTime = TimeOfDay.fromDateTime(initial.startDate);
       _endTime = TimeOfDay.fromDateTime(initial.endDate);
       _eventType = _eventTypeLabel(initial.type);
@@ -158,14 +160,18 @@ class _EventCreatorState extends State<EventCreator>
                 'Step ${_currentStep + 1} of 4',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                 ),
               ),
             ],
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onPrimary),
+            icon: Icon(Icons.help_outline,
+                color: Theme.of(context).colorScheme.onPrimary),
             onPressed: () => _showHelp(),
           ),
         ],
@@ -174,8 +180,6 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildProgressIndicator() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -185,9 +189,12 @@ class _EventCreatorState extends State<EventCreator>
               height: 4,
               margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
               decoration: BoxDecoration(
-                color: index <= _currentStep 
-                    ? themeProvider.accentColor 
-                    : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2),
+                color: index <= _currentStep
+                    ? AppColorUtils.purpleAccent
+                    : Theme.of(context)
+                        .colorScheme
+                        .onPrimary
+                        .withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -252,14 +259,26 @@ class _EventCreatorState extends State<EventCreator>
             _buildDropdown(
               label: 'Event Type',
               value: _eventType,
-              items: ['Exhibition', 'Workshop', 'Talk', 'Performance', 'Conference'],
+              items: [
+                'Exhibition',
+                'Workshop',
+                'Talk',
+                'Performance',
+                'Conference'
+              ],
               onChanged: (value) => setState(() => _eventType = value!),
             ),
             const SizedBox(height: 16),
             _buildDropdown(
               label: 'Category',
               value: _category,
-              items: ['Art', 'Digital Art', 'Photography', 'Sculpture', 'Mixed Media'],
+              items: [
+                'Art',
+                'Digital Art',
+                'Photography',
+                'Sculpture',
+                'Mixed Media'
+              ],
               onChanged: (value) => setState(() => _category = value!),
             ),
           ],
@@ -399,17 +418,17 @@ class _EventCreatorState extends State<EventCreator>
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+              color: AppColorUtils.purpleAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.3),
+                color: AppColorUtils.purpleAccent.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.info_outline,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
+                  color: AppColorUtils.purpleAccent,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -417,7 +436,10 @@ class _EventCreatorState extends State<EventCreator>
                     'Your event will be reviewed and published within 24 hours.',
                     style: GoogleFonts.inter(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -435,13 +457,17 @@ class _EventCreatorState extends State<EventCreator>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+        border: Border.all(
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _titleController.text.isNotEmpty ? _titleController.text : 'Event Title',
+            _titleController.text.isNotEmpty
+                ? _titleController.text
+                : 'Event Title',
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -450,22 +476,40 @@ class _EventCreatorState extends State<EventCreator>
           ),
           const SizedBox(height: 8),
           Text(
-            _descriptionController.text.isNotEmpty ? _descriptionController.text : 'Event Description',
+            _descriptionController.text.isNotEmpty
+                ? _descriptionController.text
+                : 'Event Description',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 16),
           _buildReviewItem('Type', _eventType),
           _buildReviewItem('Category', _category),
-          _buildReviewItem('Location', _locationController.text.isNotEmpty ? _locationController.text : 'Location'),
+          _buildReviewItem(
+              'Location',
+              _locationController.text.isNotEmpty
+                  ? _locationController.text
+                  : 'Location'),
           _buildReviewItem('Date', _formatDateRange()),
           _buildReviewItem('Time', _formatTimeRange()),
-          _buildReviewItem('Capacity', _capacityController.text.isNotEmpty ? _capacityController.text : '0'),
-          _buildReviewItem('Price', _priceController.text.isNotEmpty ? '\$${_priceController.text}' : 'Free'),
+          _buildReviewItem(
+              'Capacity',
+              _capacityController.text.isNotEmpty
+                  ? _capacityController.text
+                  : '0'),
+          _buildReviewItem(
+              'Price',
+              _priceController.text.isNotEmpty
+                  ? '\$${_priceController.text}'
+                  : 'Free'),
           _buildReviewItem('Public', _isPublic ? 'Yes' : 'No'),
-          _buildReviewItem('Registration', _allowRegistration ? 'Enabled' : 'Disabled'),
+          _buildReviewItem(
+              'Registration', _allowRegistration ? 'Enabled' : 'Disabled'),
         ],
       ),
     );
@@ -482,7 +526,10 @@ class _EventCreatorState extends State<EventCreator>
               label,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -537,21 +584,34 @@ class _EventCreatorState extends State<EventCreator>
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.5)),
+            hintStyle: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimary
+                    .withValues(alpha: 0.5)),
             filled: true,
-            fillColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            fillColor:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+              borderSide: BorderSide(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.2)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+              borderSide: BorderSide(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.2)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(
-                color: Provider.of<ThemeProvider>(context).accentColor,
+                color: AppColorUtils.purpleAccent,
               ),
             ),
           ),
@@ -568,20 +628,35 @@ class _EventCreatorState extends State<EventCreator>
           return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.location_city, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), size: 18),
+                Icon(Icons.location_city,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
+                    size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'No institutions available. Load or create an institution first.',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.8),
                     ),
                   ),
                 ),
@@ -590,9 +665,10 @@ class _EventCreatorState extends State<EventCreator>
           );
         }
 
-        final selectedId = (_institutionId != null && _institutionId!.isNotEmpty)
-            ? _institutionId!
-            : institutions.first.id;
+        final selectedId =
+            (_institutionId != null && _institutionId!.isNotEmpty)
+                ? _institutionId!
+                : institutions.first.id;
         if (_institutionId != selectedId) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
@@ -615,20 +691,30 @@ class _EventCreatorState extends State<EventCreator>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimary
+                    .withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+                border: Border.all(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onPrimary
+                        .withValues(alpha: 0.2)),
               ),
               child: DropdownButton<String>(
                 value: selectedId,
                 isExpanded: true,
                 underline: const SizedBox(),
-                dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                dropdownColor:
+                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 items: institutions.map((institution) {
                   return DropdownMenuItem<String>(
                     value: institution.id,
-                    child: Text(institution.name, overflow: TextOverflow.ellipsis),
+                    child:
+                        Text(institution.name, overflow: TextOverflow.ellipsis),
                   );
                 }).toList(),
                 onChanged: (value) {
@@ -664,15 +750,21 @@ class _EventCreatorState extends State<EventCreator>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onPrimary
+                    .withValues(alpha: 0.2)),
           ),
           child: DropdownButton<String>(
             value: value,
             isExpanded: true,
             underline: const SizedBox(),
-            dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+            dropdownColor:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             items: items.map((item) {
               return DropdownMenuItem<String>(
@@ -709,20 +801,33 @@ class _EventCreatorState extends State<EventCreator>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.calendar_today, color: Theme.of(context).colorScheme.onSurface, size: 16),
+                Icon(Icons.calendar_today,
+                    color: Theme.of(context).colorScheme.onSurface, size: 16),
                 const SizedBox(width: 8),
                 Text(
-                  date != null 
+                  date != null
                       ? '${date.day}/${date.month}/${date.year}'
                       : 'Select date',
                   style: TextStyle(
-                    color: date != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: date != null
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -755,20 +860,31 @@ class _EventCreatorState extends State<EventCreator>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.2)),
             ),
             child: Row(
               children: [
-                Icon(Icons.access_time, color: Theme.of(context).colorScheme.onSurface, size: 16),
+                Icon(Icons.access_time,
+                    color: Theme.of(context).colorScheme.onSurface, size: 16),
                 const SizedBox(width: 8),
                 Text(
-                  time != null 
-                      ? time.format(context)
-                      : 'Select time',
+                  time != null ? time.format(context) : 'Select time',
                   style: TextStyle(
-                    color: time != null ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: time != null
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.5),
                   ),
                 ),
               ],
@@ -790,7 +906,9 @@ class _EventCreatorState extends State<EventCreator>
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
+        border: Border.all(
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
@@ -810,7 +928,10 @@ class _EventCreatorState extends State<EventCreator>
                   subtitle,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -819,7 +940,7 @@ class _EventCreatorState extends State<EventCreator>
           Switch(
             value: value,
             onChanged: onChanged,
-            activeThumbColor: Provider.of<ThemeProvider>(context).accentColor,
+            activeThumbColor: AppColorUtils.purpleAccent,
           ),
         ],
       ),
@@ -827,8 +948,6 @@ class _EventCreatorState extends State<EventCreator>
   }
 
   Widget _buildNavigationButtons() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -838,7 +957,10 @@ class _EventCreatorState extends State<EventCreator>
               child: ElevatedButton(
                 onPressed: () => setState(() => _currentStep--),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .onPrimary
+                      .withValues(alpha: 0.1),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -858,7 +980,7 @@ class _EventCreatorState extends State<EventCreator>
             child: ElevatedButton(
               onPressed: _currentStep < 3 ? _nextStep : _createEvent,
               style: ElevatedButton.styleFrom(
-                backgroundColor: themeProvider.accentColor,
+                backgroundColor: AppColorUtils.purpleAccent,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -921,7 +1043,8 @@ class _EventCreatorState extends State<EventCreator>
     final institutions = provider.institutions;
     final institutionId = (_institutionId != null && _institutionId!.isNotEmpty)
         ? _institutionId!
-        : provider.selectedInstitution?.id ?? (institutions.isNotEmpty ? institutions.first.id : null);
+        : provider.selectedInstitution?.id ??
+            (institutions.isNotEmpty ? institutions.first.id : null);
 
     if (institutionId == null || institutionId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -933,7 +1056,8 @@ class _EventCreatorState extends State<EventCreator>
     final institution = provider.getInstitutionById(institutionId);
     if (institution == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.eventCreatorSelectedInstitutionNotFoundToast)),
+        SnackBar(
+            content: Text(l10n.eventCreatorSelectedInstitutionNotFoundToast)),
       );
       return;
     }
@@ -950,8 +1074,10 @@ class _EventCreatorState extends State<EventCreator>
     final startTime = _startTime ?? const TimeOfDay(hour: 10, minute: 0);
     final endTime = _endTime ?? const TimeOfDay(hour: 12, minute: 0);
 
-    final startAt = DateTime(startDate.year, startDate.month, startDate.day, startTime.hour, startTime.minute);
-    final endAt = DateTime(endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
+    final startAt = DateTime(startDate.year, startDate.month, startDate.day,
+        startTime.hour, startTime.minute);
+    final endAt = DateTime(
+        endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
     if (!endAt.isAfter(startAt)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.eventCreatorEndTimeAfterStartToast)),
@@ -994,7 +1120,9 @@ class _EventCreatorState extends State<EventCreator>
       featuredArtworkIds: initial?.featuredArtworkIds ?? const [],
       artistIds: initial?.artistIds ?? const [],
       createdAt: initial?.createdAt ?? DateTime.now(),
-      createdBy: (initial?.createdBy.isNotEmpty == true) ? initial!.createdBy : (createdBy.isNotEmpty ? createdBy : 'local_user'),
+      createdBy: (initial?.createdBy.isNotEmpty == true)
+          ? initial!.createdBy
+          : (createdBy.isNotEmpty ? createdBy : 'local_user'),
     );
 
     try {
@@ -1009,16 +1137,23 @@ class _EventCreatorState extends State<EventCreator>
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor:
+              Theme.of(context).colorScheme.surfaceContainerHighest,
           title: Text(
-            _isEditing ? l10n.eventCreatorEventUpdatedTitle : l10n.eventCreatorEventCreatedTitle,
+            _isEditing
+                ? l10n.eventCreatorEventUpdatedTitle
+                : l10n.eventCreatorEventCreatedTitle,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
           ),
           content: Text(
             _isEditing
                 ? l10n.eventCreatorEventUpdatedBody
                 : l10n.eventCreatorEventCreatedBody,
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75)),
+            style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.75)),
           ),
           actions: [
             ElevatedButton(
@@ -1030,7 +1165,9 @@ class _EventCreatorState extends State<EventCreator>
                   _resetForm();
                 }
               },
-              child: Text(_isEditing ? l10n.commonDone : l10n.eventCreatorCreateAnotherButton),
+              child: Text(_isEditing
+                  ? l10n.commonDone
+                  : l10n.eventCreatorCreateAnotherButton),
             ),
           ],
         ),
@@ -1041,7 +1178,9 @@ class _EventCreatorState extends State<EventCreator>
       }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.eventCreatorSaveFailedToast)),
+        SnackBar(
+            content: Text(
+                AppLocalizations.of(context)!.eventCreatorSaveFailedToast)),
       );
     }
   }
@@ -1186,14 +1325,19 @@ class _EventCreatorState extends State<EventCreator>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        title: Text('Event Creation Help', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text('Event Creation Help',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'Follow the 4-step process to create your event:\n\n'
           '1. Basic Info: Enter title, description, and type\n'
           '2. Date & Time: Set when your event occurs\n'
           '3. Details: Configure capacity, pricing, and settings\n'
           '4. Review: Confirm all details before creating',
-          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.7)),
+          style: TextStyle(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(

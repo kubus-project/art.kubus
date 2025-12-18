@@ -49,6 +49,7 @@ import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../season0/season0_screen.dart';
 
 enum CommunityFeedType {
@@ -2120,9 +2121,20 @@ class _CommunityScreenState extends State<CommunityScreen>
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: post.tags
-                        .map((tag) => Chip(label: Text('#$tag')))
-                        .toList(),
+                    children: post.tags.map((tag) {
+                      final roles = KubusColorRoles.of(context);
+                      return Chip(
+                        backgroundColor: roles.tagChipBackground.withValues(alpha: 0.1),
+                        side: BorderSide.none,
+                        label: Text(
+                          '#$tag',
+                          style: GoogleFonts.inter(
+                            color: roles.tagChipBackground,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
                 const SizedBox(height: 16),
@@ -2426,24 +2438,29 @@ class _CommunityScreenState extends State<CommunityScreen>
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 6,
-                                children: post.tags.map((tag) => GestureDetector(
-                                  onTap: () => _filterByTag(tag),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: themeProvider.accentColor.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(14),
-                                    ),
-                                    child: Text(
-                                      '#$tag',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                        color: themeProvider.accentColor,
+                                children: post.tags.map((tag) {
+                                  final roles = KubusColorRoles.of(context);
+                                  return GestureDetector(
+                                    onTap: () => _filterByTag(tag),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 10, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: roles.tagChipBackground
+                                            .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Text(
+                                        '#$tag',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: roles.tagChipBackground,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                )).toList(),
+                                  );
+                                }).toList(),
                               ),
                             ],
                             // Mentions
@@ -2636,16 +2653,22 @@ class _CommunityScreenState extends State<CommunityScreen>
                           Row(
                             children: [
                               Expanded(
-                                child: _buildInteractionButton(
-                                  post.isLiked
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  '${post.likeCount}',
-                                  onTap: () => _toggleLike(index),
-                                  onCountTap: () => _showPostLikes(post.id),
-                                  isActive: post.isLiked,
-                                ),
-                              ),
+	                                child: _buildInteractionButton(
+	                                  post.isLiked
+	                                      ? Icons.favorite
+	                                      : Icons.favorite_border,
+	                                  '${post.likeCount}',
+	                                  onTap: () => _toggleLike(index),
+	                                  onCountTap: () => _showPostLikes(post.id),
+	                                  isActive: post.isLiked,
+                                    color: post.isLiked
+                                        ? KubusColorRoles.of(context).likeAction
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+	                                ),
+	                              ),
                               Expanded(
                                 child: _buildInteractionButton(
                                   Icons.comment_outlined,
@@ -2706,12 +2729,12 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 
   Widget _buildInteractionButton(IconData icon, String label,
-      {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap}) {
+      {VoidCallback? onTap, bool isActive = false, VoidCallback? onCountTap, Color? color}) {
     final scheme = Theme.of(context).colorScheme;
     final accent = Provider.of<ThemeProvider>(context, listen: false).accentColor;
-    final color = isActive
+    final finalColor = color ?? (isActive
         ? accent
-        : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65);
+        : scheme.onSurface.withValues(alpha: label.isEmpty ? 0.5 : 0.65));
     final animationTheme = context.animationTheme;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -2726,7 +2749,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               scale: isActive ? 1.18 : 1.0,
               duration: animationTheme.short,
               curve: animationTheme.emphasisCurve,
-              child: Icon(icon, color: color, size: 20),
+              child: Icon(icon, color: finalColor, size: 20),
             ),
             if (label.isNotEmpty) ...[
               const SizedBox(width: 8),
@@ -2737,7 +2760,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                   duration: animationTheme.short,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: color,
+                    color: finalColor,
                     fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                   ),
                   child: Text(label, textAlign: TextAlign.center),
@@ -6363,7 +6386,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           : Icons.favorite_border,
                                       size: 18,
                                       color: post.comments[commentIndex].isLiked
-                                          ? Colors.red
+                                          ? KubusColorRoles.of(context).likeAction
                                           : Theme.of(context)
                                               .colorScheme
                                               .onSurface
@@ -6565,7 +6588,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                                                                     .favorite_border,
                                                             size: 14,
                                                             color: reply.isLiked
-                                                                ? Colors.red
+                                                                ? KubusColorRoles.of(context).likeAction
                                                                 : Theme.of(
                                                                         context)
                                                                     .colorScheme

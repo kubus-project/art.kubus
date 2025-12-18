@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/collab_member.dart';
 import '../providers/collab_provider.dart';
 import '../services/backend_api_service.dart';
@@ -264,12 +265,13 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
+        final l10n = AppLocalizations.of(ctx)!;
         return AlertDialog(
           title: const Text('Remove collaborator?'),
           content: Text('This will revoke access for ${member.user?.displayName ?? member.user?.username ?? 'this person'}.'),
           actions: [
-            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('Remove')),
+            TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.commonCancel)),
+            ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(l10n.commonRemove)),
           ],
         );
       },
@@ -330,7 +332,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                   )
                 else
                   IconButton(
-                    tooltip: 'Refresh',
+                    tooltip: AppLocalizations.of(context)!.commonRefresh,
                     onPressed: _loadMembers,
                     icon: Icon(Icons.refresh, color: scheme.onSurface.withValues(alpha: 0.75)),
                   ),
@@ -510,7 +512,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                   ElevatedButton.icon(
                     onPressed: () => unawaited(_sendInvite()),
                     icon: const Icon(Icons.send),
-                    label: const Text('Send'),
+                    label: Text(AppLocalizations.of(context)!.commonSend),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -612,7 +614,7 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
             ),
           if (_canManageMembers)
             IconButton(
-              tooltip: 'Remove',
+              tooltip: AppLocalizations.of(context)!.commonRemove,
               onPressed: () => unawaited(_removeMember(member)),
               icon: Icon(Icons.person_remove, color: scheme.onSurface.withValues(alpha: 0.75)),
             ),

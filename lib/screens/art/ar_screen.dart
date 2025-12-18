@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
+import '../../utils/app_color_utils.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:latlong2/latlong.dart';
@@ -28,6 +29,7 @@ import '../../community/community_interactions.dart';
 import '../../utils/marker_subject_utils.dart';
 import '../download_app_screen.dart';
 import '../community/profile_screen_methods.dart';
+
 /// AR Screen with seamless Android and iOS support
 /// On web, redirects to download app screen
 class ARScreen extends StatefulWidget {
@@ -196,7 +198,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     setState(() => _isLoading = true);
 
     try {
-      final platformProvider = Provider.of<PlatformProvider>(context, listen: false);
+      final platformProvider =
+          Provider.of<PlatformProvider>(context, listen: false);
 
       if (!platformProvider.supportsARFeatures) {
         if (mounted) {
@@ -324,7 +327,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             'id':
                                 artworkData['id'] ?? DateTime.now().toString(),
                             'title': artworkData['title'] ?? l10n.commonUnknown,
-                            'artist': artworkData['artist'] ?? l10n.commonUnknown,
+                            'artist':
+                                artworkData['artist'] ?? l10n.commonUnknown,
                             'modelUrl': artworkData['modelUrl'],
                             'timestamp': DateTime.now().millisecondsSinceEpoch,
                           });
@@ -377,7 +381,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         .withValues(alpha: 0.95),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
-                      color: themeProvider.accentColor.withValues(alpha: 0.3),
+                      color: AppColorUtils.cyanAccent.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -394,13 +398,13 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? themeProvider.accentColor
+                                  ? AppColorUtils.cyanAccent
                                       .withValues(alpha: 0.2)
                                   : Colors.transparent,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isSelected
-                                    ? themeProvider.accentColor
+                                    ? AppColorUtils.cyanAccent
                                     : Colors.transparent,
                                 width: 2,
                               ),
@@ -411,7 +415,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 Icon(
                                   modeIcon,
                                   color: isSelected
-                                      ? themeProvider.accentColor
+                                      ? AppColorUtils.cyanAccent
                                       : Theme.of(context)
                                           .colorScheme
                                           .onSurface
@@ -423,7 +427,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                   _modeName(l10n, modeId),
                                   style: GoogleFonts.inter(
                                     color: isSelected
-                                        ? themeProvider.accentColor
+                                        ? AppColorUtils.cyanAccent
                                         : Theme.of(context)
                                             .colorScheme
                                             .onSurface
@@ -451,7 +455,6 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   Widget _buildLoadingOverlay() {
     final l10n = AppLocalizations.of(context)!;
-    final themeProvider = Provider.of<ThemeProvider>(context);
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Center(
@@ -463,7 +466,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
             Text(
               l10n.arInitializingTitle,
               style: GoogleFonts.inter(
-                color: themeProvider.accentColor,
+                color: AppColorUtils.cyanAccent,
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -499,7 +502,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   Icon(
                     Icons.visibility_off,
                     size: 64,
-                    color: themeProvider.accentColor.withValues(alpha: 0.5),
+                    color: AppColorUtils.cyanAccent.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -545,12 +548,12 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: themeProvider.accentColor.withValues(alpha: 0.2),
+                        color: AppColorUtils.cyanAccent.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
                         Icons.view_in_ar,
-                        color: themeProvider.accentColor,
+                        color: AppColorUtils.cyanAccent,
                       ),
                     ),
                     title: Text(
@@ -566,7 +569,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                     trailing: IconButton(
                       icon: Icon(
                         Icons.open_in_new,
-                        color: themeProvider.accentColor,
+                        color: AppColorUtils.cyanAccent,
                       ),
                       onPressed: () async {
                         // Launch AR viewer for this artwork using ARManager
@@ -684,7 +687,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           children: [
             Icon(
               modeIcon,
-              color: themeProvider.accentColor,
+              color: AppColorUtils.cyanAccent,
               size: 64,
             ),
             const SizedBox(height: 16),
@@ -732,7 +735,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       );
 
       if (kDebugMode) {
-        debugPrint('ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}');
+        debugPrint(
+            'ARScreen: Placed AR artwork: ${_selectedArtwork!['title']}');
       }
 
       // Note: Discovery tracking would require converting Map to Artwork object
@@ -791,7 +795,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 children: [
                   Icon(
                     currentModeIcon,
-                    color: themeProvider.accentColor,
+                    color: AppColorUtils.cyanAccent,
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -815,11 +819,11 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
               height: 40,
               decoration: BoxDecoration(
                 color: _flashEnabled
-                    ? themeProvider.accentColor.withValues(alpha: 0.2)
+                    ? AppColorUtils.amberAccent.withValues(alpha: 0.2)
                     : Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(20),
                 border: _flashEnabled
-                    ? Border.all(color: themeProvider.accentColor, width: 1.5)
+                    ? Border.all(color: AppColorUtils.amberAccent, width: 1.5)
                     : null,
               ),
               child: IconButton(
@@ -827,7 +831,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                 icon: Icon(
                   _flashEnabled ? Icons.flash_on : Icons.flash_off,
                   color: _flashEnabled
-                      ? themeProvider.accentColor
+                      ? AppColorUtils.amberAccent
                       : Theme.of(context).colorScheme.onSurface,
                   size: 20,
                 ),
@@ -921,8 +925,7 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         break;
     }
 
-    final buttonTextColor =
-        themeProvider.isDarkMode ? Colors.white : Colors.white;
+    const buttonTextColor = Colors.white;
 
     return ElevatedButton.icon(
       onPressed: _handleAction,
@@ -936,14 +939,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         ),
       ),
       style: ElevatedButton.styleFrom(
-        backgroundColor: themeProvider.accentColor,
+        backgroundColor: AppColorUtils.cyanAccent,
         foregroundColor: buttonTextColor,
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
         elevation: 8,
-        shadowColor: themeProvider.accentColor.withValues(alpha: 0.4),
+        shadowColor: AppColorUtils.cyanAccent.withValues(alpha: 0.4),
       ),
     );
   }
@@ -1058,7 +1061,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             style:
                                 GoogleFonts.inter(fontWeight: FontWeight.w600)),
                         subtitle: Text(
-                          l10n.commonByArtist(artwork['artist']?.toString() ?? l10n.commonUnknown),
+                            l10n.commonByArtist(artwork['artist']?.toString() ??
+                                l10n.commonUnknown),
                             style: GoogleFonts.inter(fontSize: 12)),
                         trailing: Icon(Icons.arrow_forward_ios, size: 16),
                         onTap: () {
@@ -1075,7 +1079,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                 SnackBar(
                                   content: Text(
                                     l10n.arSelectedArtworkToast(
-                                      artwork['title']?.toString() ?? l10n.commonUnknown,
+                                      artwork['title']?.toString() ??
+                                          l10n.commonUnknown,
                                     ),
                                   ),
                                   duration: const Duration(seconds: 2),
@@ -1148,63 +1153,66 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
         return Container(
-        height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                l10n.arPlacedArtworksTitle(_placedObjects.length),
-                style: GoogleFonts.inter(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  l10n.arPlacedArtworksTitle(_placedObjects.length),
+                  style: GoogleFonts.inter(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _placedObjects.length,
-                itemBuilder: (context, index) {
-                  final obj = _placedObjects[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      leading: Icon(Icons.view_in_ar,
-                          color: Theme.of(context).colorScheme.primary),
-                      title: Text(obj['title']),
-                      subtitle: Text(
-                        l10n.commonByArtist(obj['artist']?.toString() ?? l10n.commonUnknown),
-                      ),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
-                        onPressed: () {
-                          setState(() {
-                            _placedObjects.removeAt(index);
-                          });
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _placedObjects.length,
+                  itemBuilder: (context, index) {
+                    final obj = _placedObjects[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: Icon(Icons.view_in_ar,
+                            color: Theme.of(context).colorScheme.primary),
+                        title: Text(obj['title']),
+                        subtitle: Text(
+                          l10n.commonByArtist(
+                              obj['artist']?.toString() ?? l10n.commonUnknown),
+                        ),
+                        trailing: IconButton(
+                          icon: Icon(Icons.delete,
+                              color: Theme.of(context).colorScheme.error),
+                          onPressed: () {
+                            setState(() {
+                              _placedObjects.removeAt(index);
+                            });
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content: Text(l10n.arArtworkRemovedToast)),
+                            );
+                          },
+                        ),
+                        onTap: () {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(l10n.arArtworkRemovedToast)),
-                          );
+                          _showArtworkDetails(obj['id']);
                         },
                       ),
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showArtworkDetails(obj['id']);
-                      },
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
-        ),
-      );
+            ],
+          ),
+        );
       },
     );
   }
@@ -1246,10 +1254,10 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
     MarkerSubjectType selectedSubjectType = MarkerSubjectType.artwork;
     MarkerSubjectOption? selectedSubject =
-      subjectSelectionRequired(selectedSubjectType) &&
-          (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
-        ? subjectOptionsByType[selectedSubjectType]!.first
-        : null;
+        subjectSelectionRequired(selectedSubjectType) &&
+                (subjectOptionsByType[selectedSubjectType] ?? []).isNotEmpty
+            ? subjectOptionsByType[selectedSubjectType]!.first
+            : null;
 
     final titleController =
         TextEditingController(text: selectedSubject?.title ?? '');
@@ -1353,15 +1361,14 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
         'createdFrom': 'ar_screen_create_mode',
         'subjectType': selectedSubjectType.name,
         'subjectLabel': selectedSubjectType.label,
-          if (selectedSubject != null) ...{
-            'subjectId': selectedSubject!.id,
-            'subjectTitle': selectedSubject!.title,
-            'subjectSubtitle': selectedSubject!.subtitle,
-          },
+        if (selectedSubject != null) ...{
+          'subjectId': selectedSubject!.id,
+          'subjectTitle': selectedSubject!.title,
+          'subjectSubtitle': selectedSubject!.subtitle,
+        },
         'visibility': isPublic ? 'public' : 'private',
         'uploadTimestamp': DateTime.now().toIso8601String(),
-        if (selectedSubject?.metadata != null)
-          ...selectedSubject!.metadata!,
+        if (selectedSubject?.metadata != null) ...selectedSubject!.metadata!,
       };
 
       try {
@@ -1381,7 +1388,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           return;
         }
 
-        final walletAddress = context.read<WalletProvider>().currentWalletAddress;
+        final walletAddress =
+            context.read<WalletProvider>().currentWalletAddress;
 
         final marker = await _arMarkerService.createMarkerForArtwork(
           artwork: selectedArtwork,
@@ -1527,7 +1535,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                             .map(
                               (type) => DropdownMenuItem(
                                 value: type,
-                                child: Text('${type.label} (${l10n.commonRequired})'),
+                                child: Text(
+                                    '${type.label} (${l10n.commonRequired})'),
                               ),
                             )
                             .toList(),
@@ -1539,7 +1548,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                         DropdownButtonFormField<MarkerSubjectOption>(
                           initialValue: selectedSubject,
                           decoration: InputDecoration(
-                            labelText: l10n.arCreateSubjectLabel(selectedSubjectType.label),
+                            labelText: l10n.arCreateSubjectLabel(
+                                selectedSubjectType.label),
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12)),
                           ),
@@ -1581,7 +1591,8 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                                     descriptionController.text =
                                         value.subtitle.isNotEmpty
                                             ? value.subtitle
-                                            : l10n.arCreateDefaultDescription(value.title);
+                                            : l10n.arCreateDefaultDescription(
+                                                value.title);
                                   });
                                 },
                         )
@@ -1871,116 +1882,121 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           final title = artwork['title']?.toString() ?? l10n.commonUnknown;
           final artist = artwork['artist']?.toString() ?? l10n.commonUnknown;
           final model = artwork['model']?.toString() ?? l10n.commonUnknown;
-          final scale = artwork['scale'] is num ? (artwork['scale'] as num).toDouble() : null;
+          final scale = artwork['scale'] is num
+              ? (artwork['scale'] as num).toDouble()
+              : null;
           final scalePercent = scale == null
               ? l10n.commonUnknown
               : (scale * 100).toStringAsFixed(0);
 
           return Container(
-          height: MediaQuery.of(context).size.height * 0.6,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
+            height: MediaQuery.of(context).size.height * 0.6,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.commonByArtist(artist),
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.7),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 24),
-                _buildDetailRow(l10n.arDetailModelLabel, model),
-                _buildDetailRow(l10n.arDetailScaleLabel, '$scalePercent%'),
-                _buildDetailRow(
-                  l10n.arDetailPlacedLabel,
-                  _formatTimestamp(l10n, artwork['timestamp']),
-                ),
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.commonActions,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.commonByArtist(artist),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    _buildInteractionButton(
-                      Icons.share_outlined,
-                      l10n.arShareButtonLabel,
-                      onTap: () {
-                        _handleShare(artwork);
-                        setModalState(() {});
-                      },
+                  const SizedBox(height: 24),
+                  _buildDetailRow(l10n.arDetailModelLabel, model),
+                  _buildDetailRow(l10n.arDetailScaleLabel, '$scalePercent%'),
+                  _buildDetailRow(
+                    l10n.arDetailPlacedLabel,
+                    _formatTimestamp(l10n, artwork['timestamp']),
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.commonActions,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
-                    const SizedBox(width: 12),
-                    _buildInteractionButton(
-                      _likedArtworks.contains(artwork['id'])
-                          ? Icons.favorite
-                          : Icons.favorite_border,
-                      _likedArtworks.contains(artwork['id'])
-                          ? l10n.arLikedButtonLabel
-                          : l10n.arLikeButtonLabel,
-                      onTap: () {
-                        _handleLike(artwork);
-                        setModalState(() {}); // Update modal state immediately
-                      },
-                      isActive: _likedArtworks.contains(artwork['id']),
-                      activeColor: Theme.of(context).colorScheme.error,
-                    ),
-                    const SizedBox(width: 12),
-                    _buildInteractionButton(
-                      _savedArtworks.contains(artwork['id'])
-                          ? Icons.bookmark
-                          : Icons.bookmark_border,
-                      _savedArtworks.contains(artwork['id'])
-                          ? l10n.arSavedButtonLabel
-                          : l10n.arSaveButtonLabel,
-                      onTap: () {
-                        _handleSave(artwork);
-                        setModalState(() {}); // Update modal state immediately
-                      },
-                      isActive: _savedArtworks.contains(artwork['id']),
-                      activeColor: Theme.of(context).colorScheme.primary,
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _buildInteractionButton(
+                        Icons.share_outlined,
+                        l10n.arShareButtonLabel,
+                        onTap: () {
+                          _handleShare(artwork);
+                          setModalState(() {});
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                      _buildInteractionButton(
+                        _likedArtworks.contains(artwork['id'])
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        _likedArtworks.contains(artwork['id'])
+                            ? l10n.arLikedButtonLabel
+                            : l10n.arLikeButtonLabel,
+                        onTap: () {
+                          _handleLike(artwork);
+                          setModalState(
+                              () {}); // Update modal state immediately
+                        },
+                        isActive: _likedArtworks.contains(artwork['id']),
+                        activeColor: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(width: 12),
+                      _buildInteractionButton(
+                        _savedArtworks.contains(artwork['id'])
+                            ? Icons.bookmark
+                            : Icons.bookmark_border,
+                        _savedArtworks.contains(artwork['id'])
+                            ? l10n.arSavedButtonLabel
+                            : l10n.arSaveButtonLabel,
+                        onTap: () {
+                          _handleSave(artwork);
+                          setModalState(
+                              () {}); // Update modal state immediately
+                        },
+                        isActive: _savedArtworks.contains(artwork['id']),
+                        activeColor: Theme.of(context).colorScheme.primary,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );
@@ -2203,30 +2219,27 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     );
 
     if (!mounted) return;
-      final isLiked = _likedArtworks.contains(artwork['id']);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                isLiked ? Icons.favorite : Icons.favorite_border,
-                color: isLiked ? scheme.onPrimary : scheme.onSurface,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isLiked
-                    ? l10n.arLikeAddedToast
-                    : l10n.arLikeRemovedToast,
-              ),
-            ],
-          ),
-          backgroundColor: isLiked
-              ? scheme.primary
-              : scheme.surfaceContainerHighest,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
+    final isLiked = _likedArtworks.contains(artwork['id']);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isLiked ? Icons.favorite : Icons.favorite_border,
+              color: isLiked ? scheme.onPrimary : scheme.onSurface,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isLiked ? l10n.arLikeAddedToast : l10n.arLikeRemovedToast,
+            ),
+          ],
         ),
-      );
+        backgroundColor:
+            isLiked ? scheme.primary : scheme.surfaceContainerHighest,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _handleSave(Map<String, dynamic> artwork) async {
@@ -2265,49 +2278,45 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
     }
 
     if (!mounted) return;
-      final isSaved = _savedArtworks.contains(artwork['id']);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(
-                isSaved ? Icons.bookmark : Icons.bookmark_border,
-                color: isSaved ? scheme.onPrimary : scheme.onSurface,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isSaved
-                    ? l10n.arSaveAddedToast
-                    : l10n.arSaveRemovedToast,
-              ),
-            ],
-          ),
-          backgroundColor: isSaved
-              ? scheme.primary
-              : scheme.surfaceContainerHighest,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 2),
-          action: _savedArtworks.contains(artwork['id'])
-              ? SnackBarAction(
-                  label: l10n.commonView,
-                  textColor: scheme.onPrimary,
-                  onPressed: () {
-                    if (!mounted) return;
-                    // Navigate to profile collections using proper navigation
-                    Navigator.of(context).pop(); // Close AR screen first
-
-                    // Import ProfileScreenMethods is already available
-                    // Show collections modal instead of double pop which causes assertion
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (context.mounted) {
-                        ProfileScreenMethods.showCollections(context);
-                      }
-                    });
-                  },
-                )
-              : null,
+    final isSaved = _savedArtworks.contains(artwork['id']);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isSaved ? Icons.bookmark : Icons.bookmark_border,
+              color: isSaved ? scheme.onPrimary : scheme.onSurface,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isSaved ? l10n.arSaveAddedToast : l10n.arSaveRemovedToast,
+            ),
+          ],
         ),
-      );
+        backgroundColor:
+            isSaved ? scheme.primary : scheme.surfaceContainerHighest,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+        action: _savedArtworks.contains(artwork['id'])
+            ? SnackBarAction(
+                label: l10n.commonView,
+                textColor: scheme.onPrimary,
+                onPressed: () {
+                  final navigator = Navigator.of(context);
+                  // Close AR screen first, then present collections using a still-mounted navigator
+                  navigator.pop();
+
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final navContext = navigator.context;
+                    if (navContext.mounted) {
+                      ProfileScreenMethods.showCollections(navContext);
+                    }
+                  });
+                },
+              )
+            : null,
+      ),
+    );
   }
 
   void _showARSettings() {
@@ -2321,39 +2330,182 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
           final messenger = ScaffoldMessenger.of(context);
 
           return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.arSettingsTitle,
-                        style: GoogleFonts.inter(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
+            height: MediaQuery.of(context).size.height * 0.7,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.arSettingsTitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
                         ),
                       ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  // Scan Settings Section
+                  if (_currentMode == 'scan') ...[
+                    Text(
+                      l10n.arScannerSettingsTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
+                    const SizedBox(height: 12),
+                    ListTile(
+                      leading: Icon(Icons.flash_on,
+                          color: Theme.of(context).colorScheme.primary),
+                      title: Text(l10n.arFlashControlTitle,
+                          style: GoogleFonts.inter(fontSize: 14)),
+                      subtitle: Text(
+                          _flashEnabled
+                              ? l10n.commonCurrentlyOn
+                              : l10n.commonCurrentlyOff,
+                          style: GoogleFonts.inter(fontSize: 12)),
+                      trailing: Switch(
+                        value: _flashEnabled,
+                        onChanged: (value) async {
+                          if (_scannerController != null) {
+                            try {
+                              await _scannerController.toggleTorch();
+                              if (!context.mounted || !mounted) return;
+                              setModalState(
+                                  () => _flashEnabled = !_flashEnabled);
+                              setState(() => _flashEnabled = !_flashEnabled);
+                            } catch (e) {
+                              if (kDebugMode) {
+                                debugPrint('ARScreen: Flash toggle failed: $e');
+                              }
+                              if (!context.mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.arFlashNotAvailableToast),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
                     ),
+                    ListTile(
+                      leading: Icon(Icons.qr_code_scanner,
+                          color: Theme.of(context).colorScheme.primary),
+                      title: Text(l10n.arScannerOverlayTitle,
+                          style: GoogleFonts.inter(fontSize: 14)),
+                      subtitle: Text(l10n.arScannerOverlaySubtitle,
+                          style: GoogleFonts.inter(fontSize: 12)),
+                      onTap: () {
+                        Navigator.pop(context);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.arScannerOverlayResetToast),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
                   ],
-                ),
-                const SizedBox(height: 24),
-                // Scan Settings Section
-                if (_currentMode == 'scan') ...[
                   Text(
-                    l10n.arScannerSettingsTitle,
+                    l10n.arDisplayTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SwitchListTile(
+                    title: Text(l10n.arShowFeaturePointsTitle,
+                        style: GoogleFonts.inter(fontSize: 14)),
+                    subtitle: Text(l10n.arShowFeaturePointsSubtitle,
+                        style: GoogleFonts.inter(fontSize: 12)),
+                    value: _showFeaturePoints,
+                    onChanged: (value) {
+                      setModalState(() => _showFeaturePoints = value);
+                      setState(() => _showFeaturePoints = value);
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text(l10n.arShowPlanesTitle,
+                        style: GoogleFonts.inter(fontSize: 14)),
+                    subtitle: Text(l10n.arShowPlanesSubtitle,
+                        style: GoogleFonts.inter(fontSize: 12)),
+                    value: _showPlanes,
+                    onChanged: (value) {
+                      setModalState(() => _showPlanes = value);
+                      setState(() => _showPlanes = value);
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text(l10n.arAutoDetectSurfacesTitle,
+                        style: GoogleFonts.inter(fontSize: 14)),
+                    subtitle: Text(l10n.arAutoDetectSurfacesSubtitle,
+                        style: GoogleFonts.inter(fontSize: 12)),
+                    value: _autoDetectSurfaces,
+                    onChanged: (value) {
+                      setModalState(() => _autoDetectSurfaces = value);
+                      setState(() => _autoDetectSurfaces = value);
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text(l10n.arDebugInfoTitle,
+                        style: GoogleFonts.inter(fontSize: 14)),
+                    subtitle: Text(l10n.arDebugInfoSubtitle,
+                        style: GoogleFonts.inter(fontSize: 12)),
+                    value: _showDebugInfo,
+                    onChanged: (value) {
+                      setModalState(() => _showDebugInfo = value);
+                      setState(() => _showDebugInfo = value);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    l10n.arModelScaleLabel(
+                      (_modelScale * 100).toStringAsFixed(0),
+                    ),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                  Slider(
+                    value: _modelScale,
+                    min: 0.5,
+                    max: 2.0,
+                    divisions: 15,
+                    label: '${(_modelScale * 100).toStringAsFixed(0)}%',
+                    onChanged: (value) {
+                      setModalState(() => _modelScale = value);
+                      setState(() => _modelScale = value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.commonActions,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -2362,178 +2514,37 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 12),
                   ListTile(
-                    leading: Icon(Icons.flash_on,
-                        color: Theme.of(context).colorScheme.primary),
-                    title: Text(l10n.arFlashControlTitle,
+                    leading: const Icon(Icons.delete_sweep),
+                    title: Text(l10n.arClearAllArtworksTitle,
                         style: GoogleFonts.inter(fontSize: 14)),
-                    subtitle: Text(
-                        _flashEnabled
-                            ? l10n.commonCurrentlyOn
-                            : l10n.commonCurrentlyOff,
-                        style: GoogleFonts.inter(fontSize: 12)),
-                    trailing: Switch(
-                      value: _flashEnabled,
-                      onChanged: (value) async {
-                        if (_scannerController != null) {
-                          try {
-                            await _scannerController.toggleTorch();
-                            if (!context.mounted || !mounted) return;
-                            setModalState(() => _flashEnabled = !_flashEnabled);
-                            setState(() => _flashEnabled = !_flashEnabled);
-                          } catch (e) {
-                            if (kDebugMode) {
-                              debugPrint('ARScreen: Flash toggle failed: $e');
-                            }
-                            if (!context.mounted) return;
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.arFlashNotAvailableToast),
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.qr_code_scanner,
-                        color: Theme.of(context).colorScheme.primary),
-                    title: Text(l10n.arScannerOverlayTitle,
-                        style: GoogleFonts.inter(fontSize: 14)),
-                    subtitle: Text(l10n.arScannerOverlaySubtitle,
+                    subtitle: Text(l10n.arClearAllArtworksSubtitle,
                         style: GoogleFonts.inter(fontSize: 12)),
                     onTap: () {
+                      setState(() => _placedObjects.clear());
                       Navigator.pop(context);
                       messenger.showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.arScannerOverlayResetToast),
-                        ),
+                        SnackBar(content: Text(l10n.arAllArtworksClearedToast)),
                       );
                     },
                   ),
-                  const SizedBox(height: 16),
-                  const Divider(),
-                  const SizedBox(height: 16),
+                  ListTile(
+                    leading: const Icon(Icons.refresh),
+                    title: Text(l10n.arResetSessionTitle,
+                        style: GoogleFonts.inter(fontSize: 14)),
+                    subtitle: Text(l10n.arResetSessionSubtitle,
+                        style: GoogleFonts.inter(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _initializeAR();
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(l10n.arSessionResetToast)),
+                      );
+                    },
+                  ),
                 ],
-                Text(
-                  l10n.arDisplayTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SwitchListTile(
-                  title: Text(l10n.arShowFeaturePointsTitle,
-                      style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text(l10n.arShowFeaturePointsSubtitle,
-                      style: GoogleFonts.inter(fontSize: 12)),
-                  value: _showFeaturePoints,
-                  onChanged: (value) {
-                    setModalState(() => _showFeaturePoints = value);
-                    setState(() => _showFeaturePoints = value);
-                  },
-                ),
-                SwitchListTile(
-                  title: Text(l10n.arShowPlanesTitle,
-                      style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text(l10n.arShowPlanesSubtitle,
-                      style: GoogleFonts.inter(fontSize: 12)),
-                  value: _showPlanes,
-                  onChanged: (value) {
-                    setModalState(() => _showPlanes = value);
-                    setState(() => _showPlanes = value);
-                  },
-                ),
-                SwitchListTile(
-                  title: Text(l10n.arAutoDetectSurfacesTitle,
-                      style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text(l10n.arAutoDetectSurfacesSubtitle,
-                      style: GoogleFonts.inter(fontSize: 12)),
-                  value: _autoDetectSurfaces,
-                  onChanged: (value) {
-                    setModalState(() => _autoDetectSurfaces = value);
-                    setState(() => _autoDetectSurfaces = value);
-                  },
-                ),
-                SwitchListTile(
-                  title: Text(l10n.arDebugInfoTitle,
-                      style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text(l10n.arDebugInfoSubtitle,
-                      style: GoogleFonts.inter(fontSize: 12)),
-                  value: _showDebugInfo,
-                  onChanged: (value) {
-                    setModalState(() => _showDebugInfo = value);
-                    setState(() => _showDebugInfo = value);
-                  },
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.arModelScaleLabel(
-                    (_modelScale * 100).toStringAsFixed(0),
-                  ),
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                Slider(
-                  value: _modelScale,
-                  min: 0.5,
-                  max: 2.0,
-                  divisions: 15,
-                  label: '${(_modelScale * 100).toStringAsFixed(0)}%',
-                  onChanged: (value) {
-                    setModalState(() => _modelScale = value);
-                    setState(() => _modelScale = value);
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.commonActions,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  leading: const Icon(Icons.delete_sweep),
-                  title: Text(l10n.arClearAllArtworksTitle,
-                      style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text(l10n.arClearAllArtworksSubtitle,
-                      style: GoogleFonts.inter(fontSize: 12)),
-                  onTap: () {
-                    setState(() => _placedObjects.clear());
-                    Navigator.pop(context);
-                    messenger.showSnackBar(
-                      SnackBar(content: Text(l10n.arAllArtworksClearedToast)),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.refresh),
-                  title: Text(l10n.arResetSessionTitle,
-                      style: GoogleFonts.inter(fontSize: 14)),
-                  subtitle: Text(l10n.arResetSessionSubtitle,
-                      style: GoogleFonts.inter(fontSize: 12)),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _initializeAR();
-                    messenger.showSnackBar(
-                      SnackBar(content: Text(l10n.arSessionResetToast)),
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
-          ),
-        );
+          );
         },
       ),
     );

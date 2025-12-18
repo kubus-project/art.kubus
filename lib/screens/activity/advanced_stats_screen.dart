@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
-import '../../providers/themeprovider.dart';
+import '../../utils/app_color_utils.dart';
+import '../../utils/kubus_color_roles.dart';
 
 class AdvancedStatsScreen extends StatefulWidget {
   final String statType;
@@ -120,7 +120,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                       _selectedTimeframe = timeframe;
                     });
                   },
-                  selectedColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.2),
+                  selectedColor: AppColorUtils.amberAccent.withValues(alpha: 0.2),
                 );
               }).toList(),
             ),
@@ -131,7 +131,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   }
 
   Widget _buildAdvancedChart() {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     final data = _getExtendedStatsData();
     
     return Card(
@@ -154,7 +154,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                   _selectedTimeframe,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: scheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -165,8 +165,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               child: CustomPaint(
                 painter: LineChartPainter(
                   data: data,
-                  accentColor: themeProvider.accentColor,
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                  accentColor: scheme.tertiary,
+                  backgroundColor: scheme.primaryContainer,
                 ),
                 size: const Size.fromHeight(250),
               ),
@@ -222,7 +222,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 children: [
                   Icon(
                     isPositive ? Icons.trending_up : Icons.trending_down,
-                    color: isPositive ? Colors.green : Colors.red,
+                    color: isPositive 
+                        ? KubusColorRoles.of(context).positiveAction 
+                        : KubusColorRoles.of(context).negativeAction,
                     size: 20,
                   ),
                   const SizedBox(width: 4),
@@ -231,7 +233,9 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: isPositive ? Colors.green : Colors.red,
+                      color: isPositive 
+                          ? KubusColorRoles.of(context).positiveAction 
+                          : KubusColorRoles.of(context).negativeAction,
                     ),
                   ),
                 ],
@@ -310,6 +314,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   }
 
   Widget _buildComparisonItem(String label, String value, bool isPositive) {
+    final roles = KubusColorRoles.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -323,7 +328,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
             children: [
               Icon(
                 isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                color: isPositive ? Colors.green : Colors.red,
+                color: isPositive ? roles.positiveAction : roles.negativeAction,
                 size: 16,
               ),
               const SizedBox(width: 4),
@@ -332,7 +337,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isPositive ? Colors.green : Colors.red,
+                  color: isPositive ? roles.positiveAction : roles.negativeAction,
                 ),
               ),
             ],
@@ -355,7 +360,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               children: [
                 Icon(
                   Icons.lightbulb,
-                  color: Provider.of<ThemeProvider>(context).accentColor,
+                  color: AppColorUtils.purpleAccent,
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -378,7 +383,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                     height: 6,
                     margin: const EdgeInsets.only(top: 6),
                     decoration: BoxDecoration(
-                      color: Provider.of<ThemeProvider>(context).accentColor,
+                      color: AppColorUtils.purpleAccent,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -425,7 +430,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
   }
 
   Widget _buildGoalItem(String title, String target, double progress) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final scheme = Theme.of(context).colorScheme;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,7 +446,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               target,
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: scheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -454,7 +459,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
             child: InlineLoading(
               progress: progress,
               tileSize: 6.0,
-              color: themeProvider.accentColor,
+              color: AppColorUtils.greenAccent,
               duration: const Duration(milliseconds: 700),
             ),
           ),
@@ -464,7 +469,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           '${(progress * 100).toInt()}% complete',
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color: scheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],

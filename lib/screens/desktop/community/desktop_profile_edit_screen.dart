@@ -1078,6 +1078,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
               username: uprof.username,
               bio: uprof.bio,
               profileImageUrl: uprof.avatar,
+              coverImageUrl: _normalizeMediaUrl(uprof.coverImage),
               followersCount: uprof.stats?.followersCount ?? 0,
               followingCount: uprof.stats?.followingCount ?? 0,
               postsCount: uprof.stats?.artworksCreated ?? 0,

@@ -10,6 +10,7 @@ import '../models/message.dart';
 import '../models/user.dart';
 import '../models/user_profile.dart';
 import '../services/event_bus.dart';
+import '../utils/media_url_resolver.dart';
 import '../utils/wallet_utils.dart';
 
 class ChatProvider extends ChangeNotifier {
@@ -631,6 +632,7 @@ class ChatProvider extends ChangeNotifier {
               username: p.username,
               bio: p.bio,
               profileImageUrl: p.avatar,
+              coverImageUrl: MediaUrlResolver.resolve(p.coverImage),
               followersCount: p.stats?.followersCount ?? 0,
               followingCount: p.stats?.followingCount ?? 0,
               postsCount: p.stats?.artworksCreated ?? 0,
@@ -650,6 +652,7 @@ class ChatProvider extends ChangeNotifier {
                 username: p.username,
                 bio: p.bio,
                 profileImageUrl: p.avatar,
+                coverImageUrl: MediaUrlResolver.resolve(p.coverImage),
                 followersCount: p.stats?.followersCount ?? 0,
                 followingCount: p.stats?.followingCount ?? 0,
                 postsCount: p.stats?.artworksCreated ?? 0,

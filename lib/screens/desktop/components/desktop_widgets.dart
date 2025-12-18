@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/kubus_color_roles.dart';
 
 /// Desktop content card with hover effects and animations
 class DesktopCard extends StatefulWidget {
@@ -300,38 +301,44 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                       ),
                     ),
                     if (widget.change != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: widget.isPositive
-                              ? Colors.green.withValues(alpha: 0.1)
-                              : Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.isPositive
-                                  ? Icons.arrow_upward
-                                  : Icons.arrow_downward,
-                              size: 14,
-                              color: widget.isPositive ? Colors.green : Colors.red,
+                      Builder(
+                        builder: (context) {
+                          final roles = KubusColorRoles.of(context);
+                          final changeColor = widget.isPositive
+                              ? roles.positiveAction
+                              : roles.negativeAction;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
                             ),
-                            const SizedBox(width: 2),
-                            Text(
-                              widget.change!,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: widget.isPositive ? Colors.green : Colors.red,
-                              ),
+                            decoration: BoxDecoration(
+                              color: changeColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                          ],
-                        ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  widget.isPositive
+                                      ? Icons.arrow_upward
+                                      : Icons.arrow_downward,
+                                  size: 14,
+                                  color: changeColor,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  widget.change!,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: changeColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                   ],
                 ),

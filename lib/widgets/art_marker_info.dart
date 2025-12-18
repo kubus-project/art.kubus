@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../models/art_marker.dart';
 import '../models/artwork.dart';
+import '../utils/app_color_utils.dart';
 
 Future<void> showArtMarkerInfoDialog({
   required BuildContext context,
@@ -12,6 +13,17 @@ Future<void> showArtMarkerInfoDialog({
   LatLng? userPosition,
 }) {
   final scheme = Theme.of(context).colorScheme;
+  final baseColor = AppColorUtils.markerSubjectColor(
+    markerType: marker.type.name,
+    metadata: marker.metadata,
+    scheme: scheme,
+  );
+  final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
+  final primaryExhibition = marker.primaryExhibitionSummary;
+  final displayTitle = hasExhibitions && (primaryExhibition?.title ?? '').isNotEmpty
+      ? primaryExhibition!.title!
+      : (artwork?.title ?? marker.name);
+
   final distanceText = () {
     if (userPosition == null) return null;
     const distance = Distance();
@@ -31,12 +43,38 @@ Future<void> showArtMarkerInfoDialog({
       backgroundColor: scheme.surface,
       title: Row(
         children: [
-          Icon(Icons.location_on, color: scheme.primary),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: baseColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              hasExhibitions ? AppColorUtils.exhibitionIcon : Icons.location_on,
+              color: baseColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              marker.name,
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (hasExhibitions) ...[
+                  Text(
+                    'Exhibition',
+                    style: GoogleFonts.outfit(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: baseColor,
+                    ),
+                  ),
+                ],
+                Text(
+                  displayTitle,
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                ),
+              ],
             ),
           ),
         ],
@@ -55,11 +93,20 @@ Future<void> showArtMarkerInfoDialog({
                   child: Image.network(
                     artwork!.imageUrl!,
                     fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _imageFallback(baseColor, scheme, marker),
                   ),
+                ),
+              )
+            else
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: _imageFallback(baseColor, scheme, marker),
                 ),
               ),
             const SizedBox(height: 12),
-            if (artwork != null)
+            if (artwork != null && !hasExhibitions)
               Text(
                 artwork.title,
                 style: GoogleFonts.outfit(
@@ -92,24 +139,30 @@ Future<void> showArtMarkerInfoDialog({
               runSpacing: 8,
               children: [
                 if (distanceText != null)
-                  _chip(scheme, Icons.near_me, distanceText),
+                  _chip(scheme, Icons.near_me, distanceText, baseColor),
+                if (hasExhibitions)
+                  _chip(scheme, Icons.verified_outlined, 'POAP', baseColor),
                 _chip(
                   scheme,
                   Icons.category_outlined,
                   marker.category.isNotEmpty ? marker.category : marker.type.name,
+                  baseColor,
                 ),
                 if (artwork != null)
                   _chip(
                     scheme,
                     Icons.military_tech_outlined,
                     artwork.rarity.name,
+                    baseColor,
                   ),
-                _chip(scheme, Icons.card_giftcard, '${artwork?.rewards ?? 0} POAP'),
+                if (artwork != null && artwork.rewards > 0)
+                  _chip(scheme, Icons.card_giftcard, '+${artwork.rewards}', baseColor),
                 if (poapCount > 0 || badgeCount > 0)
                   _chip(
                     scheme,
                     Icons.emoji_events_outlined,
                     '$poapCount POAP • $badgeCount badges',
+                    baseColor,
                   ),
               ],
             ),
@@ -126,21 +179,45 @@ Future<void> showArtMarkerInfoDialog({
   );
 }
 
-Widget _chip(ColorScheme scheme, IconData icon, String label) {
+Widget _imageFallback(Color baseColor, ColorScheme scheme, ArtMarker marker) {
+  final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
+  return Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [
+          baseColor.withValues(alpha: 0.25),
+          baseColor.withValues(alpha: 0.55),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+    ),
+    child: Center(
+      child: Icon(
+        hasExhibitions ? AppColorUtils.exhibitionIcon : Icons.auto_awesome,
+        color: scheme.onPrimary,
+        size: 48,
+      ),
+    ),
+  );
+}
+
+Widget _chip(ColorScheme scheme, IconData icon, String label, Color accentColor) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
-      color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      color: accentColor.withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: accentColor.withValues(alpha: 0.25)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: scheme.primary),
+        Icon(icon, size: 14, color: accentColor),
         const SizedBox(width: 6),
         Text(
           label,
-          style: GoogleFonts.outfit(fontSize: 12),
+          style: GoogleFonts.outfit(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ],
     ),

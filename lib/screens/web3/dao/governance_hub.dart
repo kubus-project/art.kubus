@@ -13,6 +13,7 @@ import '../../../widgets/empty_state_card.dart';
 import '../../../models/dao.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../config/config.dart';
+import '../../../utils/app_color_utils.dart';
 
 
 class GovernanceHub extends StatefulWidget {
@@ -436,12 +437,12 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: themeProvider.accentColor.withValues(alpha: 0.2),
+                backgroundColor: AppColorUtils.purpleAccent.withValues(alpha: 0.2),
                 backgroundImage: review.applicantProfile?['avatarUrl'] != null
                     ? NetworkImage(review.applicantProfile!['avatarUrl'] as String)
                     : null,
                 child: review.applicantProfile?['avatarUrl'] == null
-                    ? Icon(Icons.person, color: themeProvider.accentColor)
+                    ? Icon(Icons.person, color: AppColorUtils.purpleAccent)
                     : null,
               ),
               const SizedBox(width: 10),
@@ -511,7 +512,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                 onPressed: isActionInFlight ? null : () => _showReviewDetails(review),
                 icon: Icon(Icons.visibility, color: colorScheme.onSurface, size: 16),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
+                  backgroundColor: AppColorUtils.purpleAccent,
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
@@ -831,7 +832,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
   }
 
   Widget _buildProposalCard(Proposal proposal) {
-    final color = Provider.of<ThemeProvider>(context, listen: false).accentColor;
+    final color = AppColorUtils.indigoAccent;
     final totalVotes = proposal.totalVotes;
     final supportPct = (proposal.supportPercentage * 100).clamp(0, 100);
     final l10n = AppLocalizations.of(context)!;
@@ -1521,7 +1522,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
         final transactions = daoProvider.transactions;
         final inflow = transactions.where((tx) => tx.amount >= 0).fold<double>(0, (sum, tx) => sum + tx.amount);
         final outflow = transactions.where((tx) => tx.amount < 0).fold<double>(0, (sum, tx) => sum + tx.amount.abs());
-        final accent = Provider.of<ThemeProvider>(context).accentColor;
+        const treasuryColor = AppColorUtils.amberAccent;
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -1529,8 +1530,8 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                accent.withValues(alpha: 0.85),
-                accent,
+                treasuryColor.withValues(alpha: 0.85),
+                treasuryColor,
               ],
             ),
             borderRadius: BorderRadius.circular(16),
@@ -1774,7 +1775,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                   onPressed: () => setState(() => _selectedIndex = 2),
                   child: Text(
                     l10n.daoCreateProposalButton,
-                    style: TextStyle(color: Provider.of<ThemeProvider>(context).accentColor),
+                    style: TextStyle(color: AppColorUtils.purpleAccent),
                   ),
                 ),
               ],
@@ -1943,7 +1944,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: Provider.of<ThemeProvider>(context).accentColor,
+                          color: AppColorUtils.purpleAccent,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Center(
@@ -1988,7 +1989,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                             style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
+                              color: AppColorUtils.amberAccent,
                             ),
                           ),
                           Container(
@@ -2190,7 +2191,7 @@ class _GovernanceHubState extends State<GovernanceHub> with TickerProviderStateM
                                   width: 40,
                                   height: 40,
                                   decoration: BoxDecoration(
-                                    color: Provider.of<ThemeProvider>(context).accentColor,
+                                    color: AppColorUtils.purpleAccent,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Center(
