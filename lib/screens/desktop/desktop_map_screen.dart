@@ -26,6 +26,7 @@ import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_marker_helper.dart';
 import '../../utils/map_search_suggestion.dart';
 import '../../widgets/art_marker_cube.dart';
+import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
 import '../../widgets/map_marker_dialog.dart';
 import '../../utils/grid_utils.dart';
@@ -43,7 +44,16 @@ import '../../services/search_service.dart';
 /// Desktop map screen with Google Maps-style presentation
 /// Features side panel for artwork details and filters
 class DesktopMapScreen extends StatefulWidget {
-  const DesktopMapScreen({super.key});
+  final LatLng? initialCenter;
+  final double? initialZoom;
+  final bool autoFollow;
+
+  const DesktopMapScreen({
+    super.key,
+    this.initialCenter,
+    this.initialZoom,
+    this.autoFollow = true,
+  });
 
   @override
   State<DesktopMapScreen> createState() => _DesktopMapScreenState();
@@ -116,11 +126,22 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _animationController.forward();
     _markerStreamSub =
         _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
-    _cameraCenter = const LatLng(46.0569, 14.5058);
+
+    _autoFollow = widget.autoFollow;
+    _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
+    _cameraZoom = widget.initialZoom ?? _cameraZoom;
+
+    if (widget.initialCenter != null) {
+      _moveCamera(_cameraCenter, _cameraZoom);
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadMarkers(force: true);
-      _refreshUserLocation(animate: true);
+
+      // Only animate camera to user location when we're not deep-linking to a target.
+      // When initialCenter is provided (e.g. "Open on Map"), keep the camera focused on that target.
+      final bool shouldAnimateToUser = widget.initialCenter == null && widget.autoFollow;
+      _refreshUserLocation(animate: shouldAnimateToUser);
       _prefetchMarkerSubjects();
     });
   }
@@ -731,17 +752,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    AppLocalizations.of(context)!.commonByArtist(
-                      artwork.artist.isNotEmpty
-                          ? artwork.artist
-                          : AppLocalizations.of(context)!.commonUnknown,
-                    ),
+                  ArtworkCreatorByline(
+                    artwork: artwork,
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       color: scheme.tertiary,
                       fontWeight: FontWeight.w500,
                     ),
+                    maxLines: 1,
                   ),
                   const SizedBox(height: 16),
                   if (artwork.description.isNotEmpty) ...[
@@ -2382,11 +2400,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       width: markerWidth,
       height: markerHeight,
       child: GestureDetector(
-        onTap: () {
-          _moveCamera(marker.position, math.max(_effectiveZoom, 15));
-          setState(() => _activeMarker = marker);
-          _ensureLinkedArtworkLoaded(marker);
-        },
+        onTap: () => _handleMarkerTap(marker),
         child: ArtMarkerCube(
           marker: marker,
           baseColor: color,
@@ -2396,6 +2410,39 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         ),
       ),
     );
+  }
+
+  void _handleMarkerTap(ArtMarker marker) {
+    _moveCamera(marker.position, math.max(_effectiveZoom, 15));
+    setState(() => _activeMarker = marker);
+
+    final primaryExhibition = marker.primaryExhibitionSummary;
+    final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
+    final exhibitionsApiAvailable =
+        BackendApiService().exhibitionsApiAvailable;
+    final canPresentExhibition = exhibitionsFeatureEnabled &&
+        primaryExhibition != null &&
+        primaryExhibition.id.isNotEmpty &&
+        exhibitionsApiAvailable != false;
+
+    final isExhibitionMarker = marker.isExhibitionSubject ||
+        (primaryExhibition != null &&
+            primaryExhibition.id.isNotEmpty &&
+            (marker.artworkId == null || marker.artworkId!.isEmpty));
+
+    if (isExhibitionMarker) {
+      if (!canPresentExhibition) return;
+
+      final exhibitionId = primaryExhibition.id;
+      final hasSelection = _selectedArtwork != null || _selectedExhibition != null;
+      final alreadySelected = _selectedExhibition?.id == exhibitionId;
+      if (!hasSelection || alreadySelected) {
+        unawaited(_openExhibitionFromMarker(marker, primaryExhibition, null));
+      }
+      return;
+    }
+
+    unawaited(_ensureLinkedArtworkLoaded(marker));
   }
 
   Marker _buildClusterMarker(
@@ -3056,6 +3103,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<Artwork?> _ensureLinkedArtworkLoaded(ArtMarker marker,
       {Artwork? initial}) async {
+    if (marker.isExhibitionSubject) return initial;
     Artwork? resolvedArtwork = initial;
     final artworkProvider = context.read<ArtworkProvider>();
 

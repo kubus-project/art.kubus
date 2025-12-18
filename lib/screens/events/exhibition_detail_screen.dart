@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../models/exhibition.dart';
 import '../../models/artwork.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../widgets/collaboration_panel.dart';
@@ -48,7 +49,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   bool _canManageExhibition(String? myRole) {
     final role = (myRole ?? '').trim().toLowerCase();
     if (role.isEmpty) return false;
-    return role == 'owner' || role == 'admin' || role == 'editor' || role == 'host';
+    // Keep in sync with backend `canEditEntity` (curator+) while preserving legacy `host`.
+    return role == 'owner' || role == 'admin' || role == 'publisher' || role == 'editor' || role == 'curator' || role == 'host';
   }
 
   Future<void> _showLinkArtworksDialog(Exhibition exhibition) async {
@@ -57,15 +59,61 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     final artworkProvider = context.read<ArtworkProvider>();
     final exhibitionsProvider = context.read<ExhibitionsProvider>();
+    final collabProvider = context.read<CollabProvider>();
 
-    final artworks = List<Artwork>.from(artworkProvider.artworks);
+    // Ensure we have a reasonably fresh list of artworks for selection.
+    // (This screen does not guarantee ArtworkProvider has been initialized.)
+    if (artworkProvider.artworks.isEmpty) {
+      try {
+        await artworkProvider.loadArtworks(refresh: true);
+      } catch (_) {
+        // ArtworkProvider reports its own errors; fall through.
+      }
+    }
+
+    // Best-effort: ensure collaborator list is loaded so we can filter eligible artworks.
+    // This is UX-only filtering; server enforces ownership.
+    try {
+      await collabProvider.loadCollaborators('exhibitions', exhibition.id);
+    } catch (_) {
+      // Provider handles error state.
+    }
+
+    if (!mounted) return;
+
+    final members = collabProvider.collaboratorsFor('exhibitions', exhibition.id);
+    final allowedUserIds = members
+        .map((m) => m.userId.trim())
+        .where((v) => v.isNotEmpty)
+        .toSet();
+    final allowedWalletsLower = members
+        .map((m) => (m.user?.walletAddress ?? '').trim().toLowerCase())
+        .where((v) => v.isNotEmpty)
+        .toSet();
+
+    bool isMemberOwned(Artwork art) {
+      final meta = art.metadata ?? const <String, dynamic>{};
+      final creatorId = (meta['creatorId'] ?? meta['creator_id'])?.toString().trim();
+      if (creatorId != null && creatorId.isNotEmpty && allowedUserIds.contains(creatorId)) {
+        return true;
+      }
+      final wallet = (meta['walletAddress'] ?? meta['wallet_address'])?.toString().trim().toLowerCase();
+      if (wallet != null && wallet.isNotEmpty && allowedWalletsLower.contains(wallet)) {
+        return true;
+      }
+      return false;
+    }
+
+    final artworks = List<Artwork>.from(artworkProvider.artworks.where(isMemberOwned));
     if (artworks.isEmpty) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('No artworks available to link.', style: GoogleFonts.inter()),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('No artworks available to link.', style: GoogleFonts.inter()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       return;
     }
 
@@ -139,9 +187,6 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      if (mounted) {
-        unawaited(_load());
-      }
     } catch (_) {
       messenger.showSnackBar(
         SnackBar(
@@ -230,6 +275,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                               : 'Artworks linked to this exhibition will appear here.',
                           style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
                         ),
+                        const SizedBox(height: 12),
+                        _LinkedArtworksList(exhibition: ex),
                       ],
                     ),
                   ),
@@ -282,6 +329,53 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         ),
       ),
     );
+  }
+}
+
+class _LinkedArtworksList extends StatelessWidget {
+  const _LinkedArtworksList({required this.exhibition});
+
+  final Exhibition exhibition;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final artworkProvider = context.watch<ArtworkProvider>();
+
+    final ids = exhibition.artworkIds;
+    if (ids.isEmpty) {
+      return Text(
+        'No artworks linked yet.',
+        style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
+      );
+    }
+
+    final tiles = <Widget>[];
+    for (final id in ids) {
+      final art = artworkProvider.getArtworkById(id);
+      tiles.add(
+        ListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: Text(
+            art?.title ?? 'Artwork',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text(
+            art?.artist.isNotEmpty == true ? art!.artist : id,
+            style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          leading: Icon(Icons.image_outlined, color: scheme.onSurface.withValues(alpha: 0.7)),
+        ),
+      );
+      tiles.add(Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5)));
+    }
+
+    // Drop trailing divider.
+    if (tiles.isNotEmpty) tiles.removeLast();
+    return Column(children: tiles);
   }
 }
 

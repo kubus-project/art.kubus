@@ -8,6 +8,7 @@ import '../../models/artwork.dart';
 import '../../community/community_interactions.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
+import '../../widgets/artwork_creator_byline.dart';
 
 enum SavedItemsCategory { artworks, posts, all }
 
@@ -1020,12 +1021,13 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      'by ${artwork.artist}',
+                    ArtworkCreatorByline(
+                      artwork: artwork,
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         color: scheme.tertiary,
                       ),
+                      maxLines: 1,
                     ),
                     const SizedBox(height: 16),
                     Text(

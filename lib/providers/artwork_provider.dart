@@ -224,6 +224,7 @@ class ArtworkProvider extends ChangeNotifier {
       final artwork = getArtworkById(artworkId);
       if (artwork != null) {
         final wasLiked = artwork.isLikedByCurrentUser;
+        final original = artwork;
         final updatedArtwork = artwork.copyWith(
           isLikedByCurrentUser: !artwork.isLikedByCurrentUser,
           likesCount: artwork.isLikedByCurrentUser 
@@ -244,12 +245,24 @@ class ArtworkProvider extends ChangeNotifier {
             artistName: artwork.artist,
           );
         }
-        
-        // Sync with backend (fire-and-forget - don't block UI)
-        _syncLikeWithBackend(artworkId, !wasLiked).catchError((e) {
-          debugPrint('Failed to sync like with backend: $e');
-        });
-        await _simulateApiDelay();
+
+        // Sync with backend and reconcile count.
+        try {
+          final updatedCount = (!wasLiked)
+              ? await _backendApi.likeArtwork(artworkId)
+              : await _backendApi.unlikeArtwork(artworkId);
+
+          if (updatedCount != null) {
+            final latest = getArtworkById(artworkId);
+            if (latest != null) {
+              addOrUpdateArtwork(latest.copyWith(likesCount: updatedCount));
+            }
+          }
+        } catch (e) {
+          // Rollback optimistic state on failure.
+          addOrUpdateArtwork(original);
+          rethrow;
+        }
       }
     } catch (e) {
       _setError('Failed to toggle like: $e');
@@ -292,12 +305,6 @@ class ArtworkProvider extends ChangeNotifier {
             artistName: artwork.artist,
           );
         }
-        
-        // Sync with backend (fire-and-forget)
-        _syncFavoriteWithBackend(artworkId, isAddingToFavorites).catchError((e) {
-          debugPrint('Failed to sync favorite with backend: $e');
-        });
-        await _simulateApiDelay();
       }
     } catch (e) {
       _setError('Failed to toggle favorite: $e');
@@ -330,14 +337,18 @@ class ArtworkProvider extends ChangeNotifier {
           _taskProvider!.trackArtworkVisit(artworkId);
         }
         
-        // Sync with backend and potentially award discovery tokens
-        _syncDiscoveryWithBackend(artworkId, userId).then((_) {
-          // Award KUB8 tokens for first discovery (handled by achievement system)
-          debugPrint('Artwork $artworkId discovered by $userId');
-        }).catchError((e) {
-          debugPrint('Failed to sync discovery with backend: $e');
-        });
-        await _simulateApiDelay();
+        // Sync with backend and reconcile server discovery count.
+        try {
+          final serverCount = await _backendApi.discoverArtworkWithCount(artworkId);
+          if (serverCount != null) {
+            final latest = getArtworkById(artworkId);
+            if (latest != null) {
+              addOrUpdateArtwork(latest.copyWith(discoveryCount: serverCount));
+            }
+          }
+        } catch (e) {
+          debugPrint('ArtworkProvider.discoverArtwork sync failed: $e');
+        }
       }
     } catch (e) {
       _setError('Failed to discover artwork: $e');
@@ -362,14 +373,34 @@ class ArtworkProvider extends ChangeNotifier {
           _taskProvider!.trackArtworkVisit(artworkId);
         }
         
-        // Sync with backend quietly (fire-and-forget, no error propagation)
-        _syncViewCountWithBackend(artworkId).catchError((e) {
-          // Silent fail - view counting is not critical
-        });
+        // Sync with backend and reconcile server count (deduplicates per day for authed users).
+        final serverViews = await _backendApi.recordArtworkView(artworkId);
+        if (serverViews != null) {
+          final latest = getArtworkById(artworkId);
+          if (latest != null && latest.viewsCount != serverViews) {
+            addOrUpdateArtwork(latest.copyWith(viewsCount: serverViews));
+          }
+        }
       }
     } catch (e) {
       // Silent fail for view counting
       debugPrint('Failed to increment view count: $e');
+    }
+  }
+
+  /// Fetch comments from backend and store them locally.
+  Future<void> loadComments(String artworkId, {bool force = false}) async {
+    final operation = 'load_comments_$artworkId';
+    if (!force && isLoading(operation)) return;
+    _setLoading(operation, true);
+    try {
+      final fetched = await _backendApi.getArtworkComments(artworkId: artworkId, page: 1, limit: 100);
+      _comments[artworkId] = _nestArtworkComments(fetched);
+      notifyListeners();
+    } catch (e) {
+      _setError('Failed to load comments: $e');
+    } finally {
+      _setLoading(operation, false);
     }
   }
 
@@ -382,8 +413,9 @@ class ArtworkProvider extends ChangeNotifier {
   Future<void> addComment(String artworkId, String content, String userId, String userName) async {
     _setLoading('comment_$artworkId', true);
     try {
+      final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
       final newComment = ArtworkComment(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        id: tempId,
         artworkId: artworkId,
         userId: userId,
         userName: userName,
@@ -407,12 +439,34 @@ class ArtworkProvider extends ChangeNotifier {
 
       notifyListeners();
       
-      // Sync with backend
-      await _syncCommentWithBackend(artworkId, newComment).catchError((e) {
-        debugPrint('Failed to sync comment with backend: $e');
-        // Comment is still saved locally
-      });
-      await _simulateApiDelay();
+      // Sync with backend and replace optimistic comment.
+      try {
+        final created = await _backendApi.createArtworkComment(
+          artworkId: artworkId,
+          content: content,
+        );
+        final list = _comments[artworkId];
+        if (list != null) {
+          final idx = list.indexWhere((c) => c.id == tempId);
+          if (idx >= 0) {
+            list[idx] = created;
+            _comments[artworkId] = _nestArtworkComments(list);
+          } else {
+            // If the temp comment isn't present anymore, refresh from backend.
+            await loadComments(artworkId, force: true);
+          }
+        }
+        notifyListeners();
+      } catch (e) {
+        // Rollback optimistic comment + counter.
+        _comments[artworkId]?.removeWhere((c) => c.id == tempId);
+        final artwork = getArtworkById(artworkId);
+        if (artwork != null) {
+          addOrUpdateArtwork(artwork.copyWith(commentsCount: (artwork.commentsCount - 1).clamp(0, 1 << 30)));
+        }
+        notifyListeners();
+        rethrow;
+      }
 
       // Track comment interaction for achievements/tasks
       if (_taskProvider != null) {
@@ -433,6 +487,7 @@ class ArtworkProvider extends ChangeNotifier {
         final commentIndex = comments.indexWhere((c) => c.id == commentId);
         if (commentIndex >= 0) {
           final comment = comments[commentIndex];
+          final original = comment;
           final updatedComment = comment.copyWith(
             isLikedByCurrentUser: !comment.isLikedByCurrentUser,
             likesCount: comment.isLikedByCurrentUser 
@@ -441,11 +496,20 @@ class ArtworkProvider extends ChangeNotifier {
           );
           comments[commentIndex] = updatedComment;
           notifyListeners();
-          
-          // Sync with backend (fire-and-forget)
-          _syncCommentLikeWithBackend(artworkId, commentId, updatedComment.isLikedByCurrentUser)
-            .catchError((e) => debugPrint('Failed to sync comment like: $e'));
-          await _simulateApiDelay();
+
+          try {
+            final updatedCount = updatedComment.isLikedByCurrentUser
+                ? await _backendApi.likeComment(commentId)
+                : await _backendApi.unlikeComment(commentId);
+            if (updatedCount != null) {
+              comments[commentIndex] = comments[commentIndex].copyWith(likesCount: updatedCount);
+              notifyListeners();
+            }
+          } catch (e) {
+            comments[commentIndex] = original;
+            notifyListeners();
+            rethrow;
+          }
         }
       }
     } catch (e) {
@@ -609,49 +673,25 @@ class ArtworkProvider extends ChangeNotifier {
     await Future.delayed(const Duration(milliseconds: 500));
   }
 
-  // ===========================================
-  // BACKEND SYNC METHODS
-  // ===========================================
-  
-  /// Sync like action with backend (fire-and-forget)
-  Future<void> _syncLikeWithBackend(String artworkId, bool isLiked) async {
-    // In production: Call BackendApiService().likeArtwork(artworkId, isLiked)
-    // For now: Placeholder that simulates backend call
-    await Future.delayed(const Duration(milliseconds: 100));
-    debugPrint('Backend sync: Artwork $artworkId ${isLiked ? "liked" : "unliked"}');
-  }
-  
-  /// Sync favorite action with backend
-  Future<void> _syncFavoriteWithBackend(String artworkId, bool isFavorite) async {
-    // In production: Call BackendApiService().favoriteArtwork(artworkId, isFavorite)
-    await Future.delayed(const Duration(milliseconds: 100));
-    debugPrint('Backend sync: Artwork $artworkId ${isFavorite ? "favorited" : "unfavorited"}');
-  }
-  
-  /// Sync discovery with backend and trigger achievement check
-  Future<void> _syncDiscoveryWithBackend(String artworkId, String userId) async {
-    // In production: Call BackendApiService().discoverArtwork(artworkId)
-    await Future.delayed(const Duration(milliseconds: 100));
-    debugPrint('Backend sync: Artwork $artworkId discovered by $userId');
-  }
-  
-  /// Sync view count increment with backend (silent)
-  Future<void> _syncViewCountWithBackend(String artworkId) async {
-    // In production: Call BackendApiService().incrementViewCount(artworkId)
-    await Future.delayed(const Duration(milliseconds: 50));
-  }
-  
-  /// Sync comment with backend
-  Future<void> _syncCommentWithBackend(String artworkId, ArtworkComment comment) async {
-    // In production: Call BackendApiService().addComment(artworkId, comment)
-    await Future.delayed(const Duration(milliseconds: 100));
-    debugPrint('Backend sync: Comment added to artwork $artworkId');
-  }
-  
-  /// Sync comment like with backend
-  Future<void> _syncCommentLikeWithBackend(String artworkId, String commentId, bool isLiked) async {
-    // In production: Call BackendApiService().likeComment(artworkId, commentId, isLiked)
-    await Future.delayed(const Duration(milliseconds: 50));
+  List<ArtworkComment> _nestArtworkComments(List<ArtworkComment> flat) {
+    if (flat.isEmpty) return const <ArtworkComment>[];
+
+    final Map<String, ArtworkComment> byId = {
+      for (final c in flat) c.id: c.copyWith(replies: const []),
+    };
+    final List<ArtworkComment> roots = [];
+
+    for (final c in byId.values) {
+      final parentId = c.parentCommentId;
+      if (parentId != null && parentId.isNotEmpty && byId.containsKey(parentId)) {
+        final parent = byId[parentId]!;
+        byId[parentId] = parent.copyWith(replies: [...parent.replies, c]);
+      } else {
+        roots.add(c);
+      }
+    }
+
+    return roots;
   }
 }
 

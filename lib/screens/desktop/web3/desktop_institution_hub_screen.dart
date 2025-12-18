@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
@@ -28,11 +29,12 @@ class DesktopInstitutionHubScreen extends StatefulWidget {
   const DesktopInstitutionHubScreen({super.key});
 
   @override
-  State<DesktopInstitutionHubScreen> createState() => _DesktopInstitutionHubScreenState();
+  State<DesktopInstitutionHubScreen> createState() =>
+      _DesktopInstitutionHubScreenState();
 }
 
-class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScreen>
-    with TickerProviderStateMixin {
+class _DesktopInstitutionHubScreenState
+    extends State<DesktopInstitutionHubScreen> with TickerProviderStateMixin {
   late AnimationController _animationController;
   DAOReview? _institutionReview;
   bool _reviewLoading = false;
@@ -72,8 +74,11 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
   }
 
   String _resolveWalletAddress({bool listen = false}) {
-    final profileProvider = listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
-    final web3Provider = listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
+    final profileProvider = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
+    final web3Provider =
+        listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
     return WalletUtils.coalesce(
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
@@ -83,7 +88,11 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
   Future<void> _loadInstitutionReviewStatus({bool forceRefresh = false}) async {
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh && _hasFetchedReviewForWallet && wallet == _lastReviewWallet) return;
+    if (!forceRefresh &&
+        _hasFetchedReviewForWallet &&
+        wallet == _lastReviewWallet) {
+      return;
+    }
 
     final requestedWallet = wallet;
     setState(() {
@@ -93,11 +102,13 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
 
     try {
       final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet, forceRefresh: forceRefresh);
+      final review = await daoProvider.loadReviewForWallet(requestedWallet,
+          forceRefresh: forceRefresh);
       if (!mounted || requestedWallet != _lastReviewWallet) return;
 
       setState(() {
-        _institutionReview = review ?? daoProvider.findReviewForWallet(requestedWallet);
+        _institutionReview =
+            review ?? daoProvider.findReviewForWallet(requestedWallet);
         _hasFetchedReviewForWallet = true;
         _reviewLoading = false;
       });
@@ -139,7 +150,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                       color: Theme.of(context).scaffoldBackgroundColor,
                       border: Border(
                         right: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -163,17 +177,21 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
 
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final persona = context.watch<ProfileProvider>().userPersona;
-    final showCreateActions = persona == null || persona == UserPersona.institution;
+    final showCreateActions =
+        persona == null || persona == UserPersona.institution;
 
     // Compute approval status for gating quick actions
     final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-    final review = _institutionReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
-    final hasInstitutionBadge = profileProvider.currentUser?.isInstitution ?? false;
+    final review = _institutionReview ??
+        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final hasInstitutionBadge =
+        profileProvider.currentUser?.isInstitution ?? false;
     final reviewStatus = review?.status.toLowerCase() ?? '';
     final reviewIsInstitution = review?.isInstitutionApplication ?? false;
-    final isApprovedInstitution = hasInstitutionBadge || (reviewIsInstitution && reviewStatus == 'approved');
+    final isApprovedInstitution = hasInstitutionBadge ||
+        (reviewIsInstitution && reviewStatus == 'approved');
 
     return Container(
       color: Theme.of(context).colorScheme.surface,
@@ -212,7 +230,8 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                 final scheme = Theme.of(context).colorScheme;
                 final badge = pending > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: scheme.error,
                           borderRadius: BorderRadius.circular(999),
@@ -234,8 +253,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
 
                 return _buildQuickActionTile(
                   'Invites',
-                  pending > 0 ? 'You have pending collaboration invites' : 'View collaboration invites',
-                  Icons.group_add_outlined,
+                  pending > 0
+                      ? 'You have pending collaboration invites'
+                      : 'View collaboration invites',
+                  Icons.inbox_outlined,
                   Theme.of(context).colorScheme.primary,
                   () {
                     DesktopShellScope.of(context)?.pushScreen(
@@ -249,7 +270,9 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                 );
               },
             ),
-          if (isApprovedInstitution && showCreateActions && AppConfig.isFeatureEnabled('events'))
+          if (isApprovedInstitution &&
+              showCreateActions &&
+              AppConfig.isFeatureEnabled('events'))
             _buildQuickActionTile(
               'Create Event',
               'Schedule a new event',
@@ -264,7 +287,9 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                 );
               },
             ),
-          if (isApprovedInstitution && showCreateActions && AppConfig.isFeatureEnabled('exhibitions'))
+          if (isApprovedInstitution &&
+              showCreateActions &&
+              AppConfig.isFeatureEnabled('exhibitions'))
             _buildQuickActionTile(
               'Create Exhibition',
               'Publish a new exhibition',
@@ -294,17 +319,19 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                 );
               },
             ),
-          if (isApprovedInstitution && AppConfig.isFeatureEnabled('exhibitions'))
+          if (isApprovedInstitution &&
+              AppConfig.isFeatureEnabled('exhibitions'))
             _buildQuickActionTile(
               'My Exhibitions',
               'View hosted and collaborating exhibitions',
               Icons.collections_bookmark_outlined,
-              const Color(0xFF9C27B0), // Purple for exhibitions
+              KubusColorRoles.of(context).web3InstitutionAccent,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'My Exhibitions',
-                    child: const ExhibitionListScreen(embedded: true, canCreate: true),
+                    child: const ExhibitionListScreen(
+                        embedded: true, canCreate: true),
                   ),
                 );
               },
@@ -362,7 +389,8 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
     final isPending = status == 'pending';
     final isRejected = status == 'rejected';
 
-    Color statusColor = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    Color statusColor =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
     String statusText = 'Not Applied';
     String statusDescription = 'Apply for institution verification';
@@ -420,7 +448,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                       statusDescription,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -437,7 +468,8 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                   // Apply functionality handled by mobile view
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: themeProvider.accentColor,
+                  backgroundColor:
+                      KubusColorRoles.of(context).web3InstitutionAccent,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -456,14 +488,9 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
     );
   }
 
-  Widget _buildQuickActionTile(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-    {Widget? trailing}
-  ) {
+  Widget _buildQuickActionTile(String title, String subtitle, IconData icon,
+      Color color, VoidCallback onTap,
+      {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
@@ -508,7 +535,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                         subtitle,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -518,7 +548,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
                     Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
                     ),
               ],
             ),
@@ -579,7 +612,8 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -606,7 +640,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -618,7 +655,10 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .primaryContainer
+            .withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -626,14 +666,18 @@ class _DesktopInstitutionHubScreenState extends State<DesktopInstitutionHubScree
           Icon(
             Icons.event_available,
             size: 40,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 8),
           Text(
             'No upcoming events',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],

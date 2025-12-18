@@ -5,7 +5,6 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/artwork_provider.dart';
-import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
@@ -371,8 +370,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               children: [
                 Icon(
                   stat['positive'] ? Icons.trending_up : Icons.trending_down,
-                  color: stat['positive'] 
-                      ? KubusColorRoles.of(context).positiveAction 
+                  color: stat['positive']
+                      ? KubusColorRoles.of(context).positiveAction
                       : KubusColorRoles.of(context).negativeAction,
                   size: 14,
                 ),
@@ -382,8 +381,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                     stat['change'],
                     style: GoogleFonts.inter(
                       fontSize: 10,
-                      color: stat['positive'] 
-                          ? KubusColorRoles.of(context).positiveAction 
+                      color: stat['positive']
+                          ? KubusColorRoles.of(context).positiveAction
                           : KubusColorRoles.of(context).negativeAction,
                       fontWeight: FontWeight.w600,
                     ),
@@ -481,7 +480,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                               width: 20,
                               height: height,
                               decoration: BoxDecoration(
-                                color: AppColorUtils.indigoAccent,
+                                color: KubusColorRoles.of(context)
+                                    .web3InstitutionAccent,
                                 borderRadius: BorderRadius.circular(4),
                               ),
                             ),
@@ -871,7 +871,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               child: InlineLoading(
                 progress: percentage,
                 tileSize: 6.0,
-                color: AppColorUtils.indigoAccent,
+                color: KubusColorRoles.of(context).web3InstitutionAccent,
                 duration: animationTheme.medium,
                 animate: true,
               ),
@@ -939,7 +939,9 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColorUtils.indigoAccent.withValues(alpha: 0.2),
+              color: KubusColorRoles.of(context)
+                  .web3InstitutionAccent
+                  .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(

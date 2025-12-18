@@ -48,7 +48,9 @@ class InstitutionProvider extends ChangeNotifier {
         await _tryLoadFromBackendAndPersist();
       }
     } catch (e) {
-      debugPrint('Error loading institution data: $e');
+      if (kDebugMode) {
+        debugPrint('InstitutionProvider: Error loading institution data: $e');
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -78,7 +80,9 @@ class InstitutionProvider extends ChangeNotifier {
         await _persist();
       }
     } catch (e) {
-      debugPrint('InstitutionProvider _loadFromBackend error: $e');
+      if (kDebugMode) {
+        debugPrint('InstitutionProvider: backend load failed (ignored): $e');
+      }
     }
   }
 

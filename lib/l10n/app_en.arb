@@ -18,6 +18,10 @@
   "commonGotIt": "Got it",
   "commonInstall": "Install",
   "commonNavigate": "Navigate",
+  "commonOpenOnMap": "Open on map",
+  "@commonOpenOnMap": {
+    "description": "Label for an action that opens the in-app map centered on the current item (artwork/event/exhibition)."
+  },
   "commonReplace": "Replace",
   "commonSearch": "Search",
   "commonNotifications": "Notifications",
@@ -1323,6 +1327,17 @@
   "userProfileEventFallbackTitle": "Event",
 
   "collectionSettingsTitle": "Collection Settings",
+  "artistStudioCreatePrompt": "What would you like to create?",
+  "artistStudioCreateOptionArtworkTitle": "Create artwork",
+  "artistStudioCreateOptionArtworkSubtitle": "Upload media, set details, and publish.",
+  "artistStudioCreateOptionCollectionTitle": "Create collection",
+  "artistStudioCreateOptionCollectionSubtitle": "Curate a set of artworks into a collection.",
+  "collectionCreatorTitle": "Create collection",
+  "collectionCreatorNameRequiredError": "Collection name is required",
+  "collectionCreatorCreateFailed": "Failed to create collection.",
+  "collectionCreatorCreateFailedWithError": "Failed to create collection: {error}",
+  "collectionDetailLoadFailedMessage": "Failed to load collection details. Please try again.",
+  "collectionDetailNoArtworksYet": "No artworks yet.",
   "collectionDetailAddArtwork": "Add Artwork",
   "collectionDetailManage": "Manage",
   "collectionDetailArtworks": "Artworks",
@@ -2327,6 +2342,16 @@
   "commonTimeAgoJustNow": "Just now",
 
   "postDetailLoadPostFailedMessage": "Failed to load post.",
+  "postDetailMoreOptionsReportAction": "Report",
+  "postDetailReportPostDialogTitle": "Report post",
+  "postDetailReportPostDialogQuestion": "Why are you reporting this post?",
+  "postDetailEditPostTitle": "Edit post",
+  "postDetailPostUpdatedToast": "Post updated",
+  "postDetailUpdatePostFailedToast": "Failed to update post.",
+  "postDetailDeletePostTitle": "Delete post",
+  "postDetailDeletePostBody": "Are you sure you want to delete this post? This action cannot be undone.",
+  "postDetailPostDeletedToast": "Post deleted",
+  "postDetailDeletePostFailedToast": "Failed to delete post.",
   "postDetailPostLikedToast": "Post liked",
   "postDetailLikeRemovedToast": "Like removed",
   "postDetailUndoLikeFailedToast": "Failed to undo like.",
@@ -2569,6 +2594,8 @@
 
   "communityReplyingToCommentLabel": "Replying…",
   "communityCommentAuthRequiredToast": "Sign in to comment.",
+
+  "communityRepostedByTitle": "Reposted by",
 
   "communityRepostsLoadFailedMessage": "Failed to load reposts.",
   "communityNoRepostsTitle": "No reposts yet",

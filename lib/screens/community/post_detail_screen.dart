@@ -7,6 +7,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/wallet_utils.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../services/backend_api_service.dart';
@@ -19,8 +20,19 @@ class PostDetailScreen extends StatefulWidget {
   final CommunityPost? post;
   final String? postId;
   final VoidCallback? onClose;
+  final Future<List<CommunityLikeUser>> Function(String postId)? postLikesLoader;
+  final Future<List<Map<String, dynamic>>> Function(String postId)? postRepostsLoader;
+  final String? currentWalletAddressOverride;
 
-  const PostDetailScreen({super.key, this.post, this.postId, this.onClose}) : assert(post != null || postId != null);
+  const PostDetailScreen({
+    super.key,
+    this.post,
+    this.postId,
+    this.onClose,
+    this.postLikesLoader,
+    this.postRepostsLoader,
+    this.currentWalletAddressOverride,
+  }) : assert(post != null || postId != null);
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -44,6 +56,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   final FocusNode _commentFocusNode = FocusNode();
 
   String? _currentWalletAddress() {
+    final override = widget.currentWalletAddressOverride;
+    if (override != null) return override;
     try {
       return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
     } catch (_) {
@@ -357,6 +371,683 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
         );
       },
+    );
+  }
+
+  void _showPostLikes() {
+    final post = _post;
+    if (!mounted || post == null) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final loader = widget.postLikesLoader;
+    final future = loader != null
+        ? loader(post.id)
+        : BackendApiService().getPostLikes(post.id);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.communityPostLikesTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      color: theme.colorScheme.onSurface,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: FutureBuilder<List<CommunityLikeUser>>(
+                  future: future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text(
+                            l10n.postDetailLoadLikesFailedMessage,
+                            style: GoogleFonts.inter(
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    final likes = snapshot.data ?? <CommunityLikeUser>[];
+                    if (likes.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: EmptyStateCard(
+                            icon: Icons.favorite_border,
+                            title: l10n.postDetailNoLikesTitle,
+                            description: l10n.postDetailNoLikesDescription,
+                          ),
+                        ),
+                      );
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      itemCount: likes.length,
+                      separatorBuilder: (_, __) => Divider(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
+                      ),
+                      itemBuilder: (context, index) {
+                        final user = likes[index];
+                        final subtitleParts = <String>[];
+                        if (user.username != null && user.username!.isNotEmpty) {
+                          subtitleParts.add('@${user.username}');
+                        }
+                        if (user.walletAddress != null &&
+                            user.walletAddress!.isNotEmpty) {
+                          subtitleParts.add(user.walletAddress!);
+                        }
+                        if (user.likedAt != null) {
+                          subtitleParts.add(user.likedAt!.toIso8601String());
+                        }
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: AvatarWidget(
+                            wallet: user.walletAddress ?? user.userId,
+                            avatarUrl: user.avatarUrl,
+                            radius: 20,
+                            enableProfileNavigation: true,
+                          ),
+                          title: Text(
+                            user.displayName.isNotEmpty
+                                ? user.displayName
+                                : l10n.commonUnnamed,
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: subtitleParts.isNotEmpty
+                              ? Text(
+                                  subtitleParts.join(' ƒ?› '),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.6),
+                                  ),
+                                )
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showPostReposts() {
+    final post = _post;
+    if (!mounted || post == null) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final loader = widget.postRepostsLoader;
+    final future = loader != null
+        ? loader(post.id)
+        : BackendApiService().getPostReposts(postId: post.id);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l10n.communityRepostedByTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        l10n.communityRepostsLoadFailedMessage,
+                        style: GoogleFonts.inter(),
+                      ),
+                    );
+                  }
+                  final reposts = snapshot.data ?? [];
+                  if (reposts.isEmpty) {
+                    return Center(
+                      child: EmptyStateCard(
+                        icon: Icons.repeat,
+                        title: l10n.communityNoRepostsTitle,
+                        description: l10n.communityNoRepostsDescription,
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: reposts.length,
+                    itemBuilder: (ctx, idx) {
+                      final repost = reposts[idx];
+                      final user = repost['user'] as Map<String, dynamic>?;
+                      final username = user?['username'] ??
+                          user?['walletAddress'] ??
+                          l10n.commonUnknown;
+                      final displayName = user?['displayName'] ?? username;
+                      final avatar = user?['avatar'];
+                      final comment = repost['repostComment'] as String?;
+                      final createdAt =
+                          DateTime.tryParse(repost['createdAt'] ?? '');
+
+                      return ListTile(
+                        leading: AvatarWidget(
+                          wallet: WalletUtils.resolveFromMap(
+                            user,
+                            fallback: username,
+                          ),
+                          avatarUrl: avatar,
+                          radius: 20,
+                          enableProfileNavigation: true,
+                        ),
+                        title: Text(
+                          displayName,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '@$username',
+                              style: GoogleFonts.inter(fontSize: 12),
+                            ),
+                            if (comment != null && comment.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                comment,
+                                style: GoogleFonts.inter(fontSize: 12),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                        trailing: createdAt != null
+                            ? Text(
+                                _timeAgo(createdAt),
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.5),
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool _isCurrentUserPost(CommunityPost post) {
+    final current = _currentWalletAddress();
+    if (current == null || current.trim().isEmpty) return false;
+    return WalletUtils.equals(post.authorWallet ?? post.authorId, current);
+  }
+
+  void _showPostOptionsMenu() {
+    final post = _post;
+    if (!mounted || post == null) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final isOwner = _isCurrentUserPost(post);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (!isOwner)
+              ListTile(
+                leading: const Icon(Icons.report),
+                title: Text(
+                  l10n.postDetailMoreOptionsReportAction,
+                  style: GoogleFonts.inter(fontSize: 16),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showReportPostDialog();
+                },
+              )
+            else ...[
+              ListTile(
+                leading: const Icon(Icons.edit_outlined),
+                title: Text(
+                  l10n.commonEdit,
+                  style: GoogleFonts.inter(fontSize: 16),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _showEditPostSheet();
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: theme.colorScheme.error,
+                ),
+                title: Text(
+                  l10n.commonDelete,
+                  style: GoogleFonts.inter(
+                    fontSize: 16,
+                    color: theme.colorScheme.error,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _confirmDeletePost();
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReportPostDialog() {
+    final post = _post;
+    if (!mounted || post == null) return;
+    final l10n = AppLocalizations.of(context)!;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          l10n.postDetailReportPostDialogTitle,
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.postDetailReportPostDialogQuestion,
+              style: GoogleFonts.inter(),
+            ),
+            const SizedBox(height: 16),
+            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonSpam),
+            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonInappropriate),
+            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonHarassment),
+            _buildPostReportOption(dialogContext, post, l10n.userProfileReportReasonOther),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.commonCancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPostReportOption(
+    BuildContext dialogContext,
+    CommunityPost post,
+    String reason,
+  ) {
+    return ListTile(
+      title: Text(reason, style: GoogleFonts.inter()),
+      onTap: () async {
+        Navigator.pop(dialogContext);
+        try {
+          await CommunityService.reportPost(post, reason);
+        } catch (_) {}
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.userProfileReportSubmittedToast),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showEditPostSheet() {
+    final post = _post;
+    if (!mounted || post == null) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final controller = TextEditingController(text: post.content);
+    bool saving = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+            ),
+            child: Container(
+              height: MediaQuery.of(context).size.height * 0.6,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.outline,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          l10n.postDetailEditPostTitle,
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: saving ? null : () => Navigator.pop(sheetContext),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      child: TextField(
+                        controller: controller,
+                        maxLines: null,
+                        style: GoogleFonts.inter(),
+                        decoration: InputDecoration(
+                          hintText: l10n.communityComposerTextHint,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed:
+                                saving ? null : () => Navigator.pop(sheetContext),
+                            child: Text(l10n.commonCancel),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: saving
+                                ? null
+                                : () async {
+                                    final messenger =
+                                        ScaffoldMessenger.of(context);
+                                    final navigator = Navigator.of(sheetContext);
+
+                                    final content =
+                                        controller.text.trim();
+                                    final existingMediaUrls = post.mediaUrls.isNotEmpty
+                                        ? post.mediaUrls
+                                        : (post.imageUrl != null &&
+                                                post.imageUrl!.trim().isNotEmpty)
+                                            ? [post.imageUrl!.trim()]
+                                            : <String>[];
+                                    if (content.isEmpty && existingMediaUrls.isEmpty) {
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            l10n.communityComposerAddContentToast,
+                                          ),
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setModalState(() => saving = true);
+                                    try {
+                                      await BackendApiService().updateCommunityPost(
+                                        postId: post.id,
+                                        content: content,
+                                        mediaUrls: existingMediaUrls,
+                                      );
+                                      if (!mounted) return;
+                                      setState(() {
+                                        _post = post.copyWith(content: content);
+                                      });
+                                      navigator.pop();
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content:
+                                              Text(l10n.postDetailPostUpdatedToast),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (kDebugMode) {
+                                        debugPrint(
+                                            'PostDetailScreen: update post failed: $e');
+                                      }
+                                      if (!mounted) return;
+                                      setModalState(() => saving = false);
+                                      messenger.showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            l10n.postDetailUpdatePostFailedToast,
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  },
+                            child: saving
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(l10n.commonSave),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
+  Future<void> _confirmDeletePost() async {
+    final post = _post;
+    if (!mounted || post == null) return;
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    bool deleting = false;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            l10n.postDetailDeletePostTitle,
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            l10n.postDetailDeletePostBody,
+            style: GoogleFonts.inter(),
+          ),
+          actions: [
+            TextButton(
+              onPressed: deleting ? null : () => Navigator.pop(dialogContext),
+              child: Text(l10n.commonCancel),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.error,
+                foregroundColor: theme.colorScheme.onError,
+              ),
+              onPressed: deleting
+                  ? null
+                  : () async {
+                      setDialogState(() => deleting = true);
+                      final messenger = ScaffoldMessenger.of(context);
+                      final dialogNavigator = Navigator.of(dialogContext);
+                      final navigator = Navigator.of(context);
+                      final onClose = widget.onClose;
+                      try {
+                        await BackendApiService().deleteCommunityPost(post.id);
+                        if (!mounted) return;
+                        dialogNavigator.pop();
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.postDetailPostDeletedToast),
+                          ),
+                        );
+                        if (onClose != null) {
+                          onClose();
+                        } else {
+                          navigator.maybePop();
+                        }
+                      } catch (e) {
+                        if (kDebugMode) {
+                          debugPrint(
+                              'PostDetailScreen: delete post failed: $e');
+                        }
+                        if (!mounted) return;
+                        setDialogState(() => deleting = false);
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content:
+                                Text(l10n.postDetailDeletePostFailedToast),
+                          ),
+                        );
+                      }
+                    },
+              child: deleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.commonDelete),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -875,72 +1566,84 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         ],
         // Artwork reference
         if (post.artwork != null) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: scheme.outline.withValues(alpha: 0.3),
+          GestureDetector(
+            key: const ValueKey('post_detail_artwork_card'),
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              Navigator.pushNamed(
+                context,
+                '/artwork',
+                arguments: {'artworkId': post.artwork!.id},
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: scheme.outline.withValues(alpha: 0.3),
+                ),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: scheme.tertiary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: post.artwork!.imageUrl != null
-                      ? ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Image.network(
-                            post.artwork!.imageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.view_in_ar,
-                              color: scheme.tertiary,
-                              size: 24,
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: scheme.tertiary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: post.artwork!.imageUrl != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.network(
+                              post.artwork!.imageUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.view_in_ar,
+                                color: scheme.tertiary,
+                                size: 24,
+                              ),
                             ),
+                          )
+                        : Icon(
+                            Icons.view_in_ar,
+                            color: scheme.tertiary,
+                            size: 24,
                           ),
-                        )
-                      : Icon(
-                          Icons.view_in_ar,
-                          color: scheme.tertiary,
-                          size: 24,
-                        ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        post.artwork!.title,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        AppLocalizations.of(context)!.postDetailLinkedArtworkLabel,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: scheme.onSurface.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: scheme.onSurface.withValues(alpha: 0.4),
-                ),
-              ],
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          post.artwork!.title,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          AppLocalizations.of(context)!
+                              .postDetailLinkedArtworkLabel,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.chevron_right,
+                    color: scheme.onSurface.withValues(alpha: 0.4),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -1245,9 +1948,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   }
 
   Widget _buildDetailAction({
+    Key? actionKey,
     required IconData icon,
     required String label,
     VoidCallback? onTap,
+    VoidCallback? onLongPress,
+    VoidCallback? onSecondaryTap,
     bool highlight = false,
   }) {
     final scheme = Theme.of(context).colorScheme;
@@ -1255,8 +1961,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     return Expanded(
       child: InkWell(
+        key: actionKey,
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
+        onLongPress: onLongPress,
+        onSecondaryTap: onSecondaryTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
@@ -1293,6 +2002,13 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           onPressed: widget.onClose ?? () => Navigator.of(context).maybePop(),
         ),
         title: Text(l10n.commonPost, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        actions: [
+          IconButton(
+            key: const ValueKey('post_detail_more_menu'),
+            icon: const Icon(Icons.more_vert),
+            onPressed: _post == null ? null : _showPostOptionsMenu,
+          ),
+        ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -1308,12 +2024,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       Row(
                         children: [
                           _buildDetailAction(
+                            actionKey: const ValueKey('post_detail_like_action'),
                             icon: _post!.isLiked ? Icons.favorite : Icons.favorite_border,
                             label: '${_post!.likeCount}',
                             onTap: _toggleLike,
+                            onLongPress: _showPostLikes,
+                            onSecondaryTap: _showPostLikes,
                             highlight: _post!.isLiked,
                           ),
                           _buildDetailAction(
+                            actionKey: const ValueKey('post_detail_comment_action'),
                             icon: Icons.chat_bubble_outline,
                             label: '${_post!.commentCount}',
                             onTap: () {
@@ -1321,11 +2041,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                             },
                           ),
                           _buildDetailAction(
+                            actionKey: const ValueKey('post_detail_repost_action'),
                             icon: Icons.repeat,
                             label: '${_post!.shareCount}',
                             onTap: () => _showRepostModal(),
+                            onLongPress: _showPostReposts,
+                            onSecondaryTap: _showPostReposts,
                           ),
                           _buildDetailAction(
+                            actionKey: const ValueKey('post_detail_share_action'),
                             icon: Icons.share,
                             label: l10n.commonShare,
                             onTap: () => _showShareModal(),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/artwork_creator_byline.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -15,6 +16,9 @@ import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/rarity_ui.dart';
+import '../../utils/map_navigation.dart';
+import '../../widgets/collaboration_panel.dart';
+import '../../config/config.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 class ArtDetailScreen extends StatefulWidget {
@@ -176,6 +180,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                             const SizedBox(height: 24),
                             _buildActionButtons(artwork),
                             const SizedBox(height: 24),
+                            if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+                              CollaborationPanel(
+                                entityType: 'artworks',
+                                entityId: artwork.id,
+                              ),
+                              const SizedBox(height: 24),
+                            ],
                             _buildCommentsSection(artwork, artworkProvider),
                             const SizedBox(height: 100), // Bottom padding
                           ]),
@@ -480,8 +491,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ),
         ),
         const SizedBox(height: 8),
-        Text(
-          'by ${artwork.artist}',
+        ArtworkCreatorByline(
+          artwork: artwork,
           style: GoogleFonts.outfit(
             fontSize: 18,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -657,6 +668,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   setState(() {
                     _showComments = !_showComments;
                   });
+
+                  if (_showComments) {
+                    context.read<ArtworkProvider>().loadComments(widget.artworkId);
+                  }
                 },
                 icon: Icon(
                   _showComments ? Icons.comment : Icons.comment_outlined,
@@ -734,19 +749,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     if (!_showComments) return const SizedBox.shrink();
 
     final comments = provider.getComments(artwork.id);
+    final isLoading = provider.isLoading('load_comments_${artwork.id}');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Comments (${comments.length})',
+          'Comments (${artwork.commentsCount})',
           style: GoogleFonts.outfit(
             fontSize: 20,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 16),
-        if (comments.isEmpty)
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: InlineLoading()),
+          )
+        else if (comments.isEmpty)
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
@@ -984,6 +1005,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   void _showNavigationOptions(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     final lat = artwork.position.latitude;
     final lng = artwork.position.longitude;
     final artTitle = artwork.title;
@@ -1027,6 +1049,20 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
+                    _buildNavigationOption(
+                      icon: Icons.map_outlined,
+                      title: l10n.commonOpenOnMap,
+                      onTap: () {
+                        Navigator.pop(context);
+                        MapNavigation.open(
+                          this.context,
+                          center: artwork.position,
+                          zoom: 16,
+                          autoFollow: false,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     _buildNavigationOption(
                       icon: Icons.map,
                       title: 'Google Maps',

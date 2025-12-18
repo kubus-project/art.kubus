@@ -30,6 +30,7 @@ class Exhibition {
   final DateTime? updatedAt;
   final String? myRole;
   final UserSummaryDto? host;
+  final List<String> artworkIds;
 
   const Exhibition({
     required this.id,
@@ -47,12 +48,21 @@ class Exhibition {
     this.updatedAt,
     this.myRole,
     this.host,
+    this.artworkIds = const <String>[],
   });
 
   bool get isPublished => (status ?? '').toLowerCase() == 'published';
 
   factory Exhibition.fromJson(Map<String, dynamic> json) {
     final hostRaw = json['host'];
+    final artworkIdsRaw = json['artworkIds'] ?? json['artwork_ids'];
+    final artworkIds = <String>[];
+    if (artworkIdsRaw is List) {
+      for (final v in artworkIdsRaw) {
+        final s = v?.toString().trim();
+        if (s != null && s.isNotEmpty) artworkIds.add(s);
+      }
+    }
     return Exhibition(
       id: (json['id'] ?? '').toString(),
       eventId: (json['eventId'] ?? json['event_id'])?.toString(),
@@ -69,6 +79,7 @@ class Exhibition {
       updatedAt: _parseDateTime(json['updatedAt'] ?? json['updated_at']),
       myRole: (json['myRole'] ?? json['my_role'])?.toString(),
       host: hostRaw is Map<String, dynamic> ? UserSummaryDto.fromJson(hostRaw) : null,
+      artworkIds: artworkIds,
     );
   }
 
@@ -89,6 +100,7 @@ class Exhibition {
       'updatedAt': updatedAt?.toIso8601String(),
       'myRole': myRole,
       'host': host?.toJson(),
+      'artworkIds': artworkIds,
     };
   }
 
@@ -108,6 +120,7 @@ class Exhibition {
     DateTime? updatedAt,
     String? myRole,
     UserSummaryDto? host,
+    List<String>? artworkIds,
   }) {
     return Exhibition(
       id: id ?? this.id,
@@ -125,6 +138,7 @@ class Exhibition {
       updatedAt: updatedAt ?? this.updatedAt,
       myRole: myRole ?? this.myRole,
       host: host ?? this.host,
+      artworkIds: artworkIds ?? this.artworkIds,
     );
   }
 }

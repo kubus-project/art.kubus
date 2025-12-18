@@ -198,7 +198,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
                   children: [
                     IconButton(
                       tooltip: 'Invites',
-                      icon: Icon(Icons.group_add_outlined, color: Theme.of(context).colorScheme.onSurface),
+                      icon: Icon(Icons.inbox_outlined, color: Theme.of(context).colorScheme.onSurface),
                       onPressed: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),

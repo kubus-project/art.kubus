@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../models/collab_invite.dart';
 import '../../providers/collab_provider.dart';
+import '../art/art_detail_screen.dart';
+import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import '../../widgets/avatar_widget.dart';
@@ -70,7 +72,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Accept an invite to help manage an event or exhibition.',
+                  'Accept an invite to help manage an event, exhibition, artwork, or collection.',
                   style: GoogleFonts.inter(
                     fontSize: 13,
                     color: scheme.onSurface.withValues(alpha: 0.7),
@@ -161,6 +163,20 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     if (type == 'exhibitions' || type == 'exhibition') {
       Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: id)),
+      );
+      return;
+    }
+
+    if (type == 'artworks' || type == 'artwork') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: id)),
+      );
+      return;
+    }
+
+    if (type == 'collections' || type == 'collection') {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => CollectionDetailScreen(collectionId: id)),
       );
       return;
     }
@@ -282,6 +298,12 @@ class _InviteCard extends StatelessWidget {
       case 'exhibitions':
       case 'exhibition':
         return 'Exhibition';
+      case 'artworks':
+      case 'artwork':
+        return 'Artwork';
+      case 'collections':
+      case 'collection':
+        return 'Collection';
       default:
         return v.isEmpty ? 'Item' : v;
     }

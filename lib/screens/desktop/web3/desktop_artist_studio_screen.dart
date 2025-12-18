@@ -11,6 +11,7 @@ import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
@@ -19,6 +20,8 @@ import '../../web3/artist/artist_studio.dart';
 import '../../web3/artist/artwork_creator.dart';
 import '../../web3/artist/artwork_gallery.dart';
 import '../../web3/artist/artist_analytics.dart';
+import '../../web3/artist/collection_creator.dart';
+import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
@@ -28,7 +31,8 @@ class DesktopArtistStudioScreen extends StatefulWidget {
   const DesktopArtistStudioScreen({super.key});
 
   @override
-  State<DesktopArtistStudioScreen> createState() => _DesktopArtistStudioScreenState();
+  State<DesktopArtistStudioScreen> createState() =>
+      _DesktopArtistStudioScreenState();
 }
 
 class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
@@ -72,8 +76,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   }
 
   String _resolveWalletAddress({bool listen = false}) {
-    final profileProvider = listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
-    final web3Provider = listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
+    final profileProvider = listen
+        ? context.watch<ProfileProvider>()
+        : context.read<ProfileProvider>();
+    final web3Provider =
+        listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
     return WalletUtils.coalesce(
       walletAddress: profileProvider.currentUser?.walletAddress,
       wallet: web3Provider.walletAddress,
@@ -83,7 +90,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Future<void> _loadArtistReviewStatus({bool forceRefresh = false}) async {
     final wallet = _resolveWalletAddress();
     if (wallet.isEmpty || _reviewLoading) return;
-    if (!forceRefresh && _hasFetchedReviewForWallet && wallet == _lastReviewWallet) return;
+    if (!forceRefresh &&
+        _hasFetchedReviewForWallet &&
+        wallet == _lastReviewWallet) {
+      return;
+    }
 
     final requestedWallet = wallet;
     setState(() {
@@ -93,11 +104,13 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
     try {
       final daoProvider = context.read<DAOProvider>();
-      final review = await daoProvider.loadReviewForWallet(requestedWallet, forceRefresh: forceRefresh);
+      final review = await daoProvider.loadReviewForWallet(requestedWallet,
+          forceRefresh: forceRefresh);
       if (!mounted || requestedWallet != _lastReviewWallet) return;
 
       setState(() {
-        _artistReview = review ?? daoProvider.findReviewForWallet(requestedWallet);
+        _artistReview =
+            review ?? daoProvider.findReviewForWallet(requestedWallet);
         _hasFetchedReviewForWallet = true;
         _reviewLoading = false;
       });
@@ -140,7 +153,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       color: Theme.of(context).scaffoldBackgroundColor,
                       border: Border(
                         right: BorderSide(
-                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .outline
+                              .withValues(alpha: 0.1),
                         ),
                       ),
                     ),
@@ -170,11 +186,13 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
-    final review = _artistReview ?? (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
+    final review = _artistReview ??
+        (wallet.isNotEmpty ? daoProvider.findReviewForWallet(wallet) : null);
     final hasArtistBadge = profileProvider.currentUser?.isArtist ?? false;
     final reviewStatus = review?.status.toLowerCase() ?? '';
     final reviewIsArtist = review?.isArtistApplication ?? false;
-    final isApprovedArtist = hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
+    final isApprovedArtist =
+        hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
 
     return Container(
       color: scheme.surface,
@@ -212,7 +230,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 final pending = collabProvider.pendingInviteCount;
                 final badge = pending > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: scheme.error,
                           borderRadius: BorderRadius.circular(999),
@@ -234,13 +253,17 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
                 return _buildQuickActionTile(
                   l10n.desktopArtistStudioQuickActionInvitesTitle,
-                  pending > 0 ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
+                  pending > 0
+                      ? l10n
+                          .desktopArtistStudioQuickActionInvitesPendingSubtitle
+                      : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
                   Icons.group_add_outlined,
                   scheme.primary,
                   () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
-                        title: l10n.desktopArtistStudioQuickActionCollaborationInvitesTitle,
+                        title: l10n
+                            .desktopArtistStudioQuickActionCollaborationInvitesTitle,
                         child: const InvitesInboxScreen(),
                       ),
                     );
@@ -258,8 +281,38 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
-                    title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+                    title:
+                        l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
                     child: const ArtworkCreator(),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedArtist)
+            _buildQuickActionTile(
+              l10n.collectionCreatorTitle,
+              l10n.artistStudioCreateOptionCollectionSubtitle,
+              Icons.collections_bookmark_outlined,
+              KubusColorRoles.of(context).web3ArtistStudioAccent,
+              () {
+                final shellScope = DesktopShellScope.of(context);
+                if (shellScope == null) return;
+                shellScope.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n.collectionCreatorTitle,
+                    child: CollectionCreator(
+                      onCreated: (collectionId) {
+                        shellScope.popScreen();
+                        shellScope.pushScreen(
+                          DesktopSubScreen(
+                            title: l10n.userProfileCollectionFallbackTitle,
+                            child: CollectionDetailScreen(
+                              collectionId: collectionId,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },
@@ -289,7 +342,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-                    child: const ExhibitionListScreen(embedded: true, canCreate: true),
+                    child: const ExhibitionListScreen(
+                        embedded: true, canCreate: true),
                   ),
                 );
               },
@@ -352,26 +406,31 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     Color statusColor = scheme.onSurface.withValues(alpha: 0.6);
     IconData statusIcon = Icons.help_outline;
     String statusText = l10n.desktopArtistStudioVerificationNotAppliedTitle;
-    String statusDescription = l10n.desktopArtistStudioVerificationNotAppliedDescription;
+    String statusDescription =
+        l10n.desktopArtistStudioVerificationNotAppliedDescription;
 
     if (_reviewLoading) {
       statusText = l10n.desktopArtistStudioVerificationLoadingTitle;
-      statusDescription = l10n.desktopArtistStudioVerificationLoadingDescription;
+      statusDescription =
+          l10n.desktopArtistStudioVerificationLoadingDescription;
     } else if (isApproved) {
       statusColor = scheme.primary;
       statusIcon = Icons.verified;
       statusText = l10n.desktopArtistStudioVerificationApprovedTitle;
-      statusDescription = l10n.desktopArtistStudioVerificationApprovedDescription;
+      statusDescription =
+          l10n.desktopArtistStudioVerificationApprovedDescription;
     } else if (isPending) {
       statusColor = scheme.tertiary;
       statusIcon = Icons.pending;
       statusText = l10n.desktopArtistStudioVerificationPendingTitle;
-      statusDescription = l10n.desktopArtistStudioVerificationPendingDescription;
+      statusDescription =
+          l10n.desktopArtistStudioVerificationPendingDescription;
     } else if (isRejected) {
       statusColor = scheme.error;
       statusIcon = Icons.cancel;
       statusText = l10n.desktopArtistStudioVerificationRejectedTitle;
-      statusDescription = l10n.desktopArtistStudioVerificationRejectedDescription;
+      statusDescription =
+          l10n.desktopArtistStudioVerificationRejectedDescription;
     }
 
     return DesktopCard(
@@ -424,7 +483,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                   // Apply functionality handled by mobile view
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColorUtils.purpleAccent,
+                  backgroundColor:
+                      KubusColorRoles.of(context).web3ArtistStudioAccent,
                   foregroundColor: scheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -443,14 +503,9 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     );
   }
 
-  Widget _buildQuickActionTile(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-    {Widget? trailing}
-  ) {
+  Widget _buildQuickActionTile(String title, String subtitle, IconData icon,
+      Color color, VoidCallback onTap,
+      {Widget? trailing}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Material(
@@ -495,7 +550,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         subtitle,
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -505,7 +563,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                     Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.4),
                     ),
               ],
             ),
@@ -567,7 +628,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+      String label, String value, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -594,7 +656,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             label,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],
@@ -607,7 +672,10 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+        color: Theme.of(context)
+            .colorScheme
+            .primaryContainer
+            .withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -615,14 +683,18 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           Icon(
             Icons.history,
             size: 40,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
           ),
           const SizedBox(height: 8),
           Text(
             l10n.desktopArtistStudioNoRecentActivityLabel,
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
             ),
           ),
         ],

@@ -203,6 +203,12 @@ abstract class AppLocalizations {
   /// **'Navigate'**
   String get commonNavigate;
 
+  /// Label for an action that opens the in-app map centered on the current item.
+  ///
+  /// In en, this message translates to:
+  /// **'Open on map'**
+  String get commonOpenOnMap;
+
   /// No description provided for @commonReplace.
   ///
   /// In en, this message translates to:
@@ -5777,6 +5783,72 @@ abstract class AppLocalizations {
   /// **'Collection Settings'**
   String get collectionSettingsTitle;
 
+  /// No description provided for @artistStudioCreatePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to create?'**
+  String get artistStudioCreatePrompt;
+
+  /// No description provided for @artistStudioCreateOptionArtworkTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create artwork'**
+  String get artistStudioCreateOptionArtworkTitle;
+
+  /// No description provided for @artistStudioCreateOptionArtworkSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload media, set details, and publish.'**
+  String get artistStudioCreateOptionArtworkSubtitle;
+
+  /// No description provided for @artistStudioCreateOptionCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create collection'**
+  String get artistStudioCreateOptionCollectionTitle;
+
+  /// No description provided for @artistStudioCreateOptionCollectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Curate a set of artworks into a collection.'**
+  String get artistStudioCreateOptionCollectionSubtitle;
+
+  /// No description provided for @collectionCreatorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create collection'**
+  String get collectionCreatorTitle;
+
+  /// No description provided for @collectionCreatorNameRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection name is required'**
+  String get collectionCreatorNameRequiredError;
+
+  /// No description provided for @collectionCreatorCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create collection.'**
+  String get collectionCreatorCreateFailed;
+
+  /// No description provided for @collectionCreatorCreateFailedWithError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create collection: {error}'**
+  String collectionCreatorCreateFailedWithError(Object error);
+
+  /// No description provided for @collectionDetailLoadFailedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load collection details. Please try again.'**
+  String get collectionDetailLoadFailedMessage;
+
+  /// No description provided for @collectionDetailNoArtworksYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks yet.'**
+  String get collectionDetailNoArtworksYet;
+
   /// No description provided for @collectionDetailAddArtwork.
   ///
   /// In en, this message translates to:
@@ -9395,6 +9467,66 @@ abstract class AppLocalizations {
   /// **'Failed to load post.'**
   String get postDetailLoadPostFailedMessage;
 
+  /// No description provided for @postDetailMoreOptionsReportAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Report'**
+  String get postDetailMoreOptionsReportAction;
+
+  /// No description provided for @postDetailReportPostDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Report post'**
+  String get postDetailReportPostDialogTitle;
+
+  /// No description provided for @postDetailReportPostDialogQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Why are you reporting this post?'**
+  String get postDetailReportPostDialogQuestion;
+
+  /// No description provided for @postDetailEditPostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit post'**
+  String get postDetailEditPostTitle;
+
+  /// No description provided for @postDetailPostUpdatedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Post updated'**
+  String get postDetailPostUpdatedToast;
+
+  /// No description provided for @postDetailUpdatePostFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update post.'**
+  String get postDetailUpdatePostFailedToast;
+
+  /// No description provided for @postDetailDeletePostTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete post'**
+  String get postDetailDeletePostTitle;
+
+  /// No description provided for @postDetailDeletePostBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to delete this post? This action cannot be undone.'**
+  String get postDetailDeletePostBody;
+
+  /// No description provided for @postDetailPostDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Post deleted'**
+  String get postDetailPostDeletedToast;
+
+  /// No description provided for @postDetailDeletePostFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete post.'**
+  String get postDetailDeletePostFailedToast;
+
   /// No description provided for @postDetailPostLikedToast.
   ///
   /// In en, this message translates to:
@@ -10312,6 +10444,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in to comment.'**
   String get communityCommentAuthRequiredToast;
+
+  /// No description provided for @communityRepostedByTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reposted by'**
+  String get communityRepostedByTitle;
 
   /// No description provided for @communityRepostsLoadFailedMessage.
   ///

@@ -62,6 +62,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
   List<Map<String, dynamic>> _artistArtworks = [];
   List<Map<String, dynamic>> _artistCollections = [];
   List<Map<String, dynamic>> _artistEvents = [];
+  String? _failedCoverImageUrl;
 
   String? _currentWalletAddress() {
     try {
@@ -534,7 +535,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildProfileHeader(ThemeProvider themeProvider, {required bool isArtist, required bool isInstitution}) {
     final coverImageUrl = _normalizeMediaUrl(user!.coverImageUrl);
-    final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
+    final coverUrlIsKnownBad = coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
+    final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty && !coverUrlIsKnownBad;
     
     return Column(
       children: [
@@ -555,37 +557,67 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
                     offset: const Offset(0, 4),
                   ),
                 ],
-                gradient: !hasCoverImage ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    themeProvider.accentColor.withValues(alpha: 0.3),
-                    themeProvider.accentColor.withValues(alpha: 0.1),
-                  ],
-                ) : null,
-                image: hasCoverImage ? DecorationImage(
-                  image: NetworkImage(coverImageUrl),
-                  fit: BoxFit.cover,
-                  onError: (error, stackTrace) {
-                    // Ignore cover image load errors (e.g., missing file/404) so the
-                    // UI falls back to the gradient without crashing on web.
-                  },
-                ) : null,
+                gradient: !hasCoverImage
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          themeProvider.accentColor.withValues(alpha: 0.3),
+                          themeProvider.accentColor.withValues(alpha: 0.1),
+                        ],
+                      )
+                    : null,
               ),
-              child: hasCoverImage ? Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.2),
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.4),
-                    ],
-                  ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (hasCoverImage)
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final dpr = MediaQuery.of(context).devicePixelRatio;
+                          final cacheWidth = (constraints.maxWidth * dpr).round();
+                          final cacheHeight = (constraints.maxHeight * dpr).round();
+                          return Image.network(
+                            coverImageUrl,
+                            fit: BoxFit.cover,
+                            cacheWidth: cacheWidth > 0 ? cacheWidth : null,
+                            cacheHeight: cacheHeight > 0 ? cacheHeight : null,
+                            filterQuality: FilterQuality.medium,
+                            errorBuilder: (context, error, stackTrace) {
+                              if (_failedCoverImageUrl != coverImageUrl) {
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (!mounted) return;
+                                  setState(() => _failedCoverImageUrl = coverImageUrl);
+                                });
+                              }
+                              return const SizedBox.expand();
+                            },
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const SizedBox.expand();
+                            },
+                          );
+                        },
+                      ),
+                    if (hasCoverImage)
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.2),
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.4),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ) : null,
+              ),
             ),
             // Avatar positioned at bottom of cover, overlapping
             Positioned(

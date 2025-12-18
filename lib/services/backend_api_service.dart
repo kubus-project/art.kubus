@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/art_marker.dart';
 import '../models/artwork.dart';
+import '../models/artwork_comment.dart';
 import '../models/community_group.dart';
 import '../models/event.dart';
 import '../models/exhibition.dart';
@@ -66,8 +67,12 @@ class BackendApiService {
   final Map<String, DateTime> _debugLogThrottle = <String, DateTime>{};
 
   bool? _exhibitionsApiAvailable;
+  bool? _institutionsApiAvailable;
+  bool? _eventsApiAvailable;
 
   bool? get exhibitionsApiAvailable => _exhibitionsApiAvailable;
+  bool? get institutionsApiAvailable => _institutionsApiAvailable;
+  bool? get eventsApiAvailable => _eventsApiAvailable;
 
   void _debugLogThrottled(
     String key,
@@ -1550,12 +1555,183 @@ class BackendApiService {
   /// POST /api/artworks/:id/discover
   Future<void> discoverArtwork(String artworkId) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       await http.post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
         headers: _getHeaders(),
       );
     } catch (e) {
       debugPrint('Error recording artwork discovery: $e');
+    }
+  }
+
+  /// Like an artwork
+  /// POST /api/artworks/:id/like
+  Future<int?> likeArtwork(String artworkId) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final data = payload['data'] as Map<String, dynamic>? ?? payload;
+          return data['likesCount'] as int?;
+        }
+        return null;
+      }
+      throw Exception('Failed to like artwork (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error liking artwork: $e');
+      rethrow;
+    }
+  }
+
+  /// Unlike an artwork
+  /// DELETE /api/artworks/:id/like
+  Future<int?> unlikeArtwork(String artworkId) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final data = payload['data'] as Map<String, dynamic>? ?? payload;
+          return data['likesCount'] as int?;
+        }
+        return null;
+      }
+      throw Exception('Failed to unlike artwork (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error unliking artwork: $e');
+      rethrow;
+    }
+  }
+
+  /// Record a view for an artwork
+  /// POST /api/artworks/:id/view
+  Future<int?> recordArtworkView(String artworkId) async {
+    try {
+      // Views are allowed anonymously, but include auth when available
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/artworks/$artworkId/view'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final data = payload['data'] as Map<String, dynamic>? ?? payload;
+          return data['viewsCount'] as int?;
+        }
+        return null;
+      }
+      throw Exception('Failed to record artwork view (${response.statusCode})');
+    } catch (e) {
+      // View counting should be non-fatal for the UI.
+      debugPrint('Error recording artwork view: $e');
+      return null;
+    }
+  }
+
+  /// Get comments for an artwork
+  /// GET /api/artworks/:id/comments
+  Future<List<ArtworkComment>> getArtworkComments({
+    required String artworkId,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      // Public, but include auth if available so backend can return isLikedByCurrentUser.
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments').replace(queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+      });
+      final response = await http.get(uri, headers: _getHeaders());
+
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final raw = payload['data'] as List<dynamic>? ?? <dynamic>[];
+          return raw
+              .whereType<Map<String, dynamic>>()
+              .map(ArtworkComment.fromMap)
+              .toList();
+        }
+        return <ArtworkComment>[];
+      }
+      debugPrint('BackendApiService.getArtworkComments: non-200 ${response.statusCode}');
+      return <ArtworkComment>[];
+    } catch (e) {
+      debugPrint('BackendApiService.getArtworkComments error: $e');
+      return <ArtworkComment>[];
+    }
+  }
+
+  /// Create a comment for an artwork
+  /// POST /api/artworks/:id/comments
+  Future<ArtworkComment> createArtworkComment({
+    required String artworkId,
+    required String content,
+    String? parentCommentId,
+  }) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/artworks/$artworkId/comments'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'content': content,
+          if (parentCommentId != null && parentCommentId.trim().isNotEmpty)
+            'parentCommentId': parentCommentId.trim(),
+        }),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final data = payload['data'] as Map<String, dynamic>? ?? payload;
+          return ArtworkComment.fromMap(data);
+        }
+        throw Exception('Unexpected createArtworkComment payload: ${response.body}');
+      }
+      throw Exception('Failed to create artwork comment (${response.statusCode})');
+    } catch (e) {
+      debugPrint('Error creating artwork comment: $e');
+      rethrow;
+    }
+  }
+
+  /// Discover an artwork and return updated discovery count if available.
+  /// POST /api/artworks/:id/discover
+  Future<int?> discoverArtworkWithCount(String artworkId) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map<String, dynamic>) {
+          final data = payload['data'] as Map<String, dynamic>? ?? payload;
+          return data['discoveryCount'] as int?;
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error discovering artwork: $e');
+      return null;
     }
   }
 
@@ -1730,6 +1906,62 @@ class BackendApiService {
       }
     } catch (e) {
       debugPrint('Error creating post: $e');
+      rethrow;
+    }
+  }
+
+  /// Update a community post
+  /// PUT /api/community/posts/:id
+  Future<void> updateCommunityPost({
+    required String postId,
+    required String content,
+    required List<String> mediaUrls,
+    List<String>? mediaCids,
+  }) async {
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/community/posts/$postId'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'content': content,
+          'mediaUrls': mediaUrls,
+          if (mediaCids != null) 'mediaCids': mediaCids,
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to update post: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (_) {
+      rethrow;
+    }
+  }
+
+  /// Delete a community post
+  /// DELETE /api/community/posts/:id
+  Future<void> deleteCommunityPost(String postId) async {
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/community/posts/$postId'),
+        headers: _getHeaders(),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Failed to delete post: ${response.statusCode} - ${response.body}',
+        );
+      }
+    } catch (_) {
       rethrow;
     }
   }
@@ -3264,6 +3496,7 @@ class BackendApiService {
   /// GET /api/institutions
   Future<List<Map<String, dynamic>>> listInstitutions({int limit = 50, int offset = 0}) async {
     try {
+      if (_institutionsApiAvailable == false) return [];
       final uri = Uri.parse('$baseUrl/api/institutions').replace(queryParameters: {
         'limit': '$limit',
         'offset': '$offset',
@@ -3271,16 +3504,22 @@ class BackendApiService {
       final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
+        _institutionsApiAvailable = true;
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final list = (data['institutions'] ?? data['data'] ?? []) as List;
         return List<Map<String, dynamic>>.from(list);
-      } else if (response.statusCode == 404) {
+      } else if (response.statusCode == 404 || response.statusCode == 400) {
+        // Some deployments do not expose these provisional endpoints.
+        _institutionsApiAvailable = false;
         return [];
       } else {
         throw Exception('Failed to list institutions: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error listing institutions: $e');
+      // Treat missing/unstable endpoints as optional; avoid noisy logs in release builds.
+      if (kDebugMode) {
+        debugPrint('BackendApiService: Error listing institutions: $e');
+      }
       return [];
     }
   }
@@ -3328,6 +3567,7 @@ class BackendApiService {
     int offset = 0,
   }) async {
     try {
+      if (_eventsApiAvailable == false) return [];
       final base = institutionId == null
           ? '$baseUrl/api/events'
           : '$baseUrl/api/institutions/$institutionId/events';
@@ -3350,6 +3590,7 @@ class BackendApiService {
       final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
 
       if (response.statusCode == 200) {
+        _eventsApiAvailable = true;
         final decoded = jsonDecode(response.body);
         if (decoded is Map<String, dynamic>) {
           final dynamic data = decoded['data'] ?? decoded;
@@ -3364,12 +3605,49 @@ class BackendApiService {
         }
         return [];
       } else if (response.statusCode == 404) {
+        _eventsApiAvailable = false;
+        return [];
+      } else if (response.statusCode == 400 && institutionId == null) {
+        // Some deployments use page-based pagination rather than offset.
+        final page = (offset ~/ (limit <= 0 ? 1 : limit)) + 1;
+        final retryQuery = <String, String>{
+          'limit': '$limit',
+          'page': '$page',
+        };
+        if (upcoming != null) retryQuery['upcoming'] = '$upcoming';
+        if (from != null && from.trim().isNotEmpty) retryQuery['from'] = from.trim();
+        if (to != null && to.trim().isNotEmpty) retryQuery['to'] = to.trim();
+        if (lat != null) retryQuery['lat'] = lat.toString();
+        if (lng != null) retryQuery['lng'] = lng.toString();
+        if (radiusKm != null) retryQuery['radiusKm'] = radiusKm.toString();
+        if (hostUserId != null && hostUserId.trim().isNotEmpty) retryQuery['hostUserId'] = hostUserId.trim();
+        final retryUri = Uri.parse('$baseUrl/api/events').replace(queryParameters: retryQuery);
+        final retryRes = await http.get(retryUri, headers: _getHeaders(includeAuth: true));
+        if (retryRes.statusCode == 200) {
+          _eventsApiAvailable = true;
+          final decoded = jsonDecode(retryRes.body);
+          if (decoded is Map<String, dynamic>) {
+            final dynamic data = decoded['data'] ?? decoded;
+            if (data is Map<String, dynamic>) {
+              final list = (data['events'] ?? data['items'] ?? data['results'] ?? const []) as dynamic;
+              if (list is List) return List<Map<String, dynamic>>.from(list);
+            }
+            final list = decoded['events'] ?? (decoded['data'] is List ? decoded['data'] : null);
+            if (list is List) return List<Map<String, dynamic>>.from(list);
+          }
+          return [];
+        }
+
+        // Still not usable.
+        _eventsApiAvailable = false;
         return [];
       } else {
         throw Exception('Failed to list events: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error listing events: $e');
+      if (kDebugMode) {
+        debugPrint('BackendApiService: Error listing events: $e');
+      }
       return [];
     }
   }
@@ -4671,6 +4949,25 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
   }
 
   final mergedMeta = _mergeMarkerMetadata(json);
+  final subjectType = stringVal(
+    json['subjectType'] ??
+        json['subject_type'] ??
+        mergedMeta?['subjectType'] ??
+        mergedMeta?['subject_type'],
+  )?.toLowerCase();
+  final subjectId = stringVal(
+    json['subjectId'] ??
+        json['subject_id'] ??
+        mergedMeta?['subjectId'] ??
+        mergedMeta?['subject_id'],
+  );
+  final markerType = stringVal(
+    json['markerType'] ??
+        json['type'] ??
+        json['category'] ??
+        mergedMeta?['markerType'] ??
+        mergedMeta?['type'],
+  )?.toLowerCase();
 
   // Expand artwork ID resolution beyond bare `artworkId` to include common metadata fallbacks.
   String? artworkId = stringVal(json['artworkId'] ?? json['artwork_id']);
@@ -4679,9 +4976,15 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     artworkId = stringVal(metaArtwork['linkedArtworkId'] ??
         metaArtwork['linked_artwork_id'] ??
         metaArtwork['artworkId'] ??
-        metaArtwork['artwork_id'] ??
-        metaArtwork['subjectId'] ??
-        metaArtwork['subject_id']);
+        metaArtwork['artwork_id']);
+  }
+  final allowSubjectIdAsArtworkId = subjectId != null &&
+      subjectId.isNotEmpty &&
+      ((subjectType != null && subjectType.contains('artwork')) ||
+          ((subjectType == null || subjectType.isEmpty) &&
+              (markerType != null && markerType.contains('artwork'))));
+  if ((artworkId == null || artworkId.isEmpty) && allowSubjectIdAsArtworkId) {
+    artworkId = subjectId;
   }
   if ((artworkId == null || artworkId.isEmpty) && json['artwork'] is Map<String, dynamic>) {
     artworkId = stringVal((json['artwork'] as Map<String, dynamic>)['id']);
@@ -4735,6 +5038,32 @@ Map<String, dynamic>? _mergeMarkerMetadata(Map<String, dynamic> json) {
   merge(json['metadata']);
   merge(json['meta']);
   merge(json['marker_data'] ?? json['markerData']);
+
+  final subjectType = json['subjectType'] ?? json['subject_type'];
+  final subjectId = json['subjectId'] ?? json['subject_id'];
+  final subjectTitle = json['subjectTitle'] ?? json['subject_title'];
+  final subjectLabel = json['subjectLabel'] ?? json['subject_label'];
+  final subjectCategory = json['subjectCategory'] ?? json['subject_category'];
+  if (subjectType != null &&
+      (metadata?['subjectType'] ?? metadata?['subject_type']) == null) {
+    merge({'subjectType': subjectType});
+  }
+  if (subjectId != null &&
+      (metadata?['subjectId'] ?? metadata?['subject_id']) == null) {
+    merge({'subjectId': subjectId});
+  }
+  if (subjectTitle != null &&
+      (metadata?['subjectTitle'] ?? metadata?['subject_title']) == null) {
+    merge({'subjectTitle': subjectTitle});
+  }
+  if (subjectLabel != null &&
+      (metadata?['subjectLabel'] ?? metadata?['subject_label']) == null) {
+    merge({'subjectLabel': subjectLabel});
+  }
+  if (subjectCategory != null &&
+      (metadata?['subjectCategory'] ?? metadata?['subject_category']) == null) {
+    merge({'subjectCategory': subjectCategory});
+  }
 
   final artworkPreview = json['artwork'];
   if (artworkPreview is Map) {
@@ -4830,6 +5159,11 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
 
     addMeta('walletAddress', json['walletAddress'] ?? json['wallet_address']);
     addMeta('creatorId', json['creatorId'] ?? json['creator_id']);
+    addMeta('creators', json['creators'] ?? json['artists'] ?? json['collaborators'] ?? json['contributors']);
+    addMeta(
+      'creatorWallets',
+      json['creatorWallets'] ?? json['creatorWalletAddresses'] ?? json['walletAddresses'] ?? json['wallets'],
+    );
     addMeta('locationName', json['locationName']);
     addMeta('nft', json['nft']);
     addMeta('price', json['price']);
