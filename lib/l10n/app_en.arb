@@ -2,6 +2,7 @@
   "@@locale": "en",
   "appTitle": "art.kubus",
   "commonCancel": "Cancel",
+  "commonClear": "Clear",
   "commonClose": "Close",
   "commonContinue": "Continue",
   "commonSkip": "Skip",
@@ -9,10 +10,22 @@
   "commonBack": "Back",
   "commonNext": "Next",
   "commonSave": "Save",
+  "commonSavedToast": "Saved",
+  "commonActionFailedToast": "Something went wrong. Please try again.",
+  "commonTitle": "Title",
+  "commonDescription": "Description",
+  "commonPrice": "Price",
+  "commonForSale": "For sale",
   "commonCopy": "Copy",
   "commonDelete": "Delete",
   "commonDone": "Done",
   "commonEdit": "Edit",
+  "commonLink": "Link",
+  "commonPublish": "Publish",
+  "commonUnpublish": "Unpublish",
+  "commonDraft": "Draft",
+  "commonPublished": "Published",
+  "commonStatus": "Status",
   "commonRename": "Rename",
   "commonCreate": "Create",
   "commonGotIt": "Got it",
@@ -29,6 +42,8 @@
   "commonFeed": "Feed",
   "commonGroup": "Group",
   "commonImage": "Image",
+  "commonCoverImage": "Cover image",
+  "commonChangeCover": "Change cover",
   "commonVideo": "Video",
   "commonMembers": "Members",
   "commonAdd": "Add",
@@ -66,6 +81,27 @@
   "exhibitionCreatorPublishTitle": "Publish",
   "exhibitionCreatorPublishVisible": "Visible to everyone",
   "exhibitionCreatorPublishDraft": "Save as draft",
+  "exhibitionCreatorCollabHint": "After creating, you can invite collaborators from the exhibition detail screen.",
+  "exhibitionDetailInvitesTooltip": "Invites",
+  "exhibitionDetailRefreshTooltip": "Refresh",
+  "exhibitionDetailOverviewTitle": "Overview",
+  "exhibitionDetailArtworksTitle": "Artworks",
+  "exhibitionDetailArtworksManageHint": "Link artworks so visitors can discover them from this exhibition.",
+  "exhibitionDetailArtworksViewHint": "Artworks linked to this exhibition will appear here.",
+  "exhibitionDetailNoArtworksLinkedYet": "No artworks linked yet.",
+  "exhibitionDetailNoArtworksAvailableToLinkToast": "No artworks available to link.",
+  "exhibitionDetailAddArtworksDialogTitle": "Add artworks",
+  "exhibitionDetailArtworksLinkedToast": "Artworks linked to exhibition.",
+  "exhibitionDetailLinkArtworksFailedToast": "Failed to link artworks. Please try again.",
+  "exhibitionDetailStatusRowLabel": "Status: {status}",
+  "@exhibitionDetailStatusRowLabel": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "exhibitionDetailBadgeTitle": "Badge",
+  "exhibitionDetailBadgeClaimed": "Claimed",
+  "exhibitionDetailBadgeNotClaimed": "Not claimed",
   "exhibitionCreatorEndDateAfterStartError": "End date must be after start date.",
   "exhibitionCreatorCreateFailed": "Failed to create exhibition.",
   "exhibitionCreatorCreateFailedWithError": "Failed to create exhibition: {error}",
@@ -1345,6 +1381,8 @@
   "collectionDetailByYou": "by You",
   "collectionDetailSharingToast": "Sharing collection...",
   "collectionDetailOpeningEditorToast": "Opening collection editor...",
+  "collectionDetailAddArtworkFailedToast": "Failed to add artwork to collection. Please try again.",
+  "collectionDetailRemoveArtworkFailedToast": "Failed to remove artwork from collection. Please try again.",
   "collectionSettingsBasicInfo": "Basic Information",
   "collectionSettingsName": "Collection Name",
   "collectionSettingsNameHint": "Enter collection name",
@@ -1365,6 +1403,7 @@
   "collectionSettingsDeleteWarning": "Once you delete a collection, there is no going back. This action cannot be undone.",
   "collectionSettingsDeleteButton": "Delete Collection",
   "collectionSettingsSavedToast": "Collection settings saved for \"{name}\"",
+  "collectionSettingsSaveFailedToast": "Failed to save collection settings. Please try again.",
   "@collectionSettingsSavedToast": {
     "placeholders": {
       "name": {}
@@ -1927,6 +1966,30 @@
   },
   "artistGallerySharingToast": "Sharing {title}",
   "@artistGallerySharingToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryPublishSuccessToast": "\"{title}\" published",
+  "@artistGalleryPublishSuccessToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryUnpublishSuccessToast": "\"{title}\" moved to draft",
+  "@artistGalleryUnpublishSuccessToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryPublishFailedToast": "Failed to publish \"{title}\". Please try again.",
+  "@artistGalleryPublishFailedToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryUnpublishFailedToast": "Failed to unpublish \"{title}\". Please try again.",
+  "@artistGalleryUnpublishFailedToast": {
     "placeholders": {
       "title": {}
     }

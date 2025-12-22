@@ -15,17 +15,18 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/community_hub_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
+import '../../../providers/app_refresh_provider.dart';
 import '../../../community/community_interactions.dart';
 import '../../../models/community_group.dart';
 import '../../../models/conversation.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
 import '../../../widgets/avatar_widget.dart';
-import '../../../widgets/artist_badge.dart';
 import '../../../widgets/empty_state_card.dart';
-import '../../../widgets/institution_badge.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/community/community_post_card.dart';
+import '../../../widgets/community/community_author_role_badges.dart';
+import '../../../widgets/community/community_post_options_sheet.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -124,6 +125,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   String _followingSortMode = 'recent';
   String _artSortMode = 'recent';
 
+  AppRefreshProvider? _appRefreshProvider;
+  int _lastCommunityRefreshVersion = 0;
+  int _lastGlobalRefreshVersion = 0;
+  bool _refreshInFlight = false;
+
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
   List<CommunityPost> _followingPosts = [];
@@ -158,7 +164,36 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _loadFeed();
       _loadSidebarData();
       _initializeChat();
+
+      try {
+        _appRefreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
+        _lastCommunityRefreshVersion = _appRefreshProvider?.communityVersion ?? 0;
+        _lastGlobalRefreshVersion = _appRefreshProvider?.globalVersion ?? 0;
+        _appRefreshProvider?.addListener(_onAppRefreshTriggered);
+      } catch (_) {}
     });
+  }
+
+  void _onAppRefreshTriggered() {
+    if (!mounted || _appRefreshProvider == null) return;
+    final communityVersion = _appRefreshProvider!.communityVersion;
+    final globalVersion = _appRefreshProvider!.globalVersion;
+    if (communityVersion == _lastCommunityRefreshVersion &&
+        globalVersion == _lastGlobalRefreshVersion) {
+      return;
+    }
+    _lastCommunityRefreshVersion = communityVersion;
+    _lastGlobalRefreshVersion = globalVersion;
+
+    if (_refreshInFlight) return;
+    _refreshInFlight = true;
+    unawaited(() async {
+      try {
+        await _loadFeed();
+      } finally {
+        _refreshInFlight = false;
+      }
+    }());
   }
 
   Future<void> _initializeChat() async {
@@ -174,6 +209,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       longitude: 14.50,
       radiusKm: 50,
       limit: 50,
+      refresh: true,
     );
     // Also load groups for sidebar
     if (!communityProvider.groupsInitialized) {
@@ -475,6 +511,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   @override
   void dispose() {
+    _appRefreshProvider?.removeListener(_onAppRefreshTriggered);
     _animationController.dispose();
     _tabController.dispose();
     _scrollController.dispose();
@@ -641,8 +678,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         break;
       case _PaneViewType.postDetail:
         final post = route.post;
-        child =
-            post == null ? const SizedBox.shrink() : _buildPostDetailPane(post);
+        child = post == null
+          ? const SizedBox.shrink()
+            : _buildPostDetailPane(post, initialAction: route.initialAction);
         break;
       case _PaneViewType.conversation:
         final conversation = route.conversation;
@@ -983,12 +1021,16 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildPostDetailPane(CommunityPost post) {
+  Widget _buildPostDetailPane(
+    CommunityPost post, {
+    PostDetailInitialAction? initialAction,
+  }) {
     return Container(
       key: ValueKey('post-pane-${post.id}'),
       color: Theme.of(context).colorScheme.surface,
       child: PostDetailScreen(
         post: post,
+        initialAction: initialAction,
         onClose: _popPane,
       ),
     );
@@ -1912,6 +1954,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               longitude: 14.50,
               radiusKm: 50,
               limit: 50,
+              refresh: true,
             );
           });
         }
@@ -1942,56 +1985,77 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               longitude: 14.50,
               radiusKm: 50,
               limit: 50,
+              refresh: true,
             );
           },
           color: themeProvider.accentColor,
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            itemCount: posts.length + 1,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          await communityProvider.loadArtFeed(
-                            latitude: 46.05,
-                            longitude: 14.50,
-                            radiusKm: 50,
-                            limit: 50,
-                          );
-                        },
-                        icon: const Icon(Icons.my_location),
-                        label: const Text('Use current area'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeProvider.accentColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: () async {
-                          await communityProvider.loadArtFeed(
-                            latitude: 46.05,
-                            longitude: 14.50,
-                            radiusKm: 200,
-                            limit: 100,
-                          );
-                        },
-                        icon: const Icon(Icons.travel_explore),
-                        label: const Text('Wider radius'),
-                      ),
-                    ],
-                  ),
-                );
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              // Infinite scroll: load next page when near the bottom.
+              if (notification.metrics.extentAfter < 600 &&
+                  communityProvider.artFeedHasMore &&
+                  !communityProvider.artFeedLoading) {
+                final center = communityProvider.artFeedCenter;
+                unawaited(communityProvider.loadArtFeed(
+                  latitude: center?.lat ?? 46.05,
+                  longitude: center?.lng ?? 14.50,
+                  radiusKm: communityProvider.artFeedRadiusKm,
+                  limit: communityProvider.artFeedPageSize,
+                  refresh: false,
+                ));
               }
-              return _buildPostCard(posts[index - 1], themeProvider);
+              return false;
             },
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              itemCount: posts.length + 1,
+              itemBuilder: (context, index) {
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            await communityProvider.loadArtFeed(
+                              latitude: 46.05,
+                              longitude: 14.50,
+                              radiusKm: 50,
+                              limit: 50,
+                              refresh: true,
+                            );
+                          },
+                          icon: const Icon(Icons.my_location),
+                          label: const Text('Use current area'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: themeProvider.accentColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            await communityProvider.loadArtFeed(
+                              latitude: 46.05,
+                              longitude: 14.50,
+                              radiusKm: 200,
+                              limit: 100,
+                              refresh: true,
+                            );
+                          },
+                          icon: const Icon(Icons.travel_explore),
+                          label: const Text('Wider radius'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return _buildPostCard(posts[index - 1], themeProvider);
+              },
+            ),
           ),
         );
       },
@@ -2548,28 +2612,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     }
   }
 
-  List<Widget> _buildAuthorRoleBadges(CommunityPost post,
-      {double fontSize = 10}) {
-    final widgets = <Widget>[];
-    if (post.authorIsArtist) {
-      widgets.add(const SizedBox(width: 6));
-      widgets.add(ArtistBadge(
-        fontSize: fontSize,
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        iconOnly: true,
-      ));
-    }
-    if (post.authorIsInstitution) {
-      widgets.add(const SizedBox(width: 6));
-      widgets.add(InstitutionBadge(
-        fontSize: fontSize,
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        iconOnly: true,
-      ));
-    }
-    return widgets;
-  }
-
   Widget _buildLoadingState(ThemeProvider themeProvider, String message) {
     return Center(
       child: Column(
@@ -2734,6 +2776,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         onRepost: () => _handleRepostTap(post),
         onShare: () => _showShareDialog(post),
         onToggleBookmark: () => _toggleBookmark(post),
+        onMoreOptions: () => _showPostOptionsForPost(post),
         onShowLikes: () => _showPostLikes(post.id),
         onShowReposts: () => _viewRepostsList(post),
         onTagTap: (tag) => unawaited(_openTagFeed(tag)),
@@ -2782,7 +2825,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        ..._buildAuthorRoleBadges(post, fontSize: 9),
+                            CommunityAuthorRoleBadges(
+                              post: post,
+                              fontSize: 9,
+                              iconOnly: true,
+                            ),
                       ],
                     ),
                     Text(
@@ -3349,7 +3396,11 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              ..._buildAuthorRoleBadges(displayPost, fontSize: 8),
+              CommunityAuthorRoleBadges(
+                post: displayPost,
+                fontSize: 8,
+                iconOnly: true,
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -3649,7 +3700,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           ),
                           subtitle: subtitleParts.isNotEmpty
                               ? Text(
-                                  subtitleParts.join(' ƒ?› '),
+                                  subtitleParts.join(' • '),
                                   style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -5195,6 +5246,51 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       }
       _paneStack.add(_PaneRoute.post(post));
     });
+  }
+
+  void _openPostDetailWithAction(
+    CommunityPost post,
+    PostDetailInitialAction initialAction,
+  ) {
+    // Force a new route key when opening with an action, otherwise we may reuse
+    // an existing subtree and the initialAction won't run.
+    final existingIndex = _paneStack.lastIndexWhere(
+      (route) =>
+          route.type == _PaneViewType.postDetail && route.post?.id == post.id,
+    );
+    setState(() {
+      if (existingIndex != -1) {
+        _paneStack.removeAt(existingIndex);
+      }
+      _paneStack.add(_PaneRoute.post(post, initialAction: initialAction));
+    });
+  }
+
+  bool _isCurrentUserPost(CommunityPost post) {
+    try {
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      final currentWallet = walletProvider.currentWalletAddress;
+      if (currentWallet == null || currentWallet.trim().isEmpty) return false;
+      return WalletUtils.equals(post.authorWallet ?? post.authorId, currentWallet);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _showPostOptionsForPost(CommunityPost post) {
+    if (!mounted) return;
+    final isOwner = _isCurrentUserPost(post);
+
+    unawaited(
+      showCommunityPostOptionsSheet(
+        context: context,
+        post: post,
+        isOwner: isOwner,
+        onReport: () => _openPostDetailWithAction(post, PostDetailInitialAction.report),
+        onEdit: () => _openPostDetailWithAction(post, PostDetailInitialAction.edit),
+        onDelete: () => _openPostDetailWithAction(post, PostDetailInitialAction.delete),
+      ),
+    );
   }
 
   Future<void> _showMentionPicker(CommunityHubProvider hub) async {
@@ -7540,9 +7636,10 @@ class _PaneRoute {
   const _PaneRoute.tag(this.tag)
       : type = _PaneViewType.tagFeed,
         post = null,
-        conversation = null;
+        conversation = null,
+        initialAction = null;
 
-  const _PaneRoute.post(this.post)
+  const _PaneRoute.post(this.post, {this.initialAction})
       : type = _PaneViewType.postDetail,
         tag = null,
         conversation = null;
@@ -7550,19 +7647,21 @@ class _PaneRoute {
   const _PaneRoute.conversation(this.conversation)
       : type = _PaneViewType.conversation,
         tag = null,
-        post = null;
+        post = null,
+        initialAction = null;
 
   final _PaneViewType type;
   final String? tag;
   final CommunityPost? post;
   final Conversation? conversation;
+  final PostDetailInitialAction? initialAction;
 
   String get viewKey {
     switch (type) {
       case _PaneViewType.tagFeed:
         return 'tag-${(tag ?? '').toLowerCase()}';
       case _PaneViewType.postDetail:
-        return 'post-${post?.id ?? ''}';
+        return 'post-${post?.id ?? ''}-${initialAction?.name ?? 'view'}';
       case _PaneViewType.conversation:
         return 'conversation-${conversation?.id ?? ''}';
     }

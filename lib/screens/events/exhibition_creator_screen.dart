@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
+import 'dart:typed_data';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 
@@ -26,12 +29,50 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
   bool _published = false;
   bool _submitting = false;
 
+  Uint8List? _coverBytes;
+  String? _coverFileName;
+
   @override
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCoverImage() async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+
+      final file = picked?.files.single;
+      final bytes = file?.bytes;
+      final name = (file?.name ?? '').trim();
+
+      if (!mounted) return;
+
+      if (bytes == null || bytes.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)),
+        );
+        return;
+      }
+
+      setState(() {
+        _coverBytes = bytes;
+        _coverFileName = name.isNotEmpty ? name : 'cover.jpg';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.commonActionFailedToast)),
+      );
+    }
   }
 
   @override
@@ -138,6 +179,53 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                 ),
                 const SizedBox(height: 16),
 
+                Text(
+                  l10n.commonCoverImage,
+                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _submitting ? null : _pickCoverImage,
+                        icon: const Icon(Icons.image_outlined),
+                        label: Text(
+                          _coverBytes == null ? l10n.commonUpload : l10n.commonChangeCover,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      tooltip: l10n.commonRemove,
+                      onPressed: (_submitting || _coverBytes == null)
+                          ? null
+                          : () => setState(() {
+                                _coverBytes = null;
+                                _coverFileName = null;
+                              }),
+                      icon: const Icon(Icons.delete_outline),
+                    ),
+                  ],
+                ),
+                if (_coverBytes != null) ...[
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      height: 160,
+                      width: double.infinity,
+                      color: scheme.surfaceContainerHighest,
+                      child: Image.memory(
+                        _coverBytes!,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 18),
+
                 // Collaboration hint
                 if (AppConfig.isFeatureEnabled('collabInvites'))
                   Container(
@@ -153,7 +241,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'After creating, you can invite collaborators from the exhibition detail screen.',
+                            l10n.exhibitionCreatorCollabHint,
                             style: GoogleFonts.inter(
                               fontSize: 12,
                               color: scheme.onSurface.withValues(alpha: 0.8),
@@ -228,6 +316,22 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
 
     setState(() => _submitting = true);
     try {
+      String? coverUrl;
+      if (_coverBytes != null) {
+        final safeFileName = (_coverFileName ?? 'cover.jpg').trim();
+        coverUrl = await provider.uploadExhibitionCover(
+          bytes: _coverBytes!,
+          fileName: safeFileName.isEmpty ? 'cover.jpg' : safeFileName,
+        );
+        if (!mounted) return;
+        if (coverUrl == null || coverUrl.isEmpty) {
+          messenger.showSnackBar(
+            SnackBar(content: Text(l10n.commonActionFailedToast)),
+          );
+          return;
+        }
+      }
+
       final payload = <String, dynamic>{
         'title': title,
         if (description.isNotEmpty) 'description': description,
@@ -235,6 +339,7 @@ class _ExhibitionCreatorScreenState extends State<ExhibitionCreatorScreen> {
         if (_startsAt != null) 'startsAt': _startsAt!.toIso8601String(),
         if (_endsAt != null) 'endsAt': _endsAt!.toIso8601String(),
         'status': _published ? 'published' : 'draft',
+        if (coverUrl != null && coverUrl.isNotEmpty) 'coverUrl': coverUrl,
       };
 
       final created = await provider.createExhibition(payload);
@@ -296,7 +401,7 @@ class _DateRow extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         IconButton(
-          tooltip: 'Clear',
+          tooltip: l10n.commonClear,
           onPressed: value == null ? null : onClear,
           icon: Icon(Icons.close, color: scheme.onSurface.withValues(alpha: 0.6)),
         ),

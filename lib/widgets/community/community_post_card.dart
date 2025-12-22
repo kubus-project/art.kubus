@@ -1,14 +1,14 @@
 import 'package:art_kubus/models/community_group.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/kubus_color_roles.dart';
-import '../artist_badge.dart';
 import '../avatar_widget.dart';
 import '../inline_loading.dart';
-import '../institution_badge.dart';
+import 'community_author_role_badges.dart';
 
 class CommunityPostCard extends StatelessWidget {
   const CommunityPostCard({
@@ -22,6 +22,7 @@ class CommunityPostCard extends StatelessWidget {
     required this.onRepost,
     required this.onShare,
     required this.onToggleBookmark,
+    this.onMoreOptions,
     this.onShowLikes,
     this.onShowReposts,
     this.onTagTap,
@@ -43,6 +44,8 @@ class CommunityPostCard extends StatelessWidget {
   final VoidCallback onShare;
   final VoidCallback onToggleBookmark;
 
+  final VoidCallback? onMoreOptions;
+
   final VoidCallback? onShowLikes;
   final VoidCallback? onShowReposts;
 
@@ -54,6 +57,7 @@ class CommunityPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         final isSmallScreen = constraints.maxWidth < 375;
@@ -64,7 +68,7 @@ class CommunityPostCard extends StatelessWidget {
           child: MouseRegion(
             cursor: SystemMouseCursors.click,
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+              behavior: HitTestBehavior.deferToChild,
               onTap: () => onOpenPostDetail(post),
               child: Container(
                 padding: const EdgeInsets.all(20),
@@ -105,9 +109,10 @@ class CommunityPostCard extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    ..._buildAuthorRoleBadges(
-                                      post,
+                                    CommunityAuthorRoleBadges(
+                                      post: post,
                                       fontSize: isSmallScreen ? 8 : 9,
+                                      iconOnly: true,
                                     ),
                                   ],
                                 ),
@@ -125,13 +130,27 @@ class CommunityPostCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          _timeAgo(post.timestamp),
+                          _timeAgo(context, post.timestamp, l10n),
                           style: GoogleFonts.inter(
                             fontSize: isSmallScreen ? 10 : 12,
                             color: scheme.onSurface.withValues(alpha: 0.5),
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (onMoreOptions != null) ...[
+                          const SizedBox(width: 6),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: onMoreOptions,
+                            icon: Icon(
+                              Icons.more_vert,
+                              size: 18,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -353,43 +372,33 @@ CommunityPost _primaryImagePost(CommunityPost post) {
       : post;
 }
 
-List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10}) {
-  final widgets = <Widget>[];
-  if (post.authorIsArtist) {
-    widgets.add(const SizedBox(width: 6));
-    widgets.add(ArtistBadge(
-      fontSize: fontSize,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      iconOnly: true,
-    ));
-  }
-  if (post.authorIsInstitution) {
-    widgets.add(const SizedBox(width: 6));
-    widgets.add(InstitutionBadge(
-      fontSize: fontSize,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      iconOnly: true,
-    ));
-  }
-  return widgets;
-}
-
-String _timeAgo(DateTime timestamp) {
+String _timeAgo(BuildContext context, DateTime timestamp, AppLocalizations? l10n) {
+  // Prefer localizations when available (tests or minimal wrappers may omit).
+  final localizations = l10n ?? AppLocalizations.of(context);
   final now = DateTime.now();
   final difference = now.difference(timestamp);
 
-  if (difference.inDays > 7) {
-    return '${(difference.inDays / 7).floor()}w ago';
+  if (localizations != null) {
+    if (difference.inDays > 7) {
+      return localizations.commonTimeAgoWeeks((difference.inDays / 7).floor());
+    }
+    if (difference.inDays > 0) {
+      return localizations.commonTimeAgoDays(difference.inDays);
+    }
+    if (difference.inHours > 0) {
+      return localizations.commonTimeAgoHours(difference.inHours);
+    }
+    if (difference.inMinutes > 0) {
+      return localizations.commonTimeAgoMinutes(difference.inMinutes);
+    }
+    return localizations.commonTimeAgoJustNow;
   }
-  if (difference.inDays > 0) {
-    return '${difference.inDays}d ago';
-  }
-  if (difference.inHours > 0) {
-    return '${difference.inHours}h ago';
-  }
-  if (difference.inMinutes > 0) {
-    return '${difference.inMinutes}m ago';
-  }
+
+  // Fallback: English relative time.
+  if (difference.inDays > 7) return '${(difference.inDays / 7).floor()}w ago';
+  if (difference.inDays > 0) return '${difference.inDays}d ago';
+  if (difference.inHours > 0) return '${difference.inHours}h ago';
+  if (difference.inMinutes > 0) return '${difference.inMinutes}m ago';
   return 'Just now';
 }
 
@@ -562,7 +571,11 @@ class _RepostInnerCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          ..._buildAuthorRoleBadges(post, fontSize: 8),
+                          CommunityAuthorRoleBadges(
+                            post: post,
+                            fontSize: 8,
+                            iconOnly: true,
+                          ),
                         ],
                       ),
                       if (originalHandle.isNotEmpty)
@@ -578,7 +591,7 @@ class _RepostInnerCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  _timeAgo(post.timestamp),
+                  _timeAgo(context, post.timestamp, AppLocalizations.of(context)),
                   style: GoogleFonts.inter(
                     fontSize: 11,
                     color: scheme.onSurface.withValues(alpha: 0.5),
@@ -637,6 +650,7 @@ class _PostMetadataSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final hasMetadata = post.tags.isNotEmpty ||
         post.mentions.isNotEmpty ||
         post.location != null ||
@@ -741,7 +755,7 @@ class _PostMetadataSection extends StatelessWidget {
                   if (post.distanceKm != null) ...[
                     const SizedBox(width: 8),
                     Text(
-                      'ƒ?› ${post.distanceKm!.toStringAsFixed(1)} km',
+                      '• ${post.distanceKm!.toStringAsFixed(1)} km',
                       style: GoogleFonts.inter(
                         fontSize: 11,
                         color: scheme.onTertiaryContainer.withValues(alpha: 0.7),
@@ -807,7 +821,7 @@ class _PostMetadataSection extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          'Linked artwork',
+                          l10n?.postDetailLinkedArtworkLabel ?? 'Linked artwork',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: scheme.onSurface.withValues(alpha: 0.6),

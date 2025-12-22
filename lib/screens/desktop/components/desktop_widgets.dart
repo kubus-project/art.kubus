@@ -124,23 +124,23 @@ class DesktopSectionHeader extends StatelessWidget {
     final effectiveColor = iconColor ?? themeProvider.accentColor;
 
     return Padding(
-      padding: padding ?? const EdgeInsets.symmetric(vertical: 16),
+      padding: padding ?? const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
           if (icon != null) ...[
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: effectiveColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 icon,
                 color: effectiveColor,
-                size: 20,
+                size: 18,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
           ],
           Expanded(
             child: Column(
@@ -149,17 +149,17 @@ class DesktopSectionHeader extends StatelessWidget {
                 Text(
                   title,
                   style: GoogleFonts.inter(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 if (subtitle != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle!,
                     style: GoogleFonts.inter(
-                      fontSize: 14,
+                      fontSize: 13,
                       color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
@@ -258,10 +258,10 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
       child: AnimatedContainer(
         duration: animationTheme.short,
         curve: animationTheme.defaultCurve,
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: _isHovered
                 ? color.withValues(alpha: 0.3)
@@ -271,8 +271,8 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
               ? [
                   BoxShadow(
                     color: color.withValues(alpha: 0.15),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
                   ),
                 ]
               : null,
@@ -281,7 +281,7 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -289,15 +289,15 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
                         widget.icon,
                         color: color,
-                        size: 22,
+                        size: 20,
                       ),
                     ),
                     if (widget.change != null)
@@ -346,16 +346,16 @@ class _DesktopStatCardState extends State<DesktopStatCard> {
                 Text(
                   widget.value,
                   style: GoogleFonts.inter(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   widget.label,
                   style: GoogleFonts.inter(
-                    fontSize: 14,
+                    fontSize: 13,
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),

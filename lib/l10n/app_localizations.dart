@@ -107,6 +107,12 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get commonCancel;
 
+  /// No description provided for @commonClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get commonClear;
+
   /// No description provided for @commonClose.
   ///
   /// In en, this message translates to:
@@ -149,6 +155,42 @@ abstract class AppLocalizations {
   /// **'Save'**
   String get commonSave;
 
+  /// No description provided for @commonSavedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get commonSavedToast;
+
+  /// No description provided for @commonActionFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get commonActionFailedToast;
+
+  /// No description provided for @commonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get commonTitle;
+
+  /// No description provided for @commonDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get commonDescription;
+
+  /// No description provided for @commonPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get commonPrice;
+
+  /// No description provided for @commonForSale.
+  ///
+  /// In en, this message translates to:
+  /// **'For sale'**
+  String get commonForSale;
+
   /// No description provided for @commonCopy.
   ///
   /// In en, this message translates to:
@@ -172,6 +214,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Edit'**
   String get commonEdit;
+
+  /// No description provided for @commonLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get commonLink;
+
+  /// No description provided for @commonPublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Publish'**
+  String get commonPublish;
+
+  /// No description provided for @commonUnpublish.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpublish'**
+  String get commonUnpublish;
+
+  /// No description provided for @commonDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get commonDraft;
+
+  /// No description provided for @commonPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get commonPublished;
+
+  /// No description provided for @commonStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get commonStatus;
 
   /// No description provided for @commonRename.
   ///
@@ -250,6 +328,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Image'**
   String get commonImage;
+
+  /// No description provided for @commonCoverImage.
+  ///
+  /// In en, this message translates to:
+  /// **'Cover image'**
+  String get commonCoverImage;
+
+  /// No description provided for @commonChangeCover.
+  ///
+  /// In en, this message translates to:
+  /// **'Change cover'**
+  String get commonChangeCover;
 
   /// No description provided for @commonVideo.
   ///
@@ -472,6 +562,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save as draft'**
   String get exhibitionCreatorPublishDraft;
+
+  /// No description provided for @exhibitionCreatorCollabHint.
+  ///
+  /// In en, this message translates to:
+  /// **'After creating, you can invite collaborators from the exhibition detail screen.'**
+  String get exhibitionCreatorCollabHint;
+
+  /// No description provided for @exhibitionDetailInvitesTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Invites'**
+  String get exhibitionDetailInvitesTooltip;
+
+  /// No description provided for @exhibitionDetailRefreshTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get exhibitionDetailRefreshTooltip;
+
+  /// No description provided for @exhibitionDetailOverviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get exhibitionDetailOverviewTitle;
+
+  /// No description provided for @exhibitionDetailArtworksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks'**
+  String get exhibitionDetailArtworksTitle;
+
+  /// No description provided for @exhibitionDetailArtworksManageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Link artworks so visitors can discover them from this exhibition.'**
+  String get exhibitionDetailArtworksManageHint;
+
+  /// No description provided for @exhibitionDetailArtworksViewHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks linked to this exhibition will appear here.'**
+  String get exhibitionDetailArtworksViewHint;
+
+  /// No description provided for @exhibitionDetailNoArtworksLinkedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks linked yet.'**
+  String get exhibitionDetailNoArtworksLinkedYet;
+
+  /// No description provided for @exhibitionDetailNoArtworksAvailableToLinkToast.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks available to link.'**
+  String get exhibitionDetailNoArtworksAvailableToLinkToast;
+
+  /// No description provided for @exhibitionDetailAddArtworksDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add artworks'**
+  String get exhibitionDetailAddArtworksDialogTitle;
+
+  /// No description provided for @exhibitionDetailArtworksLinkedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Artworks linked to exhibition.'**
+  String get exhibitionDetailArtworksLinkedToast;
+
+  /// No description provided for @exhibitionDetailLinkArtworksFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to link artworks. Please try again.'**
+  String get exhibitionDetailLinkArtworksFailedToast;
+
+  /// No description provided for @exhibitionDetailStatusRowLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: {status}'**
+  String exhibitionDetailStatusRowLabel(Object status);
+
+  /// No description provided for @exhibitionDetailBadgeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Badge'**
+  String get exhibitionDetailBadgeTitle;
+
+  /// No description provided for @exhibitionDetailBadgeClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Claimed'**
+  String get exhibitionDetailBadgeClaimed;
+
+  /// No description provided for @exhibitionDetailBadgeNotClaimed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not claimed'**
+  String get exhibitionDetailBadgeNotClaimed;
 
   /// No description provided for @exhibitionCreatorEndDateAfterStartError.
   ///
@@ -5891,6 +6077,18 @@ abstract class AppLocalizations {
   /// **'Opening collection editor...'**
   String get collectionDetailOpeningEditorToast;
 
+  /// No description provided for @collectionDetailAddArtworkFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add artwork to collection. Please try again.'**
+  String get collectionDetailAddArtworkFailedToast;
+
+  /// No description provided for @collectionDetailRemoveArtworkFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to remove artwork from collection. Please try again.'**
+  String get collectionDetailRemoveArtworkFailedToast;
+
   /// No description provided for @collectionSettingsBasicInfo.
   ///
   /// In en, this message translates to:
@@ -6010,6 +6208,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Collection settings saved for \"{name}\"'**
   String collectionSettingsSavedToast(Object name);
+
+  /// No description provided for @collectionSettingsSaveFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save collection settings. Please try again.'**
+  String get collectionSettingsSaveFailedToast;
 
   /// No description provided for @collectionSettingsDeleteDialogTitle.
   ///
@@ -7912,6 +8116,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sharing {title}'**
   String artistGallerySharingToast(Object title);
+
+  /// No description provided for @artistGalleryPublishSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'"{title}" published'**
+  String artistGalleryPublishSuccessToast(Object title);
+
+  /// No description provided for @artistGalleryUnpublishSuccessToast.
+  ///
+  /// In en, this message translates to:
+  /// **'"{title}" moved to draft'**
+  String artistGalleryUnpublishSuccessToast(Object title);
+
+  /// No description provided for @artistGalleryPublishFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to publish "{title}". Please try again.'**
+  String artistGalleryPublishFailedToast(Object title);
+
+  /// No description provided for @artistGalleryUnpublishFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to unpublish "{title}". Please try again.'**
+  String artistGalleryUnpublishFailedToast(Object title);
 
   /// No description provided for @artistGalleryDeletedToast.
   ///

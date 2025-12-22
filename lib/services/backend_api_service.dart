@@ -92,6 +92,12 @@ class BackendApiService {
     return path.startsWith('/api/exhibitions') || path.contains('/api/exhibitions/');
   }
 
+  bool _isExhibitionsRootPath(Uri uri) {
+    final segments = uri.pathSegments;
+    if (segments.length < 2) return false;
+    return segments[0] == 'api' && segments[1] == 'exhibitions' && segments.length == 2;
+  }
+
   int? _tryParseRequestFailedStatus(Object error) {
     // _fetchJson throws Exception('Request failed: <code>')
     final message = error.toString();
@@ -383,7 +389,10 @@ class BackendApiService {
         throw Exception(_rateLimitMessage(key));
       }
 
-      if (_isExhibitionsPath(uri) && (primaryResponse.statusCode == 404 || primaryResponse.statusCode == 405 || primaryResponse.statusCode == 501)) {
+      if (_isExhibitionsRootPath(uri) &&
+          (primaryResponse.statusCode == 404 ||
+              primaryResponse.statusCode == 405 ||
+              primaryResponse.statusCode == 501)) {
         _exhibitionsApiAvailable = false;
       }
 
@@ -1464,8 +1473,11 @@ class BackendApiService {
   /// GET /api/artworks/:id
   Future<Artwork> getArtwork(String artworkId) async {
     try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final data = await _fetchJson(uri, allowOrbitFallback: true);
+      final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final payload = data['artwork'] ?? data['data'] ?? data;
       if (payload is Map<String, dynamic>) {
         return _artworkFromBackendJson(payload);
@@ -1473,6 +1485,95 @@ class BackendApiService {
       throw Exception('Invalid artwork payload');
     } catch (e) {
       debugPrint('Error getting artwork: $e');
+      rethrow;
+    }
+  }
+
+  /// Update an artwork
+  /// PUT /api/artworks/:id
+  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) async {
+    try {
+      await _ensureAuthWithStoredWallet();
+      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
+      final response = await http.put(uri, headers: _getHeaders(), body: jsonEncode(updates));
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (response.statusCode == 200) {
+        if (decoded is Map<String, dynamic>) {
+          final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
+          if (payload is Map<String, dynamic>) {
+            return _artworkFromBackendJson(payload);
+          }
+        }
+        return null;
+      }
+      throw Exception('Failed to update artwork: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error updating artwork: $e');
+      rethrow;
+    }
+  }
+
+  /// Publish an artwork
+  /// POST /api/artworks/:id/publish
+  Future<Artwork?> publishArtwork(String artworkId) async {
+    try {
+      await _ensureAuthWithStoredWallet();
+      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/publish');
+      final response = await http.post(uri, headers: _getHeaders());
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (response.statusCode == 200) {
+        if (decoded is Map<String, dynamic>) {
+          final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
+          if (payload is Map<String, dynamic>) {
+            return _artworkFromBackendJson(payload);
+          }
+        }
+        return null;
+      }
+      throw Exception('Failed to publish artwork: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error publishing artwork: $e');
+      rethrow;
+    }
+  }
+
+  /// Unpublish an artwork
+  /// POST /api/artworks/:id/unpublish
+  Future<Artwork?> unpublishArtwork(String artworkId) async {
+    try {
+      await _ensureAuthWithStoredWallet();
+      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/unpublish');
+      final response = await http.post(uri, headers: _getHeaders());
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (response.statusCode == 200) {
+        if (decoded is Map<String, dynamic>) {
+          final payload = decoded['data'] ?? decoded['artwork'] ?? decoded;
+          if (payload is Map<String, dynamic>) {
+            return _artworkFromBackendJson(payload);
+          }
+        }
+        return null;
+      }
+      throw Exception('Failed to unpublish artwork: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error unpublishing artwork: $e');
+      rethrow;
+    }
+  }
+
+  /// Soft-delete (deactivate) an artwork
+  /// DELETE /api/artworks/:id
+  Future<bool> deleteArtwork(String artworkId) async {
+    try {
+      await _ensureAuthWithStoredWallet();
+      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
+      final response = await http.delete(uri, headers: _getHeaders());
+      if (response.statusCode == 200 || response.statusCode == 204) return true;
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
+      throw Exception('Failed to delete artwork: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error deleting artwork: $e');
       rethrow;
     }
   }
@@ -2035,6 +2136,7 @@ class BackendApiService {
     required double longitude,
     double radiusKm = 3,
     int limit = 20,
+    int page = 1,
   }) async {
     try {
       final params = <String, String>{
@@ -2042,6 +2144,7 @@ class BackendApiService {
         'lng': longitude.toString(),
         'radiusKm': radiusKm.toStringAsFixed(2),
         'limit': limit.toString(),
+        'page': page.toString(),
       };
       final uri = Uri.parse('$baseUrl/api/community/art-feed').replace(queryParameters: params);
       final data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: false);
@@ -3771,6 +3874,7 @@ class BackendApiService {
   /// GET /api/exhibitions
   Future<List<Exhibition>> listExhibitions({
     String? eventId,
+    bool? mine,
     String? from,
     String? to,
     double? lat,
@@ -3788,6 +3892,7 @@ class BackendApiService {
         'offset': '$offset',
       };
       if (eventId != null && eventId.trim().isNotEmpty) qp['eventId'] = eventId.trim();
+      if (mine == true) qp['mine'] = 'true';
       if (from != null && from.trim().isNotEmpty) qp['from'] = from.trim();
       if (to != null && to.trim().isNotEmpty) qp['to'] = to.trim();
       if (lat != null) qp['lat'] = lat.toString();
@@ -4306,9 +4411,6 @@ class BackendApiService {
             uploadedUrl = null;
           }
 
-          // Log raw response for debugging
-          debugPrint('BackendApiService.uploadFile: response body: ${jsonEncode(body)}');
-
           // Return structured result including computed uploadedUrl for easy consumption
           return {
             'raw': body,
@@ -4321,7 +4423,10 @@ class BackendApiService {
           final retryAfter = response.headers['retry-after'];
           final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
           if (attempt < maxRetries) {
-            debugPrint('uploadFile received 429, retrying in $waitSeconds seconds (attempt $attempt)');
+            _debugLogThrottled(
+              'uploadFile:429',
+              'BackendApiService.uploadFile: received 429, retrying in ${waitSeconds}s (attempt $attempt/$maxRetries)',
+            );
             await Future.delayed(Duration(seconds: waitSeconds));
             continue;
           } else {
@@ -4332,11 +4437,17 @@ class BackendApiService {
         throw Exception('Failed to upload file: ${response.statusCode}');
       } catch (e) {
         if (attempt >= maxRetries) {
-          debugPrint('Error uploading file (final): $e');
+          _debugLogThrottled(
+            'uploadFile:error:final',
+            'BackendApiService.uploadFile: error (final): $e',
+          );
           rethrow;
         }
         final backoff = 1 << (attempt - 1);
-        debugPrint('uploadFile transient error, retrying in $backoff seconds: $e');
+        _debugLogThrottled(
+          'uploadFile:error:retry',
+          'BackendApiService.uploadFile: transient error, retrying in ${backoff}s (attempt $attempt/$maxRetries): $e',
+        );
         await Future.delayed(Duration(seconds: backoff));
       }
     }
@@ -4350,21 +4461,22 @@ class BackendApiService {
     required String fileType,
     Map<String, String>? metadata,
   }) async {
-    debugPrint('🌐 BackendApiService.uploadAvatarToProfile START');
-    debugPrint('   baseUrl: $baseUrl');
-    debugPrint('   fileName: $fileName');
-    debugPrint('   fileType: $fileType');
-    debugPrint('   fileBytes length: ${fileBytes.length}');
-    debugPrint('   metadata: $metadata');
+    _debugLogThrottled(
+      'uploadAvatarToProfile:start',
+      'BackendApiService.uploadAvatarToProfile: starting upload (fileName=$fileName, fileType=$fileType, bytes=${fileBytes.length})',
+    );
     
     const int maxRetries = 3;
     int attempt = 0;
     while (true) {
       attempt++;
-      debugPrint('   Attempt $attempt of $maxRetries');
+      _debugLogThrottled(
+        'uploadAvatarToProfile:attempt',
+        'BackendApiService.uploadAvatarToProfile: attempt $attempt/$maxRetries',
+      );
       try {
         final uri = Uri.parse('$baseUrl/api/profiles/avatars');
-        debugPrint('   POST URL: $uri');
+        _debugLogThrottled('uploadAvatarToProfile:url', 'BackendApiService.uploadAvatarToProfile: POST $uri');
         
         final request = http.MultipartRequest('POST', uri);
 
@@ -4382,14 +4494,14 @@ class BackendApiService {
         request.fields['fileType'] = fileType;
         if (metadata != null) request.fields['metadata'] = jsonEncode(metadata);
 
-        debugPrint('   Sending request...');
         final streamedResponse = await request.send();
-        debugPrint('   Response received, status: ${streamedResponse.statusCode}');
         final response = await http.Response.fromStream(streamedResponse);
-        debugPrint('   Response body length: ${response.body.length}');
+        _debugLogThrottled(
+          'uploadAvatarToProfile:status',
+          'BackendApiService.uploadAvatarToProfile: status=${response.statusCode} bodyLen=${response.body.length}',
+        );
 
         if (response.statusCode == 200) {
-          debugPrint('   ✅ Upload successful (200)');
           final body = jsonDecode(response.body) as Map<String, dynamic>;
           final Map<String, dynamic> data = body['data'] is Map<String, dynamic>
               ? Map<String, dynamic>.from(body['data'] as Map<String, dynamic>)
@@ -4400,7 +4512,6 @@ class BackendApiService {
             // Backend returns avatar URL in data.avatar field
             if (data.containsKey('avatar') && data['avatar'] != null && (data['avatar'] as String).isNotEmpty) {
               uploadedUrl = data['avatar'] as String;
-              debugPrint('   Found data.avatar: $uploadedUrl');
             } else if (data.containsKey('url') && (data['url'] as String).isNotEmpty) {
               uploadedUrl = data['url'] as String;
             } else if (data.containsKey('ipfsUrl') && (data['ipfsUrl'] as String).isNotEmpty) {
@@ -4416,8 +4527,10 @@ class BackendApiService {
             uploadedUrl = null;
           }
 
-          debugPrint('BackendApiService.uploadAvatarToProfile: response body: ${jsonEncode(body)}');
-          debugPrint('BackendApiService.uploadAvatarToProfile: extracted uploadedUrl: $uploadedUrl');
+          _debugLogThrottled(
+            'uploadAvatarToProfile:done',
+            'BackendApiService.uploadAvatarToProfile: upload complete (uploadedUrl=${uploadedUrl ?? 'null'})',
+          );
           return {
             'raw': body,
             'data': data,
@@ -4429,7 +4542,10 @@ class BackendApiService {
           final retryAfter = response.headers['retry-after'];
           final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
           if (attempt < maxRetries) {
-            debugPrint('uploadAvatarToProfile received 429, retrying in $waitSeconds seconds (attempt $attempt)');
+            _debugLogThrottled(
+              'uploadAvatarToProfile:429',
+              'BackendApiService.uploadAvatarToProfile: received 429, retrying in ${waitSeconds}s (attempt $attempt/$maxRetries)',
+            );
             await Future.delayed(Duration(seconds: waitSeconds));
             continue;
           } else {
@@ -4437,18 +4553,21 @@ class BackendApiService {
           }
         }
 
-        debugPrint('   ❌ Upload failed with status: ${response.statusCode}');
-        debugPrint('   Response body: ${response.body}');
         throw Exception('Failed to upload avatar: ${response.statusCode} ${response.body}');
       } catch (e, stackTrace) {
-        debugPrint('   ❌ Exception during upload: $e');
         if (attempt >= maxRetries) {
-          debugPrint('Error uploading avatar (final): $e');
-          debugPrint('Stack trace: $stackTrace');
+          _debugLogThrottled(
+            'uploadAvatarToProfile:error:final',
+            'BackendApiService.uploadAvatarToProfile: error (final): $e\n$stackTrace',
+            throttle: const Duration(seconds: 1),
+          );
           rethrow;
         }
         final backoff = 1 << (attempt - 1);
-        debugPrint('uploadAvatarToProfile transient error, retrying in $backoff seconds: $e');
+        _debugLogThrottled(
+          'uploadAvatarToProfile:error:retry',
+          'BackendApiService.uploadAvatarToProfile: transient error, retrying in ${backoff}s (attempt $attempt/$maxRetries): $e',
+        );
         await Future.delayed(Duration(seconds: backoff));
       }
     }
@@ -4536,7 +4655,7 @@ class BackendApiService {
       final uri = Uri.parse('$baseUrl/api/collections/$collectionId');
       final jsonData = await _fetchJson(
         uri,
-        includeAuth: false,
+        includeAuth: true,
         allowOrbitFallback: true,
       );
 
@@ -4580,6 +4699,47 @@ class BackendApiService {
       }
     } catch (e) {
       debugPrint('Error creating collection: $e');
+      rethrow;
+    }
+  }
+
+  /// Update collection
+  /// PUT /api/collections/:id
+  Future<Map<String, dynamic>> updateCollection({
+    required String collectionId,
+    String? name,
+    String? description,
+    bool? isPublic,
+    String? thumbnailUrl,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final payload = <String, dynamic>{
+        if (name != null) 'name': name,
+        if (description != null) 'description': description,
+        if (isPublic != null) 'isPublic': isPublic,
+        if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
+      };
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/collections/$collectionId'),
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+        if (jsonData is Map<String, dynamic>) {
+          final data = jsonData['data'];
+          if (data is Map<String, dynamic>) {
+            return data;
+          }
+          return jsonData;
+        }
+        return const <String, dynamic>{};
+      }
+      throw Exception('Failed to update collection: ${response.statusCode} ${response.body}');
+    } catch (e) {
       rethrow;
     }
   }
@@ -5308,8 +5468,19 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     json['arMarkerId'] ?? json['markerId'] ?? json['marker_id'],
   );
 
+  final walletAddress = nullableString(json['walletAddress'] ?? json['wallet_address']);
+  final isPublic = boolVal(json['isPublic'] ?? json['is_public']) ?? true;
+  final isActive = boolVal(json['isActive'] ?? json['is_active']) ?? true;
+  final isForSale = boolVal(json['isForSale'] ?? json['is_for_sale']) ?? false;
+  final price = doubleVal(json['price']);
+  final currency = nullableString(json['currency']);
+  final createdAt =
+      parseDate(json['createdAt'] ?? json['created_at']) ?? DateTime.now();
+  final updatedAt = parseDate(json['updatedAt'] ?? json['updated_at']);
+
   return Artwork(
     id: id,
+    walletAddress: walletAddress,
     title: title,
     artist: artist,
     description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
@@ -5342,7 +5513,13 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
           json['animationName'] ??
           arAsset?['animation'],
     ),
-    createdAt: parseDate(json['createdAt']) ?? DateTime.now(),
+    isPublic: isPublic,
+    isActive: isActive,
+    isForSale: isForSale,
+    price: price,
+    currency: currency,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
     discoveredAt: parseDate(json['discoveredAt']),
     discoveryUserId: nullableString(json['discoveryUserId']),
     tags: resolvedTags,

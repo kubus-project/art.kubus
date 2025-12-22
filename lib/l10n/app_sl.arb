@@ -2,6 +2,7 @@
   "@@locale": "sl",
   "appTitle": "art.kubus",
   "commonCancel": "Prekliči",
+  "commonClear": "Počisti",
   "commonClose": "Zapri",
   "commonContinue": "Nadaljuj",
   "commonSkip": "Preskoči",
@@ -9,10 +10,22 @@
   "commonBack": "Nazaj",
   "commonNext": "Naprej",
   "commonSave": "Shrani",
+  "commonSavedToast": "Shranjeno",
+  "commonActionFailedToast": "Nekaj je šlo narobe. Poskusi znova.",
+  "commonTitle": "Naslov",
+  "commonDescription": "Opis",
+  "commonPrice": "Cena",
+  "commonForSale": "Naprodaj",
   "commonCopy": "Kopiraj",
   "commonDelete": "Izbriši",
   "commonDone": "Končano",
   "commonEdit": "Uredi",
+  "commonLink": "Poveži",
+  "commonPublish": "Objavi",
+  "commonUnpublish": "Prekliči objavo",
+  "commonDraft": "Osnutek",
+  "commonPublished": "Objavljeno",
+  "commonStatus": "Stanje",
   "commonRename": "Preimenuj",
   "commonCreate": "Ustvari",
   "commonGotIt": "Razumem",
@@ -29,6 +42,8 @@
   "commonFeed": "Objave",
   "commonGroup": "Skupina",
   "commonImage": "Slika",
+  "commonCoverImage": "Naslovna slika",
+  "commonChangeCover": "Spremeni naslovnico",
   "commonVideo": "Video",
   "commonMembers": "Člani",
   "commonAdd": "Dodaj",
@@ -66,6 +81,27 @@
   "exhibitionCreatorPublishTitle": "Objavi",
   "exhibitionCreatorPublishVisible": "Vidno vsem",
   "exhibitionCreatorPublishDraft": "Shrani kot osnutek",
+  "exhibitionCreatorCollabHint": "Po ustvarjanju lahko povabiš sodelavce na zaslonu podrobnosti razstave.",
+  "exhibitionDetailInvitesTooltip": "Vabila",
+  "exhibitionDetailRefreshTooltip": "Osveži",
+  "exhibitionDetailOverviewTitle": "Pregled",
+  "exhibitionDetailArtworksTitle": "Umetnine",
+  "exhibitionDetailArtworksManageHint": "Poveži umetnine, da jih obiskovalci lahko odkrijejo iz te razstave.",
+  "exhibitionDetailArtworksViewHint": "Povezane umetnine se bodo prikazale tukaj.",
+  "exhibitionDetailNoArtworksLinkedYet": "Ni še povezanih umetnin.",
+  "exhibitionDetailNoArtworksAvailableToLinkToast": "Ni umetnin za povezavo.",
+  "exhibitionDetailAddArtworksDialogTitle": "Dodaj umetnine",
+  "exhibitionDetailArtworksLinkedToast": "Umetnine so povezane z razstavo.",
+  "exhibitionDetailLinkArtworksFailedToast": "Povezovanje umetnin ni uspelo. Poskusi znova.",
+  "exhibitionDetailStatusRowLabel": "Stanje: {status}",
+  "@exhibitionDetailStatusRowLabel": {
+    "placeholders": {
+      "status": {}
+    }
+  },
+  "exhibitionDetailBadgeTitle": "Značka",
+  "exhibitionDetailBadgeClaimed": "Prevzeto",
+  "exhibitionDetailBadgeNotClaimed": "Ni prevzeto",
   "exhibitionCreatorEndDateAfterStartError": "Datum konca mora biti po začetku.",
   "exhibitionCreatorCreateFailed": "Ustvarjanje razstave ni uspelo.",
   "exhibitionCreatorCreateFailedWithError": "Ustvarjanje razstave ni uspelo: {error}",
@@ -1305,6 +1341,8 @@
   "collectionDetailByYou": "avtor: Ti",
   "collectionDetailSharingToast": "Deljenje zbirke...",
   "collectionDetailOpeningEditorToast": "Odpiranje urejevalnika zbirke...",
+  "collectionDetailAddArtworkFailedToast": "Dodajanje umetnine v zbirko ni uspelo. Poskusi znova.",
+  "collectionDetailRemoveArtworkFailedToast": "Odstranjevanje umetnine iz zbirke ni uspelo. Poskusi znova.",
   "collectionSettingsBasicInfo": "Osnovni podatki",
   "collectionSettingsName": "Ime zbirke",
   "collectionSettingsNameHint": "Vnesi ime zbirke",
@@ -1325,6 +1363,7 @@
   "collectionSettingsDeleteWarning": "Ko izbrišeš zbirko, ni povratka. Tega dejanja ni mogoče razveljaviti.",
   "collectionSettingsDeleteButton": "Izbriši zbirko",
   "collectionSettingsSavedToast": "Nastavitve zbirke shranjene za \"{name}\"",
+  "collectionSettingsSaveFailedToast": "Shranjevanje nastavitev zbirke ni uspelo. Poskusi znova.",
   "@collectionSettingsSavedToast": {
     "placeholders": {
       "name": {}
@@ -1847,6 +1886,30 @@
   },
   "artistGallerySharingToast": "Deljenje: {title}",
   "@artistGallerySharingToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryPublishSuccessToast": "\"{title}\" objavljena",
+  "@artistGalleryPublishSuccessToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryUnpublishSuccessToast": "\"{title}\" premaknjena v osnutek",
+  "@artistGalleryUnpublishSuccessToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryPublishFailedToast": "Objava \"{title}\" ni uspela. Poskusi znova.",
+  "@artistGalleryPublishFailedToast": {
+    "placeholders": {
+      "title": {}
+    }
+  },
+  "artistGalleryUnpublishFailedToast": "Umaknitev objave za \"{title}\" ni uspela. Poskusi znova.",
+  "@artistGalleryUnpublishFailedToast": {
     "placeholders": {
       "title": {}
     }

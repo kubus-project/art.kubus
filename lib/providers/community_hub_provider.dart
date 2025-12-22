@@ -265,32 +265,59 @@ class CommunityHubProvider extends ChangeNotifier {
   String? _artFeedError;
   CommunityLocation? _artFeedCenter;
   double _artFeedRadiusKm = 3;
+  bool _artFeedHasMore = true;
+  int _nextArtFeedPage = 1;
+  int _artFeedPageSize = 20;
 
   List<CommunityPost> get artFeedPosts => _artFeed;
   bool get artFeedLoading => _artFeedLoading;
   String? get artFeedError => _artFeedError;
   CommunityLocation? get artFeedCenter => _artFeedCenter;
   double get artFeedRadiusKm => _artFeedRadiusKm;
+  bool get artFeedHasMore => _artFeedHasMore;
+  int get artFeedPageSize => _artFeedPageSize;
 
   Future<void> loadArtFeed({
     required double latitude,
     required double longitude,
     double radiusKm = 3,
     int limit = 20,
+    bool refresh = false,
   }) async {
     if (_artFeedLoading) return;
+    final targetPage = refresh ? 1 : _nextArtFeedPage;
+    final pageSize = limit > 0 ? limit : _artFeedPageSize;
     _artFeedLoading = true;
     _artFeedError = null;
     notifyListeners();
     try {
-      _artFeed = await _apiService.getCommunityArtFeed(
+      final incoming = await _apiService.getCommunityArtFeed(
         latitude: latitude,
         longitude: longitude,
         radiusKm: radiusKm,
-        limit: limit,
+        limit: pageSize,
+        page: targetPage,
       );
+
+      if (targetPage == 1) {
+        _artFeed = incoming;
+      } else if (incoming.isNotEmpty) {
+        final existingIds = _artFeed.map((p) => p.id).toSet();
+        final merged = <CommunityPost>[..._artFeed];
+        for (final post in incoming) {
+          if (existingIds.add(post.id)) {
+            merged.add(post);
+          }
+        }
+        _artFeed = merged;
+      }
+
       _artFeedCenter = CommunityLocation(lat: latitude, lng: longitude);
       _artFeedRadiusKm = radiusKm;
+
+      _artFeedHasMore = incoming.length >= pageSize;
+      _nextArtFeedPage = _artFeedHasMore ? (targetPage + 1) : targetPage;
+      _artFeedPageSize = pageSize;
     } catch (e) {
       _artFeedError = e.toString();
       if (kDebugMode) {

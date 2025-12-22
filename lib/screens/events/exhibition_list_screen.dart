@@ -6,6 +6,7 @@ import '../../config/config.dart';
 import '../../models/exhibition.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../providers/themeprovider.dart';
+import '../../utils/media_url_resolver.dart';
 import 'exhibition_creator_screen.dart';
 import 'exhibition_detail_screen.dart';
 
@@ -17,11 +18,19 @@ class ExhibitionListScreen extends StatefulWidget {
 
   /// If true, shows the create FAB (for hosts).
   final bool canCreate;
+  
+  /// Optional override to open exhibition details (desktop shell, etc.).
+  final ValueChanged<Exhibition>? onOpenExhibition;
+  
+  /// Optional override to open the exhibition creator (desktop shell, etc.).
+  final VoidCallback? onCreateExhibition;
 
   const ExhibitionListScreen({
     super.key,
     this.embedded = false,
     this.canCreate = true,
+    this.onOpenExhibition,
+    this.onCreateExhibition,
   });
 
   @override
@@ -58,6 +67,11 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   }
 
   void _openExhibition(Exhibition exhibition) {
+    final handler = widget.onOpenExhibition;
+    if (handler != null) {
+      handler(exhibition);
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => ExhibitionDetailScreen(
@@ -69,6 +83,11 @@ class _ExhibitionListScreenState extends State<ExhibitionListScreen>
   }
 
   void _createExhibition() {
+    final handler = widget.onCreateExhibition;
+    if (handler != null) {
+      handler();
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const ExhibitionCreatorScreen()),
     );
@@ -432,6 +451,7 @@ class _ExhibitionCard extends StatelessWidget {
 
     final location = (exhibition.locationName ?? '').trim();
     final isPublished = exhibition.isPublished;
+    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
 
     return Card(
       elevation: 0,
@@ -459,11 +479,11 @@ class _ExhibitionCard extends StatelessWidget {
                       color: themeProvider.accentColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: exhibition.coverUrl != null && exhibition.coverUrl!.isNotEmpty
+                    child: coverUrl != null && coverUrl.isNotEmpty
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(12),
                             child: Image.network(
-                              exhibition.coverUrl!,
+                              coverUrl,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Icon(
                                 Icons.collections_bookmark,

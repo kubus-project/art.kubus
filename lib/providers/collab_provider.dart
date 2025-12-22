@@ -40,7 +40,24 @@ class CollabProvider extends ChangeNotifier {
 
   int get pendingInviteCount => _invitesInbox.where((i) => i.isPending).length;
 
-  static String _key(String entityType, String entityId) => '${entityType.trim()}:${entityId.trim()}';
+  static const Map<String, String> _entityTypeAliases = {
+    'artwork': 'artwork',
+    'artworks': 'artwork',
+    'collection': 'collection',
+    'collections': 'collection',
+    'event': 'events',
+    'events': 'events',
+    'exhibition': 'exhibitions',
+    'exhibitions': 'exhibitions',
+  };
+
+  static String _normalizeEntityType(String raw) {
+    final normalized = raw.trim().toLowerCase();
+    return _entityTypeAliases[normalized] ?? normalized;
+  }
+
+  static String _key(String entityType, String entityId) =>
+      '${_normalizeEntityType(entityType)}:${entityId.trim()}';
 
   List<CollabMember> collaboratorsFor(String entityType, String entityId) {
     return List.unmodifiable(_membersByEntityKey[_key(entityType, entityId)] ?? const <CollabMember>[]);
@@ -195,11 +212,12 @@ class CollabProvider extends ChangeNotifier {
   }
 
   Future<List<CollabMember>> loadCollaborators(String entityType, String entityId, {bool refresh = true}) async {
+    final normalizedType = _normalizeEntityType(entityType);
     _setLoading(true);
     _error = null;
     try {
-      final members = await _api.listCollaborators(entityType, entityId);
-      _membersByEntityKey[_key(entityType, entityId)] = members;
+      final members = await _api.listCollaborators(normalizedType, entityId);
+      _membersByEntityKey[_key(normalizedType, entityId)] = members;
       notifyListeners();
       return members;
     } catch (e) {
@@ -217,10 +235,12 @@ class CollabProvider extends ChangeNotifier {
     required String invitedIdentifier,
     required String role,
   }) async {
+    final normalizedType = _normalizeEntityType(entityType);
     _setLoading(true);
     _error = null;
     try {
-      final invite = await _api.inviteCollaborator(entityType, entityId, invitedIdentifier, role);
+      final invite =
+          await _api.inviteCollaborator(normalizedType, entityId, invitedIdentifier, role);
       // Best effort: refresh invites for invited user is not possible client-side; refresh ours anyway.
       await refreshInvites();
       return invite;
@@ -269,11 +289,12 @@ class CollabProvider extends ChangeNotifier {
     required String memberUserId,
     required String role,
   }) async {
+    final normalizedType = _normalizeEntityType(entityType);
     _setLoading(true);
     _error = null;
     try {
-      await _api.updateCollaboratorRole(entityType, entityId, memberUserId, role);
-      await loadCollaborators(entityType, entityId);
+      await _api.updateCollaboratorRole(normalizedType, entityId, memberUserId, role);
+      await loadCollaborators(normalizedType, entityId);
     } catch (e) {
       _error = e.toString();
       notifyListeners();
@@ -288,11 +309,12 @@ class CollabProvider extends ChangeNotifier {
     required String entityId,
     required String memberUserId,
   }) async {
+    final normalizedType = _normalizeEntityType(entityType);
     _setLoading(true);
     _error = null;
     try {
-      await _api.removeCollaborator(entityType, entityId, memberUserId);
-      await loadCollaborators(entityType, entityId);
+      await _api.removeCollaborator(normalizedType, entityId, memberUserId);
+      await loadCollaborators(normalizedType, entityId);
     } catch (e) {
       _error = e.toString();
       notifyListeners();

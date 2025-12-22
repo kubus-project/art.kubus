@@ -29,6 +29,8 @@ import 'providers/locale_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/exhibitions_provider.dart';
 import 'providers/collab_provider.dart';
+import 'providers/collections_provider.dart';
+import 'providers/portfolio_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -220,6 +222,8 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
               ChangeNotifierProvider(create: (context) => CollabProvider()),
+              ChangeNotifierProvider(create: (context) => CollectionsProvider()),
+              ChangeNotifierProvider(create: (context) => PortfolioProvider()),
               ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
                 create: (context) {
                   final artworkProvider = ArtworkProvider();

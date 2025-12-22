@@ -20,6 +20,7 @@ import '../../web3/institution/event_creator.dart';
 import '../../web3/institution/event_manager.dart';
 import '../../web3/institution/institution_analytics.dart';
 import '../../events/exhibition_creator_screen.dart';
+import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
@@ -330,8 +331,29 @@ class _DesktopInstitutionHubScreenState
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: 'My Exhibitions',
-                    child: const ExhibitionListScreen(
-                        embedded: true, canCreate: true),
+                    child: ExhibitionListScreen(
+                      embedded: true,
+                      canCreate: true,
+                      onCreateExhibition: () {
+                        DesktopShellScope.of(context)?.pushScreen(
+                          DesktopSubScreen(
+                            title: 'Create Exhibition',
+                            child: const ExhibitionCreatorScreen(),
+                          ),
+                        );
+                      },
+                      onOpenExhibition: (exhibition) {
+                        DesktopShellScope.of(context)?.pushScreen(
+                          DesktopSubScreen(
+                            title: exhibition.title,
+                            child: ExhibitionDetailScreen(
+                              exhibitionId: exhibition.id,
+                              initialExhibition: exhibition,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },

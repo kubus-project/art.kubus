@@ -11,11 +11,17 @@ import 'collection_creator.dart';
 class ArtistStudioCreateScreen extends StatelessWidget {
   final VoidCallback? onArtworkCreated;
   final VoidCallback? onCollectionCreated;
+  final VoidCallback? onOpenArtworkCreator;
+  final VoidCallback? onOpenCollectionCreator;
+  final VoidCallback? onOpenExhibitionCreator;
 
   const ArtistStudioCreateScreen({
     super.key,
     this.onArtworkCreated,
     this.onCollectionCreated,
+    this.onOpenArtworkCreator,
+    this.onOpenCollectionCreator,
+    this.onOpenExhibitionCreator,
   });
 
   @override
@@ -42,6 +48,10 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           icon: Icons.add_photo_alternate_outlined,
           accent: studioAccent,
           onTap: () async {
+            if (onOpenArtworkCreator != null) {
+              onOpenArtworkCreator!();
+              return;
+            }
             final navigator = Navigator.of(context);
             await navigator.push(
               MaterialPageRoute(
@@ -64,6 +74,10 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           icon: Icons.collections_bookmark_outlined,
           accent: studioAccent,
           onTap: () async {
+            if (onOpenCollectionCreator != null) {
+              onOpenCollectionCreator!();
+              return;
+            }
             final navigator = Navigator.of(context);
             final createdId = await navigator.push<String>(
               MaterialPageRoute(
@@ -93,6 +107,10 @@ class ArtistStudioCreateScreen extends StatelessWidget {
           icon: Icons.event_available_outlined,
           accent: studioAccent,
           onTap: () async {
+            if (onOpenExhibitionCreator != null) {
+              onOpenExhibitionCreator!();
+              return;
+            }
             final navigator = Navigator.of(context);
             await navigator.push(
               MaterialPageRoute(builder: (_) => const ExhibitionCreatorScreen()),

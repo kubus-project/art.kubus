@@ -15,6 +15,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonCancel => 'Prekliči';
 
   @override
+  String get commonClear => 'Počisti';
+
+  @override
   String get commonClose => 'Zapri';
 
   @override
@@ -36,6 +39,24 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonSave => 'Shrani';
 
   @override
+  String get commonSavedToast => 'Shranjeno';
+
+  @override
+  String get commonActionFailedToast => 'Nekaj je šlo narobe. Poskusi znova.';
+
+  @override
+  String get commonTitle => 'Naslov';
+
+  @override
+  String get commonDescription => 'Opis';
+
+  @override
+  String get commonPrice => 'Cena';
+
+  @override
+  String get commonForSale => 'Naprodaj';
+
+  @override
   String get commonCopy => 'Kopiraj';
 
   @override
@@ -46,6 +67,24 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonEdit => 'Uredi';
+
+  @override
+  String get commonLink => 'Poveži';
+
+  @override
+  String get commonPublish => 'Objavi';
+
+  @override
+  String get commonUnpublish => 'Prekliči objavo';
+
+  @override
+  String get commonDraft => 'Osnutek';
+
+  @override
+  String get commonPublished => 'Objavljeno';
+
+  @override
+  String get commonStatus => 'Stanje';
 
   @override
   String get commonRename => 'Preimenuj';
@@ -85,6 +124,12 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonImage => 'Slika';
+
+  @override
+  String get commonCoverImage => 'Naslovna slika';
+
+  @override
+  String get commonChangeCover => 'Spremeni naslovnico';
 
   @override
   String get commonVideo => 'Video';
@@ -196,6 +241,56 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get exhibitionCreatorPublishDraft => 'Shrani kot osnutek';
+
+  @override
+  String get exhibitionCreatorCollabHint => 'Po ustvarjanju lahko povabiš sodelavce na zaslonu podrobnosti razstave.';
+
+  @override
+  String get exhibitionDetailInvitesTooltip => 'Vabila';
+
+  @override
+  String get exhibitionDetailRefreshTooltip => 'Osveži';
+
+  @override
+  String get exhibitionDetailOverviewTitle => 'Pregled';
+
+  @override
+  String get exhibitionDetailArtworksTitle => 'Umetnine';
+
+  @override
+  String get exhibitionDetailArtworksManageHint => 'Poveži umetnine, da jih obiskovalci lahko odkrijejo iz te razstave.';
+
+  @override
+  String get exhibitionDetailArtworksViewHint => 'Povezane umetnine se bodo prikazale tukaj.';
+
+  @override
+  String get exhibitionDetailNoArtworksLinkedYet => 'Ni še povezanih umetnin.';
+
+  @override
+  String get exhibitionDetailNoArtworksAvailableToLinkToast => 'Ni umetnin za povezavo.';
+
+  @override
+  String get exhibitionDetailAddArtworksDialogTitle => 'Dodaj umetnine';
+
+  @override
+  String get exhibitionDetailArtworksLinkedToast => 'Umetnine so povezane z razstavo.';
+
+  @override
+  String get exhibitionDetailLinkArtworksFailedToast => 'Povezovanje umetnin ni uspelo. Poskusi znova.';
+
+  @override
+  String exhibitionDetailStatusRowLabel(Object status) {
+    return 'Stanje: $status';
+  }
+
+  @override
+  String get exhibitionDetailBadgeTitle => 'Značka';
+
+  @override
+  String get exhibitionDetailBadgeClaimed => 'Prevzeto';
+
+  @override
+  String get exhibitionDetailBadgeNotClaimed => 'Ni prevzeto';
 
   @override
   String get exhibitionCreatorEndDateAfterStartError => 'Datum konca mora biti po začetku.';
@@ -3095,6 +3190,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get collectionDetailOpeningEditorToast => 'Odpiranje urejevalnika zbirke...';
 
   @override
+  String get collectionDetailAddArtworkFailedToast => 'Dodajanje umetnine v zbirko ni uspelo. Poskusi znova.';
+
+  @override
+  String get collectionDetailRemoveArtworkFailedToast => 'Odstranjevanje umetnine iz zbirke ni uspelo. Poskusi znova.';
+
+  @override
   String get collectionSettingsBasicInfo => 'Osnovni podatki';
 
   @override
@@ -3155,6 +3256,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String collectionSettingsSavedToast(Object name) {
     return 'Nastavitve zbirke shranjene za "$name"';
   }
+
+  @override
+  String get collectionSettingsSaveFailedToast => 'Shranjevanje nastavitev zbirke ni uspelo. Poskusi znova.';
 
   @override
   String get collectionSettingsDeleteDialogTitle => 'Izbriši zbirko';
@@ -4187,6 +4291,26 @@ class AppLocalizationsSl extends AppLocalizations {
   @override
   String artistGallerySharingToast(Object title) {
     return 'Deljenje: $title';
+  }
+
+  @override
+  String artistGalleryPublishSuccessToast(Object title) {
+    return '"$title" objavljena';
+  }
+
+  @override
+  String artistGalleryUnpublishSuccessToast(Object title) {
+    return '"$title" premaknjena v osnutek';
+  }
+
+  @override
+  String artistGalleryPublishFailedToast(Object title) {
+    return 'Objava "$title" ni uspela. Poskusi znova.';
+  }
+
+  @override
+  String artistGalleryUnpublishFailedToast(Object title) {
+    return 'Umaknitev objave za "$title" ni uspela. Poskusi znova.';
   }
 
   @override

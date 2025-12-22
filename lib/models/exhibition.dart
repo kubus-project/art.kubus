@@ -73,7 +73,15 @@ class Exhibition {
       locationName: (json['locationName'] ?? json['location_name'])?.toString(),
       lat: (_toNum(json['lat'] ?? json['latitude']))?.toDouble(),
       lng: (_toNum(json['lng'] ?? json['longitude']))?.toDouble(),
-      coverUrl: (json['coverUrl'] ?? json['cover_url'])?.toString(),
+      coverUrl: (json['coverUrl'] ??
+              json['cover_url'] ??
+              json['coverImage'] ??
+              json['cover_image'] ??
+              json['coverImageUrl'] ??
+              json['cover_image_url'] ??
+              json['thumbnailUrl'] ??
+              json['thumbnail_url'])
+          ?.toString(),
       status: json['status']?.toString(),
       createdAt: _parseDateTime(json['createdAt'] ?? json['created_at']),
       updatedAt: _parseDateTime(json['updatedAt'] ?? json['updated_at']),

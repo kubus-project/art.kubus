@@ -34,6 +34,7 @@ import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/media_url_resolver.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
 import '../art/art_detail_screen.dart';
@@ -262,9 +263,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
           if (_activeMarker != null)
             _buildMarkerOverlay(
               _activeMarker!,
-              context
-                  .read<ArtworkProvider>()
-                  .getArtworkById(_activeMarker!.artworkId ?? ''),
+              _activeMarker!.isExhibitionMarker
+                  ? null
+                  : context
+                      .read<ArtworkProvider>()
+                      .getArtworkById(_activeMarker!.artworkId ?? ''),
               themeProvider,
             ),
           if (_pendingMarkerLocation != null)
@@ -978,7 +981,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final location = (exhibition.locationName ?? '').trim().isNotEmpty
         ? exhibition.locationName!.trim()
         : null;
-    final coverUrl = exhibition.coverUrl;
+    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
 
     return Container(
       margin: const EdgeInsets.only(left: 24),
@@ -2416,26 +2419,15 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _moveCamera(marker.position, math.max(_effectiveZoom, 15));
     setState(() => _activeMarker = marker);
 
-    final primaryExhibition = marker.primaryExhibitionSummary;
-    final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
-    final exhibitionsApiAvailable =
-        BackendApiService().exhibitionsApiAvailable;
-    final canPresentExhibition = exhibitionsFeatureEnabled &&
-        primaryExhibition != null &&
-        primaryExhibition.id.isNotEmpty &&
-        exhibitionsApiAvailable != false;
-
-    final isExhibitionMarker = marker.isExhibitionSubject ||
-        (primaryExhibition != null &&
-            primaryExhibition.id.isNotEmpty &&
-            (marker.artworkId == null || marker.artworkId!.isEmpty));
+    final primaryExhibition = marker.resolvedExhibitionSummary;
+    final isExhibitionMarker = marker.isExhibitionMarker;
 
     if (isExhibitionMarker) {
-      if (!canPresentExhibition) return;
-
-      final exhibitionId = primaryExhibition.id;
-      final hasSelection = _selectedArtwork != null || _selectedExhibition != null;
-      final alreadySelected = _selectedExhibition?.id == exhibitionId;
+      final exhibitionId = primaryExhibition?.id;
+      final hasSelection =
+          _selectedArtwork != null || _selectedExhibition != null;
+      final alreadySelected =
+          exhibitionId != null && _selectedExhibition?.id == exhibitionId;
       if (!hasSelection || alreadySelected) {
         unawaited(_openExhibitionFromMarker(marker, primaryExhibition, null));
       }
@@ -2514,7 +2506,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
-    final primaryExhibition = marker.primaryExhibitionSummary;
+    final primaryExhibition = marker.resolvedExhibitionSummary;
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
     final canPresentExhibition = exhibitionsFeatureEnabled &&
@@ -3006,7 +2998,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   Widget _markerImageFallback(
       Color baseColor, ColorScheme scheme, ArtMarker marker) {
     // Determine the appropriate icon - use exhibition icon if marker has exhibitions
-    final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
+    final hasExhibitions =
+        marker.isExhibitionMarker || marker.exhibitionSummaries.isNotEmpty;
     final icon = hasExhibitions
         ? AppColorUtils.exhibitionIcon
         : _resolveArtMarkerIcon(marker.type);
@@ -3054,22 +3047,42 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     Artwork? artwork,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
-    final api = BackendApiService();
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
 
-    if (exhibition == null || exhibition.id.isEmpty) {
+    final resolved = exhibition ?? marker.resolvedExhibitionSummary;
+    final isExhibitionMarker = marker.isExhibitionMarker;
+
+    if (resolved == null || resolved.id.isEmpty) {
+      if (isExhibitionMarker) {
+        await _showMarkerInfoFallback(marker);
+        return;
+      }
       await _openMarkerDetail(marker, artwork);
       return;
     }
 
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
-        api.exhibitionsApiAvailable == false) {
+        BackendApiService().exhibitionsApiAvailable == false) {
+      if (isExhibitionMarker) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              'Exhibition not available at the moment.',
+              style: GoogleFonts.inter(),
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() {});
+        return;
+      }
       await _openMarkerDetail(marker, artwork);
       return;
     }
 
     final fetched = await (() async {
       try {
-        return await api.getExhibition(exhibition.id);
+        return await exhibitionsProvider.fetchExhibition(resolved.id, force: true);
       } catch (_) {
         return null;
       }
@@ -3089,7 +3102,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
       // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
       setState(() {});
-      await _openMarkerDetail(marker, artwork);
+      if (!isExhibitionMarker) {
+        await _openMarkerDetail(marker, artwork);
+      }
       return;
     }
 
@@ -3103,7 +3118,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
   Future<Artwork?> _ensureLinkedArtworkLoaded(ArtMarker marker,
       {Artwork? initial}) async {
-    if (marker.isExhibitionSubject) return initial;
+    if (marker.isExhibitionMarker) return initial;
     Artwork? resolvedArtwork = initial;
     final artworkProvider = context.read<ArtworkProvider>();
 

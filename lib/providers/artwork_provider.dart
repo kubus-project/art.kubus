@@ -74,7 +74,9 @@ class ArtworkProvider extends ChangeNotifier {
       addOrUpdateArtwork(fetched);
       return fetched;
     } catch (e) {
-      debugPrint('ArtworkProvider.fetchArtworkIfNeeded error: $e');
+      if (kDebugMode) {
+        debugPrint('ArtworkProvider: fetchArtworkIfNeeded error: $e');
+      }
       rethrow;
     }
   }
@@ -217,6 +219,40 @@ class ArtworkProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<Artwork?> publishArtwork(String artworkId) async {
+    final operation = 'publish_artwork_$artworkId';
+    _setLoading(operation, true);
+    try {
+      final updated = await _backendApi.publishArtwork(artworkId);
+      if (updated != null) {
+        addOrUpdateArtwork(updated);
+      }
+      return updated;
+    } catch (e) {
+      _setError('Failed to publish artwork: $e');
+      return null;
+    } finally {
+      _setLoading(operation, false);
+    }
+  }
+
+  Future<Artwork?> unpublishArtwork(String artworkId) async {
+    final operation = 'unpublish_artwork_$artworkId';
+    _setLoading(operation, true);
+    try {
+      final updated = await _backendApi.unpublishArtwork(artworkId);
+      if (updated != null) {
+        addOrUpdateArtwork(updated);
+      }
+      return updated;
+    } catch (e) {
+      _setError('Failed to unpublish artwork: $e');
+      return null;
+    } finally {
+      _setLoading(operation, false);
+    }
+  }
+
   /// Like/Unlike artwork
   Future<void> toggleLike(String artworkId) async {
     _setLoading('like_$artworkId', true);
@@ -347,7 +383,9 @@ class ArtworkProvider extends ChangeNotifier {
             }
           }
         } catch (e) {
-          debugPrint('ArtworkProvider.discoverArtwork sync failed: $e');
+          if (kDebugMode) {
+            debugPrint('ArtworkProvider: discoverArtwork sync failed: $e');
+          }
         }
       }
     } catch (e) {
@@ -384,7 +422,9 @@ class ArtworkProvider extends ChangeNotifier {
       }
     } catch (e) {
       // Silent fail for view counting
-      debugPrint('Failed to increment view count: $e');
+      if (kDebugMode) {
+        debugPrint('ArtworkProvider: incrementViewCount failed: $e');
+      }
     }
   }
 
@@ -601,7 +641,9 @@ class ArtworkProvider extends ChangeNotifier {
       _historyLoaded = true;
       notifyListeners();
     } catch (e) {
-      debugPrint('ArtworkProvider.ensureHistoryLoaded error: $e');
+      if (kDebugMode) {
+        debugPrint('ArtworkProvider: ensureHistoryLoaded error: $e');
+      }
       _historyLoaded = true;
     }
   }
