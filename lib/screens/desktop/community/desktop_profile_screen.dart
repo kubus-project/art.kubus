@@ -128,6 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
+    final isWide = screenWidth >= 1400;
 
     final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
     final DAOReview? daoReview = walletAddress.isNotEmpty
@@ -154,46 +155,129 @@ class _ProfileScreenState extends State<ProfileScreen>
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: EdgeInsets.symmetric(horizontal: isLarge ? 32 : 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-                    _buildHeader(themeProvider),
-                    const SizedBox(height: 32),
-                    _buildProfileCard(themeProvider, profileProvider, isArtist, isInstitution),
-                    const SizedBox(height: 24),
-                    _buildStatsCards(themeProvider, profileProvider, isLarge),
-                    const SizedBox(height: 24),
-                    if (isArtist) ...[
-                      _buildArtistPortfolioSection(themeProvider),
-                      const SizedBox(height: 24),
-                      _buildArtistCollectionsSection(themeProvider),
-                      const SizedBox(height: 24),
-                      _buildArtistEventsSection(themeProvider),
-                      const SizedBox(height: 24),
-                    ] else if (isInstitution) ...[
-                      _buildInstitutionEventsSection(themeProvider),
-                      const SizedBox(height: 24),
-                      _buildInstitutionCollectionsSection(themeProvider),
-                      const SizedBox(height: 24),
-                    ],
-                    if (!isArtist && !isInstitution) ...[
-                      _buildViewedArtworksSection(themeProvider),
-                      const SizedBox(height: 24),
-                    ],
-                    _buildPerformanceStatsSection(themeProvider),
-                    const SizedBox(height: 24),
-                    _buildAchievementsSection(themeProvider),
-                    const SizedBox(height: 24),
-                    _buildPostsSection(themeProvider),
-                    const SizedBox(height: 32),
-                  ],
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1600),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 20),
+                        _buildHeader(themeProvider),
+                        const SizedBox(height: 20),
+                        // Profile card with inline stats on wide screens
+                        _buildProfileCard(themeProvider, profileProvider, isArtist, isInstitution),
+                        const SizedBox(height: 16),
+                        _buildStatsCards(themeProvider, profileProvider, isLarge),
+                        const SizedBox(height: 20),
+                        // Two-column layout for wide screens
+                        if (isWide)
+                          _buildTwoColumnLayout(
+                            themeProvider: themeProvider,
+                            isArtist: isArtist,
+                            isInstitution: isInstitution,
+                          )
+                        else
+                          _buildSingleColumnContent(
+                            themeProvider: themeProvider,
+                            isArtist: isArtist,
+                            isInstitution: isInstitution,
+                          ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
           );
         },
       ),
+    );
+  }
+
+  /// Two-column layout for wide desktop screens (>=1400px)
+  Widget _buildTwoColumnLayout({
+    required ThemeProvider themeProvider,
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Left column: Performance + Achievements (narrower)
+        SizedBox(
+          width: 380,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPerformanceStatsSection(themeProvider),
+              const SizedBox(height: 16),
+              _buildAchievementsSection(themeProvider),
+            ],
+          ),
+        ),
+        const SizedBox(width: 24),
+        // Right column: Content sections + Posts (wider)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isArtist) ...[
+                _buildArtistPortfolioSection(themeProvider),
+                const SizedBox(height: 16),
+                _buildArtistCollectionsSection(themeProvider),
+                const SizedBox(height: 16),
+                _buildArtistEventsSection(themeProvider),
+                const SizedBox(height: 16),
+              ] else if (isInstitution) ...[
+                _buildInstitutionEventsSection(themeProvider),
+                const SizedBox(height: 16),
+                _buildInstitutionCollectionsSection(themeProvider),
+                const SizedBox(height: 16),
+              ] else ...[
+                _buildViewedArtworksSection(themeProvider),
+                const SizedBox(height: 16),
+              ],
+              _buildPostsSection(themeProvider),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Single column layout for narrower screens (<1400px)
+  Widget _buildSingleColumnContent({
+    required ThemeProvider themeProvider,
+    required bool isArtist,
+    required bool isInstitution,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (isArtist) ...[
+          _buildArtistPortfolioSection(themeProvider),
+          const SizedBox(height: 16),
+          _buildArtistCollectionsSection(themeProvider),
+          const SizedBox(height: 16),
+          _buildArtistEventsSection(themeProvider),
+          const SizedBox(height: 16),
+        ] else if (isInstitution) ...[
+          _buildInstitutionEventsSection(themeProvider),
+          const SizedBox(height: 16),
+          _buildInstitutionCollectionsSection(themeProvider),
+          const SizedBox(height: 16),
+        ],
+        if (!isArtist && !isInstitution) ...[
+          _buildViewedArtworksSection(themeProvider),
+          const SizedBox(height: 16),
+        ],
+        _buildPerformanceStatsSection(themeProvider),
+        const SizedBox(height: 16),
+        _buildAchievementsSection(themeProvider),
+        const SizedBox(height: 16),
+        _buildPostsSection(themeProvider),
+      ],
     );
   }
 
@@ -285,7 +369,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     final web3Provider = Provider.of<Web3Provider>(context);
     final coverImageUrl = _normalizeMediaUrl(user?.coverImage);
     final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty;
-    const avatarRadius = 52.0;
+    const avatarRadius = 44.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompact = screenWidth >= 1200;
 
     return DesktopCard(
       padding: EdgeInsets.zero,
@@ -297,7 +383,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: Container(
-                  height: hasCoverImage ? 200 : 120,
+                  height: hasCoverImage ? 140 : 80,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     gradient: !hasCoverImage
@@ -350,19 +436,26 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ),
                 ),
-              Positioned(
-                left: 24,
-                bottom: -avatarRadius + 12,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
+            ],
+          ),
+          // Compact horizontal layout for profile info
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Avatar
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Theme.of(context).scaffoldBackgroundColor,
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).shadowColor.withValues(alpha: 0.12),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
+                        color: Theme.of(context).shadowColor.withValues(alpha: 0.1),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
@@ -376,16 +469,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         !Provider.of<WalletProvider>(context, listen: false).isLocked,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: avatarRadius + 24),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(width: avatarRadius * 2 + 8), // align text with avatar edge
+                const SizedBox(width: 16),
+                // Name, username, bio
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -396,7 +481,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             child: Text(
                               user?.displayName ?? user?.username ?? 'Art Enthusiast',
                               style: GoogleFonts.inter(
-                                fontSize: 26,
+                                fontSize: isCompact ? 22 : 20,
                                 fontWeight: FontWeight.bold,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
@@ -489,11 +574,15 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Widget _buildStatsCards(ThemeProvider themeProvider, ProfileProvider profileProvider, bool isLarge) {
     final wallet = profileProvider.currentUser?.walletAddress;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // More columns on wider screens for compact horizontal layout
+    final maxCols = screenWidth >= 1400 ? 4 : (isLarge ? 4 : 2);
 
     return DesktopGrid(
       minCrossAxisCount: 2,
-      maxCrossAxisCount: isLarge ? 4 : 2,
-      childAspectRatio: 2.5,
+      maxCrossAxisCount: maxCols,
+      childAspectRatio: screenWidth >= 1400 ? 2.8 : 2.5,
+      spacing: 12,
       children: [
         DesktopStatCard(
           label: 'Posts',

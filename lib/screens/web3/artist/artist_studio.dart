@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../onboarding/web3/web3_onboarding.dart';
 import '../../onboarding/web3/onboarding_data.dart';
-import 'artwork_gallery.dart';
+import 'artist_portfolio_screen.dart';
 import 'artist_analytics.dart';
 import 'artist_studio_create_screen.dart';
 import 'package:provider/provider.dart';
@@ -22,7 +22,16 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
 class ArtistStudio extends StatefulWidget {
-  const ArtistStudio({super.key});
+  final VoidCallback? onOpenArtworkCreator;
+  final VoidCallback? onOpenCollectionCreator;
+  final VoidCallback? onOpenExhibitionCreator;
+
+  const ArtistStudio({
+    super.key,
+    this.onOpenArtworkCreator,
+    this.onOpenCollectionCreator,
+    this.onOpenExhibitionCreator,
+  });
 
   @override
   State<ArtistStudio> createState() => _ArtistStudioState();
@@ -181,12 +190,18 @@ class _ArtistStudioState extends State<ArtistStudio> {
 
     // Build pages list - Exhibitions tab is optional based on feature flag
     final exhibitionsEnabled = AppConfig.isFeatureEnabled('exhibitions');
+    final walletAddress = _resolveWalletAddress(listen: true);
     final pages = <Widget>[
-      ArtworkGallery(
-          onCreateRequested: () => setState(() => _selectedIndex = 1)),
+      ArtistPortfolioScreen(
+        walletAddress: walletAddress,
+        onCreateRequested: () => setState(() => _selectedIndex = 1),
+      ),
       ArtistStudioCreateScreen(
         onArtworkCreated: () => setState(() => _selectedIndex = 0),
         onCollectionCreated: () => setState(() => _selectedIndex = 0),
+        onOpenArtworkCreator: widget.onOpenArtworkCreator,
+        onOpenCollectionCreator: widget.onOpenCollectionCreator,
+        onOpenExhibitionCreator: widget.onOpenExhibitionCreator,
       ),
       if (exhibitionsEnabled)
         const ExhibitionListScreen(embedded: true, canCreate: true),

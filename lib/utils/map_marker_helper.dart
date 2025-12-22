@@ -81,7 +81,7 @@ class MapMarkerHelper {
     final missingIds = <String>{};
 
     for (final marker in markers) {
-      if (marker.isExhibitionSubject) continue;
+      if (marker.isExhibitionMarker) continue;
       final artworkId = marker.artworkId;
       if (artworkId == null || artworkId.isEmpty) continue;
       if (artworkProvider.getArtworkById(artworkId) == null) {
@@ -98,7 +98,7 @@ class MapMarkerHelper {
     }
 
     for (final marker in markers) {
-      if (marker.isExhibitionSubject) continue;
+      if (marker.isExhibitionMarker) continue;
       final artworkId = marker.artworkId;
       if (artworkId == null || artworkId.isEmpty) continue;
 

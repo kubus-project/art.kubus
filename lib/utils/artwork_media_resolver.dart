@@ -34,8 +34,14 @@ class ArtworkMediaResolver {
     if (meta == null || meta.isEmpty) return const <String?>[];
     return [
       meta['coverImage']?.toString(),
+      meta['coverImageUrl']?.toString(),
+      meta['cover_image_url']?.toString(),
+      meta['coverUrl']?.toString(),
+      meta['cover_url']?.toString(),
       meta['imageUrl']?.toString(),
       meta['image']?.toString(),
+      meta['thumbnailUrl']?.toString(),
+      meta['thumbnail_url']?.toString(),
       meta['thumbnail']?.toString(),
       meta['preview']?.toString(),
       meta['previewUrl']?.toString(),

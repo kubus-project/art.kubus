@@ -15,6 +15,7 @@ enum ArtworkStatus {
 
 class Artwork {
   final String id;
+  final String? walletAddress;
   final String title;
   final String artist;
   final String description;
@@ -22,9 +23,15 @@ class Artwork {
   final LatLng position;
   final ArtworkRarity rarity;
   final ArtworkStatus status;
+  final bool isPublic;
+  final bool isActive;
+  final bool isForSale;
+  final double? price;
+  final String? currency;
   final bool arEnabled;
   final int rewards; // KUB8 tokens
   final DateTime createdAt;
+  final DateTime? updatedAt;
   final DateTime? discoveredAt;
   final String? discoveryUserId;
   
@@ -54,6 +61,7 @@ class Artwork {
 
   const Artwork({
     required this.id,
+    this.walletAddress,
     required this.title,
     required this.artist,
     required this.description,
@@ -61,9 +69,15 @@ class Artwork {
     required this.position,
     required this.rarity,
     this.status = ArtworkStatus.undiscovered,
+    this.isPublic = true,
+    this.isActive = true,
+    this.isForSale = false,
+    this.price,
+    this.currency,
     this.arEnabled = false,
     required this.rewards,
     required this.createdAt,
+    this.updatedAt,
     this.discoveredAt,
     this.discoveryUserId,
     this.arMarkerId,
@@ -131,6 +145,7 @@ class Artwork {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'walletAddress': walletAddress,
       'title': title,
       'artist': artist,
       'description': description,
@@ -139,9 +154,15 @@ class Artwork {
       'longitude': position.longitude,
       'rarity': rarity.name,
       'status': status.name,
+      'isPublic': isPublic,
+      'isActive': isActive,
+      'isForSale': isForSale,
+      'price': price,
+      'currency': currency,
       'arEnabled': arEnabled,
       'rewards': rewards,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
       'discoveredAt': discoveredAt?.toIso8601String(),
       'discoveryUserId': discoveryUserId,
       'arMarkerId': arMarkerId,
@@ -169,6 +190,7 @@ class Artwork {
   factory Artwork.fromMap(Map<String, dynamic> map) {
     return Artwork(
       id: map['id'] ?? '',
+      walletAddress: map['walletAddress']?.toString() ?? map['wallet_address']?.toString(),
       title: map['title'] ?? '',
       artist: map['artist'] ?? '',
       description: map['description'] ?? '',
@@ -185,9 +207,15 @@ class Artwork {
         (e) => e.name == map['status'],
         orElse: () => ArtworkStatus.undiscovered,
       ),
+      isPublic: map['isPublic'] ?? map['is_public'] ?? true,
+      isActive: map['isActive'] ?? map['is_active'] ?? true,
+      isForSale: map['isForSale'] ?? map['is_for_sale'] ?? false,
+      price: map['price'] is num ? (map['price'] as num).toDouble() : double.tryParse('${map['price'] ?? ''}'),
+      currency: map['currency']?.toString(),
       arEnabled: map['arEnabled'] ?? false,
       rewards: map['rewards']?.toInt() ?? 0,
       createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
+      updatedAt: map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt']) : null,
       discoveredAt: map['discoveredAt'] != null 
           ? DateTime.tryParse(map['discoveredAt']) 
           : null,
@@ -218,6 +246,7 @@ class Artwork {
   /// Create a copy with updated fields
   Artwork copyWith({
     String? id,
+    String? walletAddress,
     String? title,
     String? artist,
     String? description,
@@ -225,9 +254,15 @@ class Artwork {
     LatLng? position,
     ArtworkRarity? rarity,
     ArtworkStatus? status,
+    bool? isPublic,
+    bool? isActive,
+    bool? isForSale,
+    double? price,
+    String? currency,
     bool? arEnabled,
     int? rewards,
     DateTime? createdAt,
+    DateTime? updatedAt,
     DateTime? discoveredAt,
     String? discoveryUserId,
     String? arMarkerId,
@@ -251,6 +286,7 @@ class Artwork {
   }) {
     return Artwork(
       id: id ?? this.id,
+      walletAddress: walletAddress ?? this.walletAddress,
       title: title ?? this.title,
       artist: artist ?? this.artist,
       description: description ?? this.description,
@@ -258,9 +294,15 @@ class Artwork {
       position: position ?? this.position,
       rarity: rarity ?? this.rarity,
       status: status ?? this.status,
+      isPublic: isPublic ?? this.isPublic,
+      isActive: isActive ?? this.isActive,
+      isForSale: isForSale ?? this.isForSale,
+      price: price ?? this.price,
+      currency: currency ?? this.currency,
       arEnabled: arEnabled ?? this.arEnabled,
       rewards: rewards ?? this.rewards,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       discoveredAt: discoveredAt ?? this.discoveredAt,
       discoveryUserId: discoveryUserId ?? this.discoveryUserId,
       arMarkerId: arMarkerId ?? this.arMarkerId,

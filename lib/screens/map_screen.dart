@@ -684,12 +684,12 @@ class _MapScreenState extends State<MapScreen>
 
   void _handleMarkerTap(ArtMarker marker) {
     setState(() => _activeMarker = marker);
-    if (marker.isExhibitionSubject) return;
+    if (marker.isExhibitionMarker) return;
     _ensureLinkedArtworkLoaded(marker);
   }
 
   Future<void> _ensureLinkedArtworkLoaded(ArtMarker marker) async {
-    if (marker.isExhibitionSubject) return;
+    if (marker.isExhibitionMarker) return;
     final artworkId = marker.artworkId;
     if (artworkId == null || artworkId.isEmpty) return;
 
@@ -1691,12 +1691,14 @@ class _MapScreenState extends State<MapScreen>
 
     if (_activeMarker != null) {
       final marker = _activeMarker!;
-      final artwork = context
-          .read<ArtworkProvider>()
-          .getArtworkById(marker.artworkId ?? '');
+      final artwork = marker.isExhibitionMarker
+          ? null
+          : context
+              .read<ArtworkProvider>()
+              .getArtworkById(marker.artworkId ?? '');
 
       final l10n = AppLocalizations.of(context)!;
-      final primaryExhibition = marker.primaryExhibitionSummary;
+      final primaryExhibition = marker.resolvedExhibitionSummary;
       final exhibitionsFeatureEnabled =
           AppConfig.isFeatureEnabled('exhibitions');
       final exhibitionsApiAvailable =
@@ -1797,7 +1799,7 @@ class _MapScreenState extends State<MapScreen>
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final baseColor = _resolveArtMarkerColor(marker, themeProvider);
-    final primaryExhibition = marker.primaryExhibitionSummary;
+    final primaryExhibition = marker.resolvedExhibitionSummary;
     final exhibitionsFeatureEnabled = AppConfig.isFeatureEnabled('exhibitions');
     final exhibitionsApiAvailable = BackendApiService().exhibitionsApiAvailable;
     final canPresentExhibition = exhibitionsFeatureEnabled &&
@@ -2197,7 +2199,8 @@ class _MapScreenState extends State<MapScreen>
   Widget _markerImageFallback(
       Color baseColor, ColorScheme scheme, ArtMarker marker) {
     // Determine the appropriate icon - use exhibition icon if marker has exhibitions
-    final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
+    final hasExhibitions =
+        marker.isExhibitionMarker || marker.exhibitionSummaries.isNotEmpty;
     final icon = hasExhibitions
         ? AppColorUtils.exhibitionIcon
         : _resolveArtMarkerIcon(marker.type);
@@ -2228,22 +2231,36 @@ class _MapScreenState extends State<MapScreen>
   ) async {
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final api = BackendApiService();
+    final exhibitionsProvider = context.read<ExhibitionsProvider>();
 
-    if (exhibition == null || exhibition.id.isEmpty) {
+    final resolved = exhibition ?? marker.resolvedExhibitionSummary;
+    final isExhibitionMarker = marker.isExhibitionMarker;
+
+    if (resolved == null || resolved.id.isEmpty) {
+      if (isExhibitionMarker) {
+        await _showMarkerInfoFallback(marker);
+        return;
+      }
       await _openMarkerDetail(marker, artwork);
       return;
     }
 
     if (!AppConfig.isFeatureEnabled('exhibitions') ||
-        api.exhibitionsApiAvailable == false) {
+        BackendApiService().exhibitionsApiAvailable == false) {
+      if (isExhibitionMarker) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Razstave trenutno niso na voljo.')),
+        );
+        setState(() {});
+        return;
+      }
       await _openMarkerDetail(marker, artwork);
       return;
     }
 
     final fetched = await (() async {
       try {
-        return await api.getExhibition(exhibition.id);
+        return await exhibitionsProvider.fetchExhibition(resolved.id, force: true);
       } catch (_) {
         return null;
       }
@@ -2257,13 +2274,15 @@ class _MapScreenState extends State<MapScreen>
       );
       // Force rebuild so we can hide exhibition UI if the API just got marked unavailable.
       setState(() {});
-      await _openMarkerDetail(marker, artwork);
+      if (!isExhibitionMarker) {
+        await _openMarkerDetail(marker, artwork);
+      }
       return;
     }
 
     navigator.push(
       MaterialPageRoute(
-        builder: (_) => ExhibitionDetailScreen(exhibitionId: exhibition.id),
+        builder: (_) => ExhibitionDetailScreen(exhibitionId: resolved.id),
       ),
     );
   }
@@ -2272,7 +2291,7 @@ class _MapScreenState extends State<MapScreen>
     setState(() => _activeMarker = marker);
 
     Artwork? resolvedArtwork = artwork;
-    final artworkId = marker.isExhibitionSubject ? null : marker.artworkId;
+    final artworkId = marker.isExhibitionMarker ? null : marker.artworkId;
     if (resolvedArtwork == null && artworkId != null && artworkId.isNotEmpty) {
       try {
         final artworkProvider = context.read<ArtworkProvider>();

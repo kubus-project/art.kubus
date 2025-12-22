@@ -1,9 +1,19 @@
+import 'dart:async';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 
-import '../../services/backend_api_service.dart';
+import '../../models/artwork.dart';
+import '../../models/collection_record.dart';
+import '../../providers/artwork_provider.dart';
+import '../../providers/collections_provider.dart';
+import '../../providers/wallet_provider.dart';
+import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../config/config.dart';
 import 'art_detail_screen.dart';
@@ -21,18 +31,41 @@ class CollectionDetailScreen extends StatefulWidget {
 }
 
 class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
-  late Future<Map<String, dynamic>> _future;
-
   @override
   void initState() {
     super.initState();
-    _future = BackendApiService().getCollection(widget.collectionId);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(_load());
+    });
+  }
+
+  Future<void> _load({bool force = false}) async {
+    final provider = context.read<CollectionsProvider>();
+    try {
+      await provider.fetchCollection(widget.collectionId, force: force);
+    } catch (_) {
+      // Provider handles error state.
+    }
   }
 
   void _reload() {
-    setState(() {
-      _future = BackendApiService().getCollection(widget.collectionId);
-    });
+    unawaited(_load(force: true));
+  }
+
+  Future<void> _openEditor(CollectionRecord collection) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _CollectionEditSheet(
+        collectionId: collection.id,
+        initialCollection: collection,
+      ),
+    );
   }
 
   @override
@@ -42,14 +75,19 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 
     return Scaffold(
       backgroundColor: scheme.surface,
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Consumer2<CollectionsProvider, WalletProvider>(
+        builder: (context, collectionsProvider, walletProvider, _) {
+          final collection =
+              collectionsProvider.getCollectionById(widget.collectionId);
+          final isLoading =
+              collectionsProvider.isLoading(widget.collectionId);
+          final error = collectionsProvider.errorFor(widget.collectionId);
+
+          if (collection == null && isLoading) {
             return const Center(child: CircularProgressIndicator(strokeWidth: 2));
           }
 
-          if (snapshot.hasError) {
+          if (collection == null && (error ?? '').isNotEmpty) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -78,19 +116,28 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
             );
           }
 
-          final raw = snapshot.data ?? const <String, dynamic>{};
-          final name = (raw['name'] ?? raw['title'] ?? l10n.userProfileCollectionFallbackTitle).toString();
-          final description = (raw['description'] ?? '').toString().trim();
-          final thumbRaw = (raw['thumbnailUrl'] ?? raw['thumbnail_url'] ?? raw['image'] ?? raw['coverImage'])?.toString();
-          final thumbnailUrl = MediaUrlResolver.resolve(thumbRaw);
+          final resolved = collection ??
+              CollectionRecord(
+                id: widget.collectionId,
+                walletAddress: '',
+                name: l10n.userProfileCollectionFallbackTitle,
+                description: '',
+                isPublic: true,
+                artworkCount: 0,
+              );
 
-          final dynamic artworksDynamic = raw['artworks'] ?? raw['items'] ?? const [];
-          final artworks = artworksDynamic is List
-              ? artworksDynamic
-                  .whereType<dynamic>()
-                  .map((e) => e is Map<String, dynamic> ? e : Map<String, dynamic>.from(e as Map))
-                  .toList()
-              : <Map<String, dynamic>>[];
+          final name = resolved.name.isNotEmpty
+              ? resolved.name
+              : l10n.userProfileCollectionFallbackTitle;
+          final description = (resolved.description ?? '').trim();
+          final thumbnailUrl =
+              MediaUrlResolver.resolve(resolved.thumbnailUrl);
+          final artworks = resolved.artworks;
+
+          final walletAddress = walletProvider.currentWalletAddress;
+          final canEdit = walletAddress != null &&
+              walletAddress.isNotEmpty &&
+              WalletUtils.equals(walletAddress, resolved.walletAddress);
 
           return CustomScrollView(
             slivers: [
@@ -100,6 +147,14 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 backgroundColor: scheme.surface,
                 elevation: 0,
                 foregroundColor: scheme.onSurface,
+                actions: [
+                  if (canEdit)
+                    IconButton(
+                      tooltip: l10n.commonEdit,
+                      onPressed: () => _openEditor(resolved),
+                      icon: const Icon(Icons.edit),
+                    ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   title: Text(
                     name,
@@ -173,15 +228,40 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                         ),
                         const SizedBox(height: 18),
                       ],
-                      Text(
-                        l10n.collectionDetailArtworks,
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            l10n.collectionDetailArtworks,
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: scheme.onSurface,
+                            ),
+                          ),
+                          const Spacer(),
+                          if (canEdit)
+                            TextButton.icon(
+                              onPressed: () => _openEditor(resolved),
+                              icon: const Icon(Icons.edit),
+                              label: Text(
+                                l10n.collectionDetailManage,
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 10),
+                      if ((error ?? '').isNotEmpty && collection != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            l10n.collectionDetailLoadFailedMessage,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: scheme.error,
+                            ),
+                          ),
+                        ),
                       if (artworks.isEmpty)
                         Text(
                           l10n.collectionDetailNoArtworksYet,
@@ -192,6 +272,11 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                         )
                       else
                         ...artworks.map((art) => _ArtworkRow(artwork: art)),
+                      if (isLoading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 16),
+                          child: LinearProgressIndicator(color: scheme.primary),
+                        ),
                     ],
                   ),
                 ),
@@ -205,17 +290,21 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
 }
 
 class _ArtworkRow extends StatelessWidget {
-  final Map<String, dynamic> artwork;
+  final CollectionArtworkRecord artwork;
 
   const _ArtworkRow({required this.artwork});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final id = (artwork['id'] ?? artwork['artworkId'] ?? artwork['artwork_id'])?.toString();
-    final title = (artwork['title'] ?? artwork['name'] ?? 'Untitled').toString();
-    final imgRaw = (artwork['imageUrl'] ?? artwork['image_url'] ?? artwork['coverImage'] ?? artwork['cover_image'])?.toString();
-    final imageUrl = MediaUrlResolver.resolve(imgRaw);
+    final l10n = AppLocalizations.of(context)!;
+    final id = artwork.id;
+    final title = artwork.title.isNotEmpty ? artwork.title : l10n.commonUntitled;
+    final rawUrl = artwork.imageUrl ??
+        (artwork.imageCid != null && artwork.imageCid!.isNotEmpty
+            ? 'ipfs://${artwork.imageCid}'
+            : null);
+    final imageUrl = MediaUrlResolver.resolve(rawUrl);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -223,7 +312,7 @@ class _ArtworkRow extends StatelessWidget {
         color: scheme.surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          onTap: id == null || id.isEmpty
+          onTap: id.isEmpty
               ? null
               : () {
                   Navigator.of(context).push(
@@ -276,6 +365,643 @@ class _ArtworkRow extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CollectionEditSheet extends StatefulWidget {
+  final String collectionId;
+  final CollectionRecord initialCollection;
+
+  const _CollectionEditSheet({
+    required this.collectionId,
+    required this.initialCollection,
+  });
+
+  @override
+  State<_CollectionEditSheet> createState() => _CollectionEditSheetState();
+}
+
+class _CollectionEditSheetState extends State<_CollectionEditSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _descriptionController;
+  bool _isPublic = true;
+  bool _saving = false;
+  bool _loadingArtworks = false;
+  bool _updatingCover = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialCollection.name);
+    _descriptionController =
+        TextEditingController(text: widget.initialCollection.description ?? '');
+    _isPublic = widget.initialCollection.isPublic;
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _changeCover(CollectionRecord collection) async {
+    if (_updatingCover) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<CollectionsProvider>();
+
+    setState(() => _updatingCover = true);
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final file = picked?.files.single;
+      final bytes = file?.bytes;
+      final fileName = (file?.name ?? '').trim();
+
+      if (!mounted) return;
+
+      if (bytes == null || bytes.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)),
+        );
+        return;
+      }
+
+      final url = await provider.uploadCollectionThumbnail(
+        bytes: bytes,
+        fileName: fileName.isEmpty ? 'cover.jpg' : fileName,
+      );
+      if (!mounted) return;
+
+      if (url == null || url.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.commonActionFailedToast)),
+        );
+        return;
+      }
+
+      await provider.updateCollection(
+        id: collection.id,
+        thumbnailUrl: url,
+      );
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.commonSavedToast)),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast),
+          backgroundColor: scheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _updatingCover = false);
+    }
+  }
+
+  Future<void> _save(CollectionRecord collection) async {
+    if (_saving) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    setState(() => _saving = true);
+    final provider = context.read<CollectionsProvider>();
+
+    try {
+      await provider.updateCollection(
+        id: collection.id,
+        name: _nameController.text.trim(),
+        description: _descriptionController.text.trim(),
+        isPublic: _isPublic,
+      );
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content:
+              Text(l10n.collectionSettingsSavedToast(_nameController.text.trim())),
+        ),
+      );
+      Navigator.of(context).maybePop();
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.collectionSettingsSaveFailedToast)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _saving = false);
+      }
+    }
+  }
+
+  Future<void> _removeArtwork(
+    CollectionRecord collection,
+    CollectionArtworkRecord artwork,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<CollectionsProvider>();
+
+    try {
+      await provider.removeArtwork(
+        collectionId: collection.id,
+        artworkId: artwork.id,
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.collectionDetailRemoveArtworkFailedToast)),
+      );
+    }
+  }
+
+  Future<void> _showAddArtworksDialog(CollectionRecord collection) async {
+    if (_loadingArtworks) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final walletProvider = context.read<WalletProvider>();
+    final walletAddress = walletProvider.currentWalletAddress ?? '';
+    if (walletAddress.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.collectionDetailNoArtworksYet)),
+      );
+      return;
+    }
+
+    final artworkProvider = context.read<ArtworkProvider>();
+    setState(() => _loadingArtworks = true);
+    try {
+      await artworkProvider.loadArtworksForWallet(walletAddress, force: true);
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.collectionDetailAddArtworkFailedToast)),
+        );
+      }
+      return;
+    } finally {
+      if (mounted) {
+        setState(() => _loadingArtworks = false);
+      }
+    }
+
+    if (!mounted) return;
+
+    final owned = _filterOwnedArtworks(artworkProvider.artworks, walletAddress);
+    final existingIds = collection.artworks.map((a) => a.id).toSet();
+    final available = owned.where((a) => !existingIds.contains(a.id)).toList();
+
+    if (available.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.collectionDetailNoArtworksYet)),
+      );
+      return;
+    }
+
+    final selectedIds = <String>{};
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setLocalState) {
+            return AlertDialog(
+              title: Text(
+                l10n.collectionDetailAddArtwork,
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+              ),
+              content: SizedBox(
+                width: 520,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: available.length,
+                  itemBuilder: (context, index) {
+                    final art = available[index];
+                    final checked = selectedIds.contains(art.id);
+                    final imageUrl = ArtworkMediaResolver.resolveCover(artwork: art);
+                    return CheckboxListTile(
+                      value: checked,
+                      onChanged: (v) {
+                        setLocalState(() {
+                          if (v == true) {
+                            selectedIds.add(art.id);
+                          } else {
+                            selectedIds.remove(art.id);
+                          }
+                        });
+                      },
+                      title: Text(
+                        art.title,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: Text(
+                        art.artist.isNotEmpty ? art.artist : art.id,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.75),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      secondary: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          child: imageUrl == null
+                              ? Icon(
+                                  Icons.image_outlined,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.5),
+                                )
+                              : Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                    Icons.broken_image_outlined,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      controlAffinity: ListTileControlAffinity.leading,
+                      contentPadding: EdgeInsets.zero,
+                    );
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(false),
+                  child: Text(l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: selectedIds.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(true),
+                  child: Text(l10n.commonAdd),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (confirmed != true || selectedIds.isEmpty) return;
+
+    if (!mounted) return;
+
+    final provider = context.read<CollectionsProvider>();
+    try {
+      await provider.addArtworks(
+        collectionId: collection.id,
+        artworkIds: selectedIds.toList(),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.collectionDetailAddArtworkFailedToast)),
+      );
+    }
+  }
+
+  List<Artwork> _filterOwnedArtworks(List<Artwork> artworks, String wallet) {
+    final normalizedWallet = WalletUtils.canonical(wallet);
+    if (normalizedWallet.isEmpty) return const <Artwork>[];
+
+    return artworks.where((artwork) {
+      final meta = artwork.metadata ?? const <String, dynamic>{};
+      final candidates = <String?>[
+        meta['walletAddress']?.toString(),
+        meta['wallet_address']?.toString(),
+        meta['wallet']?.toString(),
+        meta['ownerWallet']?.toString(),
+        meta['creatorWallet']?.toString(),
+        meta['createdBy']?.toString(),
+        meta['created_by']?.toString(),
+        artwork.discoveryUserId,
+      ];
+
+      for (final candidate in candidates) {
+        if (candidate == null) continue;
+        if (WalletUtils.equals(candidate, normalizedWallet)) {
+          return true;
+        }
+      }
+      final resolved = WalletUtils.resolveFromMap(meta);
+      return WalletUtils.equals(resolved, normalizedWallet);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final provider = context.watch<CollectionsProvider>();
+    final collection =
+        provider.getCollectionById(widget.collectionId) ?? widget.initialCollection;
+
+    final coverUrl = MediaUrlResolver.resolve(collection.thumbnailUrl);
+
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  l10n.collectionSettingsTitle,
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.commonCoverImage,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 140,
+                width: double.infinity,
+                color: scheme.surfaceContainerHighest,
+                child: coverUrl == null
+                    ? Icon(
+                        Icons.image_outlined,
+                        size: 44,
+                        color: scheme.onSurface.withValues(alpha: 0.45),
+                      )
+                    : Image.network(
+                        coverUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.broken_image_outlined,
+                          size: 44,
+                          color: scheme.onSurface.withValues(alpha: 0.45),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: (_saving || _updatingCover) ? null : () => _changeCover(collection),
+              icon: _updatingCover
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary),
+                    )
+                  : const Icon(Icons.image_outlined),
+              label: Text(l10n.commonChangeCover),
+            ),
+            const SizedBox(height: 12),
+            Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.collectionSettingsName,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: InputDecoration(
+                      hintText: l10n.collectionSettingsNameHint,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return l10n.collectionCreatorNameRequiredError;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.collectionSettingsDescriptionLabel,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      hintText: l10n.collectionSettingsDescriptionHint,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      l10n.collectionSettingsPublic,
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      l10n.collectionSettingsPublicSubtitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: scheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                    value: _isPublic,
+                    onChanged: (value) => setState(() => _isPublic = value),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Text(
+                  l10n.collectionDetailArtworks,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: _loadingArtworks
+                      ? null
+                      : () => _showAddArtworksDialog(collection),
+                  icon: _loadingArtworks
+                      ? SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.primary,
+                          ),
+                        )
+                      : const Icon(Icons.add),
+                  label: Text(l10n.collectionDetailAddArtwork),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (collection.artworks.isEmpty)
+              Text(
+                l10n.collectionDetailNoArtworksYet,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: scheme.onSurface.withValues(alpha: 0.7),
+                ),
+              )
+            else
+              SizedBox(
+                height: 200,
+                child: ListView.separated(
+                  itemCount: collection.artworks.length,
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: scheme.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                  itemBuilder: (context, index) {
+                    final art = collection.artworks[index];
+                    final imageUrl = MediaUrlResolver.resolve(
+                      art.imageUrl ??
+                          (art.imageCid != null && art.imageCid!.isNotEmpty
+                              ? 'ipfs://${art.imageCid}'
+                              : null),
+                    );
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          color: scheme.surfaceContainerHighest,
+                          child: imageUrl == null
+                              ? Icon(
+                                  Icons.image_outlined,
+                                  color: scheme.onSurface.withValues(alpha: 0.5),
+                                )
+                              : Image.network(
+                                  imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => Icon(
+                                    Icons.broken_image_outlined,
+                                    color:
+                                        scheme.onSurface.withValues(alpha: 0.5),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      title: Text(
+                        art.title,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        (art.artistName ?? art.artistWallet ?? art.id)
+                            .toString(),
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.remove_circle_outline,
+                            color: scheme.onSurface.withValues(alpha: 0.7)),
+                        onPressed: () => _removeArtwork(collection, art),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                const Spacer(),
+                FilledButton(
+                  onPressed: _saving ? null : () => _save(collection),
+                  child: _saving
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: scheme.onPrimary,
+                          ),
+                        )
+                      : Text(l10n.commonSave),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

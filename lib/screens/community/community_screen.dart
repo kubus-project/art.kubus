@@ -15,6 +15,7 @@ import '../../widgets/topbar_icon.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_post_card.dart';
+import '../../widgets/community/community_post_options_sheet.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,8 +49,7 @@ import 'messages_screen.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
-import '../../widgets/artist_badge.dart';
-import '../../widgets/institution_badge.dart';
+import '../../widgets/community/community_author_role_badges.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../season0/season0_screen.dart';
 
@@ -150,6 +150,9 @@ class _CommunityScreenState extends State<CommunityScreen>
   // Avatar cache removed - ChatProvider or UserService are used for user avatars
   // Scroll controller for the feed to detect when user is away from top
   late ScrollController _feedScrollController;
+  // Scroll controller for the Art tab list (pagination)
+  late ScrollController _artFeedScrollController;
+  bool _artFeedLoadMoreInFlight = false;
   late final TextEditingController _groupSearchController;
   Timer? _groupSearchDebounce;
   final Set<String> _groupActionsInFlight = <String>{};
@@ -241,29 +244,6 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  List<Widget> _buildAuthorRoleBadges(CommunityPost post, {double fontSize = 10, bool useOnPrimary = false}) {
-    final widgets = <Widget>[];
-    if (post.authorIsArtist) {
-      widgets.add(const SizedBox(width: 6));
-      widgets.add(ArtistBadge(
-        fontSize: fontSize,
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        useOnPrimary: useOnPrimary,
-        iconOnly: true,
-      ));
-    }
-    if (post.authorIsInstitution) {
-      widgets.add(const SizedBox(width: 6));
-      widgets.add(InstitutionBadge(
-        fontSize: fontSize,
-        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        useOnPrimary: useOnPrimary,
-        iconOnly: true,
-      ));
-    }
-    return widgets;
-  }
-
   void _openGroupFeed(CommunityGroupSummary group) {
     Navigator.push(
       context,
@@ -334,6 +314,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       await hub.loadArtFeed(
         latitude: locationData.latitude!,
         longitude: locationData.longitude!,
+        refresh: true,
       );
       if (!mounted) return;
       setState(() {
@@ -657,7 +638,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
-  Future<void> _reloadCommunityFeedsForWallet({String? walletAddress, bool force = false}) async {
+  Future<void> _reloadCommunityFeedsForWallet({
+    String? walletAddress,
+    bool force = false,
+  }) async {
     if (_communityReloadInFlight) return;
     _communityReloadInFlight = true;
     try {
@@ -669,7 +653,11 @@ class _CommunityScreenState extends State<CommunityScreen>
           debugPrint('CommunityScreen: ensureAuthLoaded failed for $normalized: $e');
         }
       }
-      await _loadInitialFeeds(force: force, walletAddress: normalized.isNotEmpty ? normalized : null);
+
+      await _loadInitialFeeds(
+        force: force,
+        walletAddress: normalized.isNotEmpty ? normalized : null,
+      );
     } finally {
       _communityReloadInFlight = false;
     }
@@ -768,6 +756,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         }
       } catch (_) {}
     });
+
+    _artFeedScrollController = ScrollController();
+    _artFeedScrollController.addListener(_maybeLoadMoreArtFeed);
 
     // Listen for socket notifications to animate bell
     try {
@@ -945,12 +936,55 @@ class _CommunityScreenState extends State<CommunityScreen>
     try {
       _feedScrollController.dispose();
     } catch (_) {}
+    try {
+      _artFeedScrollController
+        ..removeListener(_maybeLoadMoreArtFeed)
+        ..dispose();
+    } catch (_) {}
     _groupSearchDebounce?.cancel();
     _groupSearchController.dispose();
     _composerTagController?.dispose();
     _composerMentionController?.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _maybeLoadMoreArtFeed() {
+    if (!mounted) return;
+    if (_tabController.index != 3) return;
+    if (!_artFeedScrollController.hasClients) return;
+    if (_artFeedLatitude == null || _artFeedLongitude == null) return;
+
+    // When we're close to the bottom, fetch the next page.
+    final position = _artFeedScrollController.position;
+    if (position.extentAfter > 600) return;
+
+    if (_artFeedLoadMoreInFlight) return;
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    if (hub.artFeedLoading || !hub.artFeedHasMore) return;
+
+    _artFeedLoadMoreInFlight = true;
+    (() async {
+      try {
+        await hub.loadArtFeed(
+          latitude: _artFeedLatitude!,
+          longitude: _artFeedLongitude!,
+          radiusKm: hub.artFeedRadiusKm,
+          limit: 20,
+          refresh: false,
+        );
+        if (!mounted) return;
+        setState(() {
+          _artFeedPosts = List<CommunityPost>.from(hub.artFeedPosts);
+          _isLoadingArtFeed = hub.artFeedLoading;
+          _artFeedError = hub.artFeedError;
+        });
+      } catch (_) {
+        // Errors are surfaced via hub.artFeedError and the existing UI states.
+      } finally {
+        _artFeedLoadMoreInFlight = false;
+      }
+    })();
   }
 
   void _handleIncomingPost(Map<String, dynamic> data) async {
@@ -1808,6 +1842,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     return RefreshIndicator(
       onRefresh: () => _ensureArtFeedLoaded(force: true),
       child: ListView(
+        controller: _artFeedScrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
         children: [
@@ -2216,6 +2251,7 @@ class _CommunityScreenState extends State<CommunityScreen>
         },
         onShare: () => _sharePost(index),
         onToggleBookmark: () => _toggleBookmark(index),
+        onMoreOptions: () => _showPostOptionsForPost(post),
         onShowLikes: () => _showPostLikes(post.id),
         onShowReposts: () => _viewRepostsList(post),
         onTagTap: _filterByTag,
@@ -2278,10 +2314,11 @@ class _CommunityScreenState extends State<CommunityScreen>
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          ..._buildAuthorRoleBadges(
-                                            post,
-                                            fontSize: isSmallScreen ? 8 : 9,
-                                          ),
+                                              CommunityAuthorRoleBadges(
+                                                post: post,
+                                                fontSize: isSmallScreen ? 8 : 9,
+                                                iconOnly: true,
+                                              ),
                                         ],
                                       ),
                                       if ((post.authorUsername ?? '').trim().isNotEmpty)
@@ -2854,9 +2891,10 @@ class _CommunityScreenState extends State<CommunityScreen>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          ..._buildAuthorRoleBadges(
-                            originalPost,
+                          CommunityAuthorRoleBadges(
+                            post: originalPost,
                             fontSize: 8,
+                            iconOnly: true,
                           ),
                         ],
                       ),
@@ -3015,7 +3053,6 @@ class _CommunityScreenState extends State<CommunityScreen>
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        // Expanded options
         AnimatedSize(
           duration: animationTheme.medium,
           curve: animationTheme.emphasisCurve,
@@ -7707,6 +7744,55 @@ class _CommunityScreenState extends State<CommunityScreen>
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => PostDetailScreen(post: post)),
+    );
+  }
+
+  void _showPostOptionsForPost(CommunityPost post) {
+    if (!mounted) return;
+    final currentWallet = _currentWalletAddress();
+    final authorWallet = post.authorWallet ?? post.authorId;
+    final isOwner =
+        currentWallet != null && WalletUtils.equals(authorWallet, currentWallet);
+
+    unawaited(
+      showCommunityPostOptionsSheet(
+        context: context,
+        post: post,
+        isOwner: isOwner,
+        onReport: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PostDetailScreen(
+                post: post,
+                initialAction: PostDetailInitialAction.report,
+              ),
+            ),
+          );
+        },
+        onEdit: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PostDetailScreen(
+                post: post,
+                initialAction: PostDetailInitialAction.edit,
+              ),
+            ),
+          );
+        },
+        onDelete: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => PostDetailScreen(
+                post: post,
+                initialAction: PostDetailInitialAction.delete,
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

@@ -56,10 +56,19 @@ class WalletProvider extends ChangeNotifier {
   int get achievementsUnlocked => _achievementsUnlocked;
   double get achievementTokenTotal => _achievementTokenTotal;
 
-  WalletProvider({SolanaWalletService? solanaWalletService})
+  WalletProvider({SolanaWalletService? solanaWalletService, bool deferInit = false})
       : _solanaWalletService = solanaWalletService ?? SolanaWalletService() {
     debugPrint('🔐 WalletProvider constructor called');
-    _init();
+    if (!deferInit) {
+      _init();
+    }
+  }
+
+  @visibleForTesting
+  void setCurrentWalletAddressForTesting(String? address) {
+    final next = (address ?? '').trim();
+    _currentWalletAddress = next.isEmpty ? null : next;
+    notifyListeners();
   }
 
   Future<void> _init() async {

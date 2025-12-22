@@ -1,5 +1,5 @@
 import 'dart:async';
-
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +10,8 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
+import '../../l10n/app_localizations.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
@@ -53,7 +55,111 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     return role == 'owner' || role == 'admin' || role == 'publisher' || role == 'editor' || role == 'curator' || role == 'host';
   }
 
+  bool _canPublishExhibition(String? myRole) {
+    final role = (myRole ?? '').trim().toLowerCase();
+    if (role.isEmpty) return false;
+    // Keep in sync with backend `canPublishEntity` (publisher+).
+    return role == 'owner' || role == 'admin' || role == 'publisher';
+  }
+
+  Future<void> _togglePublish(Exhibition exhibition, bool publish) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ExhibitionsProvider>();
+
+    final nextStatus = publish ? 'published' : 'draft';
+    if ((exhibition.status ?? '').trim().toLowerCase() == nextStatus) return;
+
+    try {
+      await provider.updateExhibition(exhibition.id, <String, dynamic>{'status': nextStatus});
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.commonSavedToast, style: GoogleFonts.inter()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+          backgroundColor: scheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _changeCover(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final messenger = ScaffoldMessenger.of(context);
+    final provider = context.read<ExhibitionsProvider>();
+
+    try {
+      final picked = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final file = picked?.files.single;
+      final bytes = file?.bytes;
+      final fileName = (file?.name ?? '').trim();
+
+      if (!mounted) return;
+
+      if (bytes == null || bytes.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      final url = await provider.uploadExhibitionCover(
+        bytes: bytes,
+        fileName: fileName.isEmpty ? 'cover.jpg' : fileName,
+      );
+
+      if (!mounted) return;
+
+      if (url == null || url.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+            backgroundColor: scheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      await provider.updateExhibition(exhibition.id, <String, dynamic>{'coverUrl': url});
+
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.commonSavedToast, style: GoogleFonts.inter()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+          backgroundColor: scheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _showLinkArtworksDialog(Exhibition exhibition) async {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final messenger = ScaffoldMessenger.of(context);
 
@@ -109,7 +215,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text('No artworks available to link.', style: GoogleFonts.inter()),
+            content: Text(l10n.exhibitionDetailNoArtworksAvailableToLinkToast, style: GoogleFonts.inter()),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -125,7 +231,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return AlertDialog(
-              title: Text('Add artworks', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              title: Text(l10n.exhibitionDetailAddArtworksDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
               content: SizedBox(
                 width: 520,
                 child: ListView.builder(
@@ -162,13 +268,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(dialogContext).pop(false),
-                  child: Text('Cancel', style: GoogleFonts.inter()),
+                  child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
                 ),
                 FilledButton(
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
-                  child: Text('Link', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  child: Text(l10n.commonLink, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 ),
               ],
             );
@@ -183,14 +289,14 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       await exhibitionsProvider.linkExhibitionArtworks(exhibition.id, selectedIds.toList());
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Artworks linked to exhibition.', style: GoogleFonts.inter()),
+          content: Text(l10n.exhibitionDetailArtworksLinkedToast, style: GoogleFonts.inter()),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (_) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Failed to link artworks. Please try again.', style: GoogleFonts.inter()),
+          content: Text(l10n.exhibitionDetailLinkArtworksFailedToast, style: GoogleFonts.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -200,6 +306,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final provider = context.watch<ExhibitionsProvider>();
 
@@ -211,20 +318,21 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final poap = provider.poapStatusFor(widget.exhibitionId);
 
     final canManage = _canManageExhibition(ex.myRole);
+    final canPublish = _canPublishExhibition(ex.myRole);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(ex.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
-            tooltip: 'Invites',
+            tooltip: l10n.exhibitionDetailInvitesTooltip,
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
             },
             icon: const Icon(Icons.inbox_outlined),
           ),
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: l10n.exhibitionDetailRefreshTooltip,
             onPressed: _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -239,7 +347,14 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
 
-                final details = _ExhibitionDetailsCard(exhibition: ex, poap: poap);
+                final details = _ExhibitionDetailsCard(
+                  exhibition: ex,
+                  poap: poap,
+                  canManage: canManage,
+                  canPublish: canPublish,
+                  onPublishChanged: (v) => _togglePublish(ex, v),
+                  onChangeCover: canManage ? () => _changeCover(ex) : null,
+                );
 
                 final artworksCard = Card(
                   elevation: 0,
@@ -256,7 +371,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                         Row(
                           children: [
                             Text(
-                              'Artworks',
+                              l10n.exhibitionDetailArtworksTitle,
                               style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
                             ),
                             const Spacer(),
@@ -264,15 +379,15 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                               TextButton.icon(
                                 onPressed: () => _showLinkArtworksDialog(ex),
                                 icon: const Icon(Icons.add),
-                                label: Text('Add', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                label: Text(l10n.commonAdd, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                               ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Text(
                           canManage
-                              ? 'Link artworks so visitors can discover them from this exhibition.'
-                              : 'Artworks linked to this exhibition will appear here.',
+                              ? l10n.exhibitionDetailArtworksManageHint
+                              : l10n.exhibitionDetailArtworksViewHint,
                           style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
                         ),
                         const SizedBox(height: 12),
@@ -339,13 +454,14 @@ class _LinkedArtworksList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final artworkProvider = context.watch<ArtworkProvider>();
 
     final ids = exhibition.artworkIds;
     if (ids.isEmpty) {
       return Text(
-        'No artworks linked yet.',
+        l10n.exhibitionDetailNoArtworksLinkedYet,
         style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
       );
     }
@@ -380,14 +496,28 @@ class _LinkedArtworksList extends StatelessWidget {
 }
 
 class _ExhibitionDetailsCard extends StatelessWidget {
-  const _ExhibitionDetailsCard({required this.exhibition, required this.poap});
+  const _ExhibitionDetailsCard({
+    required this.exhibition,
+    required this.poap,
+    required this.canManage,
+    required this.canPublish,
+    required this.onPublishChanged,
+    required this.onChangeCover,
+  });
 
   final Exhibition exhibition;
   final ExhibitionPoapStatus? poap;
+  final bool canManage;
+  final bool canPublish;
+  final ValueChanged<bool> onPublishChanged;
+  final VoidCallback? onChangeCover;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+
+    final coverUrl = MediaUrlResolver.resolve(exhibition.coverUrl);
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {
@@ -411,11 +541,62 @@ class _ExhibitionDetailsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Overview', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                Text(l10n.exhibitionDetailOverviewTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+                const Spacer(),
+                if (canManage)
+                  TextButton.icon(
+                    onPressed: onChangeCover,
+                    icon: const Icon(Icons.image_outlined),
+                    label: Text(l10n.commonChangeCover, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  ),
+              ],
+            ),
             const SizedBox(height: 10),
+            if (coverUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Image.network(
+                    coverUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      color: scheme.surfaceContainerHighest,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        size: 48,
+                        color: scheme.onSurface.withValues(alpha: 0.45),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             if (dateRange != null) _InfoRow(icon: Icons.schedule, label: dateRange),
             if (location != null) _InfoRow(icon: Icons.place_outlined, label: location),
-            _InfoRow(icon: Icons.event_available_outlined, label: 'Status: ${_labelForStatus(exhibition.status)}'),
+            _InfoRow(
+              icon: Icons.event_available_outlined,
+              label: l10n.exhibitionDetailStatusRowLabel(_labelForStatus(l10n, exhibition.status)),
+            ),
+            if (canPublish) ...[
+              const SizedBox(height: 6),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: (exhibition.status ?? '').trim().toLowerCase() == 'published',
+                onChanged: onPublishChanged,
+                title: Text(l10n.commonPublish, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                  (exhibition.status ?? '').trim().toLowerCase() == 'published'
+                      ? l10n.commonPublished
+                      : l10n.commonDraft,
+                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                ),
+              ),
+            ],
             if ((exhibition.description ?? '').trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               Text(exhibition.description!, style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8))),
@@ -424,10 +605,10 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               const SizedBox(height: 14),
               Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
               const SizedBox(height: 10),
-              Text('Badge', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(l10n.exhibitionDetailBadgeTitle, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
               const SizedBox(height: 6),
               Text(
-                poap!.claimed == true ? 'Claimed' : 'Not claimed',
+                poap!.claimed == true ? l10n.exhibitionDetailBadgeClaimed : l10n.exhibitionDetailBadgeNotClaimed,
                 style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
               ),
             ],
@@ -444,11 +625,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
     return '${d.year}-$mm-$dd';
   }
 
-  static String _labelForStatus(String? raw) {
+  static String _labelForStatus(AppLocalizations l10n, String? raw) {
     final v = (raw ?? '').trim().toLowerCase();
-    if (v.isEmpty) return 'Unknown';
-    if (v == 'published') return 'Published';
-    if (v == 'draft') return 'Draft';
+    if (v.isEmpty) return l10n.commonUnknown;
+    if (v == 'published') return l10n.commonPublished;
+    if (v == 'draft') return l10n.commonDraft;
     return v;
   }
 }

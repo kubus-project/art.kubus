@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonCancel => 'Cancel';
 
   @override
+  String get commonClear => 'Clear';
+
+  @override
   String get commonClose => 'Close';
 
   @override
@@ -36,6 +39,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonSave => 'Save';
 
   @override
+  String get commonSavedToast => 'Saved';
+
+  @override
+  String get commonActionFailedToast => 'Something went wrong. Please try again.';
+
+  @override
+  String get commonTitle => 'Title';
+
+  @override
+  String get commonDescription => 'Description';
+
+  @override
+  String get commonPrice => 'Price';
+
+  @override
+  String get commonForSale => 'For sale';
+
+  @override
   String get commonCopy => 'Copy';
 
   @override
@@ -46,6 +67,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonEdit => 'Edit';
+
+  @override
+  String get commonLink => 'Link';
+
+  @override
+  String get commonPublish => 'Publish';
+
+  @override
+  String get commonUnpublish => 'Unpublish';
+
+  @override
+  String get commonDraft => 'Draft';
+
+  @override
+  String get commonPublished => 'Published';
+
+  @override
+  String get commonStatus => 'Status';
 
   @override
   String get commonRename => 'Rename';
@@ -85,6 +124,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonImage => 'Image';
+
+  @override
+  String get commonCoverImage => 'Cover image';
+
+  @override
+  String get commonChangeCover => 'Change cover';
 
   @override
   String get commonVideo => 'Video';
@@ -196,6 +241,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get exhibitionCreatorPublishDraft => 'Save as draft';
+
+  @override
+  String get exhibitionCreatorCollabHint => 'After creating, you can invite collaborators from the exhibition detail screen.';
+
+  @override
+  String get exhibitionDetailInvitesTooltip => 'Invites';
+
+  @override
+  String get exhibitionDetailRefreshTooltip => 'Refresh';
+
+  @override
+  String get exhibitionDetailOverviewTitle => 'Overview';
+
+  @override
+  String get exhibitionDetailArtworksTitle => 'Artworks';
+
+  @override
+  String get exhibitionDetailArtworksManageHint => 'Link artworks so visitors can discover them from this exhibition.';
+
+  @override
+  String get exhibitionDetailArtworksViewHint => 'Artworks linked to this exhibition will appear here.';
+
+  @override
+  String get exhibitionDetailNoArtworksLinkedYet => 'No artworks linked yet.';
+
+  @override
+  String get exhibitionDetailNoArtworksAvailableToLinkToast => 'No artworks available to link.';
+
+  @override
+  String get exhibitionDetailAddArtworksDialogTitle => 'Add artworks';
+
+  @override
+  String get exhibitionDetailArtworksLinkedToast => 'Artworks linked to exhibition.';
+
+  @override
+  String get exhibitionDetailLinkArtworksFailedToast => 'Failed to link artworks. Please try again.';
+
+  @override
+  String exhibitionDetailStatusRowLabel(Object status) {
+    return 'Status: $status';
+  }
+
+  @override
+  String get exhibitionDetailBadgeTitle => 'Badge';
+
+  @override
+  String get exhibitionDetailBadgeClaimed => 'Claimed';
+
+  @override
+  String get exhibitionDetailBadgeNotClaimed => 'Not claimed';
 
   @override
   String get exhibitionCreatorEndDateAfterStartError => 'End date must be after start date.';
@@ -3081,6 +3176,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get collectionDetailOpeningEditorToast => 'Opening collection editor...';
 
   @override
+  String get collectionDetailAddArtworkFailedToast => 'Failed to add artwork to collection. Please try again.';
+
+  @override
+  String get collectionDetailRemoveArtworkFailedToast => 'Failed to remove artwork from collection. Please try again.';
+
+  @override
   String get collectionSettingsBasicInfo => 'Basic Information';
 
   @override
@@ -3141,6 +3242,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String collectionSettingsSavedToast(Object name) {
     return 'Collection settings saved for \"$name\"';
   }
+
+  @override
+  String get collectionSettingsSaveFailedToast => 'Failed to save collection settings. Please try again.';
 
   @override
   String get collectionSettingsDeleteDialogTitle => 'Delete Collection';
@@ -4171,6 +4275,26 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String artistGallerySharingToast(Object title) {
     return 'Sharing $title';
+  }
+
+  @override
+  String artistGalleryPublishSuccessToast(Object title) {
+    return '"$title" published';
+  }
+
+  @override
+  String artistGalleryUnpublishSuccessToast(Object title) {
+    return '"$title" moved to draft';
+  }
+
+  @override
+  String artistGalleryPublishFailedToast(Object title) {
+    return 'Failed to publish "$title". Please try again.';
+  }
+
+  @override
+  String artistGalleryUnpublishFailedToast(Object title) {
+    return 'Failed to unpublish "$title". Please try again.';
   }
 
   @override

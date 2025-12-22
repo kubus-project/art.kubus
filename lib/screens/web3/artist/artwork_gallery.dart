@@ -81,7 +81,8 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
       opacity: _fadeAnimation,
       child: Consumer<ArtworkProvider>(
         builder: (context, artworkProvider, child) {
-          final artworks = List<art_model.Artwork>.from(artworkProvider.artworks);
+          final artworks =
+              List<art_model.Artwork>.from(artworkProvider.artworks);
           final filteredArtworks = _getFilteredArtworks(artworks);
           final isBusy = artworkProvider.isLoading('load_artworks') ||
               artworkProvider.isLoading('create_artwork');
@@ -140,8 +141,10 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
             const SizedBox(height: 4),
             LinearProgressIndicator(
               minHeight: 3,
-              backgroundColor:
-                  Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.05),
               color: themeProvider.accentColor,
             ),
           ],
@@ -176,21 +179,23 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         artworks.fold<int>(0, (sum, artwork) => sum + artwork.viewsCount);
     final totalLikes =
         artworks.fold<int>(0, (sum, artwork) => sum + artwork.likesCount);
-    final activeCount = artworks
-        .where((a) =>
-            a.status == art_model.ArtworkStatus.discovered ||
-            a.status == art_model.ArtworkStatus.favorite)
-        .length;
+    final activeCount = artworks.where((a) => a.isPublic).length;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          Expanded(child: _buildStatCard(l10n.artistGalleryStatActiveLabel, activeCount.toString(), Icons.visibility)),
+          Expanded(
+              child: _buildStatCard(l10n.artistGalleryStatActiveLabel,
+                  activeCount.toString(), Icons.visibility)),
           const SizedBox(width: 8),
-          Expanded(child: _buildStatCard(l10n.artistGalleryStatViewsLabel, totalViews.toString(), Icons.remove_red_eye)),
+          Expanded(
+              child: _buildStatCard(l10n.artistGalleryStatViewsLabel,
+                  totalViews.toString(), Icons.remove_red_eye)),
           const SizedBox(width: 8),
-          Expanded(child: _buildStatCard(l10n.artistGalleryStatLikesLabel, totalLikes.toString(), Icons.favorite)),
+          Expanded(
+              child: _buildStatCard(l10n.artistGalleryStatLikesLabel,
+                  totalLikes.toString(), Icons.favorite)),
         ],
       ),
     );
@@ -259,7 +264,8 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                       : Theme.of(context).colorScheme.onSurface,
                 ),
               ),
-              backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.0),
+              backgroundColor:
+                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.0),
               selectedColor: Provider.of<ThemeProvider>(context).accentColor,
               onSelected: (_) {
                 setState(() => _selectedFilter = filter);
@@ -290,17 +296,21 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     );
   }
 
-  Widget _buildArtworkCard(art_model.Artwork artwork, ArtworkProvider provider) {
+  Widget _buildArtworkCard(
+      art_model.Artwork artwork, ArtworkProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
     final statusColor = _getStatusColor(artwork);
 
     return GestureDetector(
       onTap: () => _showArtworkDetails(artwork),
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
+          color:
+              Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
+            color:
+                Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1),
           ),
         ),
         child: Column(
@@ -315,14 +325,17 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.8),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        artwork.status.name.toUpperCase(),
+                        (artwork.isPublic
+                                ? l10n.commonPublished
+                                : l10n.commonDraft)
+                            .toUpperCase(),
                         style: GoogleFonts.inter(
                           fontSize: 8,
                           fontWeight: FontWeight.w600,
@@ -421,11 +434,26 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                           onSelected: (value) =>
                               _handleArtworkAction(artwork, value, provider),
                           itemBuilder: (context) {
-                            final l10n = AppLocalizations.of(context)!;
                             return [
-                              PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
-                              PopupMenuItem(value: 'share', child: Text(l10n.commonShare)),
-                              PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                              if (artwork.isPublic)
+                                PopupMenuItem(
+                                  value: 'unpublish',
+                                  child: Text(l10n.commonUnpublish),
+                                )
+                              else
+                                PopupMenuItem(
+                                  value: 'publish',
+                                  child: Text(l10n.commonPublish),
+                                ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                  value: 'edit', child: Text(l10n.commonEdit)),
+                              PopupMenuItem(
+                                  value: 'share',
+                                  child: Text(l10n.commonShare)),
+                              PopupMenuItem(
+                                  value: 'delete',
+                                  child: Text(l10n.commonDelete)),
                             ];
                           },
                         ),
@@ -485,8 +513,10 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               Icon(
                 Icons.palette,
                 size: 64,
-                color:
-                    Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.3),
               ),
               const SizedBox(height: 16),
               Text(
@@ -524,13 +554,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   Color _getStatusColor(art_model.Artwork artwork) {
-    switch (artwork.status) {
-      case art_model.ArtworkStatus.discovered:
-      case art_model.ArtworkStatus.favorite:
-        return Theme.of(context).colorScheme.primary;
-      case art_model.ArtworkStatus.undiscovered:
-        return Theme.of(context).colorScheme.tertiary;
-    }
+    return artwork.isPublic
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.tertiary;
   }
 
   List<art_model.Artwork> _getFilteredArtworks(
@@ -538,10 +564,9 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
     final filtered = List<art_model.Artwork>.from(artworks.where((artwork) {
       switch (_selectedFilter) {
         case 'Active':
-          return artwork.status == art_model.ArtworkStatus.discovered ||
-              artwork.status == art_model.ArtworkStatus.favorite;
+          return artwork.isPublic;
         case 'Draft':
-          return artwork.status == art_model.ArtworkStatus.undiscovered;
+          return !artwork.isPublic;
         case 'Sold':
           return false;
         default:
@@ -586,11 +611,13 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           },
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            children: ['Newest', 'Oldest', 'Most Views', 'Most Likes'].map((option) {
+            children:
+                ['Newest', 'Oldest', 'Most Views', 'Most Likes'].map((option) {
               return RadioListTile<String>(
                 title: Text(
                   _sortLabel(option, l10n),
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.onSurface),
                 ),
                 value: option,
               );
@@ -613,7 +640,10 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           decoration: InputDecoration(
             hintText: l10n.artistGallerySearchHint,
             hintStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.54),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onPrimary
+                  .withValues(alpha: 0.54),
             ),
             border: const OutlineInputBorder(),
           ),
@@ -666,6 +696,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _showArtworkDetails(art_model.Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
     showDialog(
       context: context,
@@ -674,18 +705,18 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         child: Container(
           width: MediaQuery.of(context).size.width * 0.8,
           padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: coverUrl != null && coverUrl.isNotEmpty
-                      ? Image.network(
-                          coverUrl,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                        )
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: coverUrl != null && coverUrl.isNotEmpty
+                    ? Image.network(
+                        coverUrl,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      )
                     : Container(
                         height: 200,
                         width: double.infinity,
@@ -721,9 +752,18 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildDetailItem('Rewards', '${artwork.actualRewards} KUB8'),
-                  _buildDetailItem('Views', artwork.viewsCount.toString()),
-                  _buildDetailItem('Likes', artwork.likesCount.toString()),
+                  _buildDetailItem(
+                    l10n.season0PointsLabel,
+                    '${artwork.actualRewards} KUB8',
+                  ),
+                  _buildDetailItem(
+                    l10n.artistGalleryStatViewsLabel,
+                    artwork.viewsCount.toString(),
+                  ),
+                  _buildDetailItem(
+                    l10n.artistGalleryStatLikesLabel,
+                    artwork.likesCount.toString(),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -738,10 +778,12 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                             .onPrimary
                             .withValues(alpha: 0.1),
                       ),
-                      child: Text('Close',
-                          style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.onSurface)),
+                      child: Text(
+                        l10n.commonClose,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -755,10 +797,12 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
                         backgroundColor:
                             Provider.of<ThemeProvider>(context).accentColor,
                       ),
-                      child: Text('Create AR marker',
-                          style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.onSurface)),
+                      child: Text(
+                        l10n.artistGalleryGoToCreateButton,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -785,30 +829,58 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
           label,
           style: GoogleFonts.inter(
             fontSize: 12,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurface
-                .withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
     );
   }
 
-  void _handleArtworkAction(
+  Future<void> _handleArtworkAction(
     art_model.Artwork artwork,
     String action,
     ArtworkProvider provider,
-  ) {
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final title = artwork.title;
     switch (action) {
+      case 'publish':
+        final updated = await provider.publishArtwork(artwork.id);
+        if (!mounted) return;
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              updated != null
+                  ? l10n.artistGalleryPublishSuccessToast(title)
+                  : l10n.artistGalleryPublishFailedToast(title),
+            ),
+          ),
+        );
+        break;
+      case 'unpublish':
+        final updated = await provider.unpublishArtwork(artwork.id);
+        if (!mounted) return;
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              updated != null
+                  ? l10n.artistGalleryUnpublishSuccessToast(title)
+                  : l10n.artistGalleryUnpublishFailedToast(title),
+            ),
+          ),
+        );
+        break;
       case 'edit':
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.artistGalleryEditingToast(artwork.title))));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.artistGalleryEditingToast(title))),
+        );
         break;
       case 'share':
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.artistGallerySharingToast(artwork.title))));
+        messenger.showSnackBar(
+          SnackBar(content: Text(l10n.artistGallerySharingToast(title))),
+        );
         break;
       case 'delete':
         _confirmDelete(artwork, provider);
@@ -844,17 +916,17 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
               provider.removeArtwork(artwork.id);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.artistGalleryDeletedToast(artwork.title))),
+                SnackBar(
+                    content:
+                        Text(l10n.artistGalleryDeletedToast(artwork.title))),
               );
             },
             child: Text(l10n.commonDelete,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                style:
+                    TextStyle(color: Theme.of(context).colorScheme.onSurface)),
           ),
         ],
       ),
     );
   }
 }
-
-
-

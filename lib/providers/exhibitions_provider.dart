@@ -146,6 +146,32 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
+  Future<String?> uploadExhibitionCover({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    _setLoading(true);
+    _error = null;
+    try {
+      final result = await _api.uploadFile(
+        fileBytes: bytes,
+        fileName: fileName,
+        fileType: 'exhibition_cover',
+        metadata: const <String, String>{
+          'folder': 'exhibitions/covers',
+        },
+      );
+      final url = result['uploadedUrl']?.toString();
+      return (url != null && url.trim().isNotEmpty) ? url.trim() : null;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> deleteExhibition(String id) async {
     _setLoading(true);
     _error = null;

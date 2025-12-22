@@ -23,6 +23,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     required this.statAmber,
     required this.statPurple,
     required this.achievementGold,
+    required this.artistStudioRed,
   });
 
   /// Like/favorite action color - RED across all screens
@@ -56,6 +57,9 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   /// Achievement/reward gold accent
   final Color achievementGold;
 
+  /// Artist Studio red accent
+  final Color artistStudioRed;
+
   // --------------------------------------------------------------------------
   // Web3 Hub section accents (single source of truth)
   //
@@ -70,7 +74,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
   // --------------------------------------------------------------------------
 
   /// Artist Studio accent (red)
-  Color get web3ArtistStudioAccent => negativeAction;
+  Color get web3ArtistStudioAccent => artistStudioRed;
 
   /// DAO accent (green)
   Color get web3DaoAccent => positiveAction;
@@ -133,6 +137,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     statAmber: Color(0xFFFFB300),
     statPurple: Color(0xFF9575CD),
     achievementGold: Color(0xFFFFD700),
+    artistStudioRed: Colors.red,
   );
 
   /// Default light theme roles
@@ -150,7 +155,10 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     statAmber: Color(0xFFFFA000), // Amber 700
     statPurple: Color(0xFF7E57C2), // Deep purple 400
     achievementGold: Color(0xFFFFC107), // Amber 500
+    artistStudioRed: Colors.red,
   );
+  
+
 
   /// Convenience accessor from BuildContext
   static KubusColorRoles of(BuildContext context) {
@@ -172,6 +180,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
     Color? statAmber,
     Color? statPurple,
     Color? achievementGold,
+    Color? artistStudioRed,
   }) {
     return KubusColorRoles(
       likeAction: likeAction ?? this.likeAction,
@@ -186,7 +195,8 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       statGreen: statGreen ?? this.statGreen,
       statAmber: statAmber ?? this.statAmber,
       statPurple: statPurple ?? this.statPurple,
-      achievementGold: achievementGold ?? this.achievementGold,
+      achievementGold: achievementGold ?? this.achievementGold, 
+      artistStudioRed: artistStudioRed ?? this.artistStudioRed,
     );
   }
 
@@ -209,6 +219,7 @@ class KubusColorRoles extends ThemeExtension<KubusColorRoles> {
       statAmber: Color.lerp(statAmber, other.statAmber, t)!,
       statPurple: Color.lerp(statPurple, other.statPurple, t)!,
       achievementGold: Color.lerp(achievementGold, other.achievementGold, t)!,
+      artistStudioRed: Color.lerp(artistStudioRed, other.artistStudioRed, t)!, 
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/art_marker.dart';
 import '../models/artwork.dart';
 import '../utils/app_color_utils.dart';
+import '../utils/artwork_media_resolver.dart';
 
 Future<void> showArtMarkerInfoDialog({
   required BuildContext context,
@@ -18,11 +19,15 @@ Future<void> showArtMarkerInfoDialog({
     metadata: marker.metadata,
     scheme: scheme,
   );
-  final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
-  final primaryExhibition = marker.primaryExhibitionSummary;
+  final hasExhibitions = marker.isExhibitionMarker || marker.exhibitionSummaries.isNotEmpty;
+  final primaryExhibition = marker.resolvedExhibitionSummary;
   final displayTitle = hasExhibitions && (primaryExhibition?.title ?? '').isNotEmpty
       ? primaryExhibition!.title!
       : (artwork?.title ?? marker.name);
+  final coverUrl = ArtworkMediaResolver.resolveCover(
+    artwork: artwork,
+    metadata: marker.metadata,
+  );
 
   final distanceText = () {
     if (userPosition == null) return null;
@@ -85,13 +90,13 @@ Future<void> showArtMarkerInfoDialog({
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (artwork?.imageUrl != null)
+            if (coverUrl != null && coverUrl.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: Image.network(
-                    artwork!.imageUrl!,
+                    coverUrl,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _imageFallback(baseColor, scheme, marker),
                   ),
@@ -180,7 +185,7 @@ Future<void> showArtMarkerInfoDialog({
 }
 
 Widget _imageFallback(Color baseColor, ColorScheme scheme, ArtMarker marker) {
-  final hasExhibitions = marker.exhibitionSummaries.isNotEmpty;
+  final hasExhibitions = marker.isExhibitionMarker || marker.exhibitionSummaries.isNotEmpty;
   return Container(
     decoration: BoxDecoration(
       gradient: LinearGradient(

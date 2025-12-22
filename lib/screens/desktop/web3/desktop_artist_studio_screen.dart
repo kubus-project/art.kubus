@@ -18,10 +18,12 @@ import '../desktop_shell.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../web3/artist/artist_studio.dart';
 import '../../web3/artist/artwork_creator.dart';
-import '../../web3/artist/artwork_gallery.dart';
+import '../../web3/artist/artist_portfolio_screen.dart';
 import '../../web3/artist/artist_analytics.dart';
 import '../../web3/artist/collection_creator.dart';
 import '../../art/collection_detail_screen.dart';
+import '../../events/exhibition_creator_screen.dart';
+import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
@@ -127,8 +129,54 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final scheme = Theme.of(context).colorScheme;
     final animationTheme = context.animationTheme;
+    final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final isLarge = screenWidth >= 1200;
+
+    void openArtworkCreator() {
+      final shellScope = DesktopShellScope.of(context);
+      if (shellScope == null) return;
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: l10n.artistStudioCreateOptionArtworkTitle,
+          child: const ArtworkCreator(),
+        ),
+      );
+    }
+
+    void openCollectionCreator() {
+      final shellScope = DesktopShellScope.of(context);
+      if (shellScope == null) return;
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: l10n.collectionCreatorTitle,
+          child: CollectionCreator(
+            onCreated: (collectionId) {
+              shellScope.popScreen();
+              shellScope.pushScreen(
+                DesktopSubScreen(
+                  title: l10n.userProfileCollectionFallbackTitle,
+                  child: CollectionDetailScreen(
+                    collectionId: collectionId,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    void openExhibitionCreator() {
+      final shellScope = DesktopShellScope.of(context);
+      if (shellScope == null) return;
+      shellScope.pushScreen(
+        DesktopSubScreen(
+          title: l10n.exhibitionCreatorAppBarTitle,
+          child: const ExhibitionCreatorScreen(),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode
@@ -160,7 +208,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         ),
                       ),
                     ),
-                    child: const ArtistStudio(),
+                    child: ArtistStudio(
+                      onOpenArtworkCreator: openArtworkCreator,
+                      onOpenCollectionCreator: openCollectionCreator,
+                      onOpenExhibitionCreator: openExhibitionCreator,
+                    ),
                   ),
                 ),
 
@@ -324,10 +376,11 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
               Icons.collections_outlined,
               scheme.secondary,
               () {
+                final wallet = _resolveWalletAddress(listen: false);
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionMyGalleryTitle,
-                    child: const ArtworkGallery(),
+                    child: ArtistPortfolioScreen(walletAddress: wallet),
                   ),
                 );
               },
@@ -342,8 +395,29 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
                     title: l10n.desktopArtistStudioQuickActionExhibitionsTitle,
-                    child: const ExhibitionListScreen(
-                        embedded: true, canCreate: true),
+                    child: ExhibitionListScreen(
+                      embedded: true,
+                      canCreate: true,
+                      onCreateExhibition: () {
+                        DesktopShellScope.of(context)?.pushScreen(
+                          DesktopSubScreen(
+                            title: l10n.exhibitionCreatorAppBarTitle,
+                            child: const ExhibitionCreatorScreen(),
+                          ),
+                        );
+                      },
+                      onOpenExhibition: (exhibition) {
+                        DesktopShellScope.of(context)?.pushScreen(
+                          DesktopSubScreen(
+                            title: exhibition.title,
+                            child: ExhibitionDetailScreen(
+                              exhibitionId: exhibition.id,
+                              initialExhibition: exhibition,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },

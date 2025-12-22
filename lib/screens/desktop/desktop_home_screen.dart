@@ -127,6 +127,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         longitude: lng ?? provider.artFeedCenter?.lng ?? 14.50,
         radiusKm: radiusKm ?? provider.artFeedRadiusKm,
         limit: limit ?? 20,
+        refresh: true,
       ));
     });
   }
@@ -175,6 +176,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         longitude: center.lng ?? 14.50,
         radiusKm: configProvider.useMockData ? 200 : 50,
         limit: 50,
+        refresh: true,
       );
     }
 

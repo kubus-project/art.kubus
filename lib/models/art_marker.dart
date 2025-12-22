@@ -412,23 +412,79 @@ class ArtMarker {
     return exhibitionSummaries.first;
   }
 
+  String? _metadataString(List<String> keys) {
+    String? readFromMap(Map<String, dynamic>? map) {
+      if (map == null) return null;
+      for (final key in keys) {
+        final raw = map[key];
+        if (raw == null) continue;
+        final value = raw.toString().trim();
+        if (value.isNotEmpty) return value;
+      }
+      return null;
+    }
+
+    final direct = readFromMap(metadata);
+    if (direct != null) return direct;
+
+    final nested = metadata?['metadata'] ?? metadata?['meta'];
+    if (nested is Map) {
+      return readFromMap(Map<String, dynamic>.from(nested));
+    }
+    return null;
+  }
+
   String? get subjectType {
-    final raw = metadata?['subjectType'] ?? metadata?['subject_type'];
-    final value = raw?.toString().trim();
+    final value = _metadataString(const ['subjectType', 'subject_type']);
     if (value == null || value.isEmpty) return null;
     return value;
   }
 
   String? get subjectId {
-    final raw = metadata?['subjectId'] ?? metadata?['subject_id'];
-    final value = raw?.toString().trim();
+    final value = _metadataString(const ['subjectId', 'subject_id']);
     if (value == null || value.isEmpty) return null;
     return value;
+  }
+
+  String? get subjectTitle {
+    final value = _metadataString(const ['subjectTitle', 'subject_title']);
+    if (value == null || value.isEmpty) return null;
+    return value;
+  }
+
+  ExhibitionSummaryDto? get resolvedExhibitionSummary {
+    final primary = primaryExhibitionSummary;
+    if (primary != null && primary.id.trim().isNotEmpty) return primary;
+
+    final subjectTypeValue = subjectType?.toLowerCase();
+    final explicitExhibitionId = _metadataString(const ['exhibitionId', 'exhibition_id']);
+    final allowFallback = subjectTypeValue == null || subjectTypeValue.isEmpty;
+    final isExhibition = (subjectTypeValue != null && subjectTypeValue.contains('exhibition')) ||
+        (allowFallback && explicitExhibitionId != null && explicitExhibitionId.isNotEmpty);
+    if (!isExhibition) return null;
+
+    final resolvedId = (subjectTypeValue != null && subjectTypeValue.contains('exhibition'))
+        ? (subjectId ?? explicitExhibitionId)
+        : explicitExhibitionId;
+    if (resolvedId == null || resolvedId.isEmpty) return null;
+
+    final title = subjectTitle ?? _metadataString(const ['exhibitionTitle', 'exhibition_title']);
+    return ExhibitionSummaryDto(
+      id: resolvedId,
+      title: (title != null && title.isNotEmpty) ? title : null,
+    );
   }
 
   bool get isExhibitionSubject {
     final normalized = subjectType?.toLowerCase();
     return normalized != null && normalized.contains('exhibition');
+  }
+
+  bool get isExhibitionMarker {
+    if (isExhibitionSubject) return true;
+    final resolved = resolvedExhibitionSummary;
+    if (resolved == null || resolved.id.trim().isEmpty) return false;
+    return artworkId == null || artworkId!.isEmpty;
   }
 }
 
