@@ -281,7 +281,7 @@ abstract class AppLocalizations {
   /// **'Navigate'**
   String get commonNavigate;
 
-  /// Label for an action that opens the in-app map centered on the current item.
+  /// Label for an action that opens the in-app map centered on the current item (artwork/event/exhibition).
   ///
   /// In en, this message translates to:
   /// **'Open on map'**
@@ -3298,6 +3298,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allow others to find your profile'**
   String get settingsPublicProfileSubtitle;
+
+  /// No description provided for @settingsProfilePrivacySectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile privacy'**
+  String get settingsProfilePrivacySectionTitle;
+
+  /// No description provided for @settingsPrivateProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Private profile'**
+  String get settingsPrivateProfileTitle;
+
+  /// No description provided for @settingsPrivateProfileSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Only approved followers can see your posts'**
+  String get settingsPrivateProfileSubtitle;
+
+  /// No description provided for @settingsShowActivityStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show activity status'**
+  String get settingsShowActivityStatusTitle;
+
+  /// No description provided for @settingsShowActivityStatusSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see when you\'re online'**
+  String get settingsShowActivityStatusSubtitle;
+
+  /// No description provided for @settingsShareLastVisitedLocationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Share last visited location'**
+  String get settingsShareLastVisitedLocationTitle;
+
+  /// No description provided for @settingsShareLastVisitedLocationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Let others see what you last visited'**
+  String get settingsShareLastVisitedLocationSubtitle;
+
+  /// No description provided for @settingsShowCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show collection'**
+  String get settingsShowCollectionTitle;
+
+  /// No description provided for @settingsShowCollectionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Display your NFT collection publicly'**
+  String get settingsShowCollectionSubtitle;
+
+  /// No description provided for @settingsAllowMessagesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow messages'**
+  String get settingsAllowMessagesTitle;
+
+  /// No description provided for @settingsAllowMessagesSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Receive direct messages from others'**
+  String get settingsAllowMessagesSubtitle;
 
   /// No description provided for @settingsDeactivateAccountTileTitle.
   ///
@@ -8120,25 +8186,25 @@ abstract class AppLocalizations {
   /// No description provided for @artistGalleryPublishSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'"{title}" published'**
+  /// **'\"{title}\" published'**
   String artistGalleryPublishSuccessToast(Object title);
 
   /// No description provided for @artistGalleryUnpublishSuccessToast.
   ///
   /// In en, this message translates to:
-  /// **'"{title}" moved to draft'**
+  /// **'\"{title}\" moved to draft'**
   String artistGalleryUnpublishSuccessToast(Object title);
 
   /// No description provided for @artistGalleryPublishFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Failed to publish "{title}". Please try again.'**
+  /// **'Failed to publish \"{title}\". Please try again.'**
   String artistGalleryPublishFailedToast(Object title);
 
   /// No description provided for @artistGalleryUnpublishFailedToast.
   ///
   /// In en, this message translates to:
-  /// **'Failed to unpublish "{title}". Please try again.'**
+  /// **'Failed to unpublish \"{title}\". Please try again.'**
   String artistGalleryUnpublishFailedToast(Object title);
 
   /// No description provided for @artistGalleryDeletedToast.
@@ -9688,6 +9754,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Just now'**
   String get commonTimeAgoJustNow;
+
+  /// No description provided for @presenceOnlineLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Online'**
+  String get presenceOnlineLabel;
+
+  /// No description provided for @presenceLastSeenLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen {timeAgo}'**
+  String presenceLastSeenLabel(Object timeAgo);
+
+  /// No description provided for @presenceLastSeenAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last seen at {location}'**
+  String presenceLastSeenAtLabel(Object location);
 
   /// No description provided for @postDetailLoadPostFailedMessage.
   ///

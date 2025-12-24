@@ -1071,6 +1071,65 @@ class BackendApiService {
     }
   }
 
+  /// Fetch multiple presence records in a single batch call
+  /// POST /api/presence/batch { wallets: [wallet1,wallet2] }
+  Future<Map<String, dynamic>> getPresenceBatch(List<String> wallets) async {
+    try {
+      if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/presence/batch'),
+        headers: _getHeaders(includeAuth: true),
+        body: jsonEncode({'wallets': wallets}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': data['data'] ?? data};
+      }
+      return {'success': false, 'status': response.statusCode, 'body': response.body};
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.getPresenceBatch error: $e');
+      }
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  /// Record a last-visited subject (best-effort; server enforces privacy and may return 204).
+  /// POST /api/presence/visit { type, id }
+  Future<Map<String, dynamic>> recordPresenceVisit({
+    required String type,
+    required String id,
+    String? walletAddress,
+  }) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/presence/visit'),
+        headers: _getHeaders(includeAuth: true),
+        body: jsonEncode({'type': type, 'id': id}),
+      );
+
+      if (response.statusCode == 204) {
+        return {'success': true, 'stored': false};
+      }
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'success': true,
+          'stored': true,
+          'data': data['data'] ?? data,
+        };
+      }
+      return {'success': false, 'status': response.statusCode, 'body': response.body};
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.recordPresenceVisit error: $e');
+      }
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Find a profile by username (helper built on top of the search endpoint)
   Future<Map<String, dynamic>?> findProfileByUsername(String username) async {
     final sanitized = username.trim().replaceFirst(RegExp(r'^@+'), '');

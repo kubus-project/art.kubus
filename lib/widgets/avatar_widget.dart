@@ -1,4 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../config/config.dart';
+import '../providers/presence_provider.dart';
 import '../services/user_service.dart';
 import '../screens/community/user_profile_screen.dart' as mobile;
 import '../screens/desktop/community/desktop_user_profile_screen.dart' as desktop;
@@ -14,7 +19,7 @@ class AvatarWidget extends StatefulWidget {
   final bool enableProfileNavigation;
   final String? heroTag;
   final bool showStatusIndicator;
-  final bool isOnline;
+  final bool? isOnline;
   final Color? statusColor;
 
   const AvatarWidget({
@@ -27,7 +32,7 @@ class AvatarWidget extends StatefulWidget {
     this.enableProfileNavigation = true,
     this.heroTag,
     this.showStatusIndicator = true,
-    this.isOnline = false,
+    this.isOnline,
     this.statusColor,
   });
 
@@ -40,12 +45,19 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
   bool _loading = false;
   late AnimationController _shimmerController;
   String? _currentHeroTag;
+  String? _presencePrefetchKey;
 
   @override
   void initState() {
     super.initState();
     _setup();
     _shimmerController = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))..repeat();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _prefetchPresenceIfNeeded();
   }
 
   Future<void> _setup() async {
@@ -68,7 +80,9 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     // Skip fetch for placeholder/unknown wallets to avoid unnecessary 404s
     final invalidWalletPlaceholders = ['unknown', 'anonymous', 'n/a', 'none'];
     if (walletId.isEmpty || invalidWalletPlaceholders.contains(walletId)) {
-      debugPrint('AvatarWidget._setup: skipping profile fetch for invalid wallet "$walletId"');
+      if (kDebugMode) {
+        debugPrint('AvatarWidget: skipping profile fetch for invalid wallet "$walletId"');
+      }
       if (widget.allowFabricatedFallback) {
         if (_effectiveUrl == null || _effectiveUrl!.isEmpty) {
           setState(() { _effectiveUrl = UserService.safeAvatarUrl(WalletUtils.canonical(widget.wallet)); });
@@ -120,6 +134,10 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     super.didUpdateWidget(oldWidget);
     if (oldWidget.avatarUrl != widget.avatarUrl || oldWidget.wallet != widget.wallet || oldWidget.allowFabricatedFallback != widget.allowFabricatedFallback) {
       _setup();
+    }
+    if (oldWidget.wallet != widget.wallet || oldWidget.showStatusIndicator != widget.showStatusIndicator) {
+      _presencePrefetchKey = null;
+      _prefetchPresenceIfNeeded();
     }
   }
 
@@ -216,9 +234,22 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     }
 
     Widget base = content;
-    if (widget.showStatusIndicator) {
+    PresenceProvider? presenceProvider;
+    try {
+      presenceProvider = Provider.of<PresenceProvider>(context);
+    } catch (_) {
+      presenceProvider = null;
+    }
+    final presence = presenceProvider?.presenceForWallet(widget.wallet);
+    final bool presenceVisible = presence?.visible == true;
+    final bool? presenceOnline = presence?.isOnline;
+
+    final bool? effectiveOnline = presence != null ? presenceOnline : widget.isOnline;
+    final bool shouldShowPresence = AppConfig.isFeatureEnabled('presence') && widget.showStatusIndicator && (presence == null ? true : presenceVisible) && effectiveOnline != null;
+
+    if (shouldShowPresence) {
       final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();
-      final indicatorColor = widget.statusColor ?? (widget.isOnline ? colorScheme.tertiary : colorScheme.outlineVariant);
+      final indicatorColor = widget.statusColor ?? (effectiveOnline == true ? colorScheme.tertiary : colorScheme.outlineVariant);
       base = Stack(
         clipBehavior: Clip.none,
         children: [
@@ -227,6 +258,7 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
             top: 4,
             right: 4,
             child: Container(
+              key: const ValueKey('avatar_presence_indicator'),
               width: indicatorSize,
               height: indicatorSize,
               decoration: BoxDecoration(
@@ -278,6 +310,29 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     }
 
     return wrapped;
+  }
+
+  void _prefetchPresenceIfNeeded() {
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+    if (!widget.showStatusIndicator) return;
+    final wallet = widget.wallet.trim();
+    if (wallet.isEmpty) return;
+
+    final normalized = WalletUtils.normalize(wallet).toLowerCase();
+    const invalid = {'unknown', 'anonymous', 'n/a', 'none'};
+    if (normalized.isEmpty || invalid.contains(normalized)) return;
+
+    PresenceProvider? provider;
+    try {
+      provider = Provider.of<PresenceProvider>(context, listen: false);
+    } catch (_) {
+      provider = null;
+    }
+    if (provider == null) return;
+
+    if (_presencePrefetchKey == normalized) return;
+    _presencePrefetchKey = normalized;
+    provider.prefetch([wallet]);
   }
 
   String? _normalizeAvatar(String? raw) {

@@ -1653,6 +1653,39 @@ class AppLocalizationsSl extends AppLocalizations {
   String get settingsPublicProfileSubtitle => 'Dovoli drugim, da najdejo tvoj profil';
 
   @override
+  String get settingsProfilePrivacySectionTitle => 'Zasebnost profila';
+
+  @override
+  String get settingsPrivateProfileTitle => 'Zasebni profil';
+
+  @override
+  String get settingsPrivateProfileSubtitle => 'Samo odobreni sledilci lahko vidijo tvoje objave';
+
+  @override
+  String get settingsShowActivityStatusTitle => 'Prikaži stanje aktivnosti';
+
+  @override
+  String get settingsShowActivityStatusSubtitle => 'Dovoli drugim, da vidijo, kdaj si na spletu';
+
+  @override
+  String get settingsShareLastVisitedLocationTitle => 'Deli zadnjo obiskano lokacijo';
+
+  @override
+  String get settingsShareLastVisitedLocationSubtitle => 'Dovoli drugim, da vidijo, kaj si nazadnje obiskal/a';
+
+  @override
+  String get settingsShowCollectionTitle => 'Prikaži zbirko';
+
+  @override
+  String get settingsShowCollectionSubtitle => 'Javno prikaži svojo NFT zbirko';
+
+  @override
+  String get settingsAllowMessagesTitle => 'Dovoli sporočila';
+
+  @override
+  String get settingsAllowMessagesSubtitle => 'Prejemaj neposredna sporočila od drugih';
+
+  @override
   String get settingsDeactivateAccountTileTitle => 'Deaktiviraj račun';
 
   @override
@@ -2680,7 +2713,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String arShareText(Object title, Object artist) {
-    return 'Oglej si to AR umetnino na art.kubus!\n\n"$title"\nAvtor: $artist\n\nDoživi jo v razširjeni resničnosti!';
+    return 'Oglej si to AR umetnino na art.kubus!\n\n\"$title\"\nAvtor: $artist\n\nDoživi jo v razširjeni resničnosti!';
   }
 
   @override
@@ -2717,7 +2750,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $minutes minutama',
       one: 'pred $minutes minuto',
     );
-    return _temp0;
+    return '$_temp0';
   }
 
   @override
@@ -2730,7 +2763,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $hours urama',
       one: 'pred $hours uro',
     );
-    return _temp0;
+    return '$_temp0';
   }
 
   @override
@@ -2743,7 +2776,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $days dnevoma',
       one: 'pred $days dnem',
     );
-    return _temp0;
+    return '$_temp0';
   }
 
   @override
@@ -2756,7 +2789,7 @@ class AppLocalizationsSl extends AppLocalizations {
       two: 'pred $weeks tednoma',
       one: 'pred $weeks tednom',
     );
-    return _temp0;
+    return '$_temp0';
   }
 
   @override
@@ -3254,7 +3287,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String collectionSettingsSavedToast(Object name) {
-    return 'Nastavitve zbirke shranjene za "$name"';
+    return 'Nastavitve zbirke shranjene za \"$name\"';
   }
 
   @override
@@ -3265,7 +3298,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String collectionSettingsDeleteDialogContent(Object name) {
-    return 'Ali si prepričan/a, da želiš izbrisati "$name"? Tega dejanja ni mogoče razveljaviti.';
+    return 'Ali si prepričan/a, da želiš izbrisati \"$name\"? Tega dejanja ni mogoče razveljaviti.';
   }
 
   @override
@@ -4295,27 +4328,27 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String artistGalleryPublishSuccessToast(Object title) {
-    return '"$title" objavljena';
+    return '\"$title\" objavljena';
   }
 
   @override
   String artistGalleryUnpublishSuccessToast(Object title) {
-    return '"$title" premaknjena v osnutek';
+    return '\"$title\" premaknjena v osnutek';
   }
 
   @override
   String artistGalleryPublishFailedToast(Object title) {
-    return 'Objava "$title" ni uspela. Poskusi znova.';
+    return 'Objava \"$title\" ni uspela. Poskusi znova.';
   }
 
   @override
   String artistGalleryUnpublishFailedToast(Object title) {
-    return 'Umaknitev objave za "$title" ni uspela. Poskusi znova.';
+    return 'Umaknitev objave za \"$title\" ni uspela. Poskusi znova.';
   }
 
   @override
   String artistGalleryDeletedToast(Object title) {
-    return '"$title" izbrisana';
+    return '\"$title\" izbrisana';
   }
 
   @override
@@ -4323,7 +4356,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String artistGalleryDeleteConfirmBody(Object title) {
-    return 'Ali si prepričan/a, da želiš izbrisati "$title"? Tega dejanja ni mogoče razveljaviti.';
+    return 'Ali si prepričan/a, da želiš izbrisati \"$title\"? Tega dejanja ni mogoče razveljaviti.';
   }
 
   @override
@@ -5150,6 +5183,19 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonTimeAgoJustNow => 'Pravkar';
 
   @override
+  String get presenceOnlineLabel => 'Na spletu';
+
+  @override
+  String presenceLastSeenLabel(Object timeAgo) {
+    return 'Nazadnje viden/-a $timeAgo';
+  }
+
+  @override
+  String presenceLastSeenAtLabel(Object location) {
+    return 'Nazadnje viden/-a pri $location';
+  }
+
+  @override
   String get postDetailLoadPostFailedMessage => 'Objave ni bilo mogoče naložiti.';
 
   @override
@@ -5174,8 +5220,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postDetailDeletePostTitle => 'Izbriši objavo';
 
   @override
-  String get postDetailDeletePostBody =>
-      'Ali res želiš izbrisati to objavo? Tega dejanja ni mogoče razveljaviti.';
+  String get postDetailDeletePostBody => 'Ali res želiš izbrisati to objavo? Tega dejanja ni mogoče razveljaviti.';
 
   @override
   String get postDetailPostDeletedToast => 'Objava izbrisana';
@@ -5287,8 +5332,7 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postDetailLinkedArtworkLabel => 'Povezano umetniško delo';
 
   @override
-  String get postDetailOriginalUnavailableMessage =>
-      'Izvirna objava ni več na voljo';
+  String get postDetailOriginalUnavailableMessage => 'Izvirna objava ni več na voljo';
 
   @override
   String get communityGroupsRefreshFailedToast => 'Skupin ni bilo mogoče osvežiti.';
@@ -5378,7 +5422,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String communityGroupsEmptySearchDescription(Object query) {
-    return 'Ni skupin za "$query".';
+    return 'Ni skupin za \"$query\".';
   }
 
   @override
@@ -5437,7 +5481,7 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String communityGroupCreatedToast(Object name) {
-    return 'Skupina "$name" je ustvarjena.';
+    return 'Skupina \"$name\" je ustvarjena.';
   }
 
   @override

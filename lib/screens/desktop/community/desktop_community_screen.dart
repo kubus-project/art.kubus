@@ -24,6 +24,7 @@ import '../../../services/block_list_service.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/inline_loading.dart';
+import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/community/community_author_role_badges.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
@@ -4169,32 +4170,55 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05);
     final bool highlightActive =
         showSearchContext && (searchHighlight?.isNotEmpty ?? false);
-    final Widget? subtitleWidget = highlightActive
-        ? Text(
-            searchHighlight!,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: scheme.secondary,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          )
-        : (conversation.lastMessage != null &&
-                conversation.lastMessage!.isNotEmpty
-            ? Text(
-                conversation.lastMessage!,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              )
-            : null);
+
+    final bool isOneToOne = conversation.isGroup != true;
+    final String otherWallet = isOneToOne ? _resolveConversationOtherWallet(conversation) : '';
+    final String avatarWallet = isOneToOne && otherWallet.isNotEmpty
+        ? otherWallet
+        : (conversation.memberWallets.isNotEmpty ? conversation.memberWallets.first : '');
+
+    final List<Widget> subtitleLines = [];
+    if (isOneToOne && otherWallet.isNotEmpty) {
+      subtitleLines.add(
+        UserActivityStatusLine(
+          walletAddress: otherWallet,
+          textAlign: TextAlign.start,
+          textStyle: GoogleFonts.inter(
+            fontSize: 12,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
+      );
+    }
+
+    if (highlightActive) {
+      if (subtitleLines.isNotEmpty) subtitleLines.add(const SizedBox(height: 2));
+      subtitleLines.add(
+        Text(
+          searchHighlight!,
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: scheme.secondary,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    } else if ((conversation.lastMessage ?? '').trim().isNotEmpty) {
+      if (subtitleLines.isNotEmpty) subtitleLines.add(const SizedBox(height: 2));
+      subtitleLines.add(
+        Text(
+          conversation.lastMessage!,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            color: scheme.onSurface.withValues(alpha: 0.6),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      );
+    }
 
     return Material(
       color: Colors.transparent,
@@ -4222,9 +4246,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 children: [
                   AvatarWidget(
                     avatarUrl: conversation.displayAvatar,
-                    wallet: conversation.memberWallets.isNotEmpty
-                        ? conversation.memberWallets.first
-                        : '',
+                    wallet: avatarWallet,
                     radius: 24,
                     allowFabricatedFallback: true,
                   ),
@@ -4274,7 +4296,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (subtitleWidget != null) subtitleWidget,
+                    if (subtitleLines.isNotEmpty) ...subtitleLines,
                   ],
                 ),
               ),
@@ -4294,6 +4316,28 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ),
       ),
     );
+  }
+
+  String _resolveConversationOtherWallet(Conversation conversation) {
+    final counterpart = conversation.counterpartProfile?.wallet ?? '';
+    if (counterpart.trim().isNotEmpty) return counterpart.trim();
+
+    ProfileProvider? profileProvider;
+    try {
+      profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    } catch (_) {
+      profileProvider = null;
+    }
+    final myWallet = profileProvider?.currentUser?.walletAddress ?? '';
+
+    for (final w in conversation.memberWallets) {
+      final candidate = w.trim();
+      if (candidate.isEmpty) continue;
+      if (myWallet.isNotEmpty && WalletUtils.equals(candidate, myWallet)) continue;
+      return candidate;
+    }
+
+    return '';
   }
 
   Widget _buildEmptyMessagesState(ThemeProvider themeProvider) {

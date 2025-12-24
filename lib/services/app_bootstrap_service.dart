@@ -56,7 +56,13 @@ class AppBootstrapService {
     final appRefreshProvider = context.read<AppRefreshProvider>();
     final collabProvider = context.read<CollabProvider>();
 
-    await _runTask('auth_token', () => backend.ensureAuthLoaded(walletAddress: walletAddress));
+    await _runTask('wallet_init', walletProvider.initialize);
+
+    final resolvedWallet = (walletAddress ?? '').trim().isNotEmpty
+        ? walletAddress!.trim()
+        : walletProvider.currentWalletAddress;
+
+    await _runTask('auth_token', () => backend.ensureAuthLoaded(walletAddress: resolvedWallet));
 
     final shouldLoadWeb3 = AppConfig.enableWeb3;
     final shouldLoadCommunity = AppConfig.enableUserProfiles;
@@ -82,18 +88,18 @@ class AppBootstrapService {
       futures.add(_runTask('recent_activity', () => recentActivityProvider.initialize(force: true)));
       futures.add(_runTask(
         'notifications',
-        () => notificationProvider.initialize(walletOverride: walletAddress, force: true),
+        () => notificationProvider.initialize(walletOverride: resolvedWallet, force: true),
       ));
       futures.add(_runTask('community_groups', () => communityHubProvider.loadGroups(refresh: true)));
-      futures.add(_runTask('chat', () => chatProvider.initialize(initialWallet: walletAddress)));
+      futures.add(_runTask('chat', () => chatProvider.initialize(initialWallet: resolvedWallet)));
     }
 
     if (shouldLoadWeb3) {
       futures.add(_runTask('web3_provider', () => web3Provider.initialize(attemptRestore: true)));
-      if (walletAddress != null && walletAddress.isNotEmpty) {
+      if (resolvedWallet != null && resolvedWallet.isNotEmpty) {
         futures.add(_runTask('wallet_refresh', () => walletProvider.refreshData()));
         futures.add(_runTask('profile_refresh', () async {
-          await profileProvider.loadProfile(walletAddress);
+          await profileProvider.loadProfile(resolvedWallet);
           await profileProvider.refreshStats();
         }));
       }

@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../services/backend_api_service.dart';
@@ -43,10 +44,12 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Uint8List? _localCoverBytes;
   final ImagePicker _picker = ImagePicker();
   VoidCallback? _profileListener;
+  ProfileProvider? _profileProvider;
   
   // Privacy settings
   bool _privateProfile = false;
   bool _showActivityStatus = true;
+  bool _shareLastVisitedLocation = false;
   bool _showCollection = true;
   bool _allowMessages = true;
   
@@ -58,7 +61,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   void initState() {
     super.initState();
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    _profileProvider = profileProvider;
+    DAOProvider? daoProvider;
+    try {
+      daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    } catch (_) {
+      daoProvider = null;
+    }
     final profile = profileProvider.currentUser;
     
     // Show username without any leading '@' in the edit field for a cleaner UX.
@@ -87,6 +96,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final prefs = profile?.preferences ?? profileProvider.preferences;
     _privateProfile = prefs.privacy.toLowerCase() == 'private';
     _showActivityStatus = prefs.showActivityStatus;
+    _shareLastVisitedLocation = prefs.shareLastVisitedLocation;
     _showCollection = prefs.showCollection;
     _allowMessages = prefs.allowMessages;
     
@@ -96,7 +106,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     
     // Check DAO review for approved artist/institution status
     final walletAddress = profile?.walletAddress ?? '';
-    if (walletAddress.isNotEmpty) {
+    if (walletAddress.isNotEmpty && daoProvider != null) {
       final daoReview = daoProvider.findReviewForWallet(walletAddress);
       if (daoReview != null && daoReview.isApproved) {
         if (daoReview.isArtistApplication) _isArtist = true;
@@ -126,11 +136,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     _websiteController.dispose();
     _specialtyController.dispose();
     _yearsActiveController.dispose();
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     if (_profileListener != null) {
-      profileProvider.removeListener(_profileListener!);
+      _profileProvider?.removeListener(_profileListener!);
       _profileListener = null;
     }
+    _profileProvider = null;
     super.dispose();
   }
 
@@ -417,6 +427,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       await profileProvider.updatePreferences(
         privateProfile: _privateProfile,
         showActivityStatus: _showActivityStatus,
+        shareLastVisitedLocation: _shareLastVisitedLocation,
         showCollection: _showCollection,
         allowMessages: _allowMessages,
       );
@@ -557,7 +568,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
-    
+    final l10n = AppLocalizations.of(context)!;
+     
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -1028,7 +1040,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               ],
               
               // Privacy Settings Section
-              _buildSectionHeader('Privacy Settings', Icons.security),
+              _buildSectionHeader(l10n.settingsPrivacySettingsTileTitle, Icons.security),
               const SizedBox(height: 16),
               
               Container(
@@ -1042,35 +1054,52 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                 child: Column(
                   children: [
                     _buildPrivacySwitch(
-                      'Private Profile',
-                      'Only approved followers can see your posts',
+                      l10n.settingsPrivateProfileTitle,
+                      l10n.settingsPrivateProfileSubtitle,
                       Icons.lock_outline,
                       _privateProfile,
                       (value) => setState(() => _privateProfile = value),
+                      switchKey: const Key('profile_edit_privacy_private_profile'),
                     ),
                     _buildDivider(),
                     _buildPrivacySwitch(
-                      'Show Activity Status',
-                      'Let others see when you\'re online',
+                      l10n.settingsShowActivityStatusTitle,
+                      l10n.settingsShowActivityStatusSubtitle,
                       Icons.circle,
                       _showActivityStatus,
-                      (value) => setState(() => _showActivityStatus = value),
+                      (value) => setState(() {
+                        _showActivityStatus = value;
+                        if (!value) _shareLastVisitedLocation = false;
+                      }),
+                      switchKey: const Key('profile_edit_privacy_show_activity_status'),
                     ),
                     _buildDivider(),
                     _buildPrivacySwitch(
-                      'Show Collection',
-                      'Display your NFT collection publicly',
+                      l10n.settingsShareLastVisitedLocationTitle,
+                      l10n.settingsShareLastVisitedLocationSubtitle,
+                      Icons.place_outlined,
+                      _shareLastVisitedLocation,
+                      (value) => setState(() => _shareLastVisitedLocation = value),
+                      enabled: _showActivityStatus,
+                      switchKey: const Key('profile_edit_privacy_share_last_visited_location'),
+                    ),
+                    _buildDivider(),
+                    _buildPrivacySwitch(
+                      l10n.settingsShowCollectionTitle,
+                      l10n.settingsShowCollectionSubtitle,
                       Icons.collections,
                       _showCollection,
                       (value) => setState(() => _showCollection = value),
+                      switchKey: const Key('profile_edit_privacy_show_collection'),
                     ),
                     _buildDivider(),
                     _buildPrivacySwitch(
-                      'Allow Messages',
-                      'Receive direct messages from others',
+                      l10n.settingsAllowMessagesTitle,
+                      l10n.settingsAllowMessagesSubtitle,
                       Icons.message_outlined,
                       _allowMessages,
                       (value) => setState(() => _allowMessages = value),
+                      switchKey: const Key('profile_edit_privacy_allow_messages'),
                     ),
                   ],
                 ),
@@ -1179,8 +1208,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     String subtitle,
     IconData icon,
     bool value,
-    ValueChanged<bool> onChanged,
-  ) {
+    ValueChanged<bool> onChanged, {
+    bool enabled = true,
+    Key? switchKey,
+  }) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1188,7 +1219,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         children: [
           Icon(
             icon,
-            color: value ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+            color: enabled
+                ? (value ? themeProvider.accentColor : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5))
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38),
             size: 22,
           ),
           const SizedBox(width: 16),
@@ -1213,14 +1246,15 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
                   ),
                 ),
               ],
-            ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            activeTrackColor: themeProvider.accentColor.withValues(alpha: 0.5),
-            thumbColor: WidgetStateProperty.resolveWith((states) =>
-              states.contains(WidgetState.selected) ? themeProvider.accentColor : null),
+        ),
+        Switch(
+          key: switchKey,
+          value: value,
+          onChanged: enabled ? onChanged : null,
+          activeTrackColor: themeProvider.accentColor.withValues(alpha: 0.5),
+          thumbColor: WidgetStateProperty.resolveWith((states) =>
+            states.contains(WidgetState.selected) ? themeProvider.accentColor : null),
           ),
         ],
       ),

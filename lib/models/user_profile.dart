@@ -185,6 +185,7 @@ class ProfilePreferences {
   final bool notifications;
   final String theme;
   final bool showActivityStatus;
+  final bool shareLastVisitedLocation;
   final bool showCollection;
   final bool allowMessages;
   /// UX persona (onboarding). A hint for what to emphasize in the UI.
@@ -197,6 +198,7 @@ class ProfilePreferences {
     this.notifications = true,
     this.theme = 'auto',
     this.showActivityStatus = true,
+    this.shareLastVisitedLocation = false,
     this.showCollection = true,
     this.allowMessages = true,
     this.persona,
@@ -207,6 +209,7 @@ class ProfilePreferences {
     bool? notifications,
     String? theme,
     bool? showActivityStatus,
+    bool? shareLastVisitedLocation,
     bool? showCollection,
     bool? allowMessages,
     String? persona,
@@ -216,6 +219,7 @@ class ProfilePreferences {
       notifications: notifications ?? this.notifications,
       theme: theme ?? this.theme,
       showActivityStatus: showActivityStatus ?? this.showActivityStatus,
+      shareLastVisitedLocation: shareLastVisitedLocation ?? this.shareLastVisitedLocation,
       showCollection: showCollection ?? this.showCollection,
       allowMessages: allowMessages ?? this.allowMessages,
       persona: persona ?? this.persona,
@@ -228,6 +232,7 @@ class ProfilePreferences {
       notifications: json['notifications'] ?? true,
       theme: json['theme'] ?? 'auto',
       showActivityStatus: json['showActivityStatus'] ?? json['show_activity_status'] ?? true,
+      shareLastVisitedLocation: json['shareLastVisitedLocation'] ?? json['share_last_visited_location'] ?? false,
       showCollection: json['showCollection'] ?? json['show_collection'] ?? true,
       allowMessages: json['allowMessages'] ?? json['allow_messages'] ?? true,
       persona: (json['persona'] ?? json['userPersona'] ?? json['user_persona'])?.toString(),
@@ -240,6 +245,7 @@ class ProfilePreferences {
       'notifications': notifications,
       'theme': theme,
       'showActivityStatus': showActivityStatus,
+      'shareLastVisitedLocation': shareLastVisitedLocation,
       'showCollection': showCollection,
       'allowMessages': allowMessages,
       if (persona != null) 'persona': persona,

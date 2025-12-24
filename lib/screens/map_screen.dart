@@ -19,6 +19,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/exhibitions_provider.dart';
+import '../providers/presence_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
 import '../models/map_marker_subject.dart';
@@ -41,6 +42,7 @@ import '../utils/app_color_utils.dart';
 import '../utils/map_marker_helper.dart';
 import '../utils/map_marker_subject_loader.dart';
 import '../utils/map_search_suggestion.dart';
+import '../utils/presence_marker_visit.dart';
 import '../widgets/map_marker_dialog.dart';
 import '../providers/tile_providers.dart';
 import '../widgets/art_map_view.dart';
@@ -683,9 +685,30 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _handleMarkerTap(ArtMarker marker) {
+    _maybeRecordPresenceVisitForMarker(marker);
     setState(() => _activeMarker = marker);
     if (marker.isExhibitionMarker) return;
     _ensureLinkedArtworkLoaded(marker);
+  }
+
+  void _maybeRecordPresenceVisitForMarker(ArtMarker marker) {
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+    if (!AppConfig.isFeatureEnabled('presenceLastVisitedLocation')) return;
+    final visit = presenceVisitFromMarker(marker);
+    if (visit == null) return;
+
+    final userLocation = _currentPosition;
+    if (!shouldRecordPresenceVisitForMarker(
+      marker: marker,
+      userLocation: userLocation,
+      radiusMeters: kPresenceMarkerVisitRadiusMeters,
+    )) {
+      return;
+    }
+
+    try {
+      context.read<PresenceProvider>().recordVisit(type: visit.type, id: visit.id);
+    } catch (_) {}
   }
 
   Future<void> _ensureLinkedArtworkLoaded(ArtMarker marker) async {

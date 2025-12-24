@@ -8,7 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/config.dart';
 import '../providers/config_provider.dart';
 import '../providers/profile_provider.dart';
-import '../providers/chat_provider.dart';
 import '../providers/artwork_provider.dart';
 import '../providers/saved_items_provider.dart';
 import '../providers/wallet_provider.dart';
@@ -63,22 +62,19 @@ class _AppInitializerState extends State<AppInitializer> {
     
     // Initialize WalletProvider early to restore cached wallet
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    // WalletProvider already calls _init() in constructor, but let's ensure it's complete
-    await Future.delayed(const Duration(milliseconds: 500)); // Give it time to complete async loading
+    await walletProvider.initialize();
     final walletAddress = walletProvider.currentWalletAddress;
-    debugPrint('🔐 WalletProvider initialization complete. Has wallet: ${walletAddress != null}');
     if (!mounted) return;
-    // Capture chatProvider early to avoid BuildContext use after async gaps
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     
     // Sync Web3Provider with WalletProvider if wallet was restored
     if (walletAddress != null) {
       final web3Provider = Provider.of<Web3Provider>(context, listen: false);
       try {
         await web3Provider.connectExistingWallet(walletAddress);
-        debugPrint('✅ Web3Provider synced with restored wallet: $walletAddress');
       } catch (e) {
-        debugPrint('⚠️ Web3Provider sync failed: $e');
+        if (kDebugMode) {
+          debugPrint('AppInitializer: Web3Provider sync failed: $e');
+        }
       }
     }
     if (!mounted) return;
@@ -89,27 +85,13 @@ class _AppInitializerState extends State<AppInitializer> {
     if (walletAddress != null && walletAddress.isNotEmpty) {
       try {
         await profileProvider.loadProfile(walletAddress);
-        debugPrint('✅ ProfileProvider loaded for wallet: $walletAddress');
       } catch (e) {
-        debugPrint('⚠️ ProfileProvider load failed: $e');
+        if (kDebugMode) {
+          debugPrint('AppInitializer: ProfileProvider load failed: $e');
+        }
       }
     }
     if (!mounted) return;
-    // Initialize ChatProvider after WalletProvider and ProfileProvider are ready so wallet can be resolved
-    try {
-      // Use captured chatProvider instance
-      // Ensure auth is initialized (attempt single issuance if wallet restored)
-      try {
-        await BackendApiService().ensureAuthLoaded(walletAddress: walletAddress);
-        debugPrint('✅ BackendApiService.ensureAuthLoaded completed in AppInitializer');
-      } catch (e) {
-        debugPrint('⚠️ BackendApiService.ensureAuthLoaded failed in AppInitializer: $e');
-      }
-      if (!mounted) return;
-      await chatProvider.initialize(initialWallet: walletAddress);
-      if (!mounted) return;
-      debugPrint('✅ ChatProvider initialized from AppInitializer');
-    } catch (e) { debugPrint('⚠️ ChatProvider initialize from AppInitializer failed: $e'); }
     
     // Initialize SavedItemsProvider
     final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
@@ -205,13 +187,17 @@ class _AppInitializerState extends State<AppInitializer> {
       // First-time user - show onboarding (no wallet required)
       // Use desktop onboarding for desktop layouts
       if (isDesktop) {
-        debugPrint('Route: First-time user -> DesktopOnboardingScreen');
+        if (kDebugMode) {
+          debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
+        }
         unawaited(warmupFuture);
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
         );
       } else {
-        debugPrint('Route: First-time user -> OnboardingScreen (wallet optional, setup when needed)');
+        if (kDebugMode) {
+          debugPrint('AppInitializer: route -> OnboardingScreen');
+        }
         unawaited(warmupFuture);
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const OnboardingScreen()),
@@ -219,7 +205,9 @@ class _AppInitializerState extends State<AppInitializer> {
       }
     } else {
       // Returning user who completed onboarding - go to main app (wallet optional)
-      debugPrint('Route: Returning user -> MainApp (wallet optional)');
+      if (kDebugMode) {
+        debugPrint('AppInitializer: route -> MainApp');
+      }
       await warmupFuture;
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -341,7 +329,9 @@ class ExploreOnlyApp extends StatelessWidget {
 
   void _showWalletPrompt(BuildContext context) {
     if (kDebugMode) {
-      debugPrint('AppInitializer: wallet prompt triggered');
+      if (kDebugMode) {
+        debugPrint('AppInitializer: wallet prompt triggered');
+      }
     }
     showDialog(
       context: context,
@@ -437,7 +427,9 @@ class WalletPromptScreen extends StatelessWidget {
         ElevatedButton.icon(
           onPressed: () {
             if (kDebugMode) {
-              debugPrint('WalletPromptScreen: Set Up Wallet pressed');
+              if (kDebugMode) {
+                debugPrint('WalletPromptScreen: Set Up Wallet pressed');
+              }
             }
             Navigator.of(context).pop();
             Navigator.of(context).pushReplacement(

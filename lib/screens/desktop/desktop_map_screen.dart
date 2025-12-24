@@ -12,6 +12,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/exhibitions_provider.dart';
+import '../../providers/presence_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../providers/wallet_provider.dart';
 import '../../models/artwork.dart';
@@ -25,6 +26,7 @@ import '../../services/ar_service.dart';
 import '../../utils/map_marker_subject_loader.dart';
 import '../../utils/map_marker_helper.dart';
 import '../../utils/map_search_suggestion.dart';
+import '../../utils/presence_marker_visit.dart';
 import '../../widgets/art_marker_cube.dart';
 import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/art_map_view.dart';
@@ -2418,6 +2420,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   void _handleMarkerTap(ArtMarker marker) {
     _moveCamera(marker.position, math.max(_effectiveZoom, 15));
     setState(() => _activeMarker = marker);
+    _maybeRecordPresenceVisitForMarker(marker);
 
     final primaryExhibition = marker.resolvedExhibitionSummary;
     final isExhibitionMarker = marker.isExhibitionMarker;
@@ -2435,6 +2438,24 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     unawaited(_ensureLinkedArtworkLoaded(marker));
+  }
+
+  void _maybeRecordPresenceVisitForMarker(ArtMarker marker) {
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+    if (!AppConfig.isFeatureEnabled('presenceLastVisitedLocation')) return;
+    final visit = presenceVisitFromMarker(marker);
+    if (visit == null) return;
+    if (!shouldRecordPresenceVisitForMarker(
+      marker: marker,
+      userLocation: _userLocation,
+      radiusMeters: kPresenceMarkerVisitRadiusMeters,
+    )) {
+      return;
+    }
+
+    try {
+      context.read<PresenceProvider>().recordVisit(type: visit.type, id: visit.id);
+    } catch (_) {}
   }
 
   Marker _buildClusterMarker(

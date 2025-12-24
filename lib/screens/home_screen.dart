@@ -58,17 +58,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       vsync: this,
     );
     _animationController.forward();
-
-    // Initialize navigation provider
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final navigationProvider =
-          Provider.of<NavigationProvider>(context, listen: false);
-      navigationProvider.initialize();
-
-      final recentActivityProvider =
-          Provider.of<RecentActivityProvider>(context, listen: false);
-      recentActivityProvider.initialize();
-    });
   }
 
   @override

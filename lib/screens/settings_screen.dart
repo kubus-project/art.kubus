@@ -906,6 +906,7 @@ class _SettingsScreenState extends State<SettingsScreen>
             _personalizedAds ? l10n.commonEnabled : l10n.commonDisabled,
           ),
           Icons.privacy_tip,
+          tileKey: const Key('settings_tile_privacy_settings'),
           onTap: () {
             _showPrivacySettingsDialog();
           },
@@ -1349,10 +1350,12 @@ class _SettingsScreenState extends State<SettingsScreen>
     VoidCallback? onTap,
     Widget? trailing,
     bool isDestructive = false,
+    Key? tileKey,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
+        key: tileKey,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         tileColor: Theme.of(context).colorScheme.primaryContainer,
         shape: RoundedRectangleBorder(
@@ -2997,11 +3000,19 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   // Helper methods for dialog components
-  Widget _buildSwitchTile(String title, String subtitle, bool value, Function(bool) onChanged) {
+  Widget _buildSwitchTile(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged, {
+    bool enabled = true,
+    Key? tileKey,
+  }) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 4),
       color: Theme.of(context).colorScheme.primaryContainer,
       child: SwitchListTile(
+        key: tileKey,
         title: Text(
           title,
           style: GoogleFonts.inter(
@@ -3017,7 +3028,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
         value: value,
-        onChanged: onChanged,
+        onChanged: enabled ? onChanged : null,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         activeThumbColor: Provider.of<ThemeProvider>(context, listen: false).accentColor,
       ),
@@ -3273,6 +3284,15 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showPrivacySettingsDialog() {
     final l10n = AppLocalizations.of(context)!;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final initialPrefs = profileProvider.preferences;
+
+    bool privateProfile = initialPrefs.privacy.toLowerCase() == 'private';
+    bool showActivityStatus = initialPrefs.showActivityStatus;
+    bool shareLastVisitedLocation = initialPrefs.shareLastVisitedLocation;
+    bool showCollection = initialPrefs.showCollection;
+    bool allowMessages = initialPrefs.allowMessages;
+
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -3333,6 +3353,57 @@ class _SettingsScreenState extends State<SettingsScreen>
                       }
                     },
                   ),
+                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l10n.settingsProfilePrivacySectionTitle,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(innerContext).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildSwitchTile(
+                    l10n.settingsPrivateProfileTitle,
+                    l10n.settingsPrivateProfileSubtitle,
+                    privateProfile,
+                    (value) => setDialogState(() => privateProfile = value),
+                    tileKey: const Key('settings_privacy_private_profile'),
+                  ),
+                  _buildSwitchTile(
+                    l10n.settingsShowActivityStatusTitle,
+                    l10n.settingsShowActivityStatusSubtitle,
+                    showActivityStatus,
+                    (value) => setDialogState(() {
+                      showActivityStatus = value;
+                      if (!value) shareLastVisitedLocation = false;
+                    }),
+                    tileKey: const Key('settings_privacy_show_activity_status'),
+                  ),
+                  _buildSwitchTile(
+                    l10n.settingsShareLastVisitedLocationTitle,
+                    l10n.settingsShareLastVisitedLocationSubtitle,
+                    shareLastVisitedLocation,
+                    (value) => setDialogState(() => shareLastVisitedLocation = value),
+                    enabled: showActivityStatus,
+                    tileKey: const Key('settings_privacy_share_last_visited_location'),
+                  ),
+                  _buildSwitchTile(
+                    l10n.settingsShowCollectionTitle,
+                    l10n.settingsShowCollectionSubtitle,
+                    showCollection,
+                    (value) => setDialogState(() => showCollection = value),
+                    tileKey: const Key('settings_privacy_show_collection'),
+                  ),
+                  _buildSwitchTile(
+                    l10n.settingsAllowMessagesTitle,
+                    l10n.settingsAllowMessagesSubtitle,
+                    allowMessages,
+                    (value) => setDialogState(() => allowMessages = value),
+                    tileKey: const Key('settings_privacy_allow_messages'),
+                  ),
                 ],
               ),
             ),
@@ -3354,7 +3425,17 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
               onPressed: () async {
                 final navigator = Navigator.of(dialogContext);
-                setState(() {}); // Update main state
+                setState(() {
+                  _allowMessages = allowMessages;
+                  _publicProfile = !privateProfile;
+                });
+                await profileProvider.updatePreferences(
+                  privateProfile: privateProfile,
+                  showActivityStatus: showActivityStatus,
+                  shareLastVisitedLocation: shareLastVisitedLocation,
+                  showCollection: showCollection,
+                  allowMessages: allowMessages,
+                );
                 await _saveAllSettings();
                 if (!mounted) return;
                 navigator.pop();
@@ -3536,12 +3617,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                           return option;
                       }
                     },
-                  ),
-                  _buildSwitchTile(
-                    l10n.settingsPublicProfileTitle,
-                    l10n.settingsPublicProfileSubtitle,
-                    _publicProfile,
-                    (value) => setDialogState(() => _publicProfile = value),
                   ),
                   const SizedBox(height: 16),
                   _buildActionTile(

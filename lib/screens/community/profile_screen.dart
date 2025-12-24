@@ -12,7 +12,6 @@ import '../../providers/config_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/task_provider.dart';
-import '../../providers/wallet_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/media_url_resolver.dart';
@@ -27,6 +26,7 @@ import '../collab/invites_inbox_screen.dart';
 import '../../models/achievements.dart';
 import 'profile_edit_screen.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
@@ -404,8 +404,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                           radius: isVerySmallScreen ? 40 : isSmallScreen ? 45 : 50,
                           enableProfileNavigation: false,
                           showStatusIndicator: _showActivityStatus,
-                          isOnline: Provider.of<Web3Provider>(context, listen: false).isConnected ||
-                              !Provider.of<WalletProvider>(context, listen: false).isLocked,
                         ),
                     ),
                   ),
@@ -457,6 +455,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                     textAlign: TextAlign.center,
                   ),
                 ],
+                const SizedBox(height: 6),
+                UserActivityStatusLine(
+                  walletAddress: profileProvider.currentUser?.walletAddress ?? '',
+                  textAlign: TextAlign.center,
+                  textStyle: GoogleFonts.inter(
+                    fontSize: isVerySmallScreen ? 12 : isSmallScreen ? 13 : 14,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
                 SizedBox(height: isSmallScreen ? 6 : 8),
                 if (web3Provider.isConnected) ...[
                   Container(
