@@ -287,12 +287,16 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 tooltip: l10n.commonBack,
               ),
               const SizedBox(width: 8),
-              Text(
-                l10n.settingsTitle,
-                style: GoogleFonts.inter(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+              Expanded(
+                child: Text(
+                  l10n.settingsTitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -381,6 +385,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         },
         borderRadius: BorderRadius.circular(12),
         child: Container(
+          key: ValueKey('desktop_settings_sidebar_item_${item.index}'),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isSelected ? sectionColor.withValues(alpha: 0.1) : Colors.transparent,
@@ -395,15 +400,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     ? sectionColor
                     : scheme.onSurface.withValues(alpha: 0.6),
               ),
-              const SizedBox(width: 16),
-              Text(
-                item.title,
-                style: GoogleFonts.inter(
-                  fontSize: 15,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                  color: isSelected
-                      ? sectionColor
-                      : scheme.onSurface,
+               const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  item.title,
+                  style: GoogleFonts.inter(
+                    fontSize: 15,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color: isSelected ? sectionColor : scheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -1969,6 +1976,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
 
   Widget _buildPrivacySettings(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
+    final profileProvider = Provider.of<ProfileProvider>(context);
+    final prefs = profileProvider.preferences;
+    final bool privateProfile = prefs.privacy.toLowerCase() == 'private';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -1988,10 +1998,52 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             child: Column(
               children: [
                 _buildToggleSetting(
-                  l10n.settingsPublicProfileTitle,
-                  l10n.settingsPublicProfileSubtitle,
-                  _publicProfile,
-                  onChanged: (value) => setState(() => _publicProfile = value),
+                  l10n.settingsPrivateProfileTitle,
+                  l10n.settingsPrivateProfileSubtitle,
+                  privateProfile,
+                  saveAfterToggle: false,
+                  onChanged: (value) => profileProvider.updatePreferences(privateProfile: value),
+                  switchKey: const Key('desktop_settings_privacy_private_profile'),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsShowActivityStatusTitle,
+                  l10n.settingsShowActivityStatusSubtitle,
+                  prefs.showActivityStatus,
+                  saveAfterToggle: false,
+                  onChanged: (value) => profileProvider.updatePreferences(
+                    showActivityStatus: value,
+                    shareLastVisitedLocation: value ? prefs.shareLastVisitedLocation : false,
+                  ),
+                  switchKey: const Key('desktop_settings_privacy_show_activity_status'),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsShareLastVisitedLocationTitle,
+                  l10n.settingsShareLastVisitedLocationSubtitle,
+                  prefs.shareLastVisitedLocation,
+                  saveAfterToggle: false,
+                  onChanged: (value) => profileProvider.updatePreferences(shareLastVisitedLocation: value),
+                  enabled: prefs.showActivityStatus,
+                  switchKey: const Key('desktop_settings_privacy_share_last_visited_location'),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsShowCollectionTitle,
+                  l10n.settingsShowCollectionSubtitle,
+                  prefs.showCollection,
+                  saveAfterToggle: false,
+                  onChanged: (value) => profileProvider.updatePreferences(showCollection: value),
+                  switchKey: const Key('desktop_settings_privacy_show_collection'),
+                ),
+                const Divider(height: 32),
+                _buildToggleSetting(
+                  l10n.settingsAllowMessagesTitle,
+                  l10n.settingsAllowMessagesSubtitle,
+                  prefs.allowMessages,
+                  saveAfterToggle: false,
+                  onChanged: (value) => profileProvider.updatePreferences(allowMessages: value),
+                  switchKey: const Key('desktop_settings_privacy_allow_messages'),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2006,13 +2058,6 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                   l10n.desktopSettingsShowAchievementsSubtitle,
                   _showAchievements,
                   onChanged: (value) => setState(() => _showAchievements = value),
-                ),
-                const Divider(height: 32),
-                _buildToggleSetting(
-                  l10n.desktopSettingsAllowMessagesTitle,
-                  l10n.desktopSettingsAllowMessagesSubtitle,
-                  _allowMessages,
-                  onChanged: (value) => setState(() => _allowMessages = value),
                 ),
                 const Divider(height: 32),
                 _buildToggleSetting(
@@ -2722,7 +2767,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     bool initialValue, {
     bool saveAfterToggle = true,
     ValueChanged<bool>? onChanged,
+    bool enabled = true,
+    Key? switchKey,
   }) {
+    final displayedValue = enabled ? initialValue : false;
     return Row(
       children: [
         Expanded(
@@ -2748,13 +2796,14 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
           ),
         ),
         Switch(
-          value: initialValue,
-          onChanged: (value) {
+          key: switchKey,
+          value: displayedValue,
+          onChanged: enabled ? (value) {
             onChanged?.call(value);
             if (saveAfterToggle) {
               _saveSettings();
             }
-          },
+          } : null,
           activeTrackColor: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.5),
           thumbColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {

@@ -25,6 +25,7 @@ import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/community_hub_provider.dart';
+import 'providers/presence_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/events_provider.dart';
 import 'providers/exhibitions_provider.dart';
@@ -182,6 +183,15 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => PlatformProvider()),
               ChangeNotifierProvider(create: (context) => ConnectionProvider()),
               ChangeNotifierProvider(create: (context) => ProfileProvider()),
+              ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, PresenceProvider>(
+                create: (context) => PresenceProvider(),
+                update: (context, appRefreshProvider, profileProvider, presenceProvider) {
+                  final provider = presenceProvider ?? PresenceProvider();
+                  provider.bindToRefresh(appRefreshProvider);
+                  provider.bindProfileProvider(profileProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
               ChangeNotifierProxyProvider<AppRefreshProvider, ChatProvider>(
                 create: (context) => ChatProvider(),

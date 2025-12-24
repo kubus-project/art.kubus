@@ -14,6 +14,7 @@ import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/user_activity_status_line.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/event_bus.dart';
 import '../../utils/wallet_utils.dart';
@@ -778,7 +779,28 @@ class _MessagesScreenState extends State<MessagesScreen> {
             return ListTile(
               leading: leading,
               title: titleWidget,
-              subtitle: Text(c.lastMessage ?? ''),
+              subtitle: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!c.isGroup && otherWallet.isNotEmpty)
+                    UserActivityStatusLine(
+                      walletAddress: otherWallet,
+                      textAlign: TextAlign.start,
+                      textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                    ),
+                  if ((c.lastMessage ?? '').isNotEmpty) ...[
+                    if (!c.isGroup && otherWallet.isNotEmpty) const SizedBox(height: 2),
+                    Text(
+                      c.lastMessage ?? '',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
               trailing: unreadCount > 0
                   ? Container(
                       padding: const EdgeInsets.symmetric(

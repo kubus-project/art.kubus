@@ -501,7 +501,15 @@ class ChatProvider extends ChangeNotifier {
   bool get isAuthenticated => (_api.getAuthToken() ?? '').isNotEmpty;
 
   Future<void> initialize({String? initialWallet}) async {
-    if (_initialized) return;
+    final normalizedInitialWallet = (initialWallet ?? '').trim();
+    if (_initialized) {
+      if (normalizedInitialWallet.isNotEmpty) {
+        await setCurrentWallet(normalizedInitialWallet);
+      } else if (_conversations.isEmpty && isAuthenticated) {
+        unawaited(refreshConversations());
+      }
+      return;
+    }
     _initialized = true;
     // We do not automatically initialize persisted user cache here to avoid
     // eagerly loading data for anonymous users; initialization occurs on wallet

@@ -43,6 +43,7 @@ class WalletProvider extends ChangeNotifier {
   bool _isBalanceVisible = true;
   String? _currentWalletAddress;
   DerivedKeyPairResult? _cachedDerivedCandidate;
+  Completer<void>? _initializeCompleter;
 
   // Backend supplemental data
   Map<String, dynamic>? _backendProfile;
@@ -58,10 +59,32 @@ class WalletProvider extends ChangeNotifier {
 
   WalletProvider({SolanaWalletService? solanaWalletService, bool deferInit = false})
       : _solanaWalletService = solanaWalletService ?? SolanaWalletService() {
-    debugPrint('🔐 WalletProvider constructor called');
     if (!deferInit) {
-      _init();
+      unawaited(initialize());
     }
+  }
+
+  /// Idempotent async initialization. Safe to call multiple times.
+  Future<void> initialize() {
+    final existing = _initializeCompleter;
+    if (existing != null) return existing.future;
+
+    final completer = Completer<void>();
+    _initializeCompleter = completer;
+
+    () async {
+      try {
+        await _init();
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('WalletProvider.initialize failed: $e');
+        }
+      } finally {
+        if (!completer.isCompleted) completer.complete();
+      }
+    }();
+
+    return completer.future;
   }
 
   @visibleForTesting
@@ -72,18 +95,13 @@ class WalletProvider extends ChangeNotifier {
   }
 
   Future<void> _init() async {
-    debugPrint('🔐 WalletProvider._init() START');
     await _applySavedNetworkPreference();
     await _loadLockTimeout();
-    debugPrint('🔐 Lock timeout loaded, now loading cached wallet...');
     await _loadCachedWallet();
-    debugPrint('🔐 Cached wallet load complete. Current address: $_currentWalletAddress');
     // If a cached wallet was not loaded, proceed to load data normally
     if (_currentWalletAddress == null) {
-      debugPrint('🔐 No cached wallet, calling _loadData()');
       await _loadData();
     }
-    debugPrint('🔐 WalletProvider._init() COMPLETE');
   }
 
   Future<void> _applySavedNetworkPreference() async {
@@ -94,9 +112,10 @@ class WalletProvider extends ChangeNotifier {
           ? ApiKeys.defaultSolanaNetwork
           : savedNetwork;
       _solanaWalletService.switchNetwork(targetNetwork);
-      debugPrint('🔐 WalletProvider: applied saved Solana network -> $targetNetwork');
     } catch (e) {
-      debugPrint('🔐 WalletProvider: failed to apply saved network: $e');
+      if (kDebugMode) {
+        debugPrint('WalletProvider: failed to apply saved network: $e');
+      }
     }
   }
 

@@ -1653,6 +1653,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsPublicProfileSubtitle => 'Allow others to find your profile';
 
   @override
+  String get settingsProfilePrivacySectionTitle => 'Profile privacy';
+
+  @override
+  String get settingsPrivateProfileTitle => 'Private profile';
+
+  @override
+  String get settingsPrivateProfileSubtitle => 'Only approved followers can see your posts';
+
+  @override
+  String get settingsShowActivityStatusTitle => 'Show activity status';
+
+  @override
+  String get settingsShowActivityStatusSubtitle => 'Let others see when you\'re online';
+
+  @override
+  String get settingsShareLastVisitedLocationTitle => 'Share last visited location';
+
+  @override
+  String get settingsShareLastVisitedLocationSubtitle => 'Let others see what you last visited';
+
+  @override
+  String get settingsShowCollectionTitle => 'Show collection';
+
+  @override
+  String get settingsShowCollectionSubtitle => 'Display your NFT collection publicly';
+
+  @override
+  String get settingsAllowMessagesTitle => 'Allow messages';
+
+  @override
+  String get settingsAllowMessagesSubtitle => 'Receive direct messages from others';
+
+  @override
   String get settingsDeactivateAccountTileTitle => 'Deactivate account';
 
   @override
@@ -4279,22 +4312,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String artistGalleryPublishSuccessToast(Object title) {
-    return '"$title" published';
+    return '\"$title\" published';
   }
 
   @override
   String artistGalleryUnpublishSuccessToast(Object title) {
-    return '"$title" moved to draft';
+    return '\"$title\" moved to draft';
   }
 
   @override
   String artistGalleryPublishFailedToast(Object title) {
-    return 'Failed to publish "$title". Please try again.';
+    return 'Failed to publish \"$title\". Please try again.';
   }
 
   @override
   String artistGalleryUnpublishFailedToast(Object title) {
-    return 'Failed to unpublish "$title". Please try again.';
+    return 'Failed to unpublish \"$title\". Please try again.';
   }
 
   @override
@@ -5130,6 +5163,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonTimeAgoJustNow => 'Just now';
 
   @override
+  String get presenceOnlineLabel => 'Online';
+
+  @override
+  String presenceLastSeenLabel(Object timeAgo) {
+    return 'Last seen $timeAgo';
+  }
+
+  @override
+  String presenceLastSeenAtLabel(Object location) {
+    return 'Last seen at $location';
+  }
+
+  @override
   String get postDetailLoadPostFailedMessage => 'Failed to load post.';
 
   @override
@@ -5139,8 +5185,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailReportPostDialogTitle => 'Report post';
 
   @override
-  String get postDetailReportPostDialogQuestion =>
-      'Why are you reporting this post?';
+  String get postDetailReportPostDialogQuestion => 'Why are you reporting this post?';
 
   @override
   String get postDetailEditPostTitle => 'Edit post';
@@ -5155,8 +5200,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailDeletePostTitle => 'Delete post';
 
   @override
-  String get postDetailDeletePostBody =>
-      'Are you sure you want to delete this post? This action cannot be undone.';
+  String get postDetailDeletePostBody => 'Are you sure you want to delete this post? This action cannot be undone.';
 
   @override
   String get postDetailPostDeletedToast => 'Post deleted';
@@ -5268,8 +5312,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailLinkedArtworkLabel => 'Linked artwork';
 
   @override
-  String get postDetailOriginalUnavailableMessage =>
-      'Original post is no longer available';
+  String get postDetailOriginalUnavailableMessage => 'Original post is no longer available';
 
   @override
   String get communityGroupsRefreshFailedToast => 'Could not refresh groups.';

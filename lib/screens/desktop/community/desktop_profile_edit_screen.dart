@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path/path.dart' as path;
+import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../services/backend_api_service.dart';
@@ -46,9 +47,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   Uint8List? _localCoverBytes;
   final ImagePicker _picker = ImagePicker();
   VoidCallback? _profileListener;
+  ProfileProvider? _profileProvider;
   
   bool _privateProfile = false;
   bool _showActivityStatus = true;
+  bool _shareLastVisitedLocation = false;
   bool _showCollection = true;
   bool _allowMessages = true;
   bool _isArtist = false;
@@ -63,7 +66,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     );
     
     final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    final daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    _profileProvider = profileProvider;
+    DAOProvider? daoProvider;
+    try {
+      daoProvider = Provider.of<DAOProvider>(context, listen: false);
+    } catch (_) {
+      daoProvider = null;
+    }
     final profile = profileProvider.currentUser;
     
     final initialUsername = (profile?.username ?? '').toString().replaceFirst(RegExp(r'^@+'), '');
@@ -89,6 +98,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     final prefs = profile?.preferences ?? profileProvider.preferences;
     _privateProfile = prefs.privacy.toLowerCase() == 'private';
     _showActivityStatus = prefs.showActivityStatus;
+    _shareLastVisitedLocation = prefs.shareLastVisitedLocation;
     _showCollection = prefs.showCollection;
     _allowMessages = prefs.allowMessages;
     
@@ -96,7 +106,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     _isInstitution = profile?.isInstitution ?? false;
     
     final walletAddress = profile?.walletAddress ?? '';
-    if (walletAddress.isNotEmpty) {
+    if (walletAddress.isNotEmpty && daoProvider != null) {
       final daoReview = daoProvider.findReviewForWallet(walletAddress);
       if (daoReview != null && daoReview.isApproved) {
         if (daoReview.isArtistApplication) _isArtist = true;
@@ -127,11 +137,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     _websiteController.dispose();
     _specialtyController.dispose();
     _yearsActiveController.dispose();
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
     if (_profileListener != null) {
-      profileProvider.removeListener(_profileListener!);
+      _profileProvider?.removeListener(_profileListener!);
       _profileListener = null;
     }
+    _profileProvider = null;
     super.dispose();
   }
 
@@ -573,6 +583,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
   }
 
   Widget _buildPrivacySection(ThemeProvider themeProvider) {
+    final l10n = AppLocalizations.of(context)!;
     return DesktopCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -584,31 +595,47 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ),
           const SizedBox(height: 24),
           _buildSwitchTile(
-            title: 'Private Profile',
-            subtitle: 'Only approved followers can see your posts',
+            title: l10n.settingsPrivateProfileTitle,
+            subtitle: l10n.settingsPrivateProfileSubtitle,
             value: _privateProfile,
             onChanged: (value) => setState(() => _privateProfile = value),
+            switchKey: const Key('desktop_profile_edit_privacy_private_profile'),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
-            title: 'Show Activity Status',
-            subtitle: 'Let others see when you\'re online',
+            title: l10n.settingsShowActivityStatusTitle,
+            subtitle: l10n.settingsShowActivityStatusSubtitle,
             value: _showActivityStatus,
-            onChanged: (value) => setState(() => _showActivityStatus = value),
+            onChanged: (value) => setState(() {
+              _showActivityStatus = value;
+              if (!value) _shareLastVisitedLocation = false;
+            }),
+            switchKey: const Key('desktop_profile_edit_privacy_show_activity_status'),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
-            title: 'Show Collection',
-            subtitle: 'Display your collected artworks on your profile',
+            title: l10n.settingsShareLastVisitedLocationTitle,
+            subtitle: l10n.settingsShareLastVisitedLocationSubtitle,
+            value: _shareLastVisitedLocation,
+            enabled: _showActivityStatus,
+            onChanged: (value) => setState(() => _shareLastVisitedLocation = value),
+            switchKey: const Key('desktop_profile_edit_privacy_share_last_visited_location'),
+          ),
+          const Divider(height: 32),
+          _buildSwitchTile(
+            title: l10n.settingsShowCollectionTitle,
+            subtitle: l10n.settingsShowCollectionSubtitle,
             value: _showCollection,
             onChanged: (value) => setState(() => _showCollection = value),
+            switchKey: const Key('desktop_profile_edit_privacy_show_collection'),
           ),
           const Divider(height: 32),
           _buildSwitchTile(
-            title: 'Allow Messages',
-            subtitle: 'Let other users send you direct messages',
+            title: l10n.settingsAllowMessagesTitle,
+            subtitle: l10n.settingsAllowMessagesSubtitle,
             value: _allowMessages,
             onChanged: (value) => setState(() => _allowMessages = value),
+            switchKey: const Key('desktop_profile_edit_privacy_allow_messages'),
           ),
         ],
       ),
@@ -664,6 +691,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
     required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
+    bool enabled = true,
+    Key? switchKey,
   }) {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     
@@ -693,8 +722,9 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           ),
         ),
         Switch(
+          key: switchKey,
           value: value,
-          onChanged: onChanged,
+          onChanged: enabled ? onChanged : null,
           activeTrackColor: themeProvider.accentColor,
         ),
       ],
@@ -1039,6 +1069,7 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
       await profileProvider.updatePreferences(
         privateProfile: _privateProfile,
         showActivityStatus: _showActivityStatus,
+        shareLastVisitedLocation: _shareLastVisitedLocation,
         showCollection: _showCollection,
         allowMessages: _allowMessages,
       );

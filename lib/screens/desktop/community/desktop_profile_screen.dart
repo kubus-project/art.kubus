@@ -11,7 +11,6 @@ import '../../../providers/config_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/task_provider.dart';
-import '../../../providers/wallet_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../utils/media_url_resolver.dart';
@@ -22,6 +21,7 @@ import '../../community/post_detail_screen.dart';
 import '../../../models/achievements.dart';
 import 'desktop_profile_edit_screen.dart';
 import '../../../widgets/avatar_widget.dart';
+import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
@@ -465,8 +465,6 @@ class _ProfileScreenState extends State<ProfileScreen>
                     radius: avatarRadius,
                     enableProfileNavigation: false,
                     showStatusIndicator: _showActivityStatus,
-                    isOnline: web3Provider.isConnected ||
-                        !Provider.of<WalletProvider>(context, listen: false).isLocked,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -508,6 +506,15 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                         ),
                       ],
+                      const SizedBox(height: 6),
+                      UserActivityStatusLine(
+                        walletAddress: user?.walletAddress ?? '',
+                        textAlign: TextAlign.start,
+                        textStyle: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
                       const SizedBox(height: 12),
                       if (web3Provider.isConnected) ...[
                         Container(

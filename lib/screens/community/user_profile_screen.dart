@@ -18,6 +18,7 @@ import '../../providers/chat_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
@@ -699,8 +700,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
+          const SizedBox(height: 6),
+          UserActivityStatusLine(
+            walletAddress: user!.id,
+            textAlign: TextAlign.center,
+            textStyle: GoogleFonts.inter(
+              fontSize: 13,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
           const SizedBox(height: 16),
-          
+           
           // Bio
           Text(
             user!.bio,

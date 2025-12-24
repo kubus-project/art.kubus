@@ -2700,6 +2700,31 @@
   "mnemonicRevealCopiedToast": "Obnovitvena fraza je kopirana v odložišče",
   "mnemonicRevealShowButton": "Prikaži",
   "mnemonicRevealEnterPinDialogTitle": "Vnesi PIN",
+  "settingsProfilePrivacySectionTitle": "Zasebnost profila",
+  "settingsPrivateProfileTitle": "Zasebni profil",
+  "settingsPrivateProfileSubtitle": "Samo odobreni sledilci lahko vidijo tvoje objave",
+  "settingsShowActivityStatusTitle": "Prikaži stanje aktivnosti",
+  "settingsShowActivityStatusSubtitle": "Dovoli drugim, da vidijo, kdaj si na spletu",
+  "settingsShareLastVisitedLocationTitle": "Deli zadnjo obiskano lokacijo",
+  "settingsShareLastVisitedLocationSubtitle": "Dovoli drugim, da vidijo, kaj si nazadnje obiskal/a",
+  "settingsShowCollectionTitle": "Prikaži zbirko",
+  "settingsShowCollectionSubtitle": "Javno prikaži svojo NFT zbirko",
+  "settingsAllowMessagesTitle": "Dovoli sporočila",
+  "settingsAllowMessagesSubtitle": "Prejemaj neposredna sporočila od drugih",
+
+  "presenceOnlineLabel": "Na spletu",
+  "presenceLastSeenLabel": "Nazadnje viden/-a {timeAgo}",
+  "@presenceLastSeenLabel": {
+    "placeholders": {
+      "timeAgo": {}
+    }
+  },
+  "presenceLastSeenAtLabel": "Nazadnje viden/-a pri {location}",
+  "@presenceLastSeenAtLabel": {
+    "placeholders": {
+      "location": {}
+    }
+  },
   "@mnemonicRevealPinLockedError": {
     "placeholders": {
       "seconds": {}

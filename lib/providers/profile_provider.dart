@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -912,6 +912,7 @@ class ProfileProvider extends ChangeNotifier {
       final wallet = _prefs.getString(PreferenceKeys.walletAddress) ?? _prefs.getString('wallet_address') ?? '';
       final bool isPrivate = _prefs.getBool('private_profile') ?? false;
       final bool showActivityStatus = _prefs.getBool('show_activity_status') ?? true;
+      final bool shareLastVisitedLocation = _prefs.getBool('share_last_visited_location') ?? false;
       final bool showCollection = _prefs.getBool('show_collection') ?? true;
       final bool allowMessages = _prefs.getBool('allow_messages') ?? true;
       final String? persona = wallet.isNotEmpty ? _prefs.getString(_personaKeyForWallet(wallet)) : null;
@@ -920,6 +921,7 @@ class ProfileProvider extends ChangeNotifier {
         notifications: true,
         theme: 'auto',
         showActivityStatus: showActivityStatus,
+        shareLastVisitedLocation: shareLastVisitedLocation,
         showCollection: showCollection,
         allowMessages: allowMessages,
         persona: persona,
@@ -984,6 +986,7 @@ class ProfileProvider extends ChangeNotifier {
     try {
       await _prefs.setBool('private_profile', preferences.privacy.toLowerCase() == 'private');
       await _prefs.setBool('show_activity_status', preferences.showActivityStatus);
+      await _prefs.setBool('share_last_visited_location', preferences.shareLastVisitedLocation);
       await _prefs.setBool('show_collection', preferences.showCollection);
       await _prefs.setBool('allow_messages', preferences.allowMessages);
       final wallet = _currentWalletAddress;
@@ -1008,6 +1011,7 @@ class ProfileProvider extends ChangeNotifier {
   Future<void> updatePreferences({
     bool? privateProfile,
     bool? showActivityStatus,
+    bool? shareLastVisitedLocation,
     bool? showCollection,
     bool? allowMessages,
   }) async {
@@ -1016,6 +1020,7 @@ class ProfileProvider extends ChangeNotifier {
       final next = existing.copyWith(
         privacy: (privateProfile ?? (existing.privacy.toLowerCase() == 'private')) ? 'private' : 'public',
         showActivityStatus: showActivityStatus ?? existing.showActivityStatus,
+        shareLastVisitedLocation: shareLastVisitedLocation ?? existing.shareLastVisitedLocation,
         showCollection: showCollection ?? existing.showCollection,
         allowMessages: allowMessages ?? existing.allowMessages,
       );
@@ -1035,11 +1040,15 @@ class ProfileProvider extends ChangeNotifier {
             {'preferences': next.toJson()},
           );
         } catch (e) {
-          debugPrint('ProfileProvider.updatePreferences: backend update failed: $e');
+          if (kDebugMode) {
+            debugPrint('ProfileProvider.updatePreferences: backend update failed: $e');
+          }
         }
       }
     } catch (e) {
-      debugPrint('ProfileProvider.updatePreferences failed: $e');
+      if (kDebugMode) {
+        debugPrint('ProfileProvider.updatePreferences failed: $e');
+      }
     }
   }
   

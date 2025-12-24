@@ -654,6 +654,17 @@
   "settingsAccountTypeEnterprise": "Enterprise",
   "settingsPublicProfileTitle": "Public profile",
   "settingsPublicProfileSubtitle": "Allow others to find your profile",
+  "settingsProfilePrivacySectionTitle": "Profile privacy",
+  "settingsPrivateProfileTitle": "Private profile",
+  "settingsPrivateProfileSubtitle": "Only approved followers can see your posts",
+  "settingsShowActivityStatusTitle": "Show activity status",
+  "settingsShowActivityStatusSubtitle": "Let others see when you're online",
+  "settingsShareLastVisitedLocationTitle": "Share last visited location",
+  "settingsShareLastVisitedLocationSubtitle": "Let others see what you last visited",
+  "settingsShowCollectionTitle": "Show collection",
+  "settingsShowCollectionSubtitle": "Display your NFT collection publicly",
+  "settingsAllowMessagesTitle": "Allow messages",
+  "settingsAllowMessagesSubtitle": "Receive direct messages from others",
   "settingsDeactivateAccountTileTitle": "Deactivate account",
   "settingsDeactivateAccountTileSubtitle": "Temporarily disable your account",
   "settingsAccountSettingsUpdatedToast": "Account settings updated",
@@ -2403,6 +2414,20 @@
     }
   },
   "commonTimeAgoJustNow": "Just now",
+
+  "presenceOnlineLabel": "Online",
+  "presenceLastSeenLabel": "Last seen {timeAgo}",
+  "@presenceLastSeenLabel": {
+    "placeholders": {
+      "timeAgo": {}
+    }
+  },
+  "presenceLastSeenAtLabel": "Last seen at {location}",
+  "@presenceLastSeenAtLabel": {
+    "placeholders": {
+      "location": {}
+    }
+  },
 
   "postDetailLoadPostFailedMessage": "Failed to load post.",
   "postDetailMoreOptionsReportAction": "Report",

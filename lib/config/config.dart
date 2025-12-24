@@ -52,6 +52,8 @@ class AppConfig {
   static const bool enableUserProfiles = true;
   static const bool enableFollowing = true;
   static const bool enableMessaging = false; // Future feature
+  static const bool enablePresence = true;
+  static const bool enablePresenceLastVisitedLocation = true;
 
   /// Collaboration (events/exhibitions)
   static const bool enableCollabInvites = true;
@@ -244,6 +246,8 @@ class AppConfig {
       case 'collabInviteNotifications': return enableCollabInviteNotifications;
       case 'season0': return enableSeason0;
       case 'labs': return enableLabs;
+      case 'presence': return enablePresence;
+      case 'presenceLastVisitedLocation': return enablePresenceLastVisitedLocation;
       default: return false;
     }
   }
@@ -284,9 +288,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.2.1';
-  static const int buildNumber = 9;
-  static const String buildDate = '2025-12-15';
+  static const String version = '0.2.2';
+  static const int buildNumber = 10;
+  static const String buildDate = '2025-12-23';
   
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';
