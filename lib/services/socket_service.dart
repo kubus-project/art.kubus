@@ -17,6 +17,7 @@ class SocketService {
 
   io.Socket? _socket;
   String? _socketBaseUrl;
+  String? _socketAuthToken;
   Completer<bool>? _connectCompleter;
   final List<NotificationCallback> _notificationListeners = [];
   final List<NotificationCallback> _messageListeners = [];
@@ -113,18 +114,27 @@ class SocketService {
     try {
       await api.ensureAuthLoaded();
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('SocketService: ensureAuthLoaded failed: $e');
-      }
+      _log('ensureAuthLoaded failed: $e');
     }
 
     final resolvedBase = (baseUrl ?? api.baseUrl).replaceAll(RegExp(r'/+$'), '');
-    if (_socket != null && _socket!.connected) return true;
+
+    final nextToken = (api.getAuthToken() ?? '').trim();
+    final currentToken = (_socketAuthToken ?? '').trim();
+
+    // If auth token changes (login/logout) we must recreate the socket so the
+    // handshake includes the new token. This prevents "anonymous socket" state
+    // where presence/chat subscriptions silently fail until app restart.
+    if (_socket != null && nextToken != currentToken) {
+      disconnect();
+    }
 
     // If the target base URL changes, reset the socket instance.
     if (_socket != null && _socketBaseUrl != null && _socketBaseUrl != resolvedBase) {
       disconnect();
     }
+
+    if (_socket != null && _socket!.connected) return true;
 
     // Reuse an in-flight connect attempt.
     if (_connectCompleter != null) {
@@ -133,12 +143,13 @@ class SocketService {
     }
 
     if (_socket == null) {
-      final token = api.getAuthToken();
+      final token = (api.getAuthToken() ?? '').trim();
+      _socketAuthToken = token.isNotEmpty ? token : null;
       final options = <String, dynamic>{
         'transports': ['websocket'],
         'autoConnect': false,
-        'auth': token != null ? {'token': token} : {},
-        'extraHeaders': token != null ? {'Authorization': 'Bearer $token'} : {},
+        'auth': token.isNotEmpty ? {'token': token} : {},
+        'extraHeaders': token.isNotEmpty ? {'Authorization': 'Bearer $token'} : {},
       };
 
       _socketBaseUrl = resolvedBase;
@@ -149,9 +160,7 @@ class SocketService {
       _registerAllHandlers();
 
       _socket!.onConnect((_) {
-        if (kDebugMode) {
-          debugPrint('SocketService: Connected');
-        }
+        _log('Connected');
         // Re-subscribe if we had a previous wallet.
         if (_currentSubscribedWallet != null) {
           _resubscribe(_currentSubscribedWallet!);
@@ -161,9 +170,7 @@ class SocketService {
           try {
             cb();
           } catch (e) {
-            if (kDebugMode) {
-              debugPrint('SocketService: connect listener error: $e');
-            }
+            _log('connect listener error: $e');
           }
         }
         final c = _connectCompleter;
@@ -172,9 +179,7 @@ class SocketService {
       });
 
       _socket!.onDisconnect((_) {
-        if (kDebugMode) {
-          debugPrint('SocketService: Disconnected');
-        }
+        _log('Disconnected');
         final c = _connectCompleter;
         if (c != null && !c.isCompleted) c.complete(false);
         _connectCompleter = null;
@@ -182,9 +187,7 @@ class SocketService {
 
       // Fail fast on connection errors.
       _socket!.on('connect_error', (err) {
-        if (kDebugMode) {
-          debugPrint('SocketService: connect_error: $err');
-        }
+        _log('connect_error: $err');
         final c = _connectCompleter;
         if (c != null && !c.isCompleted) c.complete(false);
         _connectCompleter = null;
@@ -197,9 +200,7 @@ class SocketService {
     try {
       _socket!.connect();
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('SocketService: connect() error: $e');
-      }
+      _log('connect() error: $e');
       final c = _connectCompleter;
       if (c != null && !c.isCompleted) c.complete(false);
       _connectCompleter = null;
@@ -282,7 +283,7 @@ class SocketService {
 
       return await completer.future.timeout(timeout, onTimeout: () => false);
     } catch (e) {
-      debugPrint('SocketService.connectAndSubscribe error: $e');
+      _log('connectAndSubscribe error: $e');
       return false;
     }
   }
@@ -308,14 +309,14 @@ class SocketService {
 
     if (!socketReady) {
       _currentSubscribedWallet = roomWallet;
-      debugPrint('SocketService: subscribeUser queued until socket connects');
+      _log('subscribeUser queued until socket connects');
       unawaited(connect());
       return;
     }
 
     // Prevent duplicate subscriptions (compare canonical strings)
     if (previouslySubscribed == roomWallet) {
-      debugPrint('SocketService: Already subscribed to $walletAddress');
+      _log('Already subscribed to $walletAddress');
       return;
     }
 
@@ -327,17 +328,17 @@ class SocketService {
     _currentSubscribedWallet = roomWallet;
     // Emit the wallet room using canonical casing
     _socket!.emit('subscribe:user', _currentSubscribedWallet);
-    debugPrint('SocketService: emitted subscribe:user for $_currentSubscribedWallet');
+    _log('emitted subscribe:user for $_currentSubscribedWallet');
     bool awaitingAck = true; // ignore: unused_local_variable
 
     // Register handlers only once
     void onSubscribeOk(dynamic payload) {
-      debugPrint('SocketService: subscribe:ok for $walletAddress (room: user:$_currentSubscribedWallet)');
+      _log('subscribe:ok for $walletAddress (room: user:$_currentSubscribedWallet)');
       awaitingAck = false;
     }
 
     void onSubscribeError(dynamic payload) {
-      debugPrint('SocketService: subscribe:error for $walletAddress: $payload');
+      _log('subscribe:error for $walletAddress: $payload');
       _currentSubscribedWallet = null;
       awaitingAck = false;
     }
@@ -381,7 +382,7 @@ class SocketService {
 
     _socket!.on('notification:new', (data) {
       try {
-        debugPrint('SocketService: Received notification:new: $data');
+        _log('Received notification:new');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('notification:new -> listeners=${_notificationListeners.length}');
@@ -389,67 +390,67 @@ class SocketService {
             try {
               l(mapped);
             } catch (e) {
-              debugPrint('SocketService: Listener error: $e');
+              _log('notification:new listener error: $e');
             }
           }
-          try { _notificationController.add(mapped); _log('notification:new -> controller.added'); } catch (e) { debugPrint('SocketService: notification controller add error: $e'); }
+          try { _notificationController.add(mapped); _log('notification:new -> controller.added'); } catch (e) { _log('notification controller add error: $e'); }
         } else {
           _log('chat:new-message -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           for (final l in _messageListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: chat:new-message fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('chat:new-message fallback listener error: $e'); }
           }
-          try { _messageController.add(rawMap); _log('chat:new-message -> controller.added (raw)'); } catch (e) { debugPrint('SocketService: message controller add error: $e'); }
+          try { _messageController.add(rawMap); _log('chat:new-message -> controller.added (raw)'); } catch (e) { _log('message controller add error: $e'); }
         }
       } catch (e) {
-        debugPrint('SocketService: notification:new handler error: $e');
+        _log('notification:new handler error: $e');
       }
     });
 
     _socket!.on('chat:conversation-updated', (data) {
       try {
-        debugPrint('SocketService: Received chat:conversation-updated: $data');
+        _log('Received chat:conversation-updated');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
           for (final l in _conversationListeners) {
             try {
               l(mapped);
             } catch (e) {
-              debugPrint('SocketService: chat:conversation-updated listener error: $e');
+              _log('chat:conversation-updated listener error: $e');
             }
           }
         }
       } catch (e) {
-        debugPrint('SocketService: chat:conversation-updated handler error: $e');
+        _log('chat:conversation-updated handler error: $e');
       }
     });
 
     _socket!.on('art-marker:created', (data) {
       try {
-        debugPrint('SocketService: Received art-marker:created: $data');
+        _log('Received art-marker:created');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('art-marker:created -> listeners=${_markerListeners.length}');
           for (final l in _markerListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: marker listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('marker listener error: $e'); }
           }
-          try { _markerController.add(mapped); _log('art-marker:created -> controller.added'); } catch (e) { debugPrint('SocketService: marker controller add error: $e'); }
+          try { _markerController.add(mapped); _log('art-marker:created -> controller.added'); } catch (e) { _log('marker controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: art-marker:created handler error: $e'); }
+      } catch (e) { _log('art-marker:created handler error: $e'); }
     });
     // Feed updates: new posts or reposts
     _socket!.on('community:new_post', (data) {
       try {
-        debugPrint('SocketService: Received community:new_post: $data');
+        _log('Received community:new_post');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           for (final l in _postListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: post listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('post listener error: $e'); }
           }
-          try { _postController.add(mapped); _log('community:new_post -> controller.added'); } catch (e) { debugPrint('SocketService: post controller add error: $e'); }
+          try { _postController.add(mapped); _log('community:new_post -> controller.added'); } catch (e) { _log('post controller add error: $e'); }
         }
       } catch (e) {
-        debugPrint('SocketService: community:new_post handler error: $e');
+        _log('community:new_post handler error: $e');
       }
     });
     // Also handle read-all events
@@ -458,188 +459,188 @@ class SocketService {
         final mapped = (data is Map<String, dynamic>) ? Map<String, dynamic>.from(data) : {'type': 'read-all', 'data': data};
         _log('notification:read-all -> listeners=${_notificationListeners.length}');
         for (final l in _notificationListeners) {
-          try { l(mapped); } catch (e) { debugPrint('SocketService: ReadAll listener error: $e'); }
+          try { l(mapped); } catch (e) { _log('ReadAll listener error: $e'); }
         }
       } catch (e) {
-        debugPrint('SocketService: notification:read-all handler error: $e');
+        _log('notification:read-all handler error: $e');
       }
     });
     
     // Message & conversation handlers
     _socket!.on('chat:new-message', (data) {
       try {
-        debugPrint('SocketService: Received chat:new-message: $data');
+        _log('Received chat:new-message');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('chat:new-message -> listeners=${_messageListeners.length}');
           for (final l in _messageListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: chat:new-message listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('chat:new-message listener error: $e'); }
           }
-          try { _messageController.add(mapped); _log('chat:new-message -> controller.added'); } catch (e) { debugPrint('SocketService: message controller add error: $e'); }
+          try { _messageController.add(mapped); _log('chat:new-message -> controller.added'); } catch (e) { _log('message controller add error: $e'); }
         } else {
           _log('chat:message-read -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           for (final l in _messageReadListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: chat:message-read fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('chat:message-read fallback listener error: $e'); }
           }
-          try { _messageReadController.add(rawMap); _log('chat:message-read -> controller.added (raw)'); } catch (e) { debugPrint('SocketService: messageRead controller add error: $e'); }
+          try { _messageReadController.add(rawMap); _log('chat:message-read -> controller.added (raw)'); } catch (e) { _log('messageRead controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: chat:new-message handler error: $e'); }
+      } catch (e) { _log('chat:new-message handler error: $e'); }
     });
 
     _socket!.on('chat:message-read', (data) {
       try {
-        debugPrint('SocketService: Received chat:message-read: $data');
+        _log('Received chat:message-read');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('chat:message-read -> listeners=${_messageReadListeners.length}');
           for (final l in _messageReadListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: chat:message-read listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('chat:message-read listener error: $e'); }
           }
-          try { _messageReadController.add(mapped); _log('chat:message-read -> controller.added'); } catch (e) { debugPrint('SocketService: messageRead controller add error: $e'); }
+          try { _messageReadController.add(mapped); _log('chat:message-read -> controller.added'); } catch (e) { _log('messageRead controller add error: $e'); }
         } else {
           _log('chat:new-conversation -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           for (final l in _conversationListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: chat:new-conversation fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('chat:new-conversation fallback listener error: $e'); }
           }
         }
-      } catch (e) { debugPrint('SocketService: chat:message-read handler error: $e'); }
+      } catch (e) { _log('chat:message-read handler error: $e'); }
     });
 
     _socket!.on('chat:new-conversation', (data) {
       try {
-        debugPrint('SocketService: Received chat:new-conversation: $data');
+        _log('Received chat:new-conversation');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('chat:new-conversation -> listeners=${_conversationListeners.length}');
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: chat:new-conversation listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('chat:new-conversation listener error: $e'); }
           }
         } else {
           _log('chat:members-updated -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           for (final l in _conversationListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: chat:members-updated fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('chat:members-updated fallback listener error: $e'); }
           }
-          try { _conversationMemberReadController.add(rawMap); _log('chat:members-updated -> controller.added (raw)'); } catch (e) { debugPrint('SocketService: conversationMember controller add error: $e'); }
+          try { _conversationMemberReadController.add(rawMap); _log('chat:members-updated -> controller.added (raw)'); } catch (e) { _log('conversationMember controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: chat:new-conversation handler error: $e'); }
+      } catch (e) { _log('chat:new-conversation handler error: $e'); }
     });
 
     _socket!.on('chat:members-updated', (data) {
       try {
-        debugPrint('SocketService: Received chat:members-updated: $data');
+        _log('Received chat:members-updated');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('chat:members-updated -> listeners=${_conversationListeners.length}');
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: chat:members-updated listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('chat:members-updated listener error: $e'); }
           }
-          try { _conversationMemberReadController.add(mapped); _log('chat:members-updated -> controller.added'); } catch (e) { debugPrint('SocketService: conversationMember controller add error: $e'); }
+          try { _conversationMemberReadController.add(mapped); _log('chat:members-updated -> controller.added'); } catch (e) { _log('conversationMember controller add error: $e'); }
         } else {
           _log('message:received -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           for (final l in _messageListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: message:received fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('message:received fallback listener error: $e'); }
           }
-          try { _messageController.add(rawMap); _log('message:received -> controller.added (raw)'); } catch (e) { debugPrint('SocketService: message controller add error: $e'); }
+          try { _messageController.add(rawMap); _log('message:received -> controller.added (raw)'); } catch (e) { _log('message controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: chat:members-updated handler error: $e'); }
+      } catch (e) { _log('chat:members-updated handler error: $e'); }
     });
 
     // Also accept server event names used elsewhere to maximize compatibility
     _socket!.on('message:received', (data) {
       try {
-        debugPrint('SocketService: Received message:received: $data');
+        _log('Received message:received');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _log('message:received -> listeners=${_messageListeners.length}');
           for (final l in _messageListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: message:received listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('message:received listener error: $e'); }
           }
-          try { _messageController.add(mapped); _log('message:received -> controller.added'); } catch (e) { debugPrint('SocketService: message controller add error: $e'); }
+          try { _messageController.add(mapped); _log('message:received -> controller.added'); } catch (e) { _log('message controller add error: $e'); }
         } else {
           _log('message:read -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           _logEventDetails('message:read', rawMap);
           for (final l in _messageReadListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: message:read fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('message:read fallback listener error: $e'); }
           }
-          try { _messageReadController.add(rawMap); _log('message:read -> controller.added (raw)'); } catch (e) { debugPrint('SocketService: messageRead controller add error: $e'); }
+          try { _messageReadController.add(rawMap); _log('message:read -> controller.added (raw)'); } catch (e) { _log('messageRead controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: message:received handler error: $e'); }
+      } catch (e) { _log('message:received handler error: $e'); }
     });
 
     _socket!.on('message:read', (data) {
       try {
-        debugPrint('SocketService: Received message:read: $data');
+        _log('Received message:read');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _logEventDetails('message:read', mapped);
           _log('message:read -> listeners=${_messageReadListeners.length}');
           for (final l in _messageReadListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: message:read listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('message:read listener error: $e'); }
           }
-          try { _messageReadController.add(mapped); _log('message:read -> controller.added'); } catch (e) { debugPrint('SocketService: messageRead controller add error: $e'); }
+          try { _messageReadController.add(mapped); _log('message:read -> controller.added'); } catch (e) { _log('messageRead controller add error: $e'); }
         } else {
           _log('conversation:member:read -> could not map payload, sending raw wrapper to listeners');
           final rawMap = {'raw': data};
           _logEventDetails('conversation:member:read', rawMap);
           for (final l in _conversationListeners) {
-            try { l(rawMap); } catch (e) { debugPrint('SocketService: conversation:member:read fallback listener error: $e'); }
+            try { l(rawMap); } catch (e) { _log('conversation:member:read fallback listener error: $e'); }
           }
-          try { _conversationMemberReadController.add(rawMap); _log('conversation:member:read -> controller.added (raw)'); } catch (e) { debugPrint('SocketService: conversationMember controller add error: $e'); }
+          try { _conversationMemberReadController.add(rawMap); _log('conversation:member:read -> controller.added (raw)'); } catch (e) { _log('conversationMember controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: message:read handler error: $e'); }
+      } catch (e) { _log('message:read handler error: $e'); }
     });
 
     _socket!.on('conversation:member:read', (data) {
       try {
-        debugPrint('SocketService: Received conversation:member:read: $data');
+        _log('Received conversation:member:read');
         final mapped = mapFromPayload(data);
         if (mapped != null) {
           _logEventDetails('conversation:member:read', mapped);
           _log('conversation:member:read -> listeners=${_conversationListeners.length}');
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: conversation:member:read listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('conversation:member:read listener error: $e'); }
           }
-          try { _conversationMemberReadController.add(mapped); _log('conversation:member:read -> controller.added'); } catch (e) { debugPrint('SocketService: conversationMember controller add error: $e'); }
+          try { _conversationMemberReadController.add(mapped); _log('conversation:member:read -> controller.added'); } catch (e) { _log('conversationMember controller add error: $e'); }
         }
-      } catch (e) { debugPrint('SocketService: conversation:member:read handler error: $e'); }
+      } catch (e) { _log('conversation:member:read handler error: $e'); }
     });
 
     _socket!.on('message:reaction', (data) {
       try {
-        debugPrint('SocketService: Received message:reaction: $data');
+        _log('Received message:reaction');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
           _log('message:reaction -> listeners=${_messageReactionListeners.length}');
           for (final l in _messageReactionListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: message:reaction listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('message:reaction listener error: $e'); }
           }
         }
-      } catch (e) { debugPrint('SocketService: message:reaction handler error: $e'); }
+      } catch (e) { _log('message:reaction handler error: $e'); }
     });
 
     _socket!.on('chat:conversation-renamed', (data) {
       try {
-        debugPrint('SocketService: Received chat:conversation-renamed: $data');
+        _log('Received chat:conversation-renamed');
         if (data is Map<String, dynamic>) {
           final mapped = Map<String, dynamic>.from(data);
           _log('chat:conversation-renamed -> listeners=${_conversationListeners.length}');
           for (final l in _conversationListeners) {
-            try { l(mapped); } catch (e) { debugPrint('SocketService: conversation-renamed listener error: $e'); }
+            try { l(mapped); } catch (e) { _log('conversation-renamed listener error: $e'); }
           }
         }
-      } catch (e) { debugPrint('SocketService: chat:conversation-renamed handler error: $e'); }
+      } catch (e) { _log('chat:conversation-renamed handler error: $e'); }
     });
   }
 
   // Handled inline in _registerNotificationHandler
 
   void _resubscribe(String walletAddress) {
-    debugPrint('SocketService: Re-subscribing to $walletAddress after reconnect');
+    _log('Re-subscribing to $walletAddress after reconnect');
     _currentSubscribedWallet = null; // Reset to allow resubscription
     subscribeUser(walletAddress);
   }
@@ -657,13 +658,13 @@ class SocketService {
   Future<bool> subscribeConversation(String conversationId, {Duration timeout = const Duration(seconds: 6)}) async {
     // Async subscription with acknowledgement
     if (_socket == null || !_socket!.connected) {
-      debugPrint('SocketService: Cannot subscribe to conversation - socket not connected');
+      _log('Cannot subscribe to conversation - socket not connected');
       return false;
     }
 
     final nid = conversationId;
     if (_subscribedConversations.contains(nid)) {
-      debugPrint('SocketService: Already subscribed to conversation $nid');
+      _log('Already subscribed to conversation $nid');
       return false;
     }
     _socket!.emit('subscribe:conversation', nid);
@@ -707,13 +708,14 @@ class SocketService {
     if (!_subscribedConversations.contains(nid)) return;
     _socket!.emit('leave:conversation', nid);
     _subscribedConversations.remove(nid);
-    debugPrint('SocketService: left conversation $nid');
+    _log('left conversation $nid');
   }
 
   void disconnect() {
     _socket?.disconnect();
     _socket = null;
     _socketBaseUrl = null;
+    _socketAuthToken = null;
     _currentSubscribedWallet = null;
     _notificationHandlerRegistered = false;
     _connectCompleter = null;

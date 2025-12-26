@@ -1078,7 +1078,7 @@ class BackendApiService {
       if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
       final response = await http.post(
         Uri.parse('$baseUrl/api/presence/batch'),
-        headers: _getHeaders(includeAuth: true),
+        headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'wallets': wallets}),
       );
 

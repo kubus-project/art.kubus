@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -115,8 +116,10 @@ class AppBootstrapService {
     try {
       await Future<void>.sync(task).timeout(taskTimeout);
     } catch (e, st) {
-      debugPrint('AppBootstrapService: $label failed: $e');
-      debugPrint('$st');
+      if (kDebugMode) {
+        debugPrint('AppBootstrapService: $label failed: $e');
+        debugPrint('$st');
+      }
     }
   }
 }
