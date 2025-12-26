@@ -15,6 +15,7 @@ import '../../../providers/notification_provider.dart';
 import '../../../providers/recent_activity_provider.dart';
 import '../../../services/solana_walletconnect_service.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/app_bootstrap_service.dart';
 import '../../../services/user_service.dart';
 import '../../../models/user.dart';
 import '../../../widgets/inline_loading.dart';
@@ -77,40 +78,48 @@ class _ConnectWalletState extends State<ConnectWallet> with TickerProviderStateM
 
   Future<void> _runPostWalletConnectRefresh(String walletAddress) async {
     if (!mounted) return;
-    final appRefresh = Provider.of<AppRefreshProvider>(context, listen: false);
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    final notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
-    final activityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
-
     try {
-      await BackendApiService().ensureAuthLoaded(walletAddress: walletAddress);
-    } catch (e) {
-      debugPrint('connectwallet: ensureAuthLoaded after wallet connect failed: $e');
-    }
+      // These were originally imported to ensure app-wide refresh after wallet
+      // connect/import/create. Keep this logic centralized so all flows benefit.
+      AppRefreshProvider? refreshProvider;
+      NotificationProvider? notificationProvider;
+      RecentActivityProvider? recentActivityProvider;
+      try {
+        refreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
+      } catch (_) {}
+      try {
+        notificationProvider = Provider.of<NotificationProvider>(context, listen: false);
+      } catch (_) {}
+      try {
+        recentActivityProvider = Provider.of<RecentActivityProvider>(context, listen: false);
+      } catch (_) {}
 
-    try {
-      await chatProvider.initialize(initialWallet: walletAddress);
-      await chatProvider.setCurrentWallet(walletAddress);
-      await chatProvider.refreshConversations();
-    } catch (e) {
-      debugPrint('connectwallet: chat refresh after wallet connect failed: $e');
-    }
+      // Immediately bump versions so listening widgets can re-render quickly.
+      try {
+        refreshProvider?.triggerAll();
+        refreshProvider?.triggerProfile();
+        refreshProvider?.triggerChat();
+        refreshProvider?.triggerCommunity();
+        refreshProvider?.triggerNotifications();
+      } catch (_) {}
 
-    try {
-      await notificationProvider.initialize(walletOverride: walletAddress, force: true);
-    } catch (e) {
-      debugPrint('connectwallet: NotificationProvider.initialize failed after wallet connect: $e');
-    }
+      // Ensure notification-driven activity feed stays in sync.
+      try {
+        recentActivityProvider?.bindNotificationProvider(notificationProvider);
+      } catch (_) {}
 
-    try {
-      await activityProvider.refresh(force: true);
-    } catch (e) {
-      debugPrint('connectwallet: RecentActivityProvider.refresh failed after wallet connect: $e');
-    }
+      await const AppBootstrapService().warmUp(
+        context: context,
+        walletAddress: walletAddress,
+      );
 
-    try {
-      appRefresh.triggerAll();
-      appRefresh.triggerCommunity();
+      // Kick off refreshes (idempotent). We do this after warm-up so we don't
+      // hold a BuildContext across async gaps.
+      await Future.wait([
+        if (notificationProvider != null)
+          notificationProvider.initialize(walletOverride: walletAddress, force: true),
+        if (recentActivityProvider != null) recentActivityProvider.initialize(force: true),
+      ]);
     } catch (_) {}
   }
 
