@@ -56,12 +56,65 @@ class CollectionArtworkRecord {
     final tags = tagsRaw is List
         ? tagsRaw.map((e) => e.toString()).toList(growable: false)
         : const <String>[];
+
+    String? nonEmptyString(dynamic value) {
+      if (value == null) return null;
+      final s = value.toString().trim();
+      return s.isEmpty ? null : s;
+    }
+
+    String? pickFrom(Map<String, dynamic> source, List<String> keys) {
+      for (final key in keys) {
+        final v = nonEmptyString(source[key]);
+        if (v != null) return v;
+      }
+      return null;
+    }
+
+    Map<String, dynamic>? nestedArtwork;
+    final rawArtwork = map['artwork'] ?? map['artworkPreview'] ?? map['artwork_preview'];
+    if (rawArtwork is Map<String, dynamic>) {
+      nestedArtwork = rawArtwork;
+    } else if (rawArtwork is Map) {
+      nestedArtwork = Map<String, dynamic>.from(rawArtwork);
+    }
+
+    final imageUrlKeys = <String>[
+      'imageUrl',
+      'image_url',
+      'coverImage',
+      'cover_image',
+      'coverImageUrl',
+      'cover_image_url',
+      'coverUrl',
+      'cover_url',
+      'thumbnailUrl',
+      'thumbnail_url',
+      'previewUrl',
+      'preview_url',
+      'mediaUrl',
+      'media_url',
+      'image',
+      'url',
+    ];
+
+    final imageCidKeys = <String>[
+      'imageCid',
+      'image_cid',
+      'imageCID',
+      'cid',
+    ];
+
+    final resolvedImageUrl =
+        pickFrom(map, imageUrlKeys) ?? (nestedArtwork != null ? pickFrom(nestedArtwork, imageUrlKeys) : null);
+    final resolvedImageCid =
+        pickFrom(map, imageCidKeys) ?? (nestedArtwork != null ? pickFrom(nestedArtwork, imageCidKeys) : null);
     return CollectionArtworkRecord(
       id: _stringOrEmpty(map['id'] ?? map['artworkId'] ?? map['artwork_id']),
       title: _stringOrEmpty(map['title'] ?? map['name']),
       description: map['description']?.toString(),
-      imageUrl: map['imageUrl']?.toString(),
-      imageCid: map['imageCid']?.toString(),
+      imageUrl: resolvedImageUrl,
+      imageCid: resolvedImageCid,
       artistName: map['artistName']?.toString(),
       artistWallet: map['artistWallet']?.toString(),
       tags: tags,

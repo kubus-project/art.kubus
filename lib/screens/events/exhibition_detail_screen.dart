@@ -11,8 +11,10 @@ import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
+import '../art/art_detail_screen.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -447,10 +449,50 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
   }
 }
 
-class _LinkedArtworksList extends StatelessWidget {
+class _LinkedArtworksList extends StatefulWidget {
   const _LinkedArtworksList({required this.exhibition});
 
   final Exhibition exhibition;
+
+  @override
+  State<_LinkedArtworksList> createState() => _LinkedArtworksListState();
+}
+
+class _LinkedArtworksListState extends State<_LinkedArtworksList> {
+  final Set<String> _requested = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _prefetchMissingArtworks();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _LinkedArtworksList oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.exhibition.id != widget.exhibition.id) {
+      _requested.clear();
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _prefetchMissingArtworks();
+    });
+  }
+
+  void _prefetchMissingArtworks() {
+    final provider = context.read<ArtworkProvider>();
+    for (final rawId in widget.exhibition.artworkIds) {
+      final id = rawId.trim();
+      if (id.isEmpty) continue;
+      if (_requested.contains(id)) continue;
+      if (provider.getArtworkById(id) != null) continue;
+      _requested.add(id);
+      unawaited(provider.fetchArtworkIfNeeded(id).catchError((_) => null));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -458,35 +500,91 @@ class _LinkedArtworksList extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final artworkProvider = context.watch<ArtworkProvider>();
 
-    final ids = exhibition.artworkIds;
+    final ids = widget.exhibition.artworkIds;
     if (ids.isEmpty) {
       return Text(
         l10n.exhibitionDetailNoArtworksLinkedYet,
-        style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          color: scheme.onSurface.withValues(alpha: 0.7),
+        ),
       );
     }
 
     final tiles = <Widget>[];
-    for (final id in ids) {
+    for (final rawId in ids) {
+      final id = rawId.trim();
+      if (id.isEmpty) continue;
       final art = artworkProvider.getArtworkById(id);
+      final title = (art?.title ?? '').trim().isNotEmpty
+          ? art!.title
+          : l10n.commonUntitled;
+      final subtitle = art?.artist.isNotEmpty == true ? art!.artist : id;
+      final imageUrl = ArtworkMediaResolver.resolveCover(artwork: art);
+
       tiles.add(
         ListTile(
           dense: true,
           contentPadding: EdgeInsets.zero,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ArtDetailScreen(artworkId: id),
+              ),
+            );
+          },
           title: Text(
-            art?.title ?? 'Artwork',
+            title,
             style: GoogleFonts.inter(fontWeight: FontWeight.w600),
           ),
           subtitle: Text(
-            art?.artist.isNotEmpty == true ? art!.artist : id,
-            style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+            subtitle,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: scheme.onSurface.withValues(alpha: 0.75),
+            ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          leading: Icon(Icons.image_outlined, color: scheme.onSurface.withValues(alpha: 0.7)),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: imageUrl == null
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: scheme.surfaceContainerHighest,
+                      ),
+                      child: Icon(
+                        Icons.image_outlined,
+                        color: scheme.onSurface.withValues(alpha: 0.6),
+                      ),
+                    )
+                  : Image.network(
+                      imageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: scheme.surfaceContainerHighest,
+                        ),
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+          trailing: Icon(
+            Icons.chevron_right,
+            color: scheme.onSurface.withValues(alpha: 0.55),
+          ),
         ),
       );
-      tiles.add(Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5)));
+      tiles.add(
+        Divider(height: 1, color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      );
     }
 
     // Drop trailing divider.

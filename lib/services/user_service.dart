@@ -20,6 +20,9 @@ class UserService {
   static final Map<String, User> _cache = {};
   // Timestamps (epoch millis) for when entries were cached
   static final Map<String, int> _cacheTimestamps = {};
+  // Tracks legacy cache entries that were persisted before we stored `coverImageUrl`.
+  // Used to force a one-time refresh so profile covers load without manual reload.
+  static final Set<String> _legacyCacheMissingCoverKey = <String>{};
   // NOTE: Removed prior cacheVersion notifier. UI components should call
   // UserService.getUsersByWallets/getUserById for explicit fetches and not rely on
   // an implicit cache notification system.
@@ -114,11 +117,18 @@ class UserService {
               // expired
               _cache.remove(userId);
               _cacheTimestamps.remove(userId);
+              _legacyCacheMissingCoverKey.remove(userId);
             } else {
-              return _cache[userId];
+              // Force a one-time refresh for legacy cache entries that predate
+              // coverImageUrl persistence so profile covers load automatically.
+              if (!_legacyCacheMissingCoverKey.contains(userId)) {
+                return _cache[userId];
+              }
             }
           } catch (_) {
-            return _cache[userId];
+            if (!_legacyCacheMissingCoverKey.contains(userId)) {
+              return _cache[userId];
+            }
           }
         }
       }
@@ -127,9 +137,11 @@ class UserService {
       // Fetch profile from backend using wallet address (force or cache miss)
       final profile = await BackendApiService().getProfileByWallet(userId);
       // Log (briefly) the profile payload for diagnostics if it has unexpected shapes
-      try {
-        debugPrint('UserService.getUserById: profile keys = ${profile.keys}');
-      } catch (_) {}
+      if (kDebugMode) {
+        try {
+          debugPrint('UserService.getUserById: profile keys = ${profile.keys}');
+        } catch (_) {}
+      }
 
       final followingList = await getFollowingUsers();
       final isFollowing = followingList.contains(userId);
@@ -152,7 +164,9 @@ class UserService {
       try {
         achievementProgress = await loadAchievementProgress(resolvedWallet);
       } catch (e) {
-        debugPrint('UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
+        if (kDebugMode) {
+          debugPrint('UserService.getUserById: failed to load achievements for $resolvedWallet: $e');
+        }
       }
 
       // Convert backend profile to User model
@@ -177,14 +191,31 @@ class UserService {
             : 'Joined recently',
         achievementProgress: achievementProgress,
         profileImageUrl: _extractAvatarCandidate(profile['avatar'], userId),
-        coverImageUrl: (profile['coverImage'] ?? profile['cover_image'] ?? profile['coverImageUrl'] ?? profile['cover_image_url'])?.toString(),
+        coverImageUrl: _extractMediaCandidate(
+          profile['coverImage'] ??
+              profile['coverImageUrl'] ??
+              profile['cover_image_url'] ??
+              profile['cover_image'] ??
+              profile['coverUrl'] ??
+              profile['cover_url'] ??
+              profile['cover'],
+        ),
       );
-      try { debugPrint('UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}'); } catch (_) {}
+      if (kDebugMode) {
+        try {
+          debugPrint('UserService.getUserById: built user: id=${user.id}, username=${user.username}, avatar=${user.profileImageUrl}');
+        } catch (_) {}
+      }
       // populate cache & timestamp
       try {
         if (user.id.isNotEmpty) {
           // Use the central cache setter to remain consistent and avoid direct cacheVersion bumps
-          setUsersInCache([user]);
+          setUsersInCacheAuthoritative([user]);
+          // Legacy cache entries should force-refresh only once.
+          try {
+            _legacyCacheMissingCoverKey.remove(userId);
+            _legacyCacheMissingCoverKey.remove(user.id);
+          } catch (_) {}
         }
       } catch (_) {}
       // Trigger a background refresh of authoritative stats. This is intentionally
@@ -195,7 +226,9 @@ class UserService {
       } catch (_) {}
       return user;
     } catch (e) {
-      debugPrint('Error loading user profile for $userId: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.getUserById: failed to load profile for $userId: $e');
+      }
       // Return null if profile not found
       return null;
     }
@@ -240,18 +273,87 @@ class UserService {
     }
   }
 
+  // Helper to extract cover/media strings from various payload shapes that may be returned.
+  // This intentionally does not attempt to resolve URLs; widgets should use MediaUrlResolver.
+  static String? _extractMediaCandidate(dynamic candidate) {
+    try {
+      if (candidate == null) return null;
+      final String url = candidate is String
+          ? candidate
+          : candidate is Map
+              ? ((candidate['url'] ??
+                          candidate['httpUrl'] ??
+                          candidate['ipfsUrl'] ??
+                          candidate['path'] ??
+                          candidate['cid'] ??
+                          candidate['hash'])
+                      ?.toString() ??
+                  candidate.toString())
+              : candidate.toString();
+      final trimmed = url.trim();
+      if (trimmed.isEmpty) return null;
+      final lower = trimmed.toLowerCase();
+      if (lower == 'null' || lower == 'undefined') return null;
+      if (lower.startsWith(_placeholderAvatarScheme)) return null;
+      return trimmed;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Populate UserService internal cache with a list of users
   // By default, do not attempt to perform global cache-based UI notifications; callers should
   // explicitly trigger UI updates (e.g., call provider refresh methods) if they want to
   // reflect cache changes. The `notify` flag is kept for API compatibility but does
   // not perform any implicit global notification.
   static void setUsersInCache(List<User> users) {
+    _setUsersInCache(users, allowNullMediaOverwrite: false);
+  }
+
+  /// Same as `setUsersInCache` but treats null media fields as authoritative updates.
+  /// Use this when the caller has fetched a full profile payload or explicitly updated profile media.
+  static void setUsersInCacheAuthoritative(List<User> users) {
+    _setUsersInCache(users, allowNullMediaOverwrite: true);
+  }
+
+  static void _setUsersInCache(List<User> users, {required bool allowNullMediaOverwrite}) {
     try {
+      final now = DateTime.now().millisecondsSinceEpoch;
       for (final u in users) {
-        if (u.id.isNotEmpty) _cache[u.id] = u;
+        if (u.id.isEmpty) continue;
+
+        final existing = _cache[u.id];
+        if (allowNullMediaOverwrite || existing == null) {
+          _cache[u.id] = u;
+        } else {
+          _cache[u.id] = User(
+            id: u.id,
+            name: u.name,
+            username: u.username,
+            bio: u.bio,
+            profileImageUrl: u.profileImageUrl ?? existing.profileImageUrl,
+            coverImageUrl: u.coverImageUrl ?? existing.coverImageUrl,
+            followersCount: u.followersCount,
+            followingCount: u.followingCount,
+            postsCount: u.postsCount,
+            isFollowing: u.isFollowing,
+            isVerified: u.isVerified,
+            isArtist: u.isArtist,
+            isInstitution: u.isInstitution,
+            joinedDate: u.joinedDate,
+            achievementProgress: u.achievementProgress.isNotEmpty
+                ? u.achievementProgress
+                : existing.achievementProgress,
+          );
+        }
         try {
-          _cacheTimestamps[u.id] = DateTime.now().millisecondsSinceEpoch;
+          _cacheTimestamps[u.id] = now;
         } catch (_) {}
+        if (allowNullMediaOverwrite) {
+          try {
+            _legacyCacheMissingCoverKey.remove(u.id);
+          } catch (_) {}
+        }
       }
       // Persist asynchronously (best-effort)
       try {
@@ -287,6 +389,7 @@ class UserService {
             'isInstitution': u.isInstitution,
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
+            'coverImageUrl': u.coverImageUrl,
             'cachedAt': _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
           };
         }
@@ -307,13 +410,16 @@ class UserService {
             'isInstitution': u.isInstitution,
             'joinedDate': u.joinedDate,
             'profileImageUrl': u.profileImageUrl,
+            'coverImageUrl': u.coverImageUrl,
             'cachedAt': _cacheTimestamps[k] ?? DateTime.now().millisecondsSinceEpoch,
           };
         }
       }
       await prefs.setString(_cachePrefsKey, json.encode(map));
     } catch (e) {
-      debugPrint('UserService._persistCache failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService._persistCache: $e');
+      }
     }
   }
 
@@ -322,6 +428,7 @@ class UserService {
     try {
       _maxEntries = maxEntries;
       _ttlMillis = ttl.inMilliseconds;
+      _legacyCacheMissingCoverKey.clear();
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_cachePrefsKey) ?? '{}';
       final Map<String, dynamic> map = json.decode(raw) as Map<String, dynamic>;
@@ -334,6 +441,11 @@ class UserService {
           final cachedAt = (v['cachedAt'] is int) ? v['cachedAt'] as int : int.tryParse((v['cachedAt'] ?? '').toString()) ?? 0;
           if (cachedAt == 0) continue;
           if (now - cachedAt > _ttlMillis) continue; // expired
+          // Entries persisted before cover support did not include `coverImageUrl`.
+          // Mark them so first access forces a refresh and profile covers load automatically.
+          if (!v.containsKey('coverImageUrl')) {
+            _legacyCacheMissingCoverKey.add(k);
+          }
           final user = User(
             id: v['id']?.toString() ?? k,
             name: v['name']?.toString() ?? k,
@@ -349,6 +461,7 @@ class UserService {
             joinedDate: v['joinedDate']?.toString() ?? 'Joined recently',
             achievementProgress: [],
             profileImageUrl: v['profileImageUrl']?.toString(),
+            coverImageUrl: v['coverImageUrl']?.toString(),
           );
           entries[k] = user;
           timestamps[k] = cachedAt;
@@ -390,7 +503,9 @@ class UserService {
         try { await _persistCache(); } catch (_) {}
       } catch (_) {}
     } catch (e) {
-      debugPrint('UserService.initialize failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.initialize: $e');
+      }
     }
   }
 
@@ -424,10 +539,13 @@ class UserService {
     try {
       _cache.clear();
       _cacheTimestamps.clear();
+      _legacyCacheMissingCoverKey.clear();
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_cachePrefsKey);
     } catch (e) {
-      debugPrint('UserService.clearCache failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.clearCache: $e');
+      }
     }
   }
 
@@ -480,7 +598,9 @@ class UserService {
       try {
         achievementProgress = await loadAchievementProgress(wallet);
       } catch (e) {
-        debugPrint('UserService.getUserByUsername: failed to load achievements for $wallet: $e');
+        if (kDebugMode) {
+          debugPrint('UserService.getUserByUsername: failed to load achievements for $wallet: $e');
+        }
       }
 
       final user = User(
@@ -498,12 +618,26 @@ class UserService {
         joinedDate: joinedDate,
         achievementProgress: achievementProgress,
         profileImageUrl: _extractAvatarCandidate(avatarCandidate, wallet),
+        coverImageUrl: _extractMediaCandidate(
+          profile['coverImage'] ??
+              profile['coverImageUrl'] ??
+              profile['cover_image_url'] ??
+              profile['cover_image'] ??
+              profile['coverUrl'] ??
+              profile['cover_url'] ??
+              profile['cover'],
+        ),
       );
 
-      setUsersInCache([user]);
+      setUsersInCacheAuthoritative([user]);
+      try {
+        _legacyCacheMissingCoverKey.remove(wallet);
+      } catch (_) {}
       return user;
     } catch (e) {
-      debugPrint('UserService.getUserByUsername failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.getUserByUsername: $e');
+      }
       return null;
     }
   }
@@ -691,7 +825,9 @@ class UserService {
 
       return progressEntries.values.toList();
     } catch (e) {
-      debugPrint('UserService.loadAchievementProgress failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.loadAchievementProgress: $e');
+      }
       return const [];
     }
   }
@@ -749,7 +885,9 @@ class UserService {
 
       setUsersInCache([updated]);
     } catch (e) {
-      debugPrint('UserService.fetchAndUpdateUserStats failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.fetchAndUpdateUserStats: $e');
+      }
     }
   }
 
@@ -790,17 +928,31 @@ class UserService {
                 joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
                 achievementProgress: [],
                 profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
+                coverImageUrl: _extractMediaCandidate(
+                  profile['coverImage'] ??
+                      profile['coverImageUrl'] ??
+                      profile['cover_image_url'] ??
+                      profile['cover_image'] ??
+                      profile['coverUrl'] ??
+                      profile['cover_url'] ??
+                      profile['cover'],
+                ),
               );
               found[wallet] = user;
+              _legacyCacheMissingCoverKey.remove(wallet);
             } catch (e, st) {
-              try { debugPrint('UserService.getUsersByWallets (batch): failed to parse profile entry: $e - entry: $p'); } catch(_){}
-              debugPrint('Stack trace: $st');
+              if (kDebugMode) {
+                try {
+                  debugPrint('UserService.getUsersByWallets (batch): failed to parse profile entry: $e');
+                } catch (_) {}
+                debugPrint('UserService.getUsersByWallets (batch): stack trace: $st');
+              }
             }
           }
         }
 
         // Populate internal cache with found users
-        if (found.isNotEmpty) setUsersInCache(found.values.toList());
+        if (found.isNotEmpty) setUsersInCacheAuthoritative(found.values.toList());
 
         // Build ordered results using found when present, otherwise cached or fallback
         for (final w in wallets) {
@@ -830,7 +982,9 @@ class UserService {
         }
         return results;
       } catch (e) {
-        debugPrint('UserService.getUsersByWallets batch-first attempt failed: $e');
+        if (kDebugMode) {
+          debugPrint('UserService.getUsersByWallets: batch-first attempt failed: $e');
+        }
         // fall through to normal cached-first behavior
       }
     }
@@ -891,17 +1045,31 @@ class UserService {
               joinedDate: profile['createdAt'] != null ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}' : 'Joined recently',
               achievementProgress: [],
               profileImageUrl: _extractAvatarCandidate(profile['avatar'], wallet),
+              coverImageUrl: _extractMediaCandidate(
+                profile['coverImage'] ??
+                    profile['coverImageUrl'] ??
+                    profile['cover_image_url'] ??
+                    profile['cover_image'] ??
+                    profile['coverUrl'] ??
+                    profile['cover_url'] ??
+                    profile['cover'],
+              ),
             );
             found[wallet] = user;
+            _legacyCacheMissingCoverKey.remove(wallet);
             } catch (e, st) {
-              try { debugPrint('UserService.getUsersByWallets (batch fallback): failed to parse profile entry: $e - entry: $p'); } catch(_){}
-              debugPrint('Stack trace: $st');
+              if (kDebugMode) {
+                try {
+                  debugPrint('UserService.getUsersByWallets (batch fallback): failed to parse profile entry: $e');
+                } catch (_) {}
+                debugPrint('UserService.getUsersByWallets (batch fallback): stack trace: $st');
+              }
           }
         }
       }
 
       // Populate internal cache with found users
-      if (found.isNotEmpty) setUsersInCache(found.values.toList());
+      if (found.isNotEmpty) setUsersInCacheAuthoritative(found.values.toList());
 
       // Build ordered results using cached values when present, found when present, otherwise minimal fallback
       for (final w in wallets) {
@@ -931,7 +1099,9 @@ class UserService {
       }
       return results;
     } catch (e) {
-      debugPrint('UserService.getUsersByWallets batch call failed: $e');
+      if (kDebugMode) {
+        debugPrint('UserService.getUsersByWallets: batch call failed: $e');
+      }
     }
 
     // If batch failed, attempt per-wallet fallback (this will also populate cache via getUserById)
@@ -982,13 +1152,17 @@ class UserService {
   static Future<void> updateAchievementProgress(String userId, String achievementId, int newProgress) async {
     // In a real app, this would make an API call to update the server
     // For now, this is just an example of how you might handle achievement updates
-    debugPrint('Updating achievement $achievementId for user $userId to progress $newProgress');
+    if (kDebugMode) {
+      debugPrint('UserService.updateAchievementProgress: Updating achievement $achievementId for user $userId to progress $newProgress');
+    }
   }
 
   /// Increment achievement progress for a user
   static Future<void> incrementAchievementProgress(String userId, String achievementId, {int increment = 1}) async {
     // In a real app, this would make an API call to increment the server-side progress
-    debugPrint('Incrementing achievement $achievementId for user $userId by $increment');
+    if (kDebugMode) {
+      debugPrint('UserService.incrementAchievementProgress: Incrementing achievement $achievementId for user $userId by $increment');
+    }
   }
 
   /// Trigger achievement events (call when user performs actions)

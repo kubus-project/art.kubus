@@ -29,6 +29,7 @@ import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/art_detail_screen.dart';
+import '../../art/collection_detail_screen.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -911,16 +912,37 @@ class _UserProfileScreenState extends State<UserProfileScreen>
   }
 
   Widget _buildCollectionShowcaseCard(Map<String, dynamic> data, AppLocalizations l10n) {
-    final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'thumbnailUrl',
+      'coverImage',
+      'coverImageUrl',
+      'cover_image_url',
+      'coverUrl',
+      'cover_url',
+      'image',
+    ]);
     final title = (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
     final description = (data['description'] ?? '').toString();
+    final collectionId =
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
     
     return SizedBox(
       width: 200,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
+        onTap: (collectionId != null && collectionId.isNotEmpty)
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        CollectionDetailScreen(collectionId: collectionId),
+                  ),
+                );
+              }
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../models/collab_member.dart';
 import '../providers/collab_provider.dart';
 import '../services/backend_api_service.dart';
+import '../utils/user_profile_navigation.dart';
 import '../widgets/avatar_widget.dart';
 
 class CollaborationPanel extends StatefulWidget {
@@ -545,6 +546,11 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
         ? user!.walletAddress!
         : (username.isNotEmpty ? username : (displayName.isNotEmpty ? displayName : member.userId));
 
+    final walletAddress = (user?.walletAddress ?? '').trim();
+    final canOpenProfile = walletAddress.isNotEmpty || username.isNotEmpty;
+    final navUserId = walletAddress.isNotEmpty ? walletAddress : member.userId;
+    final navUsername = username.isNotEmpty ? username : null;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
@@ -555,30 +561,58 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
       ),
       child: Row(
         children: [
-          AvatarWidget(
-            avatarUrl: user?.avatarUrl,
-            wallet: seed,
-            radius: 18,
-            allowFabricatedFallback: true,
-            enableProfileNavigation: false,
-          ),
-          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, color: scheme.onSurface),
-                  overflow: TextOverflow.ellipsis,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: canOpenProfile
+                    ? () => unawaited(
+                          UserProfileNavigation.open(
+                            context,
+                            userId: navUserId,
+                            username: navUsername,
+                          ),
+                        )
+                    : null,
+                child: Row(
+                  children: [
+                    AvatarWidget(
+                      avatarUrl: user?.avatarUrl,
+                      wallet: seed,
+                      radius: 18,
+                      allowFabricatedFallback: true,
+                      enableProfileNavigation: false,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: scheme.onSurface,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (subtitle != null)
+                            Text(
+                              subtitle,
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: scheme.onSurface.withValues(alpha: 0.65),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                if (subtitle != null)
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.65)),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -603,20 +637,29 @@ class _CollaborationPanelState extends State<CollaborationPanel> {
                   labelText: 'Role',
                   filled: true,
                   fillColor: scheme.surface.withValues(alpha: 0.2),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             )
           else
             Text(
               _roleLabel(member.role),
-              style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: scheme.onSurface.withValues(alpha: 0.75),
+              ),
             ),
           if (_canManageMembers)
             IconButton(
               tooltip: AppLocalizations.of(context)!.commonRemove,
               onPressed: () => unawaited(_removeMember(member)),
-              icon: Icon(Icons.person_remove, color: scheme.onSurface.withValues(alpha: 0.75)),
+              icon: Icon(
+                Icons.person_remove,
+                color: scheme.onSurface.withValues(alpha: 0.75),
+              ),
             ),
         ],
       ),

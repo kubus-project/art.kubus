@@ -30,8 +30,10 @@ import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/art_detail_screen.dart';
+import '../../art/collection_detail_screen.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
+import '../../events/event_detail_screen.dart';
 
 /// Desktop profile screen with clean card-based layout
 /// Features: Profile header, stats cards, achievements, posts feed
@@ -1098,16 +1100,37 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildCollectionShowcaseCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'thumbnailUrl',
+      'coverImage',
+      'coverImageUrl',
+      'cover_image_url',
+      'coverUrl',
+      'cover_url',
+      'image',
+    ]);
     final title = (data['name'] ?? 'Collection').toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
     final description = (data['description'] ?? '').toString();
+    final collectionId =
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
     
     return SizedBox(
       width: 200,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
+        onTap: (collectionId != null && collectionId.isNotEmpty)
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        CollectionDetailScreen(collectionId: collectionId),
+                  ),
+                );
+              }
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1168,17 +1191,34 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildEventShowcaseCard(Map<String, dynamic> data, {bool isInstitution = false}) {
-    final imageUrl = _extractImageUrl(data, ['coverUrl', 'bannerUrl', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'coverUrl',
+      'cover_url',
+      'bannerUrl',
+      'banner_url',
+      'image',
+    ]);
     final title = (data['title'] ?? 'Event').toString();
     final location = (data['locationName'] ?? data['location'] ?? 'TBA').toString();
     final startDate = data['startsAt'] ?? data['startDate'] ?? data['start_date'];
     final dateLabel = _formatEventDate(startDate);
+    final eventId = (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
     
     return SizedBox(
       width: isInstitution ? 260 : 220,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
+        onTap: (eventId != null && eventId.isNotEmpty)
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EventDetailScreen(eventId: eventId),
+                  ),
+                );
+              }
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

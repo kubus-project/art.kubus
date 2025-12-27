@@ -24,6 +24,8 @@ import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
 import '../art/art_detail_screen.dart';
+import '../art/collection_detail_screen.dart';
+import '../events/event_detail_screen.dart';
 import '../../providers/wallet_provider.dart';
 import '../../services/socket_service.dart';
 import 'profile_screen_methods.dart';
@@ -1464,29 +1466,76 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
 
   Widget _buildCollectionCard(Map<String, dynamic> data) {
     final l10n = AppLocalizations.of(context)!;
-    final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'thumbnailUrl',
+      'coverImage',
+      'coverImageUrl',
+      'cover_image_url',
+      'coverUrl',
+      'cover_url',
+      'image',
+    ]);
     final title = (data['name'] ?? l10n.userProfileCollectionFallbackTitle).toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
     final artworksCount = int.tryParse(count.toString()) ?? 0;
-    return _buildShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: l10n.userProfileArtworksCountLabel(artworksCount),
-      footer: (data['description'] ?? l10n.userProfileCuratedByLabel(user!.name)).toString(),
+    final collectionId =
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: (collectionId != null && collectionId.isNotEmpty)
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      CollectionDetailScreen(collectionId: collectionId),
+                ),
+              );
+            }
+          : null,
+      child: _buildShowcaseCard(
+        imageUrl: imageUrl,
+        title: title,
+        subtitle: l10n.userProfileArtworksCountLabel(artworksCount),
+        footer: (data['description'] ?? l10n.userProfileCuratedByLabel(user!.name))
+            .toString(),
+      ),
     );
   }
 
   Widget _buildEventCard(Map<String, dynamic> data) {
     final l10n = AppLocalizations.of(context)!;
-    final imageUrl = _extractImageUrl(data, ['bannerUrl', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'coverUrl',
+      'cover_url',
+      'bannerUrl',
+      'banner_url',
+      'image',
+    ]);
     final title = (data['title'] ?? l10n.userProfileEventFallbackTitle).toString();
     final dateLabel = _formatDateLabel(l10n, data['startDate'] ?? data['start_date']);
     final location = (data['location'] ?? l10n.commonTba).toString();
-    return _buildShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: dateLabel,
-      footer: location,
+    final eventId = (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: (eventId != null && eventId.isNotEmpty)
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EventDetailScreen(eventId: eventId),
+                ),
+              );
+            }
+          : null,
+      child: _buildShowcaseCard(
+        imageUrl: imageUrl,
+        title: title,
+        subtitle: dateLabel,
+        footer: location,
+      ),
     );
   }
 
