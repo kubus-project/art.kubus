@@ -94,7 +94,12 @@ class UserProfile {
       });
     }
 
-    final coverRaw = json['coverImage'] ?? json['cover_image_url'];
+    final coverRaw = json['coverImage'] ??
+        json['coverImageUrl'] ??
+        json['cover_image_url'] ??
+        json['cover_image'] ??
+        json['coverUrl'] ??
+        json['cover_url'];
 
     return UserProfile(
       id: (json['id'] ?? '').toString(),

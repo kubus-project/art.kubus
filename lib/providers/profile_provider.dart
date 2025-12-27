@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,7 +13,7 @@ import '../services/event_bus.dart';
 import '../models/dao.dart';
 import '../utils/media_url_resolver.dart';
 
-class ProfileProvider extends ChangeNotifier {
+class ProfileProvider extends foundation.ChangeNotifier {
   UserProfile? _currentUser;
   final List<UserProfile> _followingUsers = [];
   final List<UserProfile> _followers = [];
@@ -33,6 +33,18 @@ class ProfileProvider extends ChangeNotifier {
 
   /// Debug info for last upload attempt (raw server response + extraction + verification)
   Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
+
+  // Local debug logger to avoid shipping noisy logs in release builds.
+  void debugPrint(Object? message) {
+    if (!foundation.kDebugMode) return;
+    final raw = message?.toString();
+    if (raw == null) return;
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return;
+    final prefixed =
+        trimmed.startsWith('ProfileProvider') ? trimmed : 'ProfileProvider: $trimmed';
+    foundation.debugPrint(prefixed);
+  }
 
   // Normalize returned URLs (make absolute if backend returns relative paths or IPFS links)
   String _resolveUrl(String? url) {
@@ -655,28 +667,28 @@ class ProfileProvider extends ChangeNotifier {
       debugPrint('ProfileProvider: Profile saved successfully for wallet: $walletAddress');
       
       // Persist to UserService cache (and let ChatProvider be updated via EventBus)
-      try {
-        final u = _currentUser;
-        if (u != null) {
-          UserService.setUsersInCache([User(
-            id: u.walletAddress,
-            name: u.displayName,
-            username: u.username,
-            bio: u.bio,
-            profileImageUrl: u.avatar,
-            coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
-            followersCount: u.stats?.followersCount ?? 0,
-            followingCount: u.stats?.followingCount ?? 0,
-            postsCount: u.stats?.artworksCreated ?? 0,
-            isFollowing: false,
-            isVerified: false,
-            joinedDate: u.createdAt.toIso8601String(),
-            achievementProgress: [],
-            isArtist: u.isArtist,
-            isInstitution: u.isInstitution,
-          )]);
-        }
-      } catch (_) {}
+        try {
+          final u = _currentUser;
+          if (u != null) {
+          UserService.setUsersInCacheAuthoritative([User(
+             id: u.walletAddress,
+             name: u.displayName,
+             username: u.username,
+             bio: u.bio,
+             profileImageUrl: u.avatar,
+             coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
+             followersCount: u.stats?.followersCount ?? 0,
+             followingCount: u.stats?.followingCount ?? 0,
+             postsCount: u.stats?.artworksCreated ?? 0,
+             isFollowing: false,
+             isVerified: false,
+             joinedDate: u.createdAt.toIso8601String(),
+             achievementProgress: [],
+             isArtist: u.isArtist,
+             isInstitution: u.isInstitution,
+           )]);
+          }
+        } catch (_) {}
       _isLoading = false;
       notifyListeners();
 
@@ -775,7 +787,7 @@ class ProfileProvider extends ChangeNotifier {
     String? mimeType,
   }) async {
     try {
-      debugPrint('📸 ProfileProvider.uploadAvatarBytes START');
+      debugPrint('ProfileProvider.uploadAvatarBytes: start');
       debugPrint('   fileName: $fileName');
       debugPrint('   mimeType: $mimeType');
       debugPrint('   fileBytes length: ${fileBytes.length}');
@@ -849,7 +861,7 @@ class ProfileProvider extends ChangeNotifier {
 
       return raster;
     } catch (e, stackTrace) {
-      debugPrint('❌ Error uploading avatar bytes: $e');
+      debugPrint('ProfileProvider.uploadAvatarBytes: error uploading avatar bytes: $e');
       debugPrint('Stack trace: $stackTrace');
       _lastUploadDebug = {'error': e.toString(), 'stackTrace': stackTrace.toString()};
       notifyListeners();
@@ -1040,15 +1052,11 @@ class ProfileProvider extends ChangeNotifier {
             {'preferences': next.toJson()},
           );
         } catch (e) {
-          if (kDebugMode) {
-            debugPrint('ProfileProvider.updatePreferences: backend update failed: $e');
-          }
+          debugPrint('ProfileProvider.updatePreferences: backend update failed: $e');
         }
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('ProfileProvider.updatePreferences failed: $e');
-      }
+      debugPrint('ProfileProvider.updatePreferences failed: $e');
     }
   }
   

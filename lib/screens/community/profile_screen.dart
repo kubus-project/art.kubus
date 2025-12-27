@@ -31,6 +31,8 @@ import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import 'post_detail_screen.dart';
 import '../art/art_detail_screen.dart';
+import '../art/collection_detail_screen.dart';
+import '../events/event_detail_screen.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../models/dao.dart';
@@ -1416,27 +1418,73 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildCollectionCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(data, ['thumbnailUrl', 'coverImage', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'thumbnailUrl',
+      'coverImage',
+      'coverImageUrl',
+      'cover_image_url',
+      'coverUrl',
+      'cover_url',
+      'image',
+    ]);
     final title = (data['name'] ?? 'New Collection').toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
-    return _buildShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: '$count artworks',
-      footer: (data['description'] ?? 'Curated by you').toString(),
+    final collectionId =
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: (collectionId != null && collectionId.isNotEmpty)
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      CollectionDetailScreen(collectionId: collectionId),
+                ),
+              );
+            }
+          : null,
+      child: _buildShowcaseCard(
+        imageUrl: imageUrl,
+        title: title,
+        subtitle: '$count artworks',
+        footer: (data['description'] ?? 'Curated by you').toString(),
+      ),
     );
   }
 
   Widget _buildEventCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(data, ['bannerUrl', 'image']);
+    final imageUrl = _extractImageUrl(data, [
+      'coverUrl',
+      'cover_url',
+      'bannerUrl',
+      'banner_url',
+      'image',
+    ]);
     final title = (data['title'] ?? 'Event').toString();
     final date = _formatDateLabel(data['startDate'] ?? data['start_date']);
     final location = (data['location'] ?? 'TBA').toString();
-    return _buildShowcaseCard(
-      imageUrl: imageUrl,
-      title: title,
-      subtitle: date,
-      footer: location,
+    final eventId = (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: (eventId != null && eventId.isNotEmpty)
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EventDetailScreen(eventId: eventId),
+                ),
+              );
+            }
+          : null,
+      child: _buildShowcaseCard(
+        imageUrl: imageUrl,
+        title: title,
+        subtitle: date,
+        footer: location,
+      ),
     );
   }
 
