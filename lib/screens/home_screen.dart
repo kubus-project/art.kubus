@@ -11,6 +11,7 @@ import '../providers/config_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/stats_provider.dart';
 import '../models/artwork.dart';
 import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
@@ -33,6 +34,8 @@ import '../widgets/inline_loading.dart';
 import '../widgets/enhanced_stats_chart.dart';
 import '../widgets/empty_state_card.dart';
 import 'activity/advanced_analytics_screen.dart';
+import '../services/stats_api_service.dart';
+import '../models/stats/stats_models.dart';
 import '../utils/app_animations.dart';
 import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
@@ -727,10 +730,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildStatsCards() {
-    return Consumer<ConfigProvider>(
-      builder: (context, configProvider, child) {
+    return Consumer2<ProfileProvider, StatsProvider>(
+      builder: (context, profileProvider, statsProvider, child) {
         final l10n = AppLocalizations.of(context)!;
-        if (!configProvider.useMockData) {
+        final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+
+        if (wallet.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -751,10 +756,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         }
 
+        // Best-effort: trigger snapshot fetch and render cached values immediately.
+        statsProvider.ensureSnapshot(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: const ['artworks', 'followers', 'viewsReceived'],
+          scope: 'public',
+        );
+
+        final snapshot = statsProvider.getSnapshot(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: const ['artworks', 'followers', 'viewsReceived'],
+          scope: 'public',
+        );
+
+        final counters = snapshot?.counters ?? const <String, int>{};
         final stats = [
-          ('artworks', '42', Icons.image),
-          ('followers', '1.2k', Icons.people),
-          ('views', '8.5k', Icons.visibility),
+          ('artworks', _formatCompactCount(counters['artworks'] ?? 0), Icons.image),
+          ('followers', _formatCompactCount(counters['followers'] ?? 0), Icons.people),
+          ('views', _formatCompactCount(counters['viewsReceived'] ?? 0), Icons.visibility),
         ];
 
         return LayoutBuilder(
@@ -814,6 +835,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       },
     );
+  }
+
+  String _formatCompactCount(int value) {
+    if (value >= 1000000) {
+      final v = (value / 1000000.0);
+      return '${v.toStringAsFixed(v >= 10 ? 0 : 1)}M';
+    }
+    if (value >= 1000) {
+      final v = (value / 1000.0);
+      return '${v.toStringAsFixed(v >= 10 ? 0 : 1)}k';
+    }
+    return value.toString();
   }
 
   Widget _buildStatCard(String title, String value, IconData icon,
@@ -1887,6 +1920,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _showStatsDialog(String statType, IconData icon) {
     final l10n = AppLocalizations.of(context)!;
     final displayTitle = _getStatDisplayTitle(statType, l10n);
+    final wallet =
+        (context.read<ProfileProvider>().currentUser?.walletAddress ?? '')
+            .trim();
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
@@ -1902,24 +1938,175 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            height: 400,
-            child: SingleChildScrollView(
-              child: Column(
-                children: [
-                  EnhancedBarChart(
-                    title: l10n.homeStatsTrendTitle(displayTitle),
-                    data: _getStatsData(statType),
-                    accentColor:
-                        Provider.of<ThemeProvider>(dialogContext).accentColor,
-                    labels: [
-                      l10n.commonWeekdayMonShort,
-                      l10n.commonWeekdayTueShort,
-                      l10n.commonWeekdayWedShort,
-                      l10n.commonWeekdayThuShort,
-                      l10n.commonWeekdayFriShort,
-                      l10n.commonWeekdaySatShort,
-                      l10n.commonWeekdaySunShort,
-                    ],
+             height: 400,
+             child: SingleChildScrollView(
+               child: Column(
+                 children: [
+                  Consumer<StatsProvider>(
+                    builder: (context, statsProvider, _) {
+                      final accent =
+                          Provider.of<ThemeProvider>(dialogContext).accentColor;
+
+                      if (wallet.isEmpty) {
+                        return EmptyStateCard(
+                          icon: Icons.analytics_outlined,
+                          title: l10n.commonNotAvailable,
+                          description: l10n.homeNoStatsAvailableDescription,
+                          showAction: false,
+                        );
+                      }
+
+                      if (!statsProvider.analyticsEnabled) {
+                        return Container(
+                          height: 200,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(dialogContext)
+                                .colorScheme
+                                .surfaceContainerHighest
+                                .withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              l10n.commonNotAvailable,
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(dialogContext)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final metric =
+                          StatsApiService.metricFromUiStatType(statType);
+                      const bucket = 'day';
+                      const timeframe = '7d';
+
+                      statsProvider.ensureSeries(
+                        entityType: 'user',
+                        entityId: wallet,
+                        metric: metric,
+                        bucket: bucket,
+                        timeframe: timeframe,
+                        scope: 'private',
+                      );
+
+                      final series = statsProvider.getSeries(
+                        entityType: 'user',
+                        entityId: wallet,
+                        metric: metric,
+                        bucket: bucket,
+                        timeframe: timeframe,
+                        scope: 'private',
+                      );
+                      final isLoading = statsProvider.isSeriesLoading(
+                        entityType: 'user',
+                        entityId: wallet,
+                        metric: metric,
+                        bucket: bucket,
+                        timeframe: timeframe,
+                        scope: 'private',
+                      );
+                      final error = statsProvider.seriesError(
+                        entityType: 'user',
+                        entityId: wallet,
+                        metric: metric,
+                        bucket: bucket,
+                        timeframe: timeframe,
+                        scope: 'private',
+                      );
+
+                      if ((isLoading && series == null) ||
+                          (error != null && series == null)) {
+                        return Container(
+                          height: 200,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(dialogContext)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: isLoading
+                                ? InlineLoading(
+                                    tileSize: 8.0,
+                                    color: accent,
+                                  )
+                                : Text(
+                                    l10n.commonNotAvailable,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      color: Theme.of(dialogContext)
+                                          .colorScheme
+                                          .onSurface
+                                          .withValues(alpha: 0.8),
+                                    ),
+                                  ),
+                          ),
+                        );
+                      }
+
+                      final now = DateTime.now().toUtc();
+                      final today = DateTime.utc(now.year, now.month, now.day);
+                      final buckets = List<DateTime>.generate(
+                        7,
+                        (i) => today.subtract(Duration(days: 6 - i)),
+                      );
+                      final valuesByDay = <String, int>{};
+                      for (final point in series?.series ?? const <StatsSeriesPoint>[]) {
+                        final dt = point.t.toUtc();
+                        final key =
+                            '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+                        valuesByDay[key] = (valuesByDay[key] ?? 0) + point.v;
+                      }
+
+                      final data = buckets
+                          .map((d) {
+                            final key =
+                                '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+                            return (valuesByDay[key] ?? 0).toDouble();
+                          })
+                          .toList(growable: false);
+
+                      String weekdayLabel(int weekday) {
+                        switch (weekday) {
+                          case DateTime.monday:
+                            return l10n.commonWeekdayMonShort;
+                          case DateTime.tuesday:
+                            return l10n.commonWeekdayTueShort;
+                          case DateTime.wednesday:
+                            return l10n.commonWeekdayWedShort;
+                          case DateTime.thursday:
+                            return l10n.commonWeekdayThuShort;
+                          case DateTime.friday:
+                            return l10n.commonWeekdayFriShort;
+                          case DateTime.saturday:
+                            return l10n.commonWeekdaySatShort;
+                          case DateTime.sunday:
+                            return l10n.commonWeekdaySunShort;
+                          default:
+                            return '';
+                        }
+                      }
+
+                      final labels = buckets
+                          .map((d) => weekdayLabel(d.weekday))
+                          .toList(growable: false);
+
+                      return EnhancedBarChart(
+                        title: l10n.homeStatsTrendTitle(displayTitle),
+                        data: data,
+                        accentColor: accent,
+                        labels: labels,
+                      );
+                    },
                   ),
                   const SizedBox(height: 20),
                   _buildStatsTimeline(statType),
@@ -1997,19 +2184,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             )),
       ],
     );
-  }
-
-  List<double> _getStatsData(String statType) {
-    switch (statType) {
-      case 'artworks':
-        return [35.0, 37.0, 39.0, 40.0, 41.0, 42.0, 42.0];
-      case 'followers':
-        return [980.0, 1050.0, 1120.0, 1150.0, 1180.0, 1200.0, 1200.0];
-      case 'views':
-        return [7200.0, 7800.0, 8100.0, 8300.0, 8450.0, 8500.0, 8500.0];
-      default:
-        return [10.0, 20.0, 30.0, 25.0, 35.0, 40.0, 45.0];
-    }
   }
 
   List<String> _getStatsMilestones(String statType) {

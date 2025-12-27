@@ -15,6 +15,7 @@ import '../../providers/recent_activity_provider.dart';
 import '../../providers/community_hub_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../providers/config_provider.dart';
+import '../../providers/stats_provider.dart';
 import '../../config/config.dart';
 import '../../models/artwork.dart';
 import '../../models/recent_activity.dart';
@@ -248,6 +249,20 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final communityProvider = context.read<CommunityHubProvider>();
     unawaited(communityProvider.loadGroups(refresh: true));
     unawaited(_loadPopularCommunityPosts(force: true));
+
+    final statsProvider = context.read<StatsProvider>();
+    unawaited(statsProvider.ensureSnapshot(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: const <String>[
+        'artworks',
+        'arEnabledArtworks',
+        'posts',
+        'groups',
+      ],
+      scope: 'public',
+      forceRefresh: true,
+    ));
   }
 
   Future<CommunityLocation> _resolveArtFeedLocation(
@@ -2015,23 +2030,50 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
   }
 
   Widget _buildPlatformStatsSection(ThemeProvider themeProvider) {
-    final artworkProvider = Provider.of<ArtworkProvider>(context);
-    final communityProvider = Provider.of<CommunityHubProvider>(context);
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final communityPostsCount = _popularCommunityPosts.length;
-    final hasArtworksLoading = artworkProvider.isLoading('load_artworks') &&
-        artworkProvider.artworks.isEmpty;
-    final isLoading = hasArtworksLoading ||
-        ((_popularCommunityLoading && _popularCommunityPosts.isEmpty) ||
-            (communityProvider.groupsLoading &&
-                communityProvider.groups.isEmpty));
-    final hasError =
-        (_popularCommunityFetchFailed && _popularCommunityPosts.isEmpty) ||
-            (communityProvider.groupsError != null &&
-                communityProvider.groups.isEmpty);
-    final isRefreshing =
-        _popularCommunityLoading || communityProvider.groupsLoading;
+
+    final statsProvider = context.watch<StatsProvider>();
+    const metrics = <String>[
+      'artworks',
+      'arEnabledArtworks',
+      'posts',
+      'groups',
+    ];
+
+    unawaited(statsProvider.ensureSnapshot(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: metrics,
+      scope: 'public',
+    ));
+
+    final snapshot = statsProvider.getSnapshot(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: metrics,
+      scope: 'public',
+    );
+    final statsError = statsProvider.snapshotError(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: metrics,
+      scope: 'public',
+    );
+    final isRefreshing = statsProvider.isSnapshotLoading(
+      entityType: 'platform',
+      entityId: 'global',
+      metrics: metrics,
+      scope: 'public',
+    );
+    final isLoading = isRefreshing && snapshot == null;
+    final hasError = statsError != null && snapshot == null;
+
+    final counters = snapshot?.counters ?? const <String, int>{};
+    final totalArtworks = counters['artworks'] ?? 0;
+    final arEnabled = counters['arEnabledArtworks'] ?? 0;
+    final posts = counters['posts'] ?? 0;
+    final groups = counters['groups'] ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2082,33 +2124,30 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               children: [
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsTotalArtworks,
-                  artworkProvider.artworks.length.toString(),
+                  totalArtworks.toString(),
                   Icons.view_in_ar,
-                  AppColorUtils.tealAccent,
+                  scheme.primary,
                 ),
                 const Divider(height: 24),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsArEnabled,
-                  artworkProvider.artworks
-                      .where((a) => a.arEnabled)
-                      .length
-                      .toString(),
+                  arEnabled.toString(),
                   Icons.visibility,
                   scheme.tertiary,
                 ),
                 const Divider(height: 24),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsCommunityPosts,
-                  communityPostsCount.toString(),
+                  posts.toString(),
                   Icons.forum,
                   scheme.secondary,
                 ),
                 const Divider(height: 24),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsActiveGroups,
-                  communityProvider.groups.length.toString(),
+                  groups.toString(),
                   Icons.groups,
-                  AppColorUtils.purpleAccent,
+                  themeProvider.accentColor,
                 ),
               ],
             ),

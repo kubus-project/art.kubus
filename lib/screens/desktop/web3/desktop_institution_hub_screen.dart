@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
+import '../../../providers/stats_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
@@ -585,6 +587,52 @@ class _DesktopInstitutionHubScreenState
 
   Widget _buildStatsGrid(ThemeProvider themeProvider) {
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+    final statsProvider = context.watch<StatsProvider>();
+    final wallet = _resolveWalletAddress(listen: true);
+
+    const metrics = <String>[
+      'eventsHosted',
+      'visitorsReceived',
+      'exhibitionArtworks',
+      'achievementTokensTotal',
+    ];
+
+    if (wallet.isNotEmpty) {
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: wallet,
+        metrics: metrics,
+        scope: 'public',
+      ));
+    }
+
+    final snapshot = wallet.isEmpty
+        ? null
+        : statsProvider.getSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: metrics,
+            scope: 'public',
+          );
+    final isLoading = wallet.isNotEmpty &&
+        statsProvider.isSnapshotLoading(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: metrics,
+          scope: 'public',
+        ) &&
+        snapshot == null;
+
+    final counters = snapshot?.counters ?? const <String, int>{};
+    final events = wallet.isEmpty ? null : (counters['eventsHosted'] ?? 0);
+    final visitors = wallet.isEmpty ? null : (counters['visitorsReceived'] ?? 0);
+    final artworks = wallet.isEmpty ? null : (counters['exhibitionArtworks'] ?? 0);
+    final revenue = wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
+
+    String displayCount(int? value) => isLoading ? '…' : (value?.toString() ?? '—');
+    String displayKub8(int? value) => isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
+
     return Column(
       children: [
         Row(
@@ -592,7 +640,7 @@ class _DesktopInstitutionHubScreenState
             Expanded(
               child: _buildStatCard(
                 'Events',
-                '0',
+                displayCount(events),
                 Icons.event_outlined,
                 scheme.primary,
               ),
@@ -601,9 +649,9 @@ class _DesktopInstitutionHubScreenState
             Expanded(
               child: _buildStatCard(
                 'Visitors',
-                '0',
+                displayCount(visitors),
                 Icons.people_outline,
-                const Color(0xFF4ECDC4),
+                scheme.secondary,
               ),
             ),
           ],
@@ -614,18 +662,18 @@ class _DesktopInstitutionHubScreenState
             Expanded(
               child: _buildStatCard(
                 'Artworks',
-                '0',
+                displayCount(artworks),
                 Icons.collections_outlined,
-                const Color(0xFFFF6B6B),
+                scheme.tertiary,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildStatCard(
                 'Revenue',
-                '0 KUB8',
+                displayKub8(revenue),
                 Icons.attach_money,
-                Colors.green,
+                roles.positiveAction,
               ),
             ),
           ],

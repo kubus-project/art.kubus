@@ -97,6 +97,13 @@ class ExhibitionsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> recordExhibitionView(String id, {String? source}) async {
+    if (id.trim().isEmpty) return;
+    try {
+      await _api.recordExhibitionView(id, source: source);
+    } catch (_) {}
+  }
+
   void selectExhibition(String? exhibitionId) {
     if (exhibitionId == null) {
       _selected = null;

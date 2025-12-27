@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
+
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/artwork_provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../providers/stats_provider.dart';
+import '../../../providers/web3provider.dart';
+import '../../../models/stats/stats_models.dart';
+import '../../../services/stats_api_service.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../utils/app_animations.dart';
@@ -23,6 +35,104 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   late Animation<double> _fadeAnimation;
   String _selectedPeriod = 'This Month';
   bool _didPlayEntrance = false;
+
+  String _resolveWalletAddress({bool listen = false}) {
+    final profileProvider =
+        listen ? context.watch<ProfileProvider>() : context.read<ProfileProvider>();
+    final web3Provider =
+        listen ? context.watch<Web3Provider>() : context.read<Web3Provider>();
+    return WalletUtils.coalesce(
+      walletAddress: profileProvider.currentUser?.walletAddress,
+      wallet: web3Provider.walletAddress,
+    );
+  }
+
+  String _timeframeForSelectedPeriod() => StatsApiService.timeframeFromLabel(_selectedPeriod);
+
+  String _bucketForTimeframe(String timeframe) {
+    if (timeframe == '24h') return 'hour';
+    if (timeframe == '1y') return 'week';
+    return 'day';
+  }
+
+  Duration _durationForTimeframe(String timeframe) {
+    switch (timeframe) {
+      case '24h':
+        return const Duration(hours: 24);
+      case '7d':
+        return const Duration(days: 7);
+      case '30d':
+        return const Duration(days: 30);
+      case '90d':
+        return const Duration(days: 90);
+      case '1y':
+        return const Duration(days: 365);
+      default:
+        return const Duration(days: 30);
+    }
+  }
+
+  DateTime _bucketStartUtc(DateTime dt, String bucket) {
+    final utc = dt.toUtc();
+    if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    if (bucket == 'week') {
+      final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
+      return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
+    }
+    return DateTime.utc(utc.year, utc.month, utc.day);
+  }
+
+  Duration _bucketStep(String bucket) {
+    if (bucket == 'hour') return const Duration(hours: 1);
+    if (bucket == 'week') return const Duration(days: 7);
+    return const Duration(days: 1);
+  }
+
+  int _sumGroups(StatsSeries? series, Set<String> groups) {
+    if (series == null) return 0;
+    var total = 0;
+    for (final point in series.series) {
+      final g = (point.g ?? '').trim().toLowerCase();
+      if (g.isEmpty) continue;
+      if (!groups.contains(g)) continue;
+      total += point.v;
+    }
+    return total;
+  }
+
+  String _formatPercentChange({required int current, required int previous}) {
+    if (previous <= 0) {
+      return current <= 0 ? '0%' : '\u2014';
+    }
+    final pct = ((current - previous) / previous) * 100;
+    final sign = pct >= 0 ? '+' : '';
+    return '$sign${pct.toStringAsFixed(0)}%';
+  }
+
+  List<_BucketStat> _fillGroupBuckets({
+    required StatsSeries? series,
+    required DateTime fromInclusive,
+    required DateTime toExclusive,
+    required String bucket,
+    required Set<String> groups,
+  }) {
+    final valuesByBucket = <int, int>{};
+    for (final point in series?.series ?? const <StatsSeriesPoint>[]) {
+      final g = (point.g ?? '').trim().toLowerCase();
+      if (!groups.contains(g)) continue;
+      final key = _bucketStartUtc(point.t, bucket).millisecondsSinceEpoch;
+      valuesByBucket[key] = (valuesByBucket[key] ?? 0) + point.v;
+    }
+
+    final step = _bucketStep(bucket);
+    final out = <_BucketStat>[];
+    for (var dt = fromInclusive; dt.isBefore(toExclusive); dt = dt.add(step)) {
+      final bucketStart = _bucketStartUtc(dt, bucket);
+      final key = bucketStart.millisecondsSinceEpoch;
+      out.add(_BucketStat(bucketStart, valuesByBucket[key] ?? 0));
+    }
+    return out;
+  }
 
   @override
   void initState() {
@@ -220,10 +330,13 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildStatsOverview() {
-    return Consumer<InstitutionProvider>(
-      builder: (context, institutionProvider, child) {
-        // Get analytics data from the provider
-        if (institutionProvider.institutions.isEmpty) {
+    return Consumer2<InstitutionProvider, StatsProvider>(
+      builder: (context, institutionProvider, statsProvider, child) {
+        final scheme = Theme.of(context).colorScheme;
+        final walletAddress = _resolveWalletAddress(listen: true);
+        final analyticsEnabled = statsProvider.analyticsEnabled;
+
+        if (walletAddress.isEmpty) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -232,54 +345,163 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
+                  color: scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 12),
-              Center(
+              const Center(
                 child: EmptyStateCard(
                   icon: Icons.analytics_outlined,
-                  title: 'No analytics data available',
-                  description:
-                      'There is no analytics data for this institution yet.',
+                  title: 'Connect your wallet',
+                  description: 'Connect a wallet to see institution analytics.',
                 ),
               ),
             ],
           );
         }
 
-        // Get analytics data from the provider
-        final institution = institutionProvider.institutions.first;
-        final analytics =
-            institutionProvider.getInstitutionAnalytics(institution.id);
+        if (!analyticsEnabled) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Overview',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: scheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Center(
+                child: EmptyStateCard(
+                  icon: Icons.analytics_outlined,
+                  title: 'Analytics disabled',
+                  description: 'Enable analytics in Settings to view charts and insights.',
+                ),
+              ),
+            ],
+          );
+        }
+
+        final timeframe = _timeframeForSelectedPeriod();
+        final bucket = _bucketForTimeframe(timeframe);
+        final duration = _durationForTimeframe(timeframe);
+        final now = DateTime.now().toUtc();
+        final currentTo = _bucketStartUtc(now, bucket);
+        final currentFrom = currentTo.subtract(duration);
+        final prevTo = currentFrom;
+        final prevFrom = prevTo.subtract(duration);
+
+        unawaited(statsProvider.ensureSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        ));
+        unawaited(statsProvider.ensureSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: prevFrom.toIso8601String(),
+          to: prevTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        ));
+
+        final series = statsProvider.getSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
+        final prevSeries = statsProvider.getSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: prevFrom.toIso8601String(),
+          to: prevTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
+
+        final isLoading = series == null &&
+            statsProvider.isSeriesLoading(
+              entityType: 'user',
+              entityId: walletAddress,
+              metric: 'viewsReceived',
+              bucket: bucket,
+              timeframe: timeframe,
+              from: currentFrom.toIso8601String(),
+              to: currentTo.toIso8601String(),
+              groupBy: 'targetType',
+              scope: 'private',
+            );
+
+        final visitorGroups = <String>{'event', 'exhibition'};
+        final artworkGroups = <String>{'artwork'};
+
+        final visitorsThis = _sumGroups(series, visitorGroups);
+        final visitorsPrev = _sumGroups(prevSeries, visitorGroups);
+        final artworkViewsThis = _sumGroups(series, artworkGroups);
+        final artworkViewsPrev = _sumGroups(prevSeries, artworkGroups);
+
+        final visitorValue = isLoading ? '\u2026' : visitorsThis.toString();
+        final artworkValue = isLoading ? '\u2026' : _formatNumber(artworkViewsThis);
+        final visitorChange = isLoading ? '\u2014' : _formatPercentChange(current: visitorsThis, previous: visitorsPrev);
+        final artworkChange = isLoading ? '\u2014' : _formatPercentChange(current: artworkViewsThis, previous: artworkViewsPrev);
+
+        final institution = institutionProvider.institutions.isNotEmpty ? institutionProvider.institutions.first : null;
+        final events = institution != null
+            ? institutionProvider.getEventsByInstitution(institution.id)
+            : const <Event>[];
+
+        final activeEvents = events.where((e) => e.isActive).length;
+        var totalRevenue = 0.0;
+        for (final event in events) {
+          final price = event.price ?? 0;
+          if (price <= 0) continue;
+          totalRevenue += price * event.currentAttendees;
+        }
 
         final stats = [
           {
             'title': 'Total Visitors',
-            'value': '${analytics['totalVisitors'] ?? 0}',
-            'change':
-                '+${analytics['visitorGrowth']?.toStringAsFixed(1) ?? '0.0'}%',
-            'positive': (analytics['visitorGrowth'] ?? 0) >= 0
+            'value': visitorValue,
+            'change': visitorChange,
+            'positive': visitorsThis >= visitorsPrev,
           },
           {
             'title': 'Active Events',
-            'value': '${analytics['activeEvents'] ?? 0}',
-            'change': '+${analytics['activeEventsCount'] ?? 0}',
-            'positive': true
+            'value': activeEvents.toString(),
+            'change': '\u2014',
+            'positive': true,
           },
           {
             'title': 'Artwork Views',
-            'value': _formatNumber(analytics['artworkViews'] ?? 0),
-            'change':
-                '+${analytics['revenueGrowth']?.toStringAsFixed(1) ?? '0.0'}%',
-            'positive': (analytics['revenueGrowth'] ?? 0) >= 0
+            'value': artworkValue,
+            'change': artworkChange,
+            'positive': artworkViewsThis >= artworkViewsPrev,
           },
           {
             'title': 'Revenue',
-            'value': '\$${_formatRevenue(analytics['revenue'] ?? 0)}',
-            'change':
-                '+${analytics['revenueGrowth']?.toStringAsFixed(1) ?? '0.0'}%',
-            'positive': (analytics['revenueGrowth'] ?? 0) >= 0
+            'value': '\$${_formatRevenue(totalRevenue)}',
+            'change': '\u2014',
+            'positive': true,
           },
         ];
 
@@ -291,7 +513,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
+                color: scheme.onSurface,
               ),
             ),
             const SizedBox(height: 12),
@@ -428,83 +650,186 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildVisitorChart() {
-    return Consumer<InstitutionProvider>(
-      builder: (context, institutionProvider, child) {
-        // Get visitor data from analytics - use actual data if available
-        final institution = institutionProvider.institutions.isNotEmpty
-            ? institutionProvider.institutions.first
-            : null;
-        final analytics = institution != null
-            ? institutionProvider.getInstitutionAnalytics(institution.id)
-            : {};
+    return Consumer<StatsProvider>(
+      builder: (context, statsProvider, child) {
+        final scheme = Theme.of(context).colorScheme;
+        final roles = KubusColorRoles.of(context);
+        final walletAddress = _resolveWalletAddress(listen: true);
 
-        // Build a simple 7-day series derived from available stats so the
-        // analytics UI remains useful in offline/local mode.
-        final totalVisitors = analytics['totalVisitors'] ?? 1200;
-        final avgDaily = (totalVisitors / 7).round();
-        final data = List.generate(7, (i) => avgDaily + (i * 10) - 30);
-        final maxValue = data.reduce((a, b) => a > b ? a : b);
+        if (walletAddress.isEmpty) {
+          return const SizedBox(
+            height: 120,
+            child: Center(
+              child: EmptyStateCard(
+                icon: Icons.analytics_outlined,
+                title: 'Connect your wallet',
+                description: 'Connect a wallet to see visitor analytics.',
+                showAction: false,
+              ),
+            ),
+          );
+        }
+
+        if (!statsProvider.analyticsEnabled) {
+          return const SizedBox(
+            height: 120,
+            child: Center(
+              child: EmptyStateCard(
+                icon: Icons.analytics_outlined,
+                title: 'Analytics disabled',
+                description: 'Enable analytics in Settings to view charts and insights.',
+                showAction: false,
+              ),
+            ),
+          );
+        }
+
+        final timeframe = _timeframeForSelectedPeriod();
+        final bucket = _bucketForTimeframe(timeframe);
+        final duration = _durationForTimeframe(timeframe);
+        final now = DateTime.now().toUtc();
+        final currentTo = _bucketStartUtc(now, bucket);
+        final currentFrom = currentTo.subtract(duration);
+
+        unawaited(statsProvider.ensureSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        ));
+
+        final series = statsProvider.getSeries(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
+
+        final isLoading = series == null &&
+            statsProvider.isSeriesLoading(
+              entityType: 'user',
+              entityId: walletAddress,
+              metric: 'viewsReceived',
+              bucket: bucket,
+              timeframe: timeframe,
+              from: currentFrom.toIso8601String(),
+              to: currentTo.toIso8601String(),
+              groupBy: 'targetType',
+              scope: 'private',
+            );
+
+        final buckets = _fillGroupBuckets(
+          series: series,
+          fromInclusive: currentFrom,
+          toExclusive: currentTo,
+          bucket: bucket,
+          groups: const <String>{'event', 'exhibition'},
+        );
+
+        final maxValue = buckets.fold<int>(0, (max, entry) => entry.value > max ? entry.value : max);
+        final hasData = buckets.any((entry) => entry.value > 0);
+
+        if (isLoading) {
+          return SizedBox(
+            height: 120,
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: roles.web3InstitutionAccent,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (!hasData) {
+          return const SizedBox(
+            height: 120,
+            child: Center(
+              child: EmptyStateCard(
+                icon: Icons.people_outline,
+                title: 'No visitors yet',
+                description: 'Views will appear once people visit your events and exhibitions.',
+                showAction: false,
+              ),
+            ),
+          );
+        }
+
+        String labelFor(DateTime bucketStart) {
+          final d = bucketStart.toLocal();
+          if (bucket == 'day' && timeframe == '7d') {
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            return days[(d.weekday - 1).clamp(0, 6)];
+          }
+          final mm = d.month.toString().padLeft(2, '0');
+          final dd = d.day.toString().padLeft(2, '0');
+          return '$mm/$dd';
+        }
+
+        const barWidth = 22.0;
+        const barSpacing = 10.0;
 
         return SizedBox(
           height: 120,
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final chartWidth = (barWidth + barSpacing) * buckets.length;
               return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: constraints.maxWidth,
+                  width: chartWidth < constraints.maxWidth ? constraints.maxWidth : chartWidth,
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     crossAxisAlignment: CrossAxisAlignment.end,
-                    children: data.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final value = entry.value;
-                      final height = (value / maxValue) * 100;
-
-                      return Flexible(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              value.toString(),
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7),
+                    children: buckets.map((entry) {
+                      final height = maxValue <= 0 ? 0.0 : (entry.value / maxValue) * 100;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: barSpacing),
+                        child: SizedBox(
+                          width: barWidth,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                entry.value.toString(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: scheme.onSurface.withValues(alpha: 0.7),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              width: 20,
-                              height: height,
-                              decoration: BoxDecoration(
-                                color: KubusColorRoles.of(context)
-                                    .web3InstitutionAccent,
-                                borderRadius: BorderRadius.circular(4),
+                              const SizedBox(height: 4),
+                              Container(
+                                width: barWidth,
+                                height: height,
+                                decoration: BoxDecoration(
+                                  color: roles.web3InstitutionAccent,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              [
-                                'Mon',
-                                'Tue',
-                                'Wed',
-                                'Thu',
-                                'Fri',
-                                'Sat',
-                                'Sun'
-                              ][index],
-                              style: GoogleFonts.inter(
-                                fontSize: 8,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.5),
+                              const SizedBox(height: 4),
+                              Text(
+                                labelFor(entry.bucketStart),
+                                style: GoogleFonts.inter(
+                                  fontSize: 8,
+                                  color: scheme.onSurface.withValues(alpha: 0.5),
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       );
                     }).toList(),
@@ -521,17 +846,12 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   Widget _buildVisitorMetrics() {
     return Consumer<InstitutionProvider>(
       builder: (context, institutionProvider, child) {
-        final institution = institutionProvider.institutions.isNotEmpty
-            ? institutionProvider.institutions.first
-            : null;
-        final analytics = institution != null
-            ? institutionProvider.getInstitutionAnalytics(institution.id)
-            : {};
+        final institution =
+            institutionProvider.institutions.isNotEmpty ? institutionProvider.institutions.first : null;
 
         final events = institution != null
             ? institutionProvider.getEventsByInstitution(institution.id)
             : const <Event>[];
-        final totalVisitors = (analytics['totalVisitors'] as int?) ?? 0;
 
         double? avgDurationMinutes;
         if (events.isNotEmpty) {
@@ -552,19 +872,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             .map((e) => e.currentAttendees / e.capacity!)
             .toList();
         if (fillValues.isNotEmpty) {
-          avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) /
-              fillValues.length;
+          avgFill = fillValues.fold<double>(0, (sum, v) => sum + v) / fillValues.length;
         }
-        final avgFillLabel =
-            avgFill == null ? '—' : '${(avgFill * 100).toStringAsFixed(0)}%';
+        final avgFillLabel = avgFill == null ? '—' : '${(avgFill * 100).toStringAsFixed(0)}%';
 
         final metrics = [
           {'label': 'Avg. Event Duration', 'value': avgDurationLabel},
           {'label': 'Avg. Event Fill', 'value': avgFillLabel},
-          {
-            'label': 'Return Visitors (est.)',
-            'value': '${(totalVisitors * 0.34).round()}'
-          },
+          {'label': 'Return Visitors', 'value': '—'},
         ];
 
         return LayoutBuilder(
@@ -576,32 +891,30 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: metrics
-                      .map((metric) => Flexible(
-                            child: Column(
-                              children: [
-                                Text(
-                                  metric['value']!,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color:
-                                        Theme.of(context).colorScheme.onSurface,
-                                  ),
+                      .map(
+                        (metric) => Flexible(
+                          child: Column(
+                            children: [
+                              Text(
+                                metric['value']!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                 ),
-                                Text(
-                                  metric['label']!,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.7),
-                                  ),
-                                  textAlign: TextAlign.center,
+                              ),
+                              Text(
+                                metric['label']!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
-                              ],
-                            ),
-                          ))
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
               ),
@@ -742,9 +1055,6 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         final institution = institutionProvider.institutions.isNotEmpty
             ? institutionProvider.institutions.first
             : null;
-        final analytics = institution != null
-            ? institutionProvider.getInstitutionAnalytics(institution.id)
-            : {};
 
         final events = institution != null
             ? institutionProvider.getEventsByInstitution(institution.id)
@@ -765,12 +1075,6 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               : 'Event';
           revenueByType[normalizedTypeLabel] =
               (revenueByType[normalizedTypeLabel] ?? 0) + revenue;
-        }
-
-        final fromStats = (analytics['revenue'] as num?)?.toDouble() ?? 0.0;
-        if (totalRevenue <= 0 && fromStats > 0) {
-          totalRevenue = fromStats;
-          revenueByType['Total'] = fromStats;
         }
 
         final sorted = revenueByType.entries.toList()
@@ -982,6 +1286,8 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   void _showExportDialog() {
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -989,7 +1295,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         title: Text('Export Analytics',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'Export your analytics data to PDF or Excel format.',
+          'Export your analytics data as CSV.',
           style: TextStyle(
               color: Theme.of(context)
                   .colorScheme
@@ -1004,14 +1310,135 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                    content: Text('Analytics exported successfully!')),
-              );
+              unawaited(() async {
+                try {
+                  await _exportAnalyticsCsv();
+                } catch (_) {
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(
+                      content: const Text('Unable to export analytics.'),
+                      backgroundColor: scheme.error,
+                    ),
+                  );
+                }
+              }());
             },
-            child: Text('Export'),
+            child: const Text('Export CSV'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _exportAnalyticsCsv() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    final statsProvider = context.read<StatsProvider>();
+    final walletAddress = _resolveWalletAddress(listen: false);
+
+    if (walletAddress.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Connect your wallet to export analytics.'),
+          backgroundColor: scheme.error,
+        ),
+      );
+      return;
+    }
+
+    if (!statsProvider.analyticsEnabled) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Analytics is disabled. Enable it in Settings to export.'),
+          backgroundColor: scheme.error,
+        ),
+      );
+      return;
+    }
+
+    final timeframe = _timeframeForSelectedPeriod();
+    final bucket = _bucketForTimeframe(timeframe);
+    final duration = _durationForTimeframe(timeframe);
+    final now = DateTime.now().toUtc();
+    final currentTo = _bucketStartUtc(now, bucket);
+    final currentFrom = currentTo.subtract(duration);
+
+    final series = await statsProvider.ensureSeries(
+      entityType: 'user',
+      entityId: walletAddress,
+      metric: 'viewsReceived',
+      bucket: bucket,
+      timeframe: timeframe,
+      from: currentFrom.toIso8601String(),
+      to: currentTo.toIso8601String(),
+      groupBy: 'targetType',
+      scope: 'private',
+      forceRefresh: true,
+    );
+    if (!mounted) return;
+
+    final points = (series?.series ?? const <StatsSeriesPoint>[]).toList();
+    if (points.isEmpty) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('No analytics data available to export.'),
+          backgroundColor: scheme.error,
+        ),
+      );
+      return;
+    }
+
+    final visitorBuckets = _fillGroupBuckets(
+      series: series,
+      fromInclusive: currentFrom,
+      toExclusive: currentTo,
+      bucket: bucket,
+      groups: const <String>{'event', 'exhibition'},
+    );
+    final artworkBuckets = _fillGroupBuckets(
+      series: series,
+      fromInclusive: currentFrom,
+      toExclusive: currentTo,
+      bucket: bucket,
+      groups: const <String>{'artwork'},
+    );
+
+    final totalVisitors = visitorBuckets.fold<int>(0, (sum, b) => sum + b.value);
+    final artworkViews = artworkBuckets.fold<int>(0, (sum, b) => sum + b.value);
+
+    final buffer = StringBuffer()
+      ..writeln('key,value')
+      ..writeln('period,${_selectedPeriod.replaceAll(",", " ")}')
+      ..writeln('timeframe,$timeframe')
+      ..writeln('bucket,$bucket')
+      ..writeln('from,${currentFrom.toIso8601String()}')
+      ..writeln('to,${currentTo.toIso8601String()}')
+      ..writeln('totalVisitors,$totalVisitors')
+      ..writeln('artworkViews,$artworkViews')
+      ..writeln('')
+      ..writeln('bucketStartUtc,visitors,artworkViews');
+
+    final rowCount = visitorBuckets.length < artworkBuckets.length ? visitorBuckets.length : artworkBuckets.length;
+    for (var i = 0; i < rowCount; i += 1) {
+      buffer.writeln(
+        '${visitorBuckets[i].bucketStart.toIso8601String()},${visitorBuckets[i].value},${artworkBuckets[i].value}',
+      );
+    }
+
+    final dir = await getTemporaryDirectory();
+    if (!mounted) return;
+    final filename =
+        'institution_analytics_${timeframe}_${DateTime.now().millisecondsSinceEpoch}.csv';
+    final file = File(p.join(dir.path, filename));
+    await file.writeAsString(buffer.toString());
+
+    await SharePlus.instance.share(
+      ShareParams(
+        files: [XFile(file.path)],
+        subject: 'Institution analytics',
+        text: 'Exported institution analytics (${_selectedPeriod.trim()}).',
       ),
     );
   }
@@ -1040,4 +1467,11 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       ),
     );
   }
+}
+
+class _BucketStat {
+  final DateTime bucketStart;
+  final int value;
+
+  const _BucketStat(this.bucketStart, this.value);
 }

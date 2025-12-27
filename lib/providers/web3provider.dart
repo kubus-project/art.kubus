@@ -6,6 +6,7 @@ import 'package:solana/solana.dart' hide Wallet; // Hide solana Wallet to avoid 
 import '../config/api_keys.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/stats_api_service.dart';
 import '../services/user_service.dart';
 import '../models/wallet.dart';
 import '../utils/wallet_utils.dart';
@@ -469,25 +470,23 @@ class Web3Provider extends ChangeNotifier {
                 }
             }
           }
-        } catch (e) {
-          debugPrint('Web3Provider._syncBackend: profile lookup failed: $e');
-        }
-
-      // Collections count
-      try {
-        final collections = await _apiService.getCollections(walletAddress: address);
-        _collectionsCount = collections.length;
       } catch (e) {
-        debugPrint('Web3Provider: collections fetch failed: $e');
+        debugPrint('Web3Provider._syncBackend: profile lookup failed: $e');
       }
 
-      // Achievement stats
+      // Canonical user snapshot (collections + achievement stats)
       try {
-        final stats = await _apiService.getAchievementStats(address);
-        _achievementsUnlocked = (stats['unlocked'] as int?) ?? 0;
-        _achievementTokenTotal = (stats['totalTokens'] as num?)?.toDouble() ?? 0.0;
+        final snapshot = await StatsApiService(api: _apiService).fetchSnapshot(
+          entityType: 'user',
+          entityId: address,
+          metrics: const ['collections', 'achievementsUnlocked', 'achievementTokensTotal'],
+          scope: 'public',
+        );
+        _collectionsCount = snapshot.counters['collections'] ?? 0;
+        _achievementsUnlocked = snapshot.counters['achievementsUnlocked'] ?? 0;
+        _achievementTokenTotal = (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
       } catch (e) {
-        debugPrint('Web3Provider: achievement stats fetch failed: $e');
+        debugPrint('Web3Provider: stats snapshot fetch failed: $e');
       }
 
       notifyListeners();

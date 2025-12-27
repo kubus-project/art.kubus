@@ -1,9 +1,21 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/topbar_icon.dart';
+import '../../widgets/empty_state_card.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../models/stats/stats_models.dart';
+import '../../providers/profile_provider.dart';
+import '../../providers/stats_provider.dart';
+import '../../providers/web3provider.dart';
+import '../../services/stats_api_service.dart';
 
 class AdvancedStatsScreen extends StatefulWidget {
   final String statType;
@@ -47,6 +59,12 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final profileProvider = context.watch<ProfileProvider>();
+    final web3Provider = context.watch<Web3Provider>();
+    final statsProvider = context.watch<StatsProvider>();
+    final wallet = (profileProvider.currentUser?.walletAddress ?? web3Provider.walletAddress).trim();
+    final stats = _buildStatsContext(statsProvider: statsProvider, walletAddress: wallet);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -56,12 +74,12 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         actions: [
           TopBarIcon(
             icon: const Icon(Icons.download),
-            onPressed: () => _showExportDialog(),
+            onPressed: () => _showExportDialog(stats),
             tooltip: 'Export',
           ),
           TopBarIcon(
             icon: const Icon(Icons.share),
-            onPressed: () => _showShareDialog(),
+            onPressed: () => _showShareDialog(stats),
             tooltip: 'Share',
           ),
         ],
@@ -75,15 +93,15 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
             children: [
               _buildTimeframeSelectorCard(),
               const SizedBox(height: 20),
-              _buildAdvancedChart(),
+              _buildAdvancedChart(stats),
               const SizedBox(height: 20),
-              _buildDetailedMetrics(),
+              _buildDetailedMetrics(stats),
               const SizedBox(height: 20),
-              _buildComparativeAnalysis(),
+              _buildComparativeAnalysis(stats),
               const SizedBox(height: 20),
-              _buildInsightsCard(),
+              _buildInsightsCard(stats),
               const SizedBox(height: 20),
-              _buildGoalsCard(),
+              _buildGoalsCard(stats),
             ],
           ),
         ),
@@ -130,9 +148,26 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     );
   }
 
-  Widget _buildAdvancedChart() {
+  Widget _buildAdvancedChart(_StatsContext stats) {
     final scheme = Theme.of(context).colorScheme;
-    final data = _getExtendedStatsData();
+
+    if (!stats.hasWallet) {
+      return const EmptyStateCard(
+        icon: Icons.analytics_outlined,
+        title: 'Connect your wallet',
+        description: 'Analytics are available after signing in.',
+        showAction: false,
+      );
+    }
+
+    if (!stats.analyticsEnabled) {
+      return const EmptyStateCard(
+        icon: Icons.analytics_outlined,
+        title: 'Analytics disabled',
+        description: 'Enable analytics in privacy settings to view charts.',
+        showAction: false,
+      );
+    }
     
     return Card(
       child: Padding(
@@ -162,27 +197,44 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
             const SizedBox(height: 20),
             SizedBox(
               height: 250,
-              child: CustomPaint(
-                painter: LineChartPainter(
-                  data: data,
-                  accentColor: scheme.tertiary,
-                  backgroundColor: scheme.primaryContainer,
-                ),
-                size: const Size.fromHeight(250),
-              ),
+              child: stats.isLoading && stats.chartData.isEmpty
+                  ? Center(
+                      child: InlineLoading(
+                        tileSize: 10.0,
+                        color: scheme.tertiary,
+                      ),
+                    )
+                  : stats.chartData.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No data available',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        )
+                      : CustomPaint(
+                          painter: LineChartPainter(
+                            data: stats.chartData,
+                            accentColor: scheme.tertiary,
+                            backgroundColor: scheme.primaryContainer,
+                          ),
+                          size: const Size.fromHeight(250),
+                        ),
             ),
             const SizedBox(height: 16),
-            _buildChartLegend(),
+            _buildChartLegend(stats),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildChartLegend() {
-    final currentValue = _getCurrentValue();
-    final change = _getChangePercentage();
-    final isPositive = change >= 0;
+  Widget _buildChartLegend(_StatsContext stats) {
+    final currentValue = stats.currentValueLabel;
+    final change = stats.changePct;
+    final isPositive = (change ?? 0) >= 0;
     
     return Row(
       children: [
@@ -221,21 +273,27 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               Row(
                 children: [
                   Icon(
-                    isPositive ? Icons.trending_up : Icons.trending_down,
-                    color: isPositive 
-                        ? KubusColorRoles.of(context).positiveAction 
-                        : KubusColorRoles.of(context).negativeAction,
+                    change == null
+                        ? Icons.trending_flat
+                        : (isPositive ? Icons.trending_up : Icons.trending_down),
+                    color: change == null
+                        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)
+                        : (isPositive
+                            ? KubusColorRoles.of(context).positiveAction
+                            : KubusColorRoles.of(context).negativeAction),
                     size: 20,
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${isPositive ? '+' : ''}${change.toStringAsFixed(1)}%',
+                    stats.changePctLabel,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: isPositive 
-                          ? KubusColorRoles.of(context).positiveAction 
-                          : KubusColorRoles.of(context).negativeAction,
+                      color: change == null
+                          ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)
+                          : (isPositive
+                              ? KubusColorRoles.of(context).positiveAction
+                              : KubusColorRoles.of(context).negativeAction),
                     ),
                   ),
                 ],
@@ -247,8 +305,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     );
   }
 
-  Widget _buildDetailedMetrics() {
-    final metrics = _getDetailedMetrics();
+  Widget _buildDetailedMetrics(_StatsContext stats) {
+    final metrics = stats.detailedMetrics;
     
     return Card(
       child: Padding(
@@ -264,32 +322,40 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               ),
             ),
             const SizedBox(height: 16),
-            ...metrics.map((metric) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    metric['title'] ?? '',
-                    style: GoogleFonts.inter(fontSize: 14),
-                  ),
-                  Text(
-                    metric['value'] ?? '',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+            if (metrics.isEmpty)
+              const EmptyStateCard(
+                icon: Icons.analytics_outlined,
+                title: 'Not enough data',
+                description: 'More activity is required to compute detailed metrics.',
+                showAction: false,
+              )
+            else
+              ...metrics.map((metric) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          metric['title'] ?? '',
+                          style: GoogleFonts.inter(fontSize: 14),
+                        ),
+                        Text(
+                          metric['value'] ?? '',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            )),
+                  )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildComparativeAnalysis() {
+  Widget _buildComparativeAnalysis(_StatsContext stats) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -304,17 +370,32 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               ),
             ),
             const SizedBox(height: 16),
-            _buildComparisonItem('vs. Last Period', '+12.5%', true),
-            _buildComparisonItem('vs. Average User', '+45.2%', true),
-            _buildComparisonItem('vs. Your Best', '-8.1%', false),
+            _buildComparisonItem(
+              'vs. Last Period',
+              stats.changePctLabel,
+              stats.changePct == null ? null : (stats.changePct! >= 0),
+            ),
+            _buildComparisonItem('vs. Average User', 'N/A', null),
+            _buildComparisonItem(
+              'vs. Your Best Bucket',
+              stats.vsBestBucketLabel,
+              stats.vsBestBucketIsPositive,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildComparisonItem(String label, String value, bool isPositive) {
+  Widget _buildComparisonItem(String label, String value, bool? isPositive) {
     final roles = KubusColorRoles.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final resolvedColor = isPositive == null
+        ? scheme.onSurface.withValues(alpha: 0.6)
+        : (isPositive ? roles.positiveAction : roles.negativeAction);
+    final resolvedIcon = isPositive == null
+        ? Icons.remove
+        : (isPositive ? Icons.arrow_upward : Icons.arrow_downward);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -327,8 +408,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           Row(
             children: [
               Icon(
-                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                color: isPositive ? roles.positiveAction : roles.negativeAction,
+                resolvedIcon,
+                color: resolvedColor,
                 size: 16,
               ),
               const SizedBox(width: 4),
@@ -337,7 +418,7 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
                 style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isPositive ? roles.positiveAction : roles.negativeAction,
+                  color: resolvedColor,
                 ),
               ),
             ],
@@ -347,8 +428,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     );
   }
 
-  Widget _buildInsightsCard() {
-    final insights = _getInsights();
+  Widget _buildInsightsCard(_StatsContext stats) {
+    final insights = stats.insights;
     
     return Card(
       child: Padding(
@@ -373,37 +454,45 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               ],
             ),
             const SizedBox(height: 16),
-            ...insights.map((insight) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 6,
-                    height: 6,
-                    margin: const EdgeInsets.only(top: 6),
-                    decoration: BoxDecoration(
-                      color: AppColorUtils.purpleAccent,
-                      shape: BoxShape.circle,
+            if (insights.isEmpty)
+              const EmptyStateCard(
+                icon: Icons.lightbulb_outline,
+                title: 'Not enough data',
+                description: 'Interact with the platform to generate insights.',
+                showAction: false,
+              )
+            else
+              ...insights.map((insight) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          margin: const EdgeInsets.only(top: 6),
+                          decoration: BoxDecoration(
+                            color: AppColorUtils.purpleAccent,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            insight,
+                            style: GoogleFonts.inter(fontSize: 14),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      insight,
-                      style: GoogleFonts.inter(fontSize: 14),
-                    ),
-                  ),
-                ],
-              ),
-            )),
+                  )),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildGoalsCard() {
+  Widget _buildGoalsCard(_StatsContext stats) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -418,11 +507,11 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
               ),
             ),
             const SizedBox(height: 16),
-            _buildGoalItem('Next Milestone', '50 ${widget.statType}', 0.8),
+            _buildGoalItem('Next Milestone', stats.nextMilestoneLabel, stats.nextMilestoneProgress),
             const SizedBox(height: 12),
-            _buildGoalItem('Monthly Goal', '100 ${widget.statType}', 0.6),
+            _buildGoalItem('Monthly Goal (projection)', stats.monthGoalLabel, stats.monthGoalProgress),
             const SizedBox(height: 12),
-            _buildGoalItem('Annual Goal', '500 ${widget.statType}', 0.2),
+            _buildGoalItem('Annual Goal (projection)', stats.yearGoalLabel, stats.yearGoalProgress),
           ],
         ),
       ),
@@ -476,173 +565,465 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
     );
   }
 
-  void _showExportDialog() {
-    showDialog(
+  void _showExportDialog(_StatsContext stats) {
+    showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Export Data'),
-        content: const Text('Export your stats data to CSV or PDF format.'),
+        content: const Text('Export your stats data as CSV.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Data exported successfully!')),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Export'),
           ),
         ],
       ),
-    );
+    ).then((confirmed) {
+      if (confirmed == true) {
+        unawaited(_exportCsv(stats));
+      }
+    });
   }
 
-  void _showShareDialog() {
-    showDialog(
+  void _showShareDialog(_StatsContext stats) {
+    showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Share Stats'),
-        content: const Text('Share your achievement with friends and followers.'),
+        content: const Text('Share a summary of this analytics view.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Stats shared successfully!')),
-              );
-            },
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Share'),
           ),
         ],
       ),
+    ).then((confirmed) {
+      if (confirmed == true) {
+        unawaited(_share(stats));
+      }
+    });
+  }
+
+  Future<void> _exportCsv(_StatsContext stats) async {
+    if (!stats.hasWallet) return;
+    if (!stats.analyticsEnabled) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    final statsProvider = context.read<StatsProvider>();
+    final metricLabel = widget.statType.trim().isEmpty ? 'Metric' : widget.statType.trim();
+    final title = '$metricLabel analytics';
+
+    try {
+      final series = await statsProvider.ensureSeries(
+        entityType: 'user',
+        entityId: stats.walletAddress,
+        metric: stats.metric,
+        bucket: stats.bucket,
+        timeframe: stats.timeframe,
+        scope: 'private',
+      );
+      if (!mounted) return;
+
+      final points = (series?.series ?? const <StatsSeriesPoint>[]).toList()
+        ..sort((a, b) => a.t.compareTo(b.t));
+      if (points.isEmpty) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: const Text('No analytics data available to export.'),
+            backgroundColor: scheme.error,
+          ),
+        );
+        return;
+      }
+
+      final buffer = StringBuffer('timestamp,value\n');
+      for (final p in points) {
+        buffer.writeln('${p.t.toUtc().toIso8601String()},${p.v}');
+      }
+
+      final dir = await getTemporaryDirectory();
+      if (!mounted) return;
+
+      final filename =
+          'analytics_${stats.metric}_${stats.timeframe}_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final file = File('${dir.path}${Platform.pathSeparator}$filename');
+      await file.writeAsString(buffer.toString());
+
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: title,
+          text: 'Exported $metricLabel analytics (${stats.timeframeLabel}).',
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Unable to export analytics.'),
+          backgroundColor: scheme.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _share(_StatsContext stats) async {
+    if (!stats.hasWallet) return;
+    if (!stats.analyticsEnabled) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final scheme = Theme.of(context).colorScheme;
+
+    final metricLabel =
+        widget.statType.trim().isEmpty ? 'Analytics' : '${widget.statType} Analytics';
+    final summary = StringBuffer()
+      ..writeln(metricLabel)
+      ..writeln('Period: ${stats.timeframeLabel}')
+      ..writeln('Total: ${stats.currentValueLabel}')
+      ..writeln('Change: ${stats.changePctLabel}');
+
+    try {
+      await SharePlus.instance.share(
+        ShareParams(text: summary.toString(), subject: metricLabel),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: const Text('Unable to share analytics on this device.'),
+          backgroundColor: scheme.error,
+        ),
+      );
+    }
+  }
+
+  _StatsContext _buildStatsContext({
+    required StatsProvider statsProvider,
+    required String walletAddress,
+  }) {
+    final hasWallet = walletAddress.trim().isNotEmpty;
+    final analyticsEnabled = statsProvider.analyticsEnabled;
+
+    final metricRaw = StatsApiService.metricFromUiStatType(widget.statType);
+    final metric = metricRaw.trim().isNotEmpty ? metricRaw.trim() : 'engagement';
+
+    final timeframe = StatsApiService.timeframeFromLabel(_selectedTimeframe);
+    final bucket = timeframe == '24h'
+        ? 'hour'
+        : timeframe == '1y'
+            ? 'week'
+            : 'day';
+
+    final now = DateTime.now().toUtc();
+    final duration = _durationForTimeframe(timeframe);
+    final prevFrom = now.subtract(Duration(seconds: duration.inSeconds * 2));
+    final prevTo = now.subtract(duration);
+
+    if (hasWallet && analyticsEnabled) {
+      unawaited(statsProvider.ensureSeries(
+        entityType: 'user',
+        entityId: walletAddress,
+        metric: metric,
+        bucket: bucket,
+        timeframe: timeframe,
+        scope: 'private',
+      ));
+      unawaited(statsProvider.ensureSeries(
+        entityType: 'user',
+        entityId: walletAddress,
+        metric: metric,
+        bucket: bucket,
+        timeframe: timeframe,
+        from: prevFrom.toIso8601String(),
+        to: prevTo.toIso8601String(),
+        scope: 'private',
+      ));
+    }
+
+    final series = statsProvider.getSeries(
+      entityType: 'user',
+      entityId: walletAddress,
+      metric: metric,
+      bucket: bucket,
+      timeframe: timeframe,
+      scope: 'private',
+    );
+    final prevSeries = statsProvider.getSeries(
+      entityType: 'user',
+      entityId: walletAddress,
+      metric: metric,
+      bucket: bucket,
+      timeframe: timeframe,
+      from: prevFrom.toIso8601String(),
+      to: prevTo.toIso8601String(),
+      scope: 'private',
+    );
+
+    final isLoading = statsProvider.isSeriesLoading(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: metric,
+          bucket: bucket,
+          timeframe: timeframe,
+          scope: 'private',
+        ) ||
+        statsProvider.isSeriesLoading(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: metric,
+          bucket: bucket,
+          timeframe: timeframe,
+          from: prevFrom.toIso8601String(),
+          to: prevTo.toIso8601String(),
+          scope: 'private',
+        );
+
+    List<double> toValues(StatsSeries? s) {
+      final points = (s?.series ?? const <StatsSeriesPoint>[]).toList()
+        ..sort((a, b) => a.t.compareTo(b.t));
+      return points.map((p) => p.v.toDouble()).toList(growable: false);
+    }
+
+    List<double> filledValues(StatsSeries? s, {required DateTime windowEnd}) {
+      if (bucket != 'day' && bucket != 'hour') return toValues(s);
+      final expected = timeframe == '24h'
+          ? 24
+          : timeframe == '7d'
+              ? 7
+              : timeframe == '30d'
+                  ? 30
+                  : timeframe == '90d'
+                      ? 90
+                      : 30;
+
+      final endBucket = bucket == 'hour'
+          ? DateTime.utc(windowEnd.year, windowEnd.month, windowEnd.day, windowEnd.hour)
+          : DateTime.utc(windowEnd.year, windowEnd.month, windowEnd.day);
+      final step = bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
+      final startBucket = endBucket.subtract(step * (expected - 1));
+
+      final valuesByBucket = <int, int>{};
+      for (final point in (s?.series ?? const <StatsSeriesPoint>[])) {
+        final dt = point.t.toUtc();
+        final key = bucket == 'hour'
+            ? DateTime.utc(dt.year, dt.month, dt.day, dt.hour).millisecondsSinceEpoch
+            : DateTime.utc(dt.year, dt.month, dt.day).millisecondsSinceEpoch;
+        valuesByBucket[key] = (valuesByBucket[key] ?? 0) + point.v;
+      }
+
+      return List<double>.generate(expected, (i) {
+        final t = startBucket.add(step * i);
+        final key = t.millisecondsSinceEpoch;
+        return (valuesByBucket[key] ?? 0).toDouble();
+      }, growable: false);
+    }
+
+    List<double> cumulative(List<double> values) {
+      var running = 0.0;
+      return values.map((v) {
+        running += v;
+        return running;
+      }).toList(growable: false);
+    }
+
+    final rawValues = filledValues(series, windowEnd: now);
+    final prevRawValues = filledValues(prevSeries, windowEnd: prevTo);
+    final chartData = cumulative(rawValues);
+
+    double sum(List<double> values) => values.fold(0.0, (a, b) => a + b);
+    final total = sum(rawValues);
+    final prevTotal = sum(prevRawValues);
+
+    double? changePct;
+    if (prevTotal > 0) {
+      changePct = ((total - prevTotal) / prevTotal) * 100.0;
+    } else if (total == 0) {
+      changePct = 0.0;
+    } else {
+      changePct = null;
+    }
+    final changePctLabel = changePct == null
+        ? 'N/A'
+        : '${changePct >= 0 ? '+' : '-'}${changePct.abs().toStringAsFixed(1)}%';
+
+    final currentValueLabel = _formatValue(chartData.isEmpty ? 0.0 : chartData.last);
+
+    final detailedMetrics = <Map<String, String>>[];
+    if (rawValues.isNotEmpty) {
+      final avg = total / rawValues.length;
+      detailedMetrics.add({
+        'title': bucket == 'hour' ? 'Average per hour' : 'Average per day',
+        'value': _formatValue(avg),
+      });
+      detailedMetrics.add({
+        'title': bucket == 'hour' ? 'Peak hour' : 'Peak day',
+        'value': rawValues.reduce((a, b) => a > b ? a : b).toInt().toString(),
+      });
+      detailedMetrics.add({
+        'title': 'Active buckets',
+        'value': rawValues.where((v) => v > 0).length.toString(),
+      });
+      detailedMetrics.add({
+        'title': 'Total',
+        'value': _formatValue(total),
+      });
+    }
+
+    final insights = <String>[];
+    if (rawValues.isNotEmpty) {
+      final nonZero = rawValues.where((v) => v > 0).length;
+      insights.add('Activity recorded in $nonZero of ${rawValues.length} buckets.');
+      if (changePct != null && changePct.abs() >= 0.1) {
+        insights.add('This period is ${changePct >= 0 ? 'up' : 'down'} vs the previous period.');
+      }
+      final peakBucket = rawValues.reduce((a, b) => a > b ? a : b);
+      insights.add('Peak bucket value: ${peakBucket.toInt()}.');
+    }
+
+    final peakBucket = rawValues.isEmpty ? 0.0 : rawValues.reduce((a, b) => a > b ? a : b);
+    final lastBucket = rawValues.isEmpty ? 0.0 : rawValues.last;
+    final vsBestBucketPct = peakBucket > 0 ? ((lastBucket - peakBucket) / peakBucket) * 100.0 : null;
+    final vsBestBucketLabel = vsBestBucketPct == null
+        ? 'N/A'
+        : '${vsBestBucketPct >= 0 ? '+' : '-'}${vsBestBucketPct.abs().toStringAsFixed(1)}%';
+
+    double nextMilestone(double value) {
+      if (value <= 0) return 10;
+      if (value < 50) return 50;
+      if (value < 100) return 100;
+      if (value < 500) return (value / 100).ceil() * 100;
+      if (value < 1000) return 1000;
+      return (value / 500).ceil() * 500;
+    }
+
+    final next = nextMilestone(total);
+    final avgPerBucket = rawValues.isEmpty ? 0.0 : (total / rawValues.length);
+    final monthMultiplier = bucket == 'hour'
+        ? 24 * 30
+        : bucket == 'week'
+            ? 4
+            : 30;
+    final yearMultiplier = bucket == 'hour'
+        ? 24 * 365
+        : bucket == 'week'
+            ? 52
+            : 365;
+    final monthGoal = avgPerBucket > 0 ? avgPerBucket * monthMultiplier : 0.0;
+    final yearGoal = avgPerBucket > 0 ? avgPerBucket * yearMultiplier : 0.0;
+
+    return _StatsContext(
+      walletAddress: walletAddress,
+      metric: metric,
+      timeframe: timeframe,
+      timeframeLabel: _selectedTimeframe,
+      bucket: bucket,
+      hasWallet: hasWallet,
+      analyticsEnabled: analyticsEnabled,
+      isLoading: isLoading,
+      chartData: chartData,
+      currentValueLabel: currentValueLabel,
+      changePct: changePct,
+      changePctLabel: changePctLabel,
+      detailedMetrics: detailedMetrics,
+      insights: insights,
+      vsBestBucketLabel: vsBestBucketLabel,
+      vsBestBucketIsPositive: vsBestBucketPct == null ? null : (vsBestBucketPct >= 0),
+      nextMilestoneLabel: _formatValue(next),
+      nextMilestoneProgress: next <= 0 ? 0.0 : (total / next).clamp(0.0, 1.0),
+      monthGoalLabel: monthGoal <= 0 ? 'N/A' : _formatValue(monthGoal),
+      monthGoalProgress: monthGoal <= 0 ? 0.0 : (total / monthGoal).clamp(0.0, 1.0),
+      yearGoalLabel: yearGoal <= 0 ? 'N/A' : _formatValue(yearGoal),
+      yearGoalProgress: yearGoal <= 0 ? 0.0 : (total / yearGoal).clamp(0.0, 1.0),
     );
   }
 
-  List<double> _getExtendedStatsData() {
-    switch (widget.statType) {
-      case 'Artworks':
-        switch (_selectedTimeframe) {
-          case '7 days':
-            return [35, 37, 39, 40, 41, 42, 42];
-          case '30 days':
-            return [20, 25, 28, 30, 32, 35, 37, 39, 40, 41, 42, 42];
-          case '3 months':
-            return [5, 8, 12, 18, 25, 30, 35, 40, 42];
-          default:
-            return [0, 5, 12, 20, 28, 35, 42];
-        }
-      case 'Followers':
-        switch (_selectedTimeframe) {
-          case '7 days':
-            return [980, 1050, 1120, 1150, 1180, 1200, 1200];
-          case '30 days':
-            return [800, 850, 900, 950, 1000, 1050, 1100, 1150, 1180, 1200, 1200, 1200];
-          default:
-            return [100, 300, 500, 700, 900, 1100, 1200];
-        }
-      case 'Views':
-        switch (_selectedTimeframe) {
-          case '7 days':
-            return [7200, 7800, 8100, 8300, 8450, 8500, 8500];
-          case '30 days':
-            return [5000, 5500, 6000, 6500, 7000, 7500, 8000, 8200, 8400, 8500, 8500, 8500];
-          default:
-            return [1000, 2500, 4000, 6000, 7500, 8200, 8500];
-        }
+  Duration _durationForTimeframe(String timeframe) {
+    switch (timeframe) {
+      case '24h':
+        return const Duration(hours: 24);
+      case '7d':
+        return const Duration(days: 7);
+      case '30d':
+        return const Duration(days: 30);
+      case '90d':
+        return const Duration(days: 90);
+      case '1y':
+        return const Duration(days: 365);
       default:
-        return [10, 20, 30, 25, 35, 40, 45];
+        return const Duration(days: 30);
     }
   }
 
-  String _getCurrentValue() {
-    switch (widget.statType) {
-      case 'Artworks':
-        return '42';
-      case 'Followers':
-        return '1.2k';
-      case 'Views':
-        return '8.5k';
-      default:
-        return '0';
+  String _formatValue(double value) {
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(1)}k';
     }
+    return value.toInt().toString();
   }
+}
 
-  double _getChangePercentage() {
-    switch (widget.statType) {
-      case 'Artworks':
-        return 20.0;
-      case 'Followers':
-        return 22.4;
-      case 'Views':
-        return 18.1;
-      default:
-        return 0.0;
-    }
-  }
+class _StatsContext {
+  final String walletAddress;
+  final String metric;
+  final String timeframe;
+  final String timeframeLabel;
+  final String bucket;
+  final bool hasWallet;
+  final bool analyticsEnabled;
+  final bool isLoading;
 
-  List<Map<String, String>> _getDetailedMetrics() {
-    switch (widget.statType) {
-      case 'Artworks':
-        return [
-          {'title': 'Average per week', 'value': '6'},
-          {'title': 'Most productive day', 'value': 'Tuesday'},
-          {'title': 'Upload frequency', 'value': 'Every 1.2 days'},
-          {'title': 'Quality score', 'value': '8.5/10'},
-        ];
-      case 'Followers':
-        return [
-          {'title': 'Growth rate', 'value': '22.4%'},
-          {'title': 'Engagement rate', 'value': '4.8%'},
-          {'title': 'Daily gain average', 'value': '32'},
-          {'title': 'Best performing content', 'value': 'Digital Art'},
-        ];
-      case 'Views':
-        return [
-          {'title': 'Daily average', 'value': '1,214'},
-          {'title': 'Peak hour', 'value': '8 PM'},
-          {'title': 'Best performing piece', 'value': 'Neon Dreams'},
-          {'title': 'View duration', 'value': '2m 45s'},
-        ];
-      default:
-        return [];
-    }
-  }
+  final List<double> chartData;
+  final String currentValueLabel;
+  final double? changePct;
+  final String changePctLabel;
+  final List<Map<String, String>> detailedMetrics;
+  final List<String> insights;
 
-  List<String> _getInsights() {
-    switch (widget.statType) {
-      case 'Artworks':
-        return [
-          'Your upload rate increased by 50% this week compared to last week.',
-          'Digital art pieces receive 40% more engagement than traditional art.',
-          'Tuesday is your most productive day for creating content.',
-          'Consider posting during 7-9 PM for maximum visibility.',
-        ];
-      case 'Followers':
-        return [
-          'Your follower growth is 22% above average for artists in your category.',
-          'Interactive posts generate 3x more followers than static images.',
-          'Users who discover you through hashtags are 60% more likely to follow.',
-          'Your engagement rate indicates high-quality content that resonates with your audience.',
-        ];
-      case 'Views':
-        return [
-          'Your content performs best during evening hours (7-9 PM).',
-          'Neon-themed artworks consistently generate the most views.',
-          'Your average view duration is 45% higher than the platform average.',
-          'Cross-posting to community feeds increases views by 80%.',
-        ];
-      default:
-        return ['No insights available for this metric.'];
-    }
-  }
+  final String vsBestBucketLabel;
+  final bool? vsBestBucketIsPositive;
+
+  final String nextMilestoneLabel;
+  final double nextMilestoneProgress;
+  final String monthGoalLabel;
+  final double monthGoalProgress;
+  final String yearGoalLabel;
+  final double yearGoalProgress;
+
+  const _StatsContext({
+    required this.walletAddress,
+    required this.metric,
+    required this.timeframe,
+    required this.timeframeLabel,
+    required this.bucket,
+    required this.hasWallet,
+    required this.analyticsEnabled,
+    required this.isLoading,
+    required this.chartData,
+    required this.currentValueLabel,
+    required this.changePct,
+    required this.changePctLabel,
+    required this.detailedMetrics,
+    required this.insights,
+    required this.vsBestBucketLabel,
+    required this.vsBestBucketIsPositive,
+    required this.nextMilestoneLabel,
+    required this.nextMilestoneProgress,
+    required this.monthGoalLabel,
+    required this.monthGoalProgress,
+    required this.yearGoalLabel,
+    required this.yearGoalProgress,
+  });
 }
 
 class LineChartPainter extends CustomPainter {
@@ -672,13 +1053,15 @@ class LineChartPainter extends CustomPainter {
     final maxValue = data.reduce((a, b) => a > b ? a : b);
     final minValue = data.reduce((a, b) => a < b ? a : b);
     final range = maxValue - minValue;
+    final safeRange = range == 0 ? 1.0 : range;
 
     final path = Path();
     final fillPath = Path();
 
     for (int i = 0; i < data.length; i++) {
-      final x = (i / (data.length - 1)) * size.width;
-      final y = size.height - ((data[i] - minValue) / range) * size.height;
+      final x = data.length == 1 ? size.width / 2 : (i / (data.length - 1)) * size.width;
+      final normalizedValue = range == 0 ? 0.5 : ((data[i] - minValue) / safeRange);
+      final y = size.height - normalizedValue * size.height;
 
       if (i == 0) {
         path.moveTo(x, y);
@@ -702,8 +1085,9 @@ class LineChartPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     for (int i = 0; i < data.length; i++) {
-      final x = (i / (data.length - 1)) * size.width;
-      final y = size.height - ((data[i] - minValue) / range) * size.height;
+      final x = data.length == 1 ? size.width / 2 : (i / (data.length - 1)) * size.width;
+      final normalizedValue = range == 0 ? 0.5 : ((data[i] - minValue) / safeRange);
+      final y = size.height - normalizedValue * size.height;
       canvas.drawCircle(Offset(x, y), 3, pointPaint);
     }
   }

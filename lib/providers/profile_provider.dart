@@ -7,6 +7,7 @@ import '../config/config.dart';
 import '../models/user_profile.dart';
 import '../models/user_persona.dart';
 import '../services/backend_api_service.dart';
+import '../services/stats_api_service.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
 import '../services/event_bus.dart';
@@ -336,73 +337,42 @@ class ProfileProvider extends foundation.ChangeNotifier {
   /// Load additional stats from backend (collections, followers, following)
   Future<void> _loadBackendStats(String walletAddress) async {
     try {
-      // Load collections count
-      final collections = await _apiService.getCollections(
-        walletAddress: walletAddress,
-        page: 1,
-        limit: 1, // Just need count
+      final snapshot = await StatsApiService().fetchSnapshot(
+        entityType: 'user',
+        entityId: walletAddress,
+        metrics: const [
+          'collections',
+          'followers',
+          'following',
+          'posts',
+          'artworks',
+          'nftsMinted',
+          'achievementsUnlocked',
+        ],
+        scope: 'public',
       );
-      _collectionsCount = collections.length;
-      
-      // Load followers
-      try {
-        final followers = await _apiService.getFollowers(
-          walletAddress: walletAddress,
-          page: 1,
-          limit: 100,
+
+      _collectionsCount = snapshot.counters['collections'] ?? 0;
+      _realFollowersCount = snapshot.counters['followers'] ?? 0;
+      _realFollowingCount = snapshot.counters['following'] ?? 0;
+      _realPostsCount = snapshot.counters['posts'] ?? 0;
+
+      final existingStats = _currentUser?.stats;
+      if (_currentUser != null) {
+        _currentUser = _currentUser!.copyWith(
+          stats: UserStats(
+            artworksDiscovered: existingStats?.artworksDiscovered ?? 0,
+            artworksCreated: snapshot.counters['artworks'] ?? (existingStats?.artworksCreated ?? 0),
+            nftsOwned: snapshot.counters['nftsMinted'] ?? (existingStats?.nftsOwned ?? 0),
+            kub8Balance: existingStats?.kub8Balance ?? 0.0,
+            achievementsUnlocked: snapshot.counters['achievementsUnlocked'] ?? (existingStats?.achievementsUnlocked ?? 0),
+            followersCount: snapshot.counters['followers'] ?? (existingStats?.followersCount ?? 0),
+            followingCount: snapshot.counters['following'] ?? (existingStats?.followingCount ?? 0),
+          ),
         );
-        _followers.clear();
-        for (final followerData in followers) {
-          try {
-            _followers.add(UserProfile.fromJson(followerData));
-          } catch (e) {
-            debugPrint('Error parsing follower: $e');
-          }
-        }
-        _realFollowersCount = _followers.length;
-      } catch (e) {
-        debugPrint('Error loading followers: $e');
-        _realFollowersCount = 0;
-      }
-      
-      // Load following
-      try {
-        final following = await _apiService.getFollowing(
-          walletAddress: walletAddress,
-          page: 1,
-          limit: 100,
-        );
-        _followingUsers.clear();
-        for (final followingData in following) {
-          try {
-            _followingUsers.add(UserProfile.fromJson(followingData));
-          } catch (e) {
-            debugPrint('Error parsing following user: $e');
-          }
-        }
-        _realFollowingCount = _followingUsers.length;
-      } catch (e) {
-        debugPrint('Error loading following: $e');
-        _realFollowingCount = 0;
       }
 
-      // Load aggregated stats (posts, follower/following counts if available)
-      try {
-        final stats = await _apiService.getUserStats(walletAddress);
-        _realPostsCount = _parseCount(stats['postsCount'] ?? stats['posts']);
-        final statsFollowers = _parseCount(stats['followersCount'] ?? stats['followers']);
-        final statsFollowing = _parseCount(stats['followingCount'] ?? stats['following']);
-        if (statsFollowers > 0) {
-          _realFollowersCount = statsFollowers;
-        }
-        if (statsFollowing > 0) {
-          _realFollowingCount = statsFollowing;
-        }
-      } catch (e) {
-        debugPrint('Error loading user stats: $e');
-      }
-      
-      debugPrint('ProfileProvider: Stats loaded - Collections: $_collectionsCount, Followers: $_realFollowersCount, Following: $_realFollowingCount');
+      notifyListeners();
     } catch (e) {
       debugPrint('Error loading backend stats: $e');
     }
@@ -1070,13 +1040,6 @@ class ProfileProvider extends foundation.ChangeNotifier {
     return count.toString();
   }
 
-  int _parseCount(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.round();
-    return int.tryParse(value.toString()) ?? 0;
-  }
-  
   void signOut() {
     _currentUser = null;
     _followingUsers.clear();

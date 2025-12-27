@@ -101,6 +101,13 @@ class EventsProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> recordEventView(String id, {String? source}) async {
+    if (id.trim().isEmpty) return;
+    try {
+      await _api.recordEventView(id, source: source);
+    } catch (_) {}
+  }
+
   void selectEvent(String? eventId) {
     if (eventId == null) {
       _selected = null;
