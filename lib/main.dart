@@ -32,6 +32,7 @@ import 'providers/exhibitions_provider.dart';
 import 'providers/collab_provider.dart';
 import 'providers/collections_provider.dart';
 import 'providers/portfolio_provider.dart';
+import 'providers/stats_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -183,6 +184,15 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => PlatformProvider()),
               ChangeNotifierProvider(create: (context) => ConnectionProvider()),
               ChangeNotifierProvider(create: (context) => ProfileProvider()),
+              ChangeNotifierProxyProvider2<AppRefreshProvider, ConfigProvider, StatsProvider>(
+                create: (context) => StatsProvider(),
+                update: (context, appRefreshProvider, configProvider, statsProvider) {
+                  final provider = statsProvider ?? StatsProvider();
+                  provider.bindToRefresh(appRefreshProvider);
+                  provider.bindConfigProvider(configProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, PresenceProvider>(
                 create: (context) => PresenceProvider(),
                 update: (context, appRefreshProvider, profileProvider, presenceProvider) {

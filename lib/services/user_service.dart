@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../models/user.dart';
 import '../models/achievements.dart';
 import 'backend_api_service.dart';
+import 'stats_api_service.dart';
 import '../utils/wallet_utils.dart';
 import 'user_action_logger.dart';
 
@@ -846,15 +847,15 @@ class UserService {
   static Future<void> fetchAndUpdateUserStats(String walletAddress) async {
     if (walletAddress.isEmpty) return;
     try {
-      final resp = await BackendApiService().getUserStats(walletAddress);
-      int followers = 0;
-      int following = 0;
-      int posts = 0;
-      try {
-        followers = _parseInt(resp['followers'] ?? resp['followersCount'] ?? resp['followers_count']);
-        following = _parseInt(resp['following'] ?? resp['followingCount'] ?? resp['following_count']);
-        posts = _parseInt(resp['posts'] ?? resp['postsCount'] ?? resp['posts_count']);
-            } catch (_) {}
+      final snapshot = await StatsApiService().fetchSnapshot(
+        entityType: 'user',
+        entityId: walletAddress,
+        metrics: const ['followers', 'following', 'posts'],
+        scope: 'public',
+      );
+      final followers = snapshot.counters['followers'] ?? 0;
+      final following = snapshot.counters['following'] ?? 0;
+      final posts = snapshot.counters['posts'] ?? 0;
 
       final existing = _cache[walletAddress];
       final isFollowing = (await getFollowingUsers()).contains(walletAddress);

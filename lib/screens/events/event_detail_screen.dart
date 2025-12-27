@@ -32,6 +32,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final events = context.read<EventsProvider>();
+      unawaited(events.recordEventView(widget.eventId, source: 'event_detail'));
       unawaited(_load());
     });
   }

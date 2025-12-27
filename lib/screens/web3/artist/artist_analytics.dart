@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/collectibles_provider.dart';
+import '../../../providers/stats_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/artwork.dart';
+import '../../../models/stats/stats_models.dart';
+import '../../../services/stats_api_service.dart';
 import '../../../utils/app_animations.dart';
+import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/rarity_ui.dart';
 
 class ArtistAnalytics extends StatefulWidget {
@@ -66,7 +71,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
 
   Future<void> _loadNFTData() async {
     final web3 = Provider.of<Web3Provider>(context, listen: false);
-    if (!web3.isConnected || web3.walletAddress.isEmpty) {
+    final walletAddress = web3.walletAddress;
+    if (!web3.isConnected || walletAddress.isEmpty) {
       setState(() {
         _loadingNFTs = false;
         _nftsSold = 0;
@@ -81,13 +87,17 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           collectiblesProvider.allCollectibles.isEmpty) {
         await collectiblesProvider.initialize();
       }
-      final nfts = collectiblesProvider.getCollectiblesByOwner(web3.walletAddress);
+      if (!mounted) return;
+      final nfts = collectiblesProvider.getCollectiblesByOwner(walletAddress);
       setState(() {
         _nftsSold = nfts.length;
         _loadingNFTs = false;
       });
     } catch (e) {
-      debugPrint('Failed to load NFT data: $e');
+      if (kDebugMode) {
+        debugPrint('ArtistAnalytics: _loadNFTData failed: $e');
+      }
+      if (!mounted) return;
       setState(() {
         _loadingNFTs = false;
         _nftsSold = 0;
@@ -190,18 +200,283 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     );
   }
 
+  String _timeframeForSelectedPeriod() => StatsApiService.timeframeFromLabel(_selectedPeriod);
+
+  String _bucketForTimeframe(String timeframe) {
+    if (timeframe == '24h') return 'hour';
+    if (timeframe == '1y') return 'week';
+    return 'day';
+  }
+
+  Duration _durationForTimeframe(String timeframe) {
+    switch (timeframe) {
+      case '24h':
+        return const Duration(hours: 24);
+      case '7d':
+        return const Duration(days: 7);
+      case '30d':
+        return const Duration(days: 30);
+      case '90d':
+        return const Duration(days: 90);
+      case '1y':
+        return const Duration(days: 365);
+      default:
+        return const Duration(days: 30);
+    }
+  }
+
+  DateTime _bucketStartUtc(DateTime dt, String bucket) {
+    final utc = dt.toUtc();
+    if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+    if (bucket == 'week') {
+      final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
+      return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
+    }
+    return DateTime.utc(utc.year, utc.month, utc.day);
+  }
+
+  Duration _bucketStep(String bucket) {
+    if (bucket == 'hour') return const Duration(hours: 1);
+    if (bucket == 'week') return const Duration(days: 7);
+    return const Duration(days: 1);
+  }
+
+  int _totalFromSeries(StatsSeries? series) {
+    return (series?.series ?? const <StatsSeriesPoint>[])
+        .fold<int>(0, (sum, point) => sum + point.v);
+  }
+
+  String _formatPercentChange({required int current, required int previous}) {
+    if (previous <= 0) {
+      return current <= 0 ? '0%' : '\u2014';
+    }
+    final pct = ((current - previous) / previous) * 100;
+    final sign = pct >= 0 ? '+' : '';
+    return '$sign${pct.toStringAsFixed(0)}%';
+  }
+
+  List<double> _filledValues(
+    StatsSeries? series, {
+    required DateTime windowEnd,
+    required String timeframe,
+    required String bucket,
+  }) {
+    final points = (series?.series ?? const <StatsSeriesPoint>[]).toList()
+      ..sort((a, b) => a.t.compareTo(b.t));
+
+    int expectedPoints() {
+      if (bucket == 'hour') return 24;
+      if (bucket == 'day') {
+        switch (timeframe) {
+          case '7d':
+            return 7;
+          case '30d':
+            return 30;
+          case '90d':
+            return 90;
+          default:
+            return 30;
+        }
+      }
+      if (bucket == 'week') return 52;
+      return points.length;
+    }
+
+    final expected = expectedPoints();
+    if (expected <= 0) return const <double>[];
+
+    DateTime bucketStart(DateTime dt) {
+      final utc = dt.toUtc();
+      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'week') {
+        final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
+        return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
+      }
+      return DateTime.utc(utc.year, utc.month, utc.day);
+    }
+
+    final step = bucket == 'hour'
+        ? const Duration(hours: 1)
+        : bucket == 'week'
+            ? const Duration(days: 7)
+            : const Duration(days: 1);
+
+    final endBucket = bucketStart(windowEnd.subtract(const Duration(microseconds: 1)));
+    final startBucket = endBucket.subtract(step * (expected - 1));
+
+    final valuesByBucket = <int, int>{};
+    for (final point in points) {
+      final key = bucketStart(point.t).millisecondsSinceEpoch;
+      valuesByBucket[key] = (valuesByBucket[key] ?? 0) + point.v;
+    }
+
+    final out = <double>[];
+    for (var i = 0; i < expected; i += 1) {
+      final key = startBucket.add(step * i).millisecondsSinceEpoch;
+      out.add((valuesByBucket[key] ?? 0).toDouble());
+    }
+    return out;
+  }
+
   Widget _buildOverviewCards() {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, child) {
-        final themeProvider = Provider.of<ThemeProvider>(context);
-        final web3 = Provider.of<Web3Provider>(context, listen: false);
+    return Consumer2<ArtworkProvider, StatsProvider>(
+      builder: (context, artworkProvider, statsProvider, child) {
+        final themeProvider = context.watch<ThemeProvider>();
+        final web3 = context.watch<Web3Provider>();
+        final walletAddress = web3.walletAddress.trim();
+
+        const snapshotMetrics = <String>[
+          'viewsReceived',
+          'arEnabledArtworks',
+        ];
+
+        if (walletAddress.isNotEmpty) {
+          unawaited(statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: walletAddress,
+            metrics: snapshotMetrics,
+            scope: 'public',
+          ));
+        }
+
+        final snapshot = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSnapshot(
+                entityType: 'user',
+                entityId: walletAddress,
+                metrics: snapshotMetrics,
+                scope: 'public',
+              );
+        final snapshotCounters = snapshot?.counters ?? const <String, int>{};
 
         final artworks = artworkProvider.userArtworks;
-        final totalViews = artworks.fold<int>(0, (sum, a) => sum + a.viewsCount);
-        final activeMarkers = artworks.where((a) => a.arEnabled).length;
         final estimatedRewards = artworks.fold<int>(0, (sum, a) => sum + a.actualRewards);
         final kub8Balance = web3.kub8Balance;
         final totalRevenueKub8 = kub8Balance + estimatedRewards.toDouble();
+
+        final fallbackViews = artworks.fold<int>(0, (sum, a) => sum + a.viewsCount);
+        final totalVisitors = snapshotCounters['viewsReceived'] ?? fallbackViews;
+        final fallbackMarkers = artworks.where((a) => a.arEnabled).length;
+        final activeMarkers = snapshotCounters['arEnabledArtworks'] ?? fallbackMarkers;
+
+        final timeframe = _timeframeForSelectedPeriod();
+        final bucket = _bucketForTimeframe(timeframe);
+        final duration = _durationForTimeframe(timeframe);
+        final now = DateTime.now().toUtc();
+        final currentTo = _bucketStartUtc(now, bucket);
+        final currentFrom = currentTo.subtract(duration);
+        final prevTo = currentFrom;
+        final prevFrom = prevTo.subtract(duration);
+
+        if (walletAddress.isNotEmpty && statsProvider.analyticsEnabled) {
+          unawaited(statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: 'viewsReceived',
+            bucket: bucket,
+            timeframe: timeframe,
+            from: currentFrom.toIso8601String(),
+            to: currentTo.toIso8601String(),
+            scope: 'private',
+          ));
+          unawaited(statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: 'viewsReceived',
+            bucket: bucket,
+            timeframe: timeframe,
+            from: prevFrom.toIso8601String(),
+            to: prevTo.toIso8601String(),
+            scope: 'private',
+          ));
+
+          unawaited(statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: 'achievementTokensTotal',
+            bucket: bucket,
+            timeframe: timeframe,
+            from: currentFrom.toIso8601String(),
+            to: currentTo.toIso8601String(),
+            scope: 'private',
+          ));
+          unawaited(statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: 'achievementTokensTotal',
+            bucket: bucket,
+            timeframe: timeframe,
+            from: prevFrom.toIso8601String(),
+            to: prevTo.toIso8601String(),
+            scope: 'private',
+          ));
+        }
+
+        final viewsSeries = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSeries(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: 'viewsReceived',
+                bucket: bucket,
+                timeframe: timeframe,
+                from: currentFrom.toIso8601String(),
+                to: currentTo.toIso8601String(),
+                scope: 'private',
+              );
+        final prevViewsSeries = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSeries(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: 'viewsReceived',
+                bucket: bucket,
+                timeframe: timeframe,
+                from: prevFrom.toIso8601String(),
+                to: prevTo.toIso8601String(),
+                scope: 'private',
+              );
+
+        final earningsSeries = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSeries(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: 'achievementTokensTotal',
+                bucket: bucket,
+                timeframe: timeframe,
+                from: currentFrom.toIso8601String(),
+                to: currentTo.toIso8601String(),
+                scope: 'private',
+              );
+        final prevEarningsSeries = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSeries(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: 'achievementTokensTotal',
+                bucket: bucket,
+                timeframe: timeframe,
+                from: prevFrom.toIso8601String(),
+                to: prevTo.toIso8601String(),
+                scope: 'private',
+              );
+
+        final viewsThis = _totalFromSeries(viewsSeries);
+        final viewsPrev = _totalFromSeries(prevViewsSeries);
+        final viewsChange = statsProvider.analyticsEnabled
+            ? _formatPercentChange(current: viewsThis, previous: viewsPrev)
+            : '\u2014';
+        final viewsPositive = viewsThis >= viewsPrev;
+
+        final earningsThis = _totalFromSeries(earningsSeries);
+        final earningsPrev = _totalFromSeries(prevEarningsSeries);
+        final earningsChange = statsProvider.analyticsEnabled
+            ? _formatPercentChange(current: earningsThis, previous: earningsPrev)
+            : '\u2014';
+        final earningsPositive = earningsThis >= earningsPrev;
+
+        final inactiveChange = '\u2014';
 
         return GridView.count(
           shrinkWrap: true,
@@ -217,8 +492,8 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               'Wallet: ${kub8Balance.toStringAsFixed(1)} KUB8',
               Icons.account_balance_wallet,
               themeProvider.accentColor,
-              '+0%',
-              true,
+              earningsChange,
+              earningsPositive,
             ),
             _buildMetricCard(
               'Active Markers',
@@ -226,29 +501,29 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               'AR-enabled artworks',
               Icons.location_on,
               Theme.of(context).colorScheme.primary,
-              '+0%',
+              inactiveChange,
               true,
             ),
             _buildMetricCard(
               'Total Visitors',
-              totalViews.toString(),
+              totalVisitors.toString(),
               'All-time views',
               Icons.people,
               Theme.of(context).colorScheme.tertiary,
-              '+0%',
-              true,
+              viewsChange,
+              viewsPositive,
             ),
             _buildMetricCard(
               'NFTs Sold',
-              _loadingNFTs ? '...' : _nftsSold.toString(),
-              _loadingNFTs 
+              _loadingNFTs ? '\u2026' : _nftsSold.toString(),
+              _loadingNFTs
                   ? 'Loading...'
-                  : (web3.isConnected 
+                  : (web3.isConnected
                       ? (_nftsSold > 0 ? '$_nftsSold minted' : 'No sales yet')
                       : 'Connect wallet'),
               Icons.token,
               Theme.of(context).colorScheme.secondary,
-              '+0%',
+              inactiveChange,
               true,
             ),
           ],
@@ -266,6 +541,16 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     String change,
     bool isPositive,
   ) {
+    final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
+
+    final isNeutral = change.trim() == '\u2014';
+    final chipColor = isNeutral
+        ? scheme.onSurface.withValues(alpha: 0.6)
+        : isPositive
+            ? roles.positiveAction
+            : scheme.error;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -290,14 +575,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
-                  color: isPositive ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                  color: chipColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   change,
                   style: GoogleFonts.inter(
                     fontSize: 8,
-                    color: isPositive ? Colors.green : Colors.red,
+                    color: chipColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -343,8 +628,121 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildChartSection() {
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, child) {
+    return Consumer2<StatsProvider, Web3Provider>(
+      builder: (context, statsProvider, web3, child) {
+        final scheme = Theme.of(context).colorScheme;
+        final themeProvider = context.watch<ThemeProvider>();
+
+        final walletAddress = web3.walletAddress.trim();
+        final timeframe = _timeframeForSelectedPeriod();
+        final bucket = _bucketForTimeframe(timeframe);
+        final duration = _durationForTimeframe(timeframe);
+        final now = DateTime.now().toUtc();
+        final currentTo = _bucketStartUtc(now, bucket);
+        final currentFrom = currentTo.subtract(duration);
+        final prevTo = currentFrom;
+        final prevFrom = prevTo.subtract(duration);
+
+        final metric = _currentChartIndex == 0
+            ? 'achievementTokensTotal'
+            : _currentChartIndex == 1
+                ? 'viewsReceived'
+                : 'engagement';
+
+        if (walletAddress.isNotEmpty && statsProvider.analyticsEnabled) {
+          unawaited(statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: metric,
+            bucket: bucket,
+            timeframe: timeframe,
+            from: currentFrom.toIso8601String(),
+            to: currentTo.toIso8601String(),
+            scope: 'private',
+          ));
+          unawaited(statsProvider.ensureSeries(
+            entityType: 'user',
+            entityId: walletAddress,
+            metric: metric,
+            bucket: bucket,
+            timeframe: timeframe,
+            from: prevFrom.toIso8601String(),
+            to: prevTo.toIso8601String(),
+            scope: 'private',
+          ));
+        }
+
+        final series = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSeries(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: metric,
+                bucket: bucket,
+                timeframe: timeframe,
+                from: currentFrom.toIso8601String(),
+                to: currentTo.toIso8601String(),
+                scope: 'private',
+              );
+        final prevSeries = walletAddress.isEmpty
+            ? null
+            : statsProvider.getSeries(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: metric,
+                bucket: bucket,
+                timeframe: timeframe,
+                from: prevFrom.toIso8601String(),
+                to: prevTo.toIso8601String(),
+                scope: 'private',
+              );
+
+        final values = _filledValues(
+          series,
+          windowEnd: currentTo,
+          timeframe: timeframe,
+          bucket: bucket,
+        );
+        final previousValues = _filledValues(
+          prevSeries,
+          windowEnd: prevTo,
+          timeframe: timeframe,
+          bucket: bucket,
+        );
+
+        final avg = values.isEmpty ? 0.0 : values.reduce((a, b) => a + b) / values.length;
+        final averageValues = values.isEmpty ? const <double>[] : List<double>.filled(values.length, avg);
+
+        final hasSeries = values.any((v) => v > 0) || previousValues.any((v) => v > 0);
+        final isLoading = walletAddress.isNotEmpty &&
+            statsProvider.analyticsEnabled &&
+            ((series == null &&
+                    statsProvider.isSeriesLoading(
+                      entityType: 'user',
+                      entityId: walletAddress,
+                      metric: metric,
+                      bucket: bucket,
+                      timeframe: timeframe,
+                      from: currentFrom.toIso8601String(),
+                      to: currentTo.toIso8601String(),
+                      scope: 'private',
+                    )) ||
+                (prevSeries == null &&
+                    statsProvider.isSeriesLoading(
+                      entityType: 'user',
+                      entityId: walletAddress,
+                      metric: metric,
+                      bucket: bucket,
+                      timeframe: timeframe,
+                      from: prevFrom.toIso8601String(),
+                      to: prevTo.toIso8601String(),
+                      scope: 'private',
+                    )));
+
+        final currentLineColor = themeProvider.accentColor;
+        final previousLineColor = scheme.secondary;
+        final averageLineColor = scheme.tertiary;
+
         return Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -396,13 +794,69 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               const SizedBox(height: 20),
               SizedBox(
                 height: 200,
-                child: CustomPaint(
-                  painter: LineChartPainter(_currentChartIndex, Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.1)),
-                  size: const Size(double.infinity, 200),
-                ),
+                child: walletAddress.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Connect wallet to view analytics.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : !statsProvider.analyticsEnabled
+                        ? Center(
+                            child: Text(
+                              'Analytics is disabled in settings.',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: scheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : isLoading
+                            ? Center(
+                                child: SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: themeProvider.accentColor,
+                                  ),
+                                ),
+                              )
+                            : !hasSeries
+                            ? Center(
+                                child: Text(
+                                  'No analytics data yet.',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: scheme.onSurface.withValues(alpha: 0.7),
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : CustomPaint(
+                                painter: LineChartPainter(
+                                  current: values,
+                                  previous: previousValues,
+                                  average: averageValues,
+                                  currentColor: currentLineColor,
+                                  previousColor: previousLineColor,
+                                  averageColor: averageLineColor,
+                                  gridColor: scheme.onPrimary.withValues(alpha: 0.1),
+                                ),
+                                size: const Size(double.infinity, 200),
+                              ),
               ),
               const SizedBox(height: 16),
-              _buildChartLegend(),
+              _buildChartLegend(
+                currentColor: currentLineColor,
+                previousColor: previousLineColor,
+                averageColor: averageLineColor,
+              ),
             ],
           ),
         );
@@ -497,8 +951,12 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     );
   }
 
-  Widget _buildChartLegend() {
-    final colors = [Colors.blue, Colors.green, Colors.orange];
+  Widget _buildChartLegend({
+    required Color currentColor,
+    required Color previousColor,
+    required Color averageColor,
+  }) {
+    final colors = [currentColor, previousColor, averageColor];
     final labels = ['This Period', 'Previous Period', 'Average'];
     
     return LayoutBuilder(
@@ -899,25 +1357,31 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
     return weeks <= 1 ? '1w ago' : '${weeks}w ago';
   }
 
-// Custom painter for line chart
 class LineChartPainter extends CustomPainter {
-  final int chartType;
+  final List<double> current;
+  final List<double> previous;
+  final List<double> average;
+  final Color currentColor;
+  final Color previousColor;
+  final Color averageColor;
   final Color gridColor;
 
-  LineChartPainter(this.chartType, this.gridColor);
+  LineChartPainter({
+    required this.current,
+    required this.previous,
+    required this.average,
+    required this.currentColor,
+    required this.previousColor,
+    required this.averageColor,
+    required this.gridColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.blue
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
     final gridPaint = Paint()
       ..color = gridColor
       ..strokeWidth = 0.5;
 
-    // Draw grid
     for (int i = 0; i <= 5; i++) {
       final y = size.height * i / 5;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
@@ -928,58 +1392,76 @@ class LineChartPainter extends CustomPainter {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
 
-    // Generate sample data based on chart type
-    final points = _generateDataPoints(size);
-    
-    // Draw line
-    final path = Path();
-    if (points.isNotEmpty) {
-      path.moveTo(points[0].dx, points[0].dy);
-      for (int i = 1; i < points.length; i++) {
-        path.lineTo(points[i].dx, points[i].dy);
-      }
+    double maxValue = 0;
+    for (final v in current) {
+      if (v > maxValue) maxValue = v;
     }
-    
-    canvas.drawPath(path, paint);
+    for (final v in previous) {
+      if (v > maxValue) maxValue = v;
+    }
+    for (final v in average) {
+      if (v > maxValue) maxValue = v;
+    }
+    if (maxValue <= 0) maxValue = 1;
 
-    // Draw points
-    final pointPaint = Paint()
-      ..color = Colors.blue
-      ..style = PaintingStyle.fill;
+    void drawSeries(List<double> values, Color color, double strokeWidth) {
+      if (values.isEmpty) return;
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = strokeWidth
+        ..style = PaintingStyle.stroke;
 
-    for (final point in points) {
-      canvas.drawCircle(point, 3, pointPaint);
+      final offsets = _toOffsets(values, size, maxValue);
+      if (offsets.isEmpty) return;
+      final path = Path()..moveTo(offsets.first.dx, offsets.first.dy);
+      for (var i = 1; i < offsets.length; i += 1) {
+        path.lineTo(offsets[i].dx, offsets[i].dy);
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    drawSeries(previous, previousColor.withValues(alpha: 0.7), 1.5);
+    drawSeries(average, averageColor.withValues(alpha: 0.6), 1.0);
+    drawSeries(current, currentColor, 2.0);
+
+    if (current.isNotEmpty) {
+      final pointPaint = Paint()
+        ..color = currentColor
+        ..style = PaintingStyle.fill;
+
+      for (final offset in _toOffsets(current, size, maxValue)) {
+        canvas.drawCircle(offset, 2.5, pointPaint);
+      }
     }
   }
 
-  List<Offset> _generateDataPoints(Size size) {
+  List<Offset> _toOffsets(List<double> values, Size size, double maxValue) {
     final points = <Offset>[];
-    final data = _getSampleData();
-    
-    for (int i = 0; i < data.length; i++) {
-      final x = size.width * i / (data.length - 1);
-      final y = size.height * (1 - data[i]);
+    if (values.isEmpty) return points;
+    if (values.length == 1) {
+      final y = size.height * (1 - (values.first / maxValue));
+      points.add(Offset(0, y));
+      return points;
+    }
+
+    for (var i = 0; i < values.length; i += 1) {
+      final x = size.width * i / (values.length - 1);
+      final y = size.height * (1 - (values[i] / maxValue));
       points.add(Offset(x, y));
     }
-    
     return points;
   }
 
-  List<double> _getSampleData() {
-    switch (chartType) {
-      case 0: // Revenue
-        return [0.2, 0.3, 0.25, 0.6, 0.8, 0.7, 0.9];
-      case 1: // Views
-        return [0.1, 0.4, 0.3, 0.7, 0.6, 0.8, 0.85];
-      case 2: // Engagement
-        return [0.3, 0.2, 0.5, 0.4, 0.7, 0.6, 0.8];
-      default:
-        return [0.2, 0.3, 0.25, 0.6, 0.8, 0.7, 0.9];
-    }
-  }
-
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant LineChartPainter oldDelegate) {
+    return !listEquals(oldDelegate.current, current) ||
+        !listEquals(oldDelegate.previous, previous) ||
+        !listEquals(oldDelegate.average, average) ||
+        oldDelegate.currentColor != currentColor ||
+        oldDelegate.previousColor != previousColor ||
+        oldDelegate.averageColor != averageColor ||
+        oldDelegate.gridColor != gridColor;
+  }
 }
 
 

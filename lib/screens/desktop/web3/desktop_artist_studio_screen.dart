@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import 'dart:async';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
+import '../../../providers/stats_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
@@ -653,6 +655,51 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildStatsGrid(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final statsProvider = context.watch<StatsProvider>();
+    final wallet = _resolveWalletAddress(listen: true);
+
+    const metrics = <String>[
+      'artworks',
+      'viewsReceived',
+      'likesReceived',
+      'achievementTokensTotal',
+    ];
+
+    if (wallet.isNotEmpty) {
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: wallet,
+        metrics: metrics,
+        scope: 'public',
+      ));
+    }
+
+    final snapshot = wallet.isEmpty
+        ? null
+        : statsProvider.getSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: metrics,
+            scope: 'public',
+          );
+    final isLoading = wallet.isNotEmpty &&
+        statsProvider.isSnapshotLoading(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: metrics,
+          scope: 'public',
+        ) &&
+        snapshot == null;
+
+    final counters = snapshot?.counters ?? const <String, int>{};
+    final artworks = wallet.isEmpty ? null : (counters['artworks'] ?? 0);
+    final views = wallet.isEmpty ? null : (counters['viewsReceived'] ?? 0);
+    final likes = wallet.isEmpty ? null : (counters['likesReceived'] ?? 0);
+    final earnedKub8 = wallet.isEmpty ? null : (counters['achievementTokensTotal'] ?? 0);
+
+    String displayCount(int? value) => isLoading ? '…' : (value?.toString() ?? '—');
+    String displayKub8(int? value) => isLoading ? '…' : (value == null ? '—' : '${value.toString()} KUB8');
+
     return Column(
       children: [
         Row(
@@ -660,7 +707,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             Expanded(
               child: _buildStatCard(
                 l10n.desktopArtistStudioStatArtworks,
-                '0',
+                displayCount(artworks),
                 Icons.collections_outlined,
                 AppColorUtils.tealAccent, // Collections
               ),
@@ -669,7 +716,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             Expanded(
               child: _buildStatCard(
                 l10n.desktopArtistStudioStatViews,
-                '0',
+                displayCount(views),
                 Icons.visibility_outlined,
                 scheme.secondary,
               ),
@@ -682,7 +729,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             Expanded(
               child: _buildStatCard(
                 l10n.desktopArtistStudioStatLikes,
-                '0',
+                displayCount(likes),
                 Icons.favorite_outline,
                 scheme.tertiary,
               ),
@@ -691,7 +738,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
             Expanded(
               child: _buildStatCard(
                 l10n.desktopArtistStudioStatSales,
-                '0 KUB8',
+                displayKub8(earnedKub8),
                 Icons.attach_money,
                 scheme.primary,
               ),

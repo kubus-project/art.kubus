@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -16,6 +17,7 @@ import '../../community/community_interactions.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/dao_provider.dart';
+import '../../providers/stats_provider.dart';
 import '../../core/conversation_navigator.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
@@ -164,28 +166,24 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     }
   }
 
-  int _parseStatValue(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.round();
-    if (value is String) return int.tryParse(value) ?? 0;
-    try {
-      return int.parse(value.toString());
-    } catch (_) {
-      return 0;
-    }
-  }
-
-  Future<void> _loadUserStats({bool skipFollowersOverwrite = false}) async {
+  Future<void> _loadUserStats({bool skipFollowersOverwrite = false, bool forceRefresh = false}) async {
     final profile = user;
     if (profile == null) return;
     try {
-      final stats = await BackendApiService().getUserStats(profile.id);
+      final statsProvider = context.read<StatsProvider>();
+      final snapshot = await statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: profile.id,
+        metrics: const ['posts', 'followers', 'following'],
+        scope: 'public',
+        forceRefresh: forceRefresh,
+      );
       if (!mounted) return;
       setState(() {
-        final fetchedPosts = _parseStatValue(stats['postsCount'] ?? stats['posts']);
-        final fetchedFollowers = _parseStatValue(stats['followersCount'] ?? stats['followers']);
-        final fetchedFollowing = _parseStatValue(stats['followingCount'] ?? stats['following']);
+        final counters = snapshot?.counters ?? const <String, int>{};
+        final fetchedPosts = counters['posts'] ?? 0;
+        final fetchedFollowers = counters['followers'] ?? 0;
+        final fetchedFollowing = counters['following'] ?? 0;
 
         var resolvedFollowers = fetchedFollowers;
         var resolvedFollowing = fetchedFollowing;
@@ -203,7 +201,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
         );
       });
     } catch (e) {
-      debugPrint('Failed to load user stats: $e');
+      if (kDebugMode) {
+        debugPrint('UserProfileScreen._loadUserStats: $e');
+      }
     }
   }
 
@@ -243,7 +243,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       UserService.fetchAndUpdateUserStats(user!.id);
     } catch (_) {}
 
-    await _loadUserStats(skipFollowersOverwrite: true);
+    await _loadUserStats(skipFollowersOverwrite: true, forceRefresh: true);
     await _loadPosts();
     await _maybeLoadArtistData(force: true);
   }
@@ -390,7 +390,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
       );
     }
 
-    await _loadUserStats();
+    await _loadUserStats(forceRefresh: true);
     // Persist updated user in cache so other screens see immediate change
     try {
       if (user != null) UserService.setUsersInCache([user!]);

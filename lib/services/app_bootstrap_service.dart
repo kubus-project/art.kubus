@@ -18,6 +18,7 @@ import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/saved_items_provider.dart';
+import '../providers/stats_provider.dart';
 import '../providers/task_provider.dart';
 import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
@@ -56,6 +57,7 @@ class AppBootstrapService {
     final taskProvider = context.read<TaskProvider>();
     final appRefreshProvider = context.read<AppRefreshProvider>();
     final collabProvider = context.read<CollabProvider>();
+    final statsProvider = context.read<StatsProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
 
@@ -72,6 +74,7 @@ class AppBootstrapService {
       _runTask('cache', cacheProvider.initialize),
       _runTask('saved_items', savedItemsProvider.initialize),
       _runTask('navigation', navigationProvider.initialize),
+      _runTask('stats', statsProvider.initialize),
       _runTask('tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
       _runTask('collectibles', () => collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment)),
@@ -103,6 +106,12 @@ class AppBootstrapService {
           await profileProvider.loadProfile(resolvedWallet);
           await profileProvider.refreshStats();
         }));
+        futures.add(_runTask('stats_snapshot', () => statsProvider.ensureSnapshot(
+              entityType: 'user',
+              entityId: resolvedWallet,
+              metrics: const ['followers', 'following', 'posts', 'artworks', 'viewsReceived'],
+              scope: 'public',
+            )));
       }
     }
 

@@ -146,6 +146,8 @@ class StatsChartPainter extends CustomPainter {
       );
     }
 
+    if (data.isEmpty) return;
+
     // Find min and max values for scaling
     final maxValue = data.reduce((a, b) => a > b ? a : b);
     final minValue = data.reduce((a, b) => a < b ? a : b);
@@ -358,21 +360,26 @@ class _EnhancedBarChartState extends State<EnhancedBarChart>
               builder: (context, child) {
                 return LayoutBuilder(
                   builder: (context, constraints) {
-                    final maxValue = widget.data.reduce((a, b) => a > b ? a : b);
-                    final minValue = widget.data.reduce((a, b) => a < b ? a : b);
+                    final maxValue = widget.data.isEmpty
+                        ? 0.0
+                        : widget.data.reduce((a, b) => a > b ? a : b);
+                    final minValue = widget.data.isEmpty
+                        ? 0.0
+                        : widget.data.reduce((a, b) => a < b ? a : b);
                     final range = maxValue - minValue;
-                    
+                     
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: widget.data.asMap().entries.map((entry) {
                         final index = entry.key;
                         final value = entry.value;
-                        final normalizedHeight = range > 0 
-                            ? ((value - minValue) / range) * (constraints.maxHeight - 40)
-                            : constraints.maxHeight * 0.3;
+                        final normalizedHeight = range > 0
+                            ? ((value - minValue) / range) *
+                                (constraints.maxHeight - 40)
+                            : (maxValue == 0.0 ? 0.0 : (constraints.maxHeight - 40));
                         final barHeight = (normalizedHeight * _animation.value).clamp(4.0, constraints.maxHeight - 30);
-                        
+                         
                         return Flexible(
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 2),

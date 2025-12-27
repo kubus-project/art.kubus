@@ -13,6 +13,7 @@ import '../models/wallet.dart';
 import '../models/swap_quote.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
+import '../services/stats_api_service.dart';
 import '../services/user_service.dart';
 import '../config/api_keys.dart';
 import '../utils/wallet_utils.dart';
@@ -763,21 +764,19 @@ class WalletProvider extends ChangeNotifier {
         debugPrint('WalletProvider._syncBackendData: profile lookup failed: $e');
       }
 
-      // Collections
+      // Canonical user snapshot (collections + achievement stats)
       try {
-        final collections = await _apiService.getCollections(walletAddress: address);
-        _collectionsCount = collections.length;
+        final snapshot = await StatsApiService(api: _apiService).fetchSnapshot(
+          entityType: 'user',
+          entityId: address,
+          metrics: const ['collections', 'achievementsUnlocked', 'achievementTokensTotal'],
+          scope: 'public',
+        );
+        _collectionsCount = snapshot.counters['collections'] ?? 0;
+        _achievementsUnlocked = snapshot.counters['achievementsUnlocked'] ?? 0;
+        _achievementTokenTotal = (snapshot.counters['achievementTokensTotal'] ?? 0).toDouble();
       } catch (e) {
-        debugPrint('collections fetch failed: $e');
-      }
-
-      // Achievement stats
-      try {
-        final stats = await _apiService.getAchievementStats(address);
-        _achievementsUnlocked = (stats['unlocked'] as int?) ?? 0;
-        _achievementTokenTotal = (stats['totalTokens'] as num?)?.toDouble() ?? 0.0;
-      } catch (e) {
-        debugPrint('achievement stats fetch failed: $e');
+        debugPrint('stats snapshot fetch failed: $e');
       }
 
       // Try to issue backend token for this wallet to ensure API auth is ready

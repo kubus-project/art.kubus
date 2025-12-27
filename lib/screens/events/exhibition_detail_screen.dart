@@ -36,6 +36,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      final provider = context.read<ExhibitionsProvider>();
+      unawaited(provider.recordExhibitionView(widget.exhibitionId, source: 'exhibition_detail'));
       unawaited(_load());
     });
   }

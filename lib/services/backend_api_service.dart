@@ -1334,6 +1334,100 @@ class BackendApiService {
     }
   }
 
+  /// Get canonical stats snapshot
+  /// GET /api/stats/:entityType/:entityId
+  Future<Map<String, dynamic>> getStatsSnapshot({
+    required String entityType,
+    required String entityId,
+    List<String> metrics = const [],
+    String scope = 'public',
+    String? groupBy,
+  }) async {
+    try {
+      // Snapshot is public, but include auth when available (private stats allowed for owners).
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final queryParams = <String, String>{};
+      if (metrics.isNotEmpty) queryParams['metrics'] = metrics.join(',');
+      if (scope.trim().isNotEmpty) queryParams['scope'] = scope.trim();
+      if (groupBy != null && groupBy.trim().isNotEmpty) queryParams['groupBy'] = groupBy.trim();
+
+      final encodedId = Uri.encodeComponent(entityId);
+      final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId')
+          .replace(queryParameters: queryParams.isEmpty ? null : queryParams);
+      final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is Map<String, dynamic>) return data;
+        }
+        throw Exception('Unexpected stats snapshot payload');
+      }
+
+      throw Exception('Failed to get stats snapshot (${response.statusCode})');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.getStatsSnapshot: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Get canonical stats series (graph-ready)
+  /// GET /api/stats/:entityType/:entityId/series
+  Future<Map<String, dynamic>> getStatsSeries({
+    required String entityType,
+    required String entityId,
+    required String metric,
+    String bucket = 'day',
+    String timeframe = '30d',
+    String? from,
+    String? to,
+    String? groupBy,
+    String scope = 'public',
+  }) async {
+    try {
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final queryParams = <String, String>{
+        'metric': metric,
+        'bucket': bucket,
+      };
+      if (timeframe.trim().isNotEmpty) queryParams['timeframe'] = timeframe.trim();
+      if (from != null && from.trim().isNotEmpty) queryParams['from'] = from.trim();
+      if (to != null && to.trim().isNotEmpty) queryParams['to'] = to.trim();
+      if (groupBy != null && groupBy.trim().isNotEmpty) queryParams['groupBy'] = groupBy.trim();
+      if (scope.trim().isNotEmpty) queryParams['scope'] = scope.trim();
+
+      final encodedId = Uri.encodeComponent(entityId);
+      final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId/series')
+          .replace(queryParameters: queryParams);
+      final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic>) {
+          final data = decoded['data'];
+          if (data is Map<String, dynamic>) return data;
+        }
+        throw Exception('Unexpected stats series payload');
+      }
+
+      throw Exception('Failed to get stats series (${response.statusCode})');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.getStatsSeries: $e');
+      }
+      rethrow;
+    }
+  }
+
   // ==================== Mock Data API (New) ====================
 
   /// Get mock artworks (development/testing)
@@ -1799,6 +1893,54 @@ class BackendApiService {
       // View counting should be non-fatal for the UI.
       debugPrint('Error recording artwork view: $e');
       return null;
+    }
+  }
+
+  /// Record a view for an event
+  /// POST /api/events/:id/view
+  Future<void> recordEventView(String eventId, {String? source}) async {
+    try {
+      // Views are allowed anonymously, but include auth when available.
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final uri = Uri.parse('$baseUrl/api/events/$eventId/view').replace(
+        queryParameters: (source != null && source.trim().isNotEmpty)
+            ? <String, String>{'source': source.trim()}
+            : null,
+      );
+
+      final response = await http.post(uri, headers: _getHeaders(includeAuth: true));
+      if (response.statusCode == 200) return;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.recordEventView: $e');
+      }
+    }
+  }
+
+  /// Record a view for an exhibition
+  /// POST /api/exhibitions/:id/view
+  Future<void> recordExhibitionView(String exhibitionId, {String? source}) async {
+    try {
+      // Views are allowed anonymously, but include auth when available.
+      try {
+        await _ensureAuthWithStoredWallet();
+      } catch (_) {}
+
+      final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/view').replace(
+        queryParameters: (source != null && source.trim().isNotEmpty)
+            ? <String, String>{'source': source.trim()}
+            : null,
+      );
+
+      final response = await http.post(uri, headers: _getHeaders(includeAuth: true));
+      if (response.statusCode == 200) return;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.recordExhibitionView: $e');
+      }
     }
   }
 
