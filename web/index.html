@@ -21,6 +21,7 @@
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="art.kubus">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
@@ -40,14 +41,20 @@
     (function() {
       try {
         var hostname = location.hostname || '';
+        var qs = (location.search || '').toLowerCase();
+        // Opt-in escape hatch for production deployments: append `?clear_sw=1`
+        // to clear the Flutter service worker + caches and force a clean reload.
+        // This is intentionally NOT automatic in production.
+        var forceClear = qs.indexOf('clear_sw=1') !== -1 || qs.indexOf('clear-sw=1') !== -1;
+
         var isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || location.port !== '';
-        if (!isLocalHost) return;
+        if (!isLocalHost && !forceClear) return;
 
         if ('serviceWorker' in navigator) {
           navigator.serviceWorker.getRegistrations()
             .then(function(regs) {
               regs.forEach(function(r) {
-                try { console.info('Dev helper: unregistering service worker at', r.scope); } catch(e) {}
+                try { if (isLocalHost) console.info('Dev helper: unregistering service worker at', r.scope); } catch(e) {}
                 r.unregister();
               });
             })
@@ -63,12 +70,28 @@
                   // Only delete caches that look like Flutter-generated caches
                   if (n.indexOf('flutter') !== -1 || n.indexOf('flutter-app-manifest') !== -1 || n.indexOf('flutter-temp-cache') !== -1) {
                     caches.delete(name);
-                    try { console.info('Dev helper: deleted cache', name); } catch(e) {}
+                    try { if (isLocalHost) console.info('Dev helper: deleted cache', name); } catch(e) {}
                   }
                 } catch (e) { /* ignore individual cache errors */ }
               });
             })
             .catch(function(e) { console.warn('Dev helper: caches.keys failed', e); });
+        }
+
+        // If this was a forced production clear, reload once without the flag.
+        if (forceClear) {
+          try {
+            var url = new URL(location.href);
+            url.searchParams.delete('clear_sw');
+            url.searchParams.delete('clear-sw');
+            // Also drop the raw query token variants.
+            var cleaned = url.toString().replace(/([?&])clear_sw=1(&|$)/, '$1').replace(/([?&])clear-sw=1(&|$)/, '$1');
+            // Normalize any trailing ? or &
+            cleaned = cleaned.replace(/[?&]$/, '');
+            location.replace(cleaned);
+          } catch (e) {
+            location.reload();
+          }
         }
       } catch (e) {
         console.warn('Dev helper: unregister script failed', e);
@@ -101,7 +124,6 @@
 
     .contain {
       display:block;
-      width:100%; height:100%;
       object-fit: contain;
     }
 
@@ -117,7 +139,6 @@
     }
 
     .bottom {
-      position: absolute;
       bottom: 0;
       left: 50%;
       -ms-transform: translate(-50%, 0);

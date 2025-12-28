@@ -17,6 +17,7 @@ import '../../../providers/themeprovider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/stats_provider.dart';
+import '../../../providers/app_refresh_provider.dart';
 import '../../../core/conversation_navigator.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
@@ -1544,6 +1545,10 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           duration: const Duration(seconds: 2),
         ),
       );
+      try {
+        context.read<AppRefreshProvider>().triggerCommunity();
+        context.read<AppRefreshProvider>().triggerProfile();
+      } catch (_) {}
     }
 
     await _loadUserStats(forceRefresh: true);

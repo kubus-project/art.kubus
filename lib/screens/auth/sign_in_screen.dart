@@ -20,7 +20,14 @@ import '../desktop/auth/desktop_auth_shell.dart';
 import '../desktop/desktop_shell.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  const SignInScreen({
+    super.key,
+    this.redirectRoute,
+    this.redirectArguments,
+  });
+
+  final String? redirectRoute;
+  final Object? redirectArguments;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -41,6 +48,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
+    final redirectRoute = widget.redirectRoute?.trim();
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
@@ -80,6 +88,15 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     }
     if (!mounted) return;
+
+    if (redirectRoute != null && redirectRoute.isNotEmpty) {
+      Navigator.of(context).pushReplacementNamed(
+        redirectRoute,
+        arguments: widget.redirectArguments,
+      );
+      return;
+    }
+
     Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const MainApp()));
   }
 

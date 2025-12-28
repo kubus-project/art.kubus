@@ -8,9 +8,11 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../models/artwork.dart';
 import '../../models/artwork_comment.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/nft_minting_service.dart';
 import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
@@ -52,10 +54,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       vsync: this,
     );
 
-    _loadArtworkDetails();
-    
-    // Increment view count when screen loads
+    // Defer context-dependent work until after the first frame so inherited
+    // widgets (localizations/theme) are available.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _loadArtworkDetails();
       context.read<ArtworkProvider>().incrementViewCount(widget.artworkId);
     });
   }
@@ -101,9 +104,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Consumer<ArtworkProvider>(
-      builder: (context, artworkProvider, child) {
+    return Consumer2<ArtworkProvider, ProfileProvider>(
+      builder: (context, artworkProvider, profileProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
+        final isSignedIn = profileProvider.isSignedIn;
         
         if (_artworkLoading) {
           return Scaffold(
@@ -195,10 +199,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     ],
                   ),
                 ),
-              );
-            },
+            );
+          },
           ),
-          floatingActionButton: _showComments ? _buildCommentFAB(artwork) : null,
+          floatingActionButton: (_showComments && isSignedIn) ? _buildCommentFAB(artwork) : null,
         );
       },
     );
@@ -750,6 +754,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
     final comments = provider.getComments(artwork.id);
     final isLoading = provider.isLoading('load_comments_${artwork.id}');
+    final error = provider.commentLoadError(artwork.id);
+    final isSignedIn = context.watch<ProfileProvider>().isSignedIn;
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -762,6 +769,33 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ),
         ),
         const SizedBox(height: 16),
+        if (error != null)
+          Container(
+            padding: const EdgeInsets.all(12),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning, color: Theme.of(context).colorScheme.onErrorContainer),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    error,
+                    style: GoogleFonts.outfit(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => provider.loadComments(artwork.id, force: true),
+                  child: Text(l10n.commonRetry),
+                ),
+              ],
+            ),
+          ),
         if (isLoading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
@@ -786,6 +820,28 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           )
         else
           ...comments.map((comment) => _buildCommentItem(comment, provider)),
+        const SizedBox(height: 12),
+        if (!isSignedIn)
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                final nav = Navigator.of(context);
+                nav.pushNamed(
+                  '/sign-in',
+                  arguments: {
+                    'redirectRoute': '/artwork',
+                    'redirectArguments': {'artworkId': artwork.id},
+                  },
+                );
+              },
+              icon: const Icon(Icons.login),
+              label: Text(
+                'Sign in to comment',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -973,32 +1029,93 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   void _submitComment(Artwork artwork, ArtworkProvider provider) async {
-    if (_commentController.text.trim().isEmpty) return;
+    final content = _commentController.text.trim();
+    if (content.isEmpty) return;
+
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    if (!profileProvider.isSignedIn) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.communityCommentAuthRequiredToast, style: GoogleFonts.outfit()),
+          action: SnackBarAction(
+            label: 'Sign in',
+            onPressed: () {
+              navigator.pushNamed(
+                '/sign-in',
+                arguments: {
+                  'redirectRoute': '/artwork',
+                  'redirectArguments': {'artworkId': artwork.id},
+                },
+              );
+            },
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final userId = walletProvider.currentWalletAddress ?? 'anonymous_user';
-    final userName = walletProvider.currentWalletAddress != null 
-        ? 'User ${walletProvider.currentWalletAddress!.substring(0, 8)}...' 
-        : 'Anonymous User';
+    final walletAddress = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
+    final displayName = profileProvider.currentUser?.displayName
+        ?? profileProvider.currentUser?.username
+        ?? (walletAddress != null && walletAddress.length >= 8 ? 'User ${walletAddress.substring(0, 8)}...' : 'User');
+    final optimisticId = walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
 
-    await provider.addComment(
-      artwork.id,
-      _commentController.text.trim(),
-      userId,
-      userName,
-    );
+    try {
+      await provider.addComment(
+        artwork.id,
+        content,
+        optimisticId,
+        displayName,
+      );
 
-    if (mounted) {
+      if (!mounted) return;
       _commentController.clear();
-      Navigator.pop(context);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
+      navigator.pop();
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('Comment added successfully!', style: GoogleFonts.outfit()),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } on BackendApiRequestException catch (e) {
+      if (!mounted) return;
+      final authRequired = e.statusCode == 401 || e.statusCode == 403;
+      messenger.showSnackBar(
         SnackBar(
           content: Text(
-            'Comment added successfully!',
+            authRequired ? l10n.communityCommentAuthRequiredToast : l10n.commonSomethingWentWrong,
             style: GoogleFonts.outfit(),
           ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
+          action: authRequired
+              ? SnackBarAction(
+                  label: 'Sign in',
+                  onPressed: () {
+                    navigator.pushNamed(
+                      '/sign-in',
+                      arguments: {
+                        'redirectRoute': '/artwork',
+                        'redirectArguments': {'artworkId': artwork.id},
+                      },
+                    );
+                  },
+                )
+              : null,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.commonSomethingWentWrong, style: GoogleFonts.outfit()),
+          duration: const Duration(seconds: 4),
         ),
       );
     }

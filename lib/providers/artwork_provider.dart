@@ -15,6 +15,8 @@ import 'saved_items_provider.dart';
 class ArtworkProvider extends ChangeNotifier {
   final List<Artwork> _artworks = [];
   final Map<String, List<ArtworkComment>> _comments = {};
+  final Map<String, String?> _commentLoadErrors = <String, String?>{};
+  final Map<String, String?> _commentSubmitErrors = <String, String?>{};
   final Map<String, bool> _loadingStates = {};
   final Set<String> _walletsWithPrivateArtworks = <String>{};
   String? _error;
@@ -432,13 +434,15 @@ class ArtworkProvider extends ChangeNotifier {
   Future<void> loadComments(String artworkId, {bool force = false}) async {
     final operation = 'load_comments_$artworkId';
     if (!force && isLoading(operation)) return;
+    _commentLoadErrors[artworkId] = null;
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtworkComments(artworkId: artworkId, page: 1, limit: 100);
       _comments[artworkId] = _nestArtworkComments(fetched);
       notifyListeners();
     } catch (e) {
-      _setError('Failed to load comments: $e');
+      _commentLoadErrors[artworkId] = 'Failed to load comments: $e';
+      _setError(_commentLoadErrors[artworkId]!);
     } finally {
       _setLoading(operation, false);
     }
@@ -449,11 +453,15 @@ class ArtworkProvider extends ChangeNotifier {
     return _comments[artworkId] ?? [];
   }
 
+  String? commentLoadError(String artworkId) => _commentLoadErrors[artworkId];
+  String? commentSubmitError(String artworkId) => _commentSubmitErrors[artworkId];
+
   /// Add comment to artwork
-  Future<void> addComment(String artworkId, String content, String userId, String userName) async {
+  Future<ArtworkComment> addComment(String artworkId, String content, String userId, String userName) async {
     _setLoading('comment_$artworkId', true);
+    _commentSubmitErrors[artworkId] = null;
+    final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
     try {
-      final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
       final newComment = ArtworkComment(
         id: tempId,
         artworkId: artworkId,
@@ -480,40 +488,45 @@ class ArtworkProvider extends ChangeNotifier {
       notifyListeners();
       
       // Sync with backend and replace optimistic comment.
-      try {
-        final created = await _backendApi.createArtworkComment(
-          artworkId: artworkId,
-          content: content,
-        );
-        final list = _comments[artworkId];
-        if (list != null) {
-          final idx = list.indexWhere((c) => c.id == tempId);
-          if (idx >= 0) {
-            list[idx] = created;
-            _comments[artworkId] = _nestArtworkComments(list);
-          } else {
-            // If the temp comment isn't present anymore, refresh from backend.
-            await loadComments(artworkId, force: true);
-          }
+      final created = await _backendApi.createArtworkComment(
+        artworkId: artworkId,
+        content: content,
+      );
+
+      final list = _comments[artworkId];
+      if (list != null) {
+        final idx = list.indexWhere((c) => c.id == tempId);
+        if (idx >= 0) {
+          list[idx] = created;
+          _comments[artworkId] = _nestArtworkComments(list);
+        } else {
+          // If the temp comment isn't present anymore, refresh from backend.
+          await loadComments(artworkId, force: true);
         }
-        notifyListeners();
-      } catch (e) {
-        // Rollback optimistic comment + counter.
-        _comments[artworkId]?.removeWhere((c) => c.id == tempId);
-        final artwork = getArtworkById(artworkId);
-        if (artwork != null) {
-          addOrUpdateArtwork(artwork.copyWith(commentsCount: (artwork.commentsCount - 1).clamp(0, 1 << 30)));
-        }
-        notifyListeners();
-        rethrow;
       }
+
+      // Refresh comments from backend to avoid stale caches / ordering issues.
+      await loadComments(artworkId, force: true);
+      notifyListeners();
 
       // Track comment interaction for achievements/tasks
       if (_taskProvider != null) {
         _taskProvider!.trackArtworkComment(artworkId);
       }
+
+      return created;
     } catch (e) {
-      _setError('Failed to add comment: $e');
+      // Rollback optimistic comment + counter.
+      _comments[artworkId]?.removeWhere((c) => c.id == tempId);
+      final artwork = getArtworkById(artworkId);
+      if (artwork != null) {
+        addOrUpdateArtwork(
+          artwork.copyWith(commentsCount: (artwork.commentsCount - 1).clamp(0, 1 << 30)),
+        );
+      }
+      _commentSubmitErrors[artworkId] = 'Failed to add comment: $e';
+      _setError(_commentSubmitErrors[artworkId]!);
+      rethrow;
     } finally {
       _setLoading('comment_$artworkId', false);
     }
