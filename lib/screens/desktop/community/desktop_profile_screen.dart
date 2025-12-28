@@ -12,6 +12,7 @@ import '../../../providers/profile_provider.dart';
 import '../../../providers/dao_provider.dart';
 import '../../../providers/task_provider.dart';
 import '../../../providers/artwork_provider.dart';
+import '../../../providers/stats_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
@@ -915,14 +916,87 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildPerformanceStatsSection(ThemeProvider themeProvider) {
-    return Consumer2<ProfileProvider, ArtworkProvider>(
-      builder: (context, profileProvider, artworkProvider, _) {
+    return Consumer3<ProfileProvider, ArtworkProvider, StatsProvider>(
+      builder: (context, profileProvider, artworkProvider, statsProvider, _) {
+        final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
         final stats = profileProvider.currentUser?.stats;
         final viewHistory = artworkProvider.viewHistoryEntries;
         final viewedCount = viewHistory.length;
-        final discoveries = stats?.artworksDiscovered ?? 0;
-        final created = stats?.artworksCreated ?? 0;
-        final nftsOwned = stats?.nftsOwned ?? 0;
+
+        const publicMetrics = <String>['artworks', 'nftsMinted'];
+        const privateMetrics = <String>['artworksDiscovered'];
+
+        if (wallet.isNotEmpty) {
+          statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: publicMetrics,
+            scope: 'public',
+          );
+          statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: privateMetrics,
+            scope: 'private',
+          );
+        }
+
+        final publicSnapshot = wallet.isEmpty
+            ? null
+            : statsProvider.getSnapshot(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: publicMetrics,
+                scope: 'public',
+              );
+        final privateSnapshot = wallet.isEmpty
+            ? null
+            : statsProvider.getSnapshot(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: privateMetrics,
+                scope: 'private',
+              );
+
+        final publicCounters = publicSnapshot?.counters ?? const <String, int>{};
+        final privateCounters = privateSnapshot?.counters ?? const <String, int>{};
+
+        final publicLoading = wallet.isNotEmpty &&
+            statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: publicMetrics,
+              scope: 'public',
+            ) &&
+            publicSnapshot == null;
+        final privateLoading = wallet.isNotEmpty &&
+            statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: privateMetrics,
+              scope: 'private',
+            ) &&
+            privateSnapshot == null;
+
+        final discoveriesValue = privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
+        final createdValue = publicCounters['artworks'] ?? stats?.artworksCreated;
+        final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
+
+        final discoveriesLabel = privateLoading
+            ? '\u2026'
+            : discoveriesValue == null
+                ? '\u2014'
+                : _formatStatCount(discoveriesValue);
+        final createdLabel = publicLoading
+            ? '\u2026'
+            : createdValue == null
+                ? '\u2014'
+                : _formatStatCount(createdValue);
+        final nftsLabel = publicLoading
+            ? '\u2026'
+            : nftsOwnedValue == null
+                ? '\u2014'
+                : _formatStatCount(nftsOwnedValue);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -946,19 +1020,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 _buildPerformanceStatCard(
                   'Discoveries',
-                  _formatStatCount(discoveries),
+                  discoveriesLabel,
                   Icons.explore_outlined,
                   themeProvider,
                 ),
                 _buildPerformanceStatCard(
                   'Created',
-                  _formatStatCount(created),
+                  createdLabel,
                   Icons.create_outlined,
                   themeProvider,
                 ),
                 _buildPerformanceStatCard(
                   'NFTs Owned',
-                  _formatStatCount(nftsOwned),
+                  nftsLabel,
                   Icons.token_outlined,
                   themeProvider,
                 ),
