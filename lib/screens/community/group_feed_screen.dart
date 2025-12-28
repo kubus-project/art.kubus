@@ -1,13 +1,18 @@
 import 'package:flutter/foundation.dart';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
 import '../../models/community_group.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
+import '../../services/backend_api_service.dart';
+import '../../utils/media_url_resolver.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/empty_state_card.dart';
@@ -26,6 +31,10 @@ class GroupFeedScreen extends StatefulWidget {
 class _GroupFeedScreenState extends State<GroupFeedScreen> {
   late CommunityGroupSummary _group;
   bool _membershipInFlight = false;
+  final TextEditingController _composerController = TextEditingController();
+  bool _posting = false;
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
 
   @override
   void initState() {
@@ -38,6 +47,12 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         hub.loadGroups();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _composerController.dispose();
+    super.dispose();
   }
 
   @override
@@ -98,6 +113,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
               padding: const EdgeInsets.all(24),
               children: [
                 _buildGroupHeader(summary),
+                const SizedBox(height: 16),
+                _buildComposer(summary, hub),
                 const SizedBox(height: 16),
                 if (error != null)
                   Container(
@@ -167,6 +184,218 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
     _group = match;
     return match;
+  }
+
+  Widget _buildComposer(CommunityGroupSummary summary, CommunityHubProvider hub) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final profileProvider = context.watch<ProfileProvider>();
+    final isSignedIn = profileProvider.isSignedIn;
+    final isMember = summary.isMember || summary.isOwner;
+
+    if (!isSignedIn) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.login, color: scheme.onSurface.withValues(alpha: 0.7)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Sign in to post.',
+                style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pushNamed('/sign-in'),
+              child: const Text('Sign in'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!isMember) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lock_outline, color: scheme.onSurface.withValues(alpha: 0.7)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Join this group to post.',
+                style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+              ),
+            ),
+            TextButton(
+              onPressed: _membershipInFlight ? null : () => _toggleMembership(hub, summary),
+              child: Text(l10n.commonJoin),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _composerController,
+            minLines: 2,
+            maxLines: 5,
+            decoration: InputDecoration(
+              hintText: l10n.communityComposerTextHint,
+              filled: true,
+              fillColor: scheme.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          if (_selectedImageBytes != null) ...[
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Stack(
+                children: [
+                  Image.memory(
+                    _selectedImageBytes!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: IconButton(
+                      style: IconButton.styleFrom(
+                        backgroundColor: scheme.surface.withValues(alpha: 0.8),
+                      ),
+                      onPressed: _posting
+                          ? null
+                          : () => setState(() {
+                                _selectedImage = null;
+                                _selectedImageBytes = null;
+                              }),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              IconButton(
+                tooltip: l10n.commonImage,
+                onPressed: _posting ? null : _pickComposerImage,
+                icon: const Icon(Icons.image_outlined),
+              ),
+              const Spacer(),
+              ElevatedButton(
+                onPressed: _posting ? null : () => _submitGroupPost(summary, hub),
+                child: _posting
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.commonPost),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickComposerImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 85,
+    );
+    if (image == null) return;
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _selectedImage = image;
+      _selectedImageBytes = bytes;
+    });
+  }
+
+  Future<void> _submitGroupPost(CommunityGroupSummary summary, CommunityHubProvider hub) async {
+    if (_posting) return;
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final content = _composerController.text.trim();
+    if (content.isEmpty) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.communityComposerAddContentToast)));
+      return;
+    }
+
+    setState(() => _posting = true);
+    try {
+      String? imageUrl;
+      if (_selectedImageBytes != null && _selectedImage != null) {
+        final upload = await BackendApiService().uploadFile(
+          fileBytes: _selectedImageBytes!,
+          fileName: _selectedImage!.name,
+          fileType: 'community_post_media',
+          metadata: {'scope': 'group_post', 'groupId': summary.id},
+        );
+        final raw = upload['uploadedUrl']?.toString();
+        imageUrl = MediaUrlResolver.resolve(raw) ?? raw;
+      }
+
+      await hub.submitGroupPost(
+        summary.id,
+        content: content,
+        imageUrl: imageUrl,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _posting = false;
+        _composerController.clear();
+        _selectedImage = null;
+        _selectedImageBytes = null;
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.communityComposerPostCreatedToast),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _posting = false);
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.communityComposerCreatePostFailedToast),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _toggleMembership(

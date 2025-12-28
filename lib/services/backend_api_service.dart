@@ -1951,32 +1951,28 @@ class BackendApiService {
     int page = 1,
     int limit = 50,
   }) async {
-    try {
-      // Public, but include auth if available so backend can return isLikedByCurrentUser.
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments').replace(queryParameters: {
-        'page': page.toString(),
-        'limit': limit.toString(),
-      });
-      final response = await http.get(uri, headers: _getHeaders());
+    // Public, but include auth if available so backend can return isLikedByCurrentUser.
+    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments').replace(queryParameters: {
+      'page': page.toString(),
+      'limit': limit.toString(),
+    });
+    final response = await http.get(uri, headers: _getHeaders());
 
-      if (response.statusCode == 200) {
-        final payload = jsonDecode(response.body);
-        if (payload is Map<String, dynamic>) {
-          final raw = payload['data'] as List<dynamic>? ?? <dynamic>[];
-          return raw
-              .whereType<Map<String, dynamic>>()
-              .map(ArtworkComment.fromMap)
-              .toList();
-        }
-        return <ArtworkComment>[];
+    if (response.statusCode == 200) {
+      final payload = jsonDecode(response.body);
+      if (payload is Map<String, dynamic>) {
+        final raw = payload['data'] as List<dynamic>? ?? <dynamic>[];
+        return raw.whereType<Map<String, dynamic>>().map(ArtworkComment.fromMap).toList();
       }
-      debugPrint('BackendApiService.getArtworkComments: non-200 ${response.statusCode}');
-      return <ArtworkComment>[];
-    } catch (e) {
-      debugPrint('BackendApiService.getArtworkComments error: $e');
       return <ArtworkComment>[];
     }
+
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
   }
 
   /// Create a comment for an artwork
@@ -1986,31 +1982,32 @@ class BackendApiService {
     required String content,
     String? parentCommentId,
   }) async {
-    try {
-      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/artworks/$artworkId/comments'),
-        headers: _getHeaders(),
-        body: jsonEncode({
-          'content': content,
-          if (parentCommentId != null && parentCommentId.trim().isNotEmpty)
-            'parentCommentId': parentCommentId.trim(),
-        }),
-      );
+    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments');
+    final response = await http.post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({
+        'content': content,
+        if (parentCommentId != null && parentCommentId.trim().isNotEmpty)
+          'parentCommentId': parentCommentId.trim(),
+      }),
+    );
 
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final payload = jsonDecode(response.body);
-        if (payload is Map<String, dynamic>) {
-          final data = payload['data'] as Map<String, dynamic>? ?? payload;
-          return ArtworkComment.fromMap(data);
-        }
-        throw Exception('Unexpected createArtworkComment payload: ${response.body}');
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final payload = jsonDecode(response.body);
+      if (payload is Map<String, dynamic>) {
+        final data = payload['data'] as Map<String, dynamic>? ?? payload;
+        return ArtworkComment.fromMap(data);
       }
-      throw Exception('Failed to create artwork comment (${response.statusCode})');
-    } catch (e) {
-      debugPrint('Error creating artwork comment: $e');
-      rethrow;
+      throw Exception('Unexpected createArtworkComment payload: ${response.body}');
     }
+
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
   }
 
   /// Discover an artwork and return updated discovery count if available.
@@ -2499,6 +2496,8 @@ class BackendApiService {
     int limit = 50,
   }) async {
     try {
+      // Public-ish, but include auth when available for personalized fields (likes, follows).
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       final qp = {
         'page': page.toString(),
         'limit': limit.toString(),
@@ -2533,6 +2532,7 @@ class BackendApiService {
     double? locationLng,
   }) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       final aggregatedMedia = <String>[];
       if (imageUrl != null && imageUrl.isNotEmpty) {
         aggregatedMedia.add(imageUrl);

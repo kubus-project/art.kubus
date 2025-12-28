@@ -21,6 +21,7 @@ import '../../../models/community_group.dart';
 import '../../../models/conversation.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
+import '../../../services/user_service.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/inline_loading.dart';
@@ -130,6 +131,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   int _lastCommunityRefreshVersion = 0;
   int _lastGlobalRefreshVersion = 0;
   bool _refreshInFlight = false;
+  Set<String> _followingWallets = <String>{};
+  final Set<String> _followRequestsInFlight = <String>{};
 
   // Feed state for different tabs
   List<CommunityPost> _discoverPosts = [];
@@ -165,6 +168,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       _loadFeed();
       _loadSidebarData();
       _initializeChat();
+      unawaited(_syncFollowingWallets());
 
       try {
         _appRefreshProvider = Provider.of<AppRefreshProvider>(context, listen: false);
@@ -191,10 +195,118 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     unawaited(() async {
       try {
         await _loadFeed();
+        await _syncFollowingWallets();
       } finally {
         _refreshInFlight = false;
       }
     }());
+  }
+
+  Future<void> _syncFollowingWallets() async {
+    try {
+      final wallets = await UserService.getFollowingUsers();
+      if (!mounted) return;
+      setState(() {
+        _followingWallets = wallets.map(WalletUtils.canonical).where((w) => w.isNotEmpty).toSet();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _toggleSuggestedFollow({
+    required String walletAddress,
+    required String displayName,
+  }) async {
+    final l10n = AppLocalizations.of(context)!;
+    final profileProvider = context.read<ProfileProvider>();
+    if (!profileProvider.isSignedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileSignInToFollowToast),
+          action: SnackBarAction(
+            label: 'Sign in',
+            onPressed: () => Navigator.of(context).pushNamed('/sign-in'),
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    final wallet = WalletUtils.canonical(walletAddress);
+    if (wallet.isEmpty) return;
+    if (_followRequestsInFlight.contains(wallet)) return;
+
+    final wasFollowing = _followingWallets.contains(wallet);
+    final shouldFollow = !wasFollowing;
+
+    setState(() {
+      _followRequestsInFlight.add(wallet);
+      if (shouldFollow) {
+        _followingWallets.add(wallet);
+      } else {
+        _followingWallets.remove(wallet);
+      }
+    });
+
+    // Optimistically persist local follow state so it survives reloads.
+    try {
+      if (shouldFollow) {
+        await UserService.followUser(wallet);
+      } else {
+        await UserService.unfollowUser(wallet);
+      }
+    } catch (_) {}
+
+    final backend = BackendApiService();
+    try {
+      if (shouldFollow) {
+        await backend.followUser(wallet);
+      } else {
+        await backend.unfollowUser(wallet);
+      }
+
+      if (!mounted) return;
+      setState(() => _followRequestsInFlight.remove(wallet));
+      _appRefreshProvider?.triggerCommunity();
+      _appRefreshProvider?.triggerProfile();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            shouldFollow
+                ? l10n.userProfileNowFollowingToast(displayName)
+                : l10n.userProfileUnfollowedToast(displayName),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    } catch (_) {
+      // Roll back optimistic state on failure.
+      try {
+        if (shouldFollow) {
+          await UserService.unfollowUser(wallet);
+        } else {
+          await UserService.followUser(wallet);
+        }
+      } catch (_) {}
+
+      if (!mounted) return;
+      setState(() {
+        _followRequestsInFlight.remove(wallet);
+        if (shouldFollow) {
+          _followingWallets.remove(wallet);
+        } else {
+          _followingWallets.add(wallet);
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.userProfileFollowUpdateFailedToast),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _initializeChat() async {
@@ -6150,6 +6262,14 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               final walletAddress =
                   (artist['walletAddress'] ?? artist['wallet'])?.toString();
               final profileId = walletAddress ?? handle;
+              final canonicalWallet = WalletUtils.canonical(walletAddress);
+              final currentWallet =
+                  WalletUtils.canonical(context.read<WalletProvider>().currentWalletAddress);
+              final canFollow = canonicalWallet.isNotEmpty &&
+                  !WalletUtils.equals(canonicalWallet, currentWallet);
+              final isFollowing = canFollow && _followingWallets.contains(canonicalWallet);
+              final isFollowBusy =
+                  canFollow && _followRequestsInFlight.contains(canonicalWallet);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: DesktopCard(
@@ -6201,17 +6321,21 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         ),
                       ),
                       TextButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Followed $displayName'),
-                            ),
-                          );
-                        },
+                        onPressed: (!canFollow || isFollowBusy)
+                            ? null
+                            : () => _toggleSuggestedFollow(
+                                  walletAddress: canonicalWallet,
+                                  displayName: displayName,
+                                ),
                         child: Text(
-                          'Follow',
+                          isFollowing ? 'Following' : 'Follow',
                           style: GoogleFonts.inter(
-                            color: themeProvider.accentColor,
+                            color: isFollowing
+                                ? Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7)
+                                : themeProvider.accentColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),

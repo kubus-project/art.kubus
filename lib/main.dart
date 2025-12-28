@@ -401,7 +401,18 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
             '/wallet_connect': (context) => const ConnectWallet(),
             '/connect_wallet': (context) => const ConnectWallet(),
             '/connect-wallet': (context) => const ConnectWallet(),
-            '/sign-in': (context) => const SignInScreen(),
+            '/sign-in': (context) {
+              final args = ModalRoute.of(context)?.settings.arguments;
+              if (args is Map) {
+                final redirectRoute = args['redirectRoute']?.toString();
+                final redirectArguments = args['redirectArguments'];
+                return SignInScreen(
+                  redirectRoute: redirectRoute,
+                  redirectArguments: redirectArguments,
+                );
+              }
+              return const SignInScreen();
+            },
             '/register': (context) => const RegisterScreen(),
             '/web3': (context) {
               final l10n = AppLocalizations.of(context)!;
