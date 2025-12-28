@@ -1220,7 +1220,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               ),
               const SizedBox(height: 16),
               if (topArtworks.isEmpty)
-                _buildArtworkItem('No artworks yet', '0 views', 'N/A')
+                _buildArtworkItem('No artworks yet', '0 views', '0 likes')
               else
                 ...topArtworks.map((artwork) => _buildArtworkItem(
                       artwork.title,

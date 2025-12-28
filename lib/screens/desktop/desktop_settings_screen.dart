@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/stats_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/platform_provider.dart';
@@ -437,12 +438,52 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
   }
 
   Widget _buildHeader(ThemeProvider themeProvider) {
-    return Consumer<ProfileProvider>(
-      builder: (context, profileProvider, _) {
+    return Consumer2<ProfileProvider, StatsProvider>(
+      builder: (context, profileProvider, statsProvider, _) {
         final l10n = AppLocalizations.of(context)!;
         final user = profileProvider.currentUser;
+        final wallet = (user?.walletAddress ?? '').trim();
         final scheme = Theme.of(context).colorScheme;
         final headerColor = scheme.secondary;
+
+        const metrics = <String>['artworks', 'followers', 'following'];
+        if (wallet.isNotEmpty) {
+          statsProvider.ensureSnapshot(
+            entityType: 'user',
+            entityId: wallet,
+            metrics: metrics,
+            scope: 'public',
+          );
+        }
+
+        final snapshot = wallet.isEmpty
+            ? null
+            : statsProvider.getSnapshot(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: metrics,
+                scope: 'public',
+              );
+        final isLoading = wallet.isNotEmpty &&
+            statsProvider.isSnapshotLoading(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: metrics,
+              scope: 'public',
+            ) &&
+            snapshot == null;
+        final counters = snapshot?.counters ?? const <String, int>{};
+
+        final artworks = wallet.isEmpty
+            ? 0
+            : (counters['artworks'] ?? user?.stats?.artworksCreated ?? 0);
+        final followers = wallet.isEmpty
+            ? 0
+            : (counters['followers'] ?? user?.stats?.followersCount ?? 0);
+        final following = wallet.isEmpty
+            ? 0
+            : (counters['following'] ?? user?.stats?.followingCount ?? 0);
+        String displayCount(int value) => isLoading ? '\u2026' : value.toString();
 
         return Container(
           padding: const EdgeInsets.all(32),
@@ -502,11 +543,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                _buildProfileStat(l10n.userProfileArtworksTitle, (user?.stats?.artworksCreated ?? 0).toString()),
+                                _buildProfileStat(l10n.userProfileArtworksTitle, displayCount(artworks)),
                                 const SizedBox(width: 24),
-                                _buildProfileStat(l10n.userProfileFollowersStatLabel, (user?.stats?.followersCount ?? 0).toString()),
+                                _buildProfileStat(l10n.userProfileFollowersStatLabel, displayCount(followers)),
                                 const SizedBox(width: 24),
-                                _buildProfileStat(l10n.userProfileFollowingStatLabel, (user?.stats?.followingCount ?? 0).toString()),
+                                _buildProfileStat(l10n.userProfileFollowingStatLabel, displayCount(following)),
                               ],
                             ),
                           ],

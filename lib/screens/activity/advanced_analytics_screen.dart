@@ -10,6 +10,7 @@ import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
+import '../../utils/kubus_color_roles.dart';
 import '../../models/stats/stats_models.dart';
 import '../../services/stats_api_service.dart';
 import '../../providers/profile_provider.dart';
@@ -1144,8 +1145,18 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
 
     final now = DateTime.now().toUtc();
     final duration = _durationForTimeframe(timeframe);
-    final prevFrom = now.subtract(Duration(seconds: duration.inSeconds * 2));
-    final prevTo = now.subtract(duration);
+
+    DateTime bucketStartUtc(DateTime dt) {
+      final utc = dt.toUtc();
+      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      return DateTime.utc(utc.year, utc.month, utc.day);
+    }
+
+    final step = bucket == 'hour' ? const Duration(hours: 1) : const Duration(days: 1);
+    final currentTo = bucketStartUtc(now).add(step);
+    final currentFrom = currentTo.subtract(duration);
+    final prevTo = currentFrom;
+    final prevFrom = prevTo.subtract(duration);
 
     if (hasWallet && analyticsEnabled) {
       unawaited(statsProvider.ensureSeries(
@@ -1154,6 +1165,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         metric: metric,
         bucket: bucket,
         timeframe: timeframe,
+        from: currentFrom.toIso8601String(),
+        to: currentTo.toIso8601String(),
         scope: 'private',
       ));
       unawaited(statsProvider.ensureSeries(
@@ -1174,6 +1187,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       metric: metric,
       bucket: bucket,
       timeframe: timeframe,
+      from: currentFrom.toIso8601String(),
+      to: currentTo.toIso8601String(),
       scope: 'private',
     );
     final previousSeries = statsProvider.getSeries(
@@ -1193,6 +1208,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       metric: metric,
       bucket: bucket,
       timeframe: timeframe,
+      from: currentFrom.toIso8601String(),
+      to: currentTo.toIso8601String(),
       scope: 'private',
     );
     final error = statsProvider.seriesError(
@@ -1201,6 +1218,8 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       metric: metric,
       bucket: bucket,
       timeframe: timeframe,
+      from: currentFrom.toIso8601String(),
+      to: currentTo.toIso8601String(),
       scope: 'private',
     );
 
@@ -1266,8 +1285,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
       }, growable: false);
     }
 
-    final chartData = filledValues(series, windowEnd: now);
-    final previousChartData = filledValues(previousSeries, windowEnd: prevTo);
+    final chartData =
+        filledValues(series, windowEnd: currentTo.subtract(const Duration(milliseconds: 1)));
+    final previousChartData =
+        filledValues(previousSeries, windowEnd: prevTo.subtract(const Duration(milliseconds: 1)));
 
     double sumSeries(StatsSeries? s) =>
         (s?.series ?? const []).fold<double>(0, (sum, p) => sum + p.v.toDouble());
@@ -1289,9 +1310,10 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen>
         : '${changePct >= 0 ? '+' : '-'}${changePct.abs().toStringAsFixed(1)}%';
 
     final scheme = Theme.of(context).colorScheme;
+    final roles = KubusColorRoles.of(context);
     final trendColor = changePct == null
         ? scheme.secondary
-        : (changePct >= 0 ? Colors.green : Colors.red);
+        : (changePct >= 0 ? roles.positiveAction : roles.negativeAction);
     final trendIcon = changePct == null
         ? Icons.trending_flat
         : (changePct >= 0 ? Icons.trending_up : Icons.trending_down);

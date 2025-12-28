@@ -1986,6 +1986,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           StatsApiService.metricFromUiStatType(statType);
                       const bucket = 'day';
                       const timeframe = '7d';
+                      final now = DateTime.now().toUtc();
+                      final today = DateTime.utc(now.year, now.month, now.day);
+                      final currentTo = today.add(const Duration(days: 1));
+                      final currentFrom = currentTo.subtract(const Duration(days: 7));
 
                       statsProvider.ensureSeries(
                         entityType: 'user',
@@ -1993,6 +1997,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         metric: metric,
                         bucket: bucket,
                         timeframe: timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
                         scope: 'private',
                       );
 
@@ -2002,6 +2008,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         metric: metric,
                         bucket: bucket,
                         timeframe: timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
                         scope: 'private',
                       );
                       final isLoading = statsProvider.isSeriesLoading(
@@ -2010,6 +2018,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         metric: metric,
                         bucket: bucket,
                         timeframe: timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
                         scope: 'private',
                       );
                       final error = statsProvider.seriesError(
@@ -2018,6 +2028,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         metric: metric,
                         bucket: bucket,
                         timeframe: timeframe,
+                        from: currentFrom.toIso8601String(),
+                        to: currentTo.toIso8601String(),
                         scope: 'private',
                       );
 
@@ -2053,8 +2065,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         );
                       }
 
-                      final now = DateTime.now().toUtc();
-                      final today = DateTime.utc(now.year, now.month, now.day);
                       final buckets = List<DateTime>.generate(
                         7,
                         (i) => today.subtract(Duration(days: 6 - i)),

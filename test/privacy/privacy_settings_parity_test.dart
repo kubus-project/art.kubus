@@ -4,6 +4,7 @@ import 'package:art_kubus/providers/navigation_provider.dart';
 import 'package:art_kubus/providers/notification_provider.dart';
 import 'package:art_kubus/providers/platform_provider.dart';
 import 'package:art_kubus/providers/profile_provider.dart';
+import 'package:art_kubus/providers/stats_provider.dart';
 import 'package:art_kubus/providers/themeprovider.dart';
 import 'package:art_kubus/providers/wallet_provider.dart';
 import 'package:art_kubus/providers/web3provider.dart';
@@ -27,6 +28,7 @@ Widget _wrapWithApp({
   required NotificationProvider notificationProvider,
   required NavigationProvider navigationProvider,
   required LocaleProvider localeProvider,
+  required StatsProvider statsProvider,
 }) {
   return MultiProvider(
     providers: [
@@ -38,6 +40,7 @@ Widget _wrapWithApp({
       ChangeNotifierProvider.value(value: notificationProvider),
       ChangeNotifierProvider.value(value: navigationProvider),
       ChangeNotifierProvider.value(value: localeProvider),
+      ChangeNotifierProvider.value(value: statsProvider),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -70,6 +73,7 @@ void main() {
     final notificationProvider = NotificationProvider();
     final navigationProvider = NavigationProvider();
     final localeProvider = LocaleProvider();
+    final statsProvider = StatsProvider();
 
     await tester.pumpWidget(
       _wrapWithApp(
@@ -82,6 +86,7 @@ void main() {
         notificationProvider: notificationProvider,
         navigationProvider: navigationProvider,
         localeProvider: localeProvider,
+        statsProvider: statsProvider,
       ),
     );
 
@@ -119,6 +124,7 @@ void main() {
         notificationProvider: notificationProvider,
         navigationProvider: navigationProvider,
         localeProvider: localeProvider,
+        statsProvider: statsProvider,
       ),
     );
     await tester.pump();
@@ -153,6 +159,7 @@ void main() {
     final notificationProvider = NotificationProvider();
     final navigationProvider = NavigationProvider();
     final localeProvider = LocaleProvider();
+    final statsProvider = StatsProvider();
 
     await tester.pumpWidget(
       _wrapWithApp(
@@ -165,6 +172,7 @@ void main() {
         notificationProvider: notificationProvider,
         navigationProvider: navigationProvider,
         localeProvider: localeProvider,
+        statsProvider: statsProvider,
       ),
     );
     await tester.pump(const Duration(milliseconds: 200));
@@ -193,6 +201,7 @@ void main() {
         notificationProvider: notificationProvider,
         navigationProvider: navigationProvider,
         localeProvider: localeProvider,
+        statsProvider: statsProvider,
       ),
     );
     await tester.pump();

@@ -13,6 +13,7 @@ import '../../providers/profile_provider.dart';
 import '../../providers/dao_provider.dart';
 import '../../providers/task_provider.dart';
 import '../../providers/artwork_provider.dart';
+import '../../providers/stats_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../community/community_interactions.dart';
@@ -1830,18 +1831,98 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildPerformanceStats() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Consumer2<ProfileProvider, ArtworkProvider>(
-        builder: (context, profileProvider, artworkProvider, child) {
+      child: Consumer3<ProfileProvider, ArtworkProvider, StatsProvider>(
+        builder: (context, profileProvider, artworkProvider, statsProvider, child) {
+          final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
           final stats = profileProvider.currentUser?.stats;
           final viewHistory = artworkProvider.viewHistoryEntries;
           final viewedCount = viewHistory.length;
-          final discoveries = stats?.artworksDiscovered ?? 0;
-          final created = stats?.artworksCreated ?? 0;
-          final followers = stats?.followersCount ?? profileProvider.followersCount;
-          final following = stats?.followingCount ?? profileProvider.followingCount;
-          final nftsOwned = stats?.nftsOwned ?? 0;
 
-          final hasData = stats != null || viewedCount > 0;
+          const publicMetrics = <String>[
+            'followers',
+            'following',
+            'artworks',
+            'nftsMinted',
+          ];
+          const privateMetrics = <String>['artworksDiscovered'];
+
+          if (wallet.isNotEmpty) {
+            statsProvider.ensureSnapshot(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: publicMetrics,
+              scope: 'public',
+            );
+            statsProvider.ensureSnapshot(
+              entityType: 'user',
+              entityId: wallet,
+              metrics: privateMetrics,
+              scope: 'private',
+            );
+          }
+
+          final publicSnapshot = wallet.isEmpty
+              ? null
+              : statsProvider.getSnapshot(
+                  entityType: 'user',
+                  entityId: wallet,
+                  metrics: publicMetrics,
+                  scope: 'public',
+                );
+          final privateSnapshot = wallet.isEmpty
+              ? null
+              : statsProvider.getSnapshot(
+                  entityType: 'user',
+                  entityId: wallet,
+                  metrics: privateMetrics,
+                  scope: 'private',
+                );
+
+          final publicCounters = publicSnapshot?.counters ?? const <String, int>{};
+          final privateCounters = privateSnapshot?.counters ?? const <String, int>{};
+
+          final publicLoading = wallet.isNotEmpty &&
+              statsProvider.isSnapshotLoading(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: publicMetrics,
+                scope: 'public',
+              ) &&
+              publicSnapshot == null;
+          final privateLoading = wallet.isNotEmpty &&
+              statsProvider.isSnapshotLoading(
+                entityType: 'user',
+                entityId: wallet,
+                metrics: privateMetrics,
+                scope: 'private',
+              ) &&
+              privateSnapshot == null;
+
+          final discoveriesValue =
+              privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
+          final createdValue = publicCounters['artworks'] ?? stats?.artworksCreated;
+          final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
+          final followersValue = publicCounters['followers'] ??
+              stats?.followersCount ??
+              profileProvider.followersCount;
+          final followingValue = publicCounters['following'] ??
+              stats?.followingCount ??
+              profileProvider.followingCount;
+
+          final discoveriesLabel = privateLoading
+              ? '\u2026'
+              : discoveriesValue == null
+                  ? '\u2014'
+                  : _formatCount(discoveriesValue);
+
+          final createdLabel =
+              publicLoading ? '\u2026' : createdValue == null ? '\u2014' : _formatCount(createdValue);
+          final ownedLabel =
+              publicLoading ? '\u2026' : nftsOwnedValue == null ? '\u2014' : _formatCount(nftsOwnedValue);
+          final followersLabel = publicLoading ? '\u2026' : _formatCount(followersValue);
+          final followingLabel = publicLoading ? '\u2026' : _formatCount(followingValue);
+
+          final hasData = wallet.isNotEmpty || viewedCount > 0;
           if (!hasData) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1878,11 +1959,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               const SizedBox(height: 16),
               _buildPerformanceCard('Artworks viewed', _formatCount(viewedCount), Icons.visibility, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Discoveries', _formatCount(discoveries), Icons.location_on, null),
+              _buildPerformanceCard('Discoveries', discoveriesLabel, Icons.location_on, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Created / Owned', '${_formatCount(created)} / ${_formatCount(nftsOwned)}', Icons.auto_fix_high, null),
+              _buildPerformanceCard('Created / Owned', '$createdLabel / $ownedLabel', Icons.auto_fix_high, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Followers / Following', '${_formatCount(followers)} / ${_formatCount(following)}', Icons.group, null),
+              _buildPerformanceCard('Followers / Following', '$followersLabel / $followingLabel', Icons.group, null),
             ],
           );
         },

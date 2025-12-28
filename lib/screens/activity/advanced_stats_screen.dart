@@ -727,8 +727,28 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
 
     final now = DateTime.now().toUtc();
     final duration = _durationForTimeframe(timeframe);
-    final prevFrom = now.subtract(Duration(seconds: duration.inSeconds * 2));
-    final prevTo = now.subtract(duration);
+
+    DateTime bucketStartUtc(DateTime dt) {
+      final utc = dt.toUtc();
+      if (bucket == 'hour') return DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+      if (bucket == 'week') {
+        final startOfDay = DateTime.utc(utc.year, utc.month, utc.day);
+        return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
+      }
+      return DateTime.utc(utc.year, utc.month, utc.day);
+    }
+
+    Duration bucketStep() {
+      if (bucket == 'hour') return const Duration(hours: 1);
+      if (bucket == 'week') return const Duration(days: 7);
+      return const Duration(days: 1);
+    }
+
+    final step = bucketStep();
+    final currentTo = bucketStartUtc(now).add(step);
+    final currentFrom = currentTo.subtract(duration);
+    final prevTo = currentFrom;
+    final prevFrom = prevTo.subtract(duration);
 
     if (hasWallet && analyticsEnabled) {
       unawaited(statsProvider.ensureSeries(
@@ -737,6 +757,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
         metric: metric,
         bucket: bucket,
         timeframe: timeframe,
+        from: currentFrom.toIso8601String(),
+        to: currentTo.toIso8601String(),
         scope: 'private',
       ));
       unawaited(statsProvider.ensureSeries(
@@ -757,6 +779,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       metric: metric,
       bucket: bucket,
       timeframe: timeframe,
+      from: currentFrom.toIso8601String(),
+      to: currentTo.toIso8601String(),
       scope: 'private',
     );
     final prevSeries = statsProvider.getSeries(
@@ -776,6 +800,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
           metric: metric,
           bucket: bucket,
           timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
           scope: 'private',
         ) ||
         statsProvider.isSeriesLoading(
@@ -837,8 +863,8 @@ class _AdvancedStatsScreenState extends State<AdvancedStatsScreen>
       }).toList(growable: false);
     }
 
-    final rawValues = filledValues(series, windowEnd: now);
-    final prevRawValues = filledValues(prevSeries, windowEnd: prevTo);
+    final rawValues = filledValues(series, windowEnd: currentTo.subtract(const Duration(milliseconds: 1)));
+    final prevRawValues = filledValues(prevSeries, windowEnd: prevTo.subtract(const Duration(milliseconds: 1)));
     final chartData = cumulative(rawValues);
 
     double sum(List<double> values) => values.fold(0.0, (a, b) => a + b);

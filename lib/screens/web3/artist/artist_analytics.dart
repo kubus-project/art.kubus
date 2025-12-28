@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -233,12 +235,6 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
       return startOfDay.subtract(Duration(days: startOfDay.weekday - 1));
     }
     return DateTime.utc(utc.year, utc.month, utc.day);
-  }
-
-  Duration _bucketStep(String bucket) {
-    if (bucket == 'hour') return const Duration(hours: 1);
-    if (bucket == 'week') return const Duration(days: 7);
-    return const Duration(days: 1);
   }
 
   int _totalFromSeries(StatsSeries? series) {
@@ -1058,9 +1054,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(child: _buildMetricItem('Avg. View Time', 'N/A', Icons.schedule)),
+              Row(
+                children: [
+                Expanded(child: _buildMetricItem('Avg. View Time', '\u2014', Icons.schedule)),
                 const SizedBox(width: 16),
                 Expanded(child: _buildMetricItem('Engagement Rate', '${engagementRate.toStringAsFixed(1)}%', Icons.thumb_up)),
               ],
@@ -1070,7 +1066,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
               children: [
                 Expanded(child: _buildMetricItem('Conversion Rate', '${conversionRate.toStringAsFixed(1)}%', Icons.trending_up)),
                 const SizedBox(width: 16),
-                Expanded(child: _buildMetricItem('Return Visitors', 'N/A', Icons.refresh)),
+                Expanded(child: _buildMetricItem('Return Visitors', '\u2014', Icons.refresh)),
               ],
             ),
           ],
