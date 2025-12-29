@@ -17,6 +17,7 @@ import '../../../models/user_persona.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
+import '../../map_markers/manage_markers_screen.dart';
 
 class InstitutionHub extends StatefulWidget {
   final ValueChanged<int>? onTabChanged;
@@ -151,6 +152,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final profileProvider = context.watch<ProfileProvider>();
     final daoProvider = context.watch<DAOProvider>();
     final wallet = _resolveWalletAddress(listen: true);
@@ -191,6 +193,15 @@ class _InstitutionHubState extends State<InstitutionHub> {
           IconButton(
             icon: Icon(Icons.help_outline, color: Theme.of(context).colorScheme.onSurface),
             onPressed: _showOnboarding,
+          ),
+          IconButton(
+            tooltip: l10n.manageMarkersTitle,
+            icon: Icon(Icons.place_outlined, color: Theme.of(context).colorScheme.onSurface),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ManageMarkersScreen()),
+              );
+            },
           ),
           if (AppConfig.isFeatureEnabled('collabInvites'))
             Consumer<CollabProvider>(

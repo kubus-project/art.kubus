@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../services/onboarding_state_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
@@ -336,8 +337,7 @@ class _DesktopPermissionsScreenState extends State<DesktopPermissionsScreen> {
 
   void _completeOnboarding() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('completed_onboarding', true);
-    await prefs.setBool('has_completed_onboarding', true);
+    await OnboardingStateService.markCompleted(prefs: prefs);
     await prefs.setBool('has_seen_permissions', true);
 
     if (mounted) {

@@ -6197,4 +6197,126 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mnemonicRevealEnterPinDialogTitle => 'Enter PIN';
+
+  @override
+  String get manageMarkersTitle => 'Manage markers';
+
+  @override
+  String get manageMarkersCardSubtitle => 'Create, publish, and edit your map markers';
+
+  @override
+  String get manageMarkersQuickActionSubtitle => 'Create, publish, and edit markers';
+
+  @override
+  String get manageMarkersSearchHint => 'Search markers';
+
+  @override
+  String get manageMarkersRefreshTooltip => 'Refresh';
+
+  @override
+  String get manageMarkersStatusDraft => 'Draft';
+
+  @override
+  String get manageMarkersStatusPublic => 'Public';
+
+  @override
+  String get manageMarkersStatusPrivate => 'Private';
+
+  @override
+  String get manageMarkersEmptyTitle => 'No markers yet';
+
+  @override
+  String get manageMarkersEmptySubtitle => 'Create your first marker to place an AR experience on the map.';
+
+  @override
+  String get manageMarkersSelectTitle => 'Select a marker';
+
+  @override
+  String get manageMarkersSelectSubtitle => 'Pick a marker from the list or create a new one.';
+
+  @override
+  String get manageMarkersLoadFailedTitle => 'Couldn\'t load markers';
+
+  @override
+  String get manageMarkersLoadFailedSubtitle => 'Check your connection and try again.';
+
+  @override
+  String get manageMarkersRetryButton => 'Retry';
+
+  @override
+  String get manageMarkersNewButton => 'New marker';
+
+  @override
+  String get manageMarkersEditTitle => 'Edit marker';
+
+  @override
+  String get manageMarkersCloseTooltip => 'Close';
+
+  @override
+  String get manageMarkersCreateButton => 'Create';
+
+  @override
+  String get manageMarkersSaveButton => 'Save';
+
+  @override
+  String get manageMarkersSaveFailed => 'Failed to save marker';
+
+  @override
+  String get manageMarkersCreatedToast => 'Marker created';
+
+  @override
+  String get manageMarkersUpdatedToast => 'Marker updated';
+
+  @override
+  String get manageMarkersDeleteConfirmTitle => 'Delete marker?';
+
+  @override
+  String get manageMarkersDeleteConfirmBody => 'This can\'t be undone.';
+
+  @override
+  String get manageMarkersDeleteButton => 'Delete';
+
+  @override
+  String get manageMarkersCancelButton => 'Cancel';
+
+  @override
+  String get manageMarkersDeleteFailed => 'Failed to delete marker';
+
+  @override
+  String get manageMarkersDeletedToast => 'Marker deleted';
+
+  @override
+  String get manageMarkersActivationRadiusLabel => 'Activation radius (m)';
+
+  @override
+  String get manageMarkersPublishedToggleTitle => 'Published';
+
+  @override
+  String get manageMarkersRequiresProximityTitle => 'Requires proximity';
+
+  @override
+  String get manageMarkersRequiresProximitySubtitle => 'Require users to be near the marker to activate AR';
+
+  @override
+  String get manageMarkersSearchNoResults => 'No results';
+
+  @override
+  String manageMarkersPickSubjectTitle(Object subjectType) {
+    return 'Pick $subjectType';
+  }
+
+  @override
+  String get manageMarkersSearchSubjectsHint => 'Search subjects';
+
+  @override
+  String get manageMarkersPickArAssetTitle => 'Pick AR asset';
+
+  @override
+  String get manageMarkersSearchArAssetsHint => 'Search AR assets';
+
+  @override
+  String get manageMarkersClearSelectionTooltip => 'Clear selection';
+
+  @override
+  String get manageMarkersPickArAssetPlaceholder => 'Select an AR asset';
 }

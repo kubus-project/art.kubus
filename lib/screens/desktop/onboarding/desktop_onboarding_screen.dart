@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../services/onboarding_state_service.dart';
 import '../../../widgets/app_logo.dart';
 import '../../../widgets/gradient_icon_card.dart';
 import '../../../providers/themeprovider.dart';
@@ -150,17 +151,15 @@ class _DesktopOnboardingScreenState extends State<DesktopOnboardingScreen>
   }
 
   void _startWalletCreation() async {
+    final navigator = Navigator.of(context);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('completed_onboarding', true);
-    await prefs.setBool('has_seen_onboarding', true);
-
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const SignInScreen(),
-        ),
-      );
-    }
+    await OnboardingStateService.markCompleted(prefs: prefs);
+    if (!mounted) return;
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SignInScreen(),
+      ),
+    );
   }
 
   @override

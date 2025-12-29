@@ -43,6 +43,16 @@ import '../../download_app_screen.dart';
 import '../../map_screen.dart';
 import '../../season0/season0_screen.dart';
 
+class _ComposerImagePayload {
+  final Uint8List bytes;
+  final String fileName;
+
+  const _ComposerImagePayload({
+    required this.bytes,
+    required this.fileName,
+  });
+}
+
 /// Desktop community screen with Twitter/Instagram-style feed
 /// Features multi-column layout with trending and suggestions
 class DesktopCommunityScreen extends StatefulWidget {
@@ -107,7 +117,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _isComposerExpanded = false;
   bool _isPosting = false;
   final TextEditingController _composeController = TextEditingController();
-  final List<Uint8List> _selectedImages = [];
+  final List<_ComposerImagePayload> _selectedImages = [];
   String? _selectedLocation;
   String _selectedCategory = 'post';
   final TextEditingController _tagController = TextEditingController();
@@ -5044,7 +5054,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(8),
                           image: DecorationImage(
-                            image: MemoryImage(_selectedImages[index]),
+                            image: MemoryImage(_selectedImages[index].bytes),
                             fit: BoxFit.cover,
                           ),
                         ),
@@ -6708,7 +6718,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                                               BorderRadius.circular(12),
                                           image: DecorationImage(
                                             image: MemoryImage(
-                                                _selectedImages[index]),
+                                                _selectedImages[index].bytes),
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -6827,10 +6837,32 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     final image = await picker.pickImage(source: ImageSource.gallery);
     if (image != null) {
       final bytes = await image.readAsBytes();
+      final fileName = (image.name.trim().isNotEmpty)
+          ? image.name.trim()
+          : 'post-image-${DateTime.now().millisecondsSinceEpoch}.jpg';
       setState(() {
-        _selectedImages.add(bytes);
+        _selectedImages.add(_ComposerImagePayload(bytes: bytes, fileName: fileName));
       });
     }
+  }
+
+  Future<List<String>> _uploadComposerMedia() async {
+    if (_selectedImages.isEmpty) return const <String>[];
+    final api = BackendApiService();
+    final mediaUrls = <String>[];
+    for (final image in _selectedImages) {
+      final uploadResult = await api.uploadFile(
+        fileBytes: image.bytes,
+        fileName: image.fileName,
+        fileType: 'post-image',
+      );
+      final url = uploadResult['uploadedUrl'] as String?;
+      if (url == null || url.trim().isEmpty) {
+        throw Exception('Image upload returned no URL');
+      }
+      mediaUrls.add(url);
+    }
+    return mediaUrls;
   }
 
   Future<void> _pickLocation() async {
@@ -7705,7 +7737,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               }
             },
             child: Text(
-              'Open mobile app',
+              'Download app',
               style: GoogleFonts.inter(
                 color: Provider.of<ThemeProvider>(context, listen: false)
                     .accentColor,
@@ -7719,7 +7751,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Future<void> _submitPost() async {
-    if (_composeController.text.trim().isEmpty) return;
+    final rawContent = _composeController.text.trim();
+    if (rawContent.isEmpty && _selectedImages.isEmpty) return;
 
     setState(() => _isPosting = true);
 
@@ -7728,8 +7761,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final hub = Provider.of<CommunityHubProvider>(context, listen: false);
       hub.setDraftCategory(_selectedCategory);
 
-      // In parity with mobile, we would upload media first; skip upload here but keep hook
-      final mediaUrls = <String>[];
+      final mediaUrls = await _uploadComposerMedia();
+      final postType = mediaUrls.isNotEmpty ? 'image' : 'text';
+      var content = rawContent;
+      if (content.isEmpty && mediaUrls.isNotEmpty) {
+        content = 'Shared a photo';
+      }
 
       final draft = hub.draft;
       final location = draft.location;
@@ -7739,8 +7776,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       if (draft.targetGroup != null) {
         await hub.submitGroupPost(
           draft.targetGroup!.id,
-          content: _composeController.text.trim(),
+          content: content,
           mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          postType: postType,
           category: draft.category,
           tags: draft.tags,
           mentions: draft.mentions,
@@ -7749,8 +7787,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         );
       } else {
         await api.createCommunityPost(
-          content: _composeController.text.trim(),
+          content: content,
           mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
+          postType: postType,
           category: draft.category,
           tags: draft.tags,
           mentions: draft.mentions,

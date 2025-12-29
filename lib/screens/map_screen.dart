@@ -162,6 +162,7 @@ class _MapScreenState extends State<MapScreen>
   ArtMarker? _activeMarker;
   Timer? _proximityCheckTimer;
   StreamSubscription<ArtMarker>? _markerSocketSubscription;
+  StreamSubscription<String>? _markerDeletedSubscription;
   Timer? _markerRefreshDebounce;
 
   // UI State
@@ -286,6 +287,7 @@ class _MapScreenState extends State<MapScreen>
     _proximityCheckTimer?.cancel();
     _markerRefreshDebounce?.cancel();
     _markerSocketSubscription?.cancel();
+    _markerDeletedSubscription?.cancel();
     _animationController.dispose();
     _locationIndicatorController?.dispose();
     _sheetController.dispose();
@@ -390,6 +392,8 @@ class _MapScreenState extends State<MapScreen>
       await _loadArtMarkers();
       _markerSocketSubscription =
           _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
+      _markerDeletedSubscription =
+          _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
 
       // Start proximity checking timer (every 10 seconds)
       _proximityCheckTimer = Timer.periodic(
@@ -459,6 +463,14 @@ class _MapScreenState extends State<MapScreen>
     } catch (e) {
       debugPrint('MapScreen: failed to handle socket marker: $e');
     }
+  }
+
+  void _handleMarkerDeleted(String markerId) {
+    try {
+      setState(() {
+        _artMarkers.removeWhere((m) => m.id == markerId);
+      });
+    } catch (_) {}
   }
 
   void _handleNotificationTap(String payload) {

@@ -86,6 +86,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   bool _isLocating = false;
   final Distance _distance = const Distance();
   StreamSubscription<ArtMarker>? _markerStreamSub;
+  StreamSubscription<String>? _markerDeletedSub;
   Timer? _markerRefreshDebounce;
   LatLng _cameraCenter = const LatLng(46.0569, 14.5058);
   LatLng? _queuedCameraTarget;
@@ -129,6 +130,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _animationController.forward();
     _markerStreamSub =
         _mapMarkerService.onMarkerCreated.listen(_handleMarkerCreated);
+    _markerDeletedSub =
+        _mapMarkerService.onMarkerDeleted.listen(_handleMarkerDeleted);
 
     _autoFollow = widget.autoFollow;
     _cameraCenter = widget.initialCenter ?? const LatLng(46.0569, 14.5058);
@@ -185,6 +188,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     _searchDebounce?.cancel();
     _markerRefreshDebounce?.cancel();
     _markerStreamSub?.cancel();
+    _markerDeletedSub?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -2520,6 +2524,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     } else {
       _mapMarkerService.clearCache();
     }
+  }
+
+  void _handleMarkerDeleted(String markerId) {
+    try {
+      setState(() {
+        _artMarkers.removeWhere((m) => m.id == markerId);
+      });
+    } catch (_) {}
   }
 
   Marker _buildMarkerOverlay(

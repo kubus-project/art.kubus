@@ -2725,6 +2725,52 @@
       "location": {}
     }
   },
+  "manageMarkersTitle": "Upravljaj označevalnike",
+  "manageMarkersCardSubtitle": "Ustvari, objavi in uredi svoje označevalnike na zemljevidu",
+  "manageMarkersQuickActionSubtitle": "Ustvari, objavi in uredi označevalnike",
+  "manageMarkersSearchHint": "Išči označevalnike",
+  "manageMarkersRefreshTooltip": "Osveži",
+  "manageMarkersStatusDraft": "Osnutek",
+  "manageMarkersStatusPublic": "Javno",
+  "manageMarkersStatusPrivate": "Zasebno",
+  "manageMarkersEmptyTitle": "Ni še označevalnikov",
+  "manageMarkersEmptySubtitle": "Ustvari prvi označevalnik za AR izkušnjo na zemljevidu.",
+  "manageMarkersSelectTitle": "Izberi označevalnik",
+  "manageMarkersSelectSubtitle": "Izberi označevalnik s seznama ali ustvari novega.",
+  "manageMarkersLoadFailedTitle": "Označevalnikov ni mogoče naložiti",
+  "manageMarkersLoadFailedSubtitle": "Preveri povezavo in poskusi znova.",
+  "manageMarkersRetryButton": "Poskusi znova",
+  "manageMarkersNewButton": "Nov označevalnik",
+  "manageMarkersEditTitle": "Uredi označevalnik",
+  "manageMarkersCloseTooltip": "Zapri",
+  "manageMarkersCreateButton": "Ustvari",
+  "manageMarkersSaveButton": "Shrani",
+  "manageMarkersSaveFailed": "Shranjevanje označevalnika ni uspelo",
+  "manageMarkersCreatedToast": "Označevalnik ustvarjen",
+  "manageMarkersUpdatedToast": "Označevalnik posodobljen",
+  "manageMarkersDeleteConfirmTitle": "Izbrišem označevalnik?",
+  "manageMarkersDeleteConfirmBody": "Tega ni mogoče razveljaviti.",
+  "manageMarkersDeleteButton": "Izbriši",
+  "manageMarkersCancelButton": "Prekliči",
+  "manageMarkersDeleteFailed": "Brisanje označevalnika ni uspelo",
+  "manageMarkersDeletedToast": "Označevalnik izbrisan",
+  "manageMarkersActivationRadiusLabel": "Aktivacijski radij (m)",
+  "manageMarkersPublishedToggleTitle": "Objavljeno",
+  "manageMarkersRequiresProximityTitle": "Zahteva bližino",
+  "manageMarkersRequiresProximitySubtitle": "Uporabnik mora biti blizu označevalnika za aktivacijo AR",
+
+  "manageMarkersSearchNoResults": "Ni rezultatov",
+  "manageMarkersPickSubjectTitle": "Izberi {subjectType}",
+  "@manageMarkersPickSubjectTitle": {
+    "placeholders": {
+      "subjectType": {}
+    }
+  },
+  "manageMarkersSearchSubjectsHint": "Išči subjekte",
+  "manageMarkersPickArAssetTitle": "Izberi AR sredstvo",
+  "manageMarkersSearchArAssetsHint": "Išči AR sredstva",
+  "manageMarkersClearSelectionTooltip": "Počisti izbor",
+  "manageMarkersPickArAssetPlaceholder": "Izberi AR sredstvo",
   "@mnemonicRevealPinLockedError": {
     "placeholders": {
       "seconds": {}

@@ -19,6 +19,8 @@ class MapMarkerService {
   final List<ArtMarker> _cachedMarkers = [];
   final StreamController<ArtMarker> _markerStreamController =
       StreamController<ArtMarker>.broadcast();
+  final StreamController<String> _markerDeletedController =
+      StreamController<String>.broadcast();
   final SocketService _socket = SocketService();
   bool _socketRegistered = false;
   LatLng? _lastQueryCenter;
@@ -121,6 +123,8 @@ class MapMarkerService {
   /// Stream for real-time marker creations broadcast by the backend via sockets.
   Stream<ArtMarker> get onMarkerCreated => _markerStreamController.stream;
 
+  Stream<String> get onMarkerDeleted => _markerDeletedController.stream;
+
   Future<ArtMarker?> createMarker({
     required LatLng location,
     required String title,
@@ -216,6 +220,16 @@ class MapMarkerService {
 
   void _handleSocketMarker(Map<String, dynamic> payload) {
     try {
+      final event = payload['event']?.toString() ?? '';
+      final deleted = payload['deleted'] == true || event == 'art-marker:deleted';
+      if (deleted) {
+        final id = (payload['id'] ?? payload['_id'] ?? '').toString();
+        if (id.isEmpty) return;
+        _cachedMarkers.removeWhere((m) => m.id == id);
+        _markerDeletedController.add(id);
+        return;
+      }
+
       final marker = _markerFromSocketPayload(payload);
       if (marker == null || !_isValidPosition(marker.position)) return;
       // If we have an active cache window and the marker is nearby, merge it in-place.

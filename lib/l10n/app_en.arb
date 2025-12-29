@@ -2900,5 +2900,52 @@
   "mnemonicRevealIncorrectPinError": "Incorrect PIN",
   "mnemonicRevealCopiedToast": "Mnemonic copied to clipboard",
   "mnemonicRevealShowButton": "Show",
-  "mnemonicRevealEnterPinDialogTitle": "Enter PIN"
+  "mnemonicRevealEnterPinDialogTitle": "Enter PIN",
+
+  "manageMarkersTitle": "Manage markers",
+  "manageMarkersCardSubtitle": "Create, publish, and edit your map markers",
+  "manageMarkersQuickActionSubtitle": "Create, publish, and edit markers",
+  "manageMarkersSearchHint": "Search markers",
+  "manageMarkersRefreshTooltip": "Refresh",
+  "manageMarkersStatusDraft": "Draft",
+  "manageMarkersStatusPublic": "Public",
+  "manageMarkersStatusPrivate": "Private",
+  "manageMarkersEmptyTitle": "No markers yet",
+  "manageMarkersEmptySubtitle": "Create your first marker to place an AR experience on the map.",
+  "manageMarkersSelectTitle": "Select a marker",
+  "manageMarkersSelectSubtitle": "Pick a marker from the list or create a new one.",
+  "manageMarkersLoadFailedTitle": "Couldn't load markers",
+  "manageMarkersLoadFailedSubtitle": "Check your connection and try again.",
+  "manageMarkersRetryButton": "Retry",
+  "manageMarkersNewButton": "New marker",
+  "manageMarkersEditTitle": "Edit marker",
+  "manageMarkersCloseTooltip": "Close",
+  "manageMarkersCreateButton": "Create",
+  "manageMarkersSaveButton": "Save",
+  "manageMarkersSaveFailed": "Failed to save marker",
+  "manageMarkersCreatedToast": "Marker created",
+  "manageMarkersUpdatedToast": "Marker updated",
+  "manageMarkersDeleteConfirmTitle": "Delete marker?",
+  "manageMarkersDeleteConfirmBody": "This can't be undone.",
+  "manageMarkersDeleteButton": "Delete",
+  "manageMarkersCancelButton": "Cancel",
+  "manageMarkersDeleteFailed": "Failed to delete marker",
+  "manageMarkersDeletedToast": "Marker deleted",
+  "manageMarkersActivationRadiusLabel": "Activation radius (m)",
+  "manageMarkersPublishedToggleTitle": "Published",
+  "manageMarkersRequiresProximityTitle": "Requires proximity",
+  "manageMarkersRequiresProximitySubtitle": "Require users to be near the marker to activate AR",
+
+  "manageMarkersSearchNoResults": "No results",
+  "manageMarkersPickSubjectTitle": "Pick {subjectType}",
+  "@manageMarkersPickSubjectTitle": {
+    "placeholders": {
+      "subjectType": {}
+    }
+  },
+  "manageMarkersSearchSubjectsHint": "Search subjects",
+  "manageMarkersPickArAssetTitle": "Pick AR asset",
+  "manageMarkersSearchArAssetsHint": "Search AR assets",
+  "manageMarkersClearSelectionTooltip": "Clear selection",
+  "manageMarkersPickArAssetPlaceholder": "Select an AR asset"
 }

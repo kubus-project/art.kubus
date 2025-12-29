@@ -26,6 +26,7 @@ import '../../web3/institution/institution_analytics.dart';
 import '../../events/exhibition_creator_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
+import '../../map_markers/manage_markers_screen.dart';
 
 /// Desktop Institution Hub screen with split-panel layout
 /// Left: Mobile institution hub view
@@ -330,6 +331,23 @@ class _DesktopInstitutionHubScreenState
                   DesktopSubScreen(
                     title: 'Create Exhibition',
                     child: const ExhibitionCreatorScreen(),
+                  ),
+                );
+              },
+            ),
+          if (section == DesktopInstitutionSection.create &&
+              isApprovedInstitution &&
+              showCreateActions)
+            _buildQuickActionTile(
+              'Manage Markers',
+              'Create, publish, and edit map markers',
+              Icons.place_outlined,
+              Theme.of(context).colorScheme.primary,
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: 'Manage Markers',
+                    child: const ManageMarkersScreen(),
                   ),
                 );
               },

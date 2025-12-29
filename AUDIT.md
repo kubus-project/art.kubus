@@ -21,13 +21,23 @@ This document captures a high-level map of the current stack and highlights gaps
 - **Core services**: `backend/src/services/*` (storage, OrbitDB lifecycle, sync/dual-write, etc.)
 
 ## User-Facing Strings / i18n
-- No localization layer is present (no ARB/AppLocalizations).
-- High-surface hotspots:
+- ARB-based localization is present and generated via Flutter gen-l10n:
+  - ARB sources: `lib/l10n/app_en.arb`, `lib/l10n/app_sl.arb`
+  - Generated API: `lib/l10n/app_localizations.dart` (`AppLocalizations`)
+  - Wired into `MaterialApp` in `lib/main.dart`.
+
+- High-surface hotspots to keep localized (and parity-check for desktop):
   - Auth: `lib/screens/auth/`
   - Onboarding: `lib/screens/onboarding/` and `lib/screens/desktop/onboarding/`
   - Map/AR: `lib/screens/map_screen.dart`, `lib/screens/art/ar_screen.dart`
   - Community/Messaging: `lib/screens/community/` and desktop community screens
   - Settings/Profile: `lib/screens/settings_screen.dart`, `lib/screens/community/user_profile_screen.dart`
+
+## Phase 1 wiring map
+
+For the current A–F wiring maps (UI → providers → services → endpoints), see:
+
+- `docs/PHASE1_WIRING_MAP.md`
 
 ## Build / Run
 - **Flutter**: `flutter pub get` then `flutter run --debug` (use physical devices for AR features).

@@ -16,6 +16,7 @@ import '../providers/cache_provider.dart';
 import '../providers/locale_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
+import '../services/onboarding_state_service.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/desktop/onboarding/desktop_onboarding_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
@@ -105,18 +106,15 @@ class _AppInitializerState extends State<AppInitializer> {
     // ProfileProvider always uses backend data (no setUseMockData method)
     
     final prefs = await SharedPreferences.getInstance();
-    
-    // Check user state using standardized preference keys
-    final isFirstTime = prefs.getBool('first_time') ?? true;
-    final hasSeenWelcome = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
-    final isFirstLaunch = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
+
+    final onboardingState = await OnboardingStateService.load(prefs: prefs);
     
     // Check user preference for skipping onboarding (defaults to config setting)
     final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
     
     // Check wallet connection status
     final hasWallet = prefs.getBool('has_wallet') ?? false;
-    final hasCompletedOnboarding = prefs.getBool('completed_onboarding') ?? false;
+    final hasCompletedOnboarding = onboardingState.hasCompletedOnboarding;
     final hasAuthToken = (BackendApiService().getAuthToken() ?? '').isNotEmpty;
     final shouldShowSignIn = !hasWallet &&
       !hasAuthToken &&
@@ -125,9 +123,8 @@ class _AppInitializerState extends State<AppInitializer> {
     
     if (kDebugMode) {
       debugPrint('AppInitializer: flags');
-      debugPrint('  isFirstTime: $isFirstTime');
-      debugPrint('  hasSeenWelcome: $hasSeenWelcome');
-      debugPrint('  isFirstLaunch: $isFirstLaunch');
+      debugPrint('  isFirstLaunch: ${onboardingState.isFirstLaunch}');
+      debugPrint('  hasSeenWelcome: ${onboardingState.hasSeenWelcome}');
       debugPrint('  userSkipOnboarding: $userSkipOnboarding');
       debugPrint('  hasWallet: $hasWallet');
       debugPrint('  hasCompletedOnboarding: $hasCompletedOnboarding');
@@ -139,8 +136,7 @@ class _AppInitializerState extends State<AppInitializer> {
     
     // Navigate based on user state and configuration
     final shouldSkipOnboarding = userSkipOnboarding &&
-      hasCompletedOnboarding &&
-      (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
+      hasCompletedOnboarding;
     
     if (kDebugMode) {
       debugPrint('AppInitializer: shouldSkipOnboarding=$shouldSkipOnboarding');
@@ -165,12 +161,8 @@ class _AppInitializerState extends State<AppInitializer> {
       if (kDebugMode) {
         debugPrint('AppInitializer: route -> MainApp (skip onboarding)');
       }
-      // Mark as no longer first time if not already set
-      if (isFirstTime) {
-        await prefs.setBool('first_time', false);
-        await prefs.setBool(PreferenceKeys.hasSeenWelcome, true);
-        await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
-      }
+      // Ensure welcome/first-launch flags are consistent for returning users.
+      await OnboardingStateService.markWelcomeSeen(prefs: prefs);
       
       await warmupFuture;
       if (!mounted) return;
@@ -452,19 +444,14 @@ class OnboardingManager {
   /// Mark user as a returning user to skip onboarding screens
   static Future<void> markAsReturningUser() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('first_time', false);
-    await prefs.setBool(PreferenceKeys.hasSeenWelcome, true);
-    await prefs.setBool(PreferenceKeys.isFirstLaunch, false);
+    await OnboardingStateService.markWelcomeSeen(prefs: prefs);
   }
   
   /// Reset user state to trigger onboarding again (useful for testing)
   static Future<void> resetOnboardingState() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('first_time', true);
-    await prefs.setBool(PreferenceKeys.hasSeenWelcome, false);
-    await prefs.setBool(PreferenceKeys.isFirstLaunch, true);
     await prefs.remove('has_wallet');
-    await prefs.remove('completed_onboarding');
+    await OnboardingStateService.reset(prefs: prefs);
     
     // Reset all Web3 feature onboarding
     final keys = prefs.getKeys();
@@ -482,11 +469,8 @@ class OnboardingManager {
     // Check user preference (defaults to config setting)
     final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
     if (!userSkipOnboarding) return false;
-    
-    final isFirstTime = prefs.getBool('first_time') ?? true;
-    final hasSeenWelcome = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
-    final isFirstLaunch = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
-    
-    return (!isFirstTime || hasSeenWelcome || !isFirstLaunch);
+
+    final onboardingState = await OnboardingStateService.load(prefs: prefs);
+    return onboardingState.isReturningUser;
   }
 }

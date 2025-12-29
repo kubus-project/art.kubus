@@ -11722,6 +11722,246 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter PIN'**
   String get mnemonicRevealEnterPinDialogTitle;
+
+  /// No description provided for @manageMarkersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage markers'**
+  String get manageMarkersTitle;
+
+  /// No description provided for @manageMarkersCardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create, publish, and edit your map markers'**
+  String get manageMarkersCardSubtitle;
+
+  /// No description provided for @manageMarkersQuickActionSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create, publish, and edit markers'**
+  String get manageMarkersQuickActionSubtitle;
+
+  /// No description provided for @manageMarkersSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search markers'**
+  String get manageMarkersSearchHint;
+
+  /// No description provided for @manageMarkersRefreshTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get manageMarkersRefreshTooltip;
+
+  /// No description provided for @manageMarkersStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get manageMarkersStatusDraft;
+
+  /// No description provided for @manageMarkersStatusPublic.
+  ///
+  /// In en, this message translates to:
+  /// **'Public'**
+  String get manageMarkersStatusPublic;
+
+  /// No description provided for @manageMarkersStatusPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Private'**
+  String get manageMarkersStatusPrivate;
+
+  /// No description provided for @manageMarkersEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No markers yet'**
+  String get manageMarkersEmptyTitle;
+
+  /// No description provided for @manageMarkersEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your first marker to place an AR experience on the map.'**
+  String get manageMarkersEmptySubtitle;
+
+  /// No description provided for @manageMarkersSelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a marker'**
+  String get manageMarkersSelectTitle;
+
+  /// No description provided for @manageMarkersSelectSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a marker from the list or create a new one.'**
+  String get manageMarkersSelectSubtitle;
+
+  /// No description provided for @manageMarkersLoadFailedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load markers'**
+  String get manageMarkersLoadFailedTitle;
+
+  /// No description provided for @manageMarkersLoadFailedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your connection and try again.'**
+  String get manageMarkersLoadFailedSubtitle;
+
+  /// No description provided for @manageMarkersRetryButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get manageMarkersRetryButton;
+
+  /// No description provided for @manageMarkersNewButton.
+  ///
+  /// In en, this message translates to:
+  /// **'New marker'**
+  String get manageMarkersNewButton;
+
+  /// No description provided for @manageMarkersEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit marker'**
+  String get manageMarkersEditTitle;
+
+  /// No description provided for @manageMarkersCloseTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get manageMarkersCloseTooltip;
+
+  /// No description provided for @manageMarkersCreateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create'**
+  String get manageMarkersCreateButton;
+
+  /// No description provided for @manageMarkersSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get manageMarkersSaveButton;
+
+  /// No description provided for @manageMarkersSaveFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save marker'**
+  String get manageMarkersSaveFailed;
+
+  /// No description provided for @manageMarkersCreatedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker created'**
+  String get manageMarkersCreatedToast;
+
+  /// No description provided for @manageMarkersUpdatedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker updated'**
+  String get manageMarkersUpdatedToast;
+
+  /// No description provided for @manageMarkersDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete marker?'**
+  String get manageMarkersDeleteConfirmTitle;
+
+  /// No description provided for @manageMarkersDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This can\'t be undone.'**
+  String get manageMarkersDeleteConfirmBody;
+
+  /// No description provided for @manageMarkersDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get manageMarkersDeleteButton;
+
+  /// No description provided for @manageMarkersCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get manageMarkersCancelButton;
+
+  /// No description provided for @manageMarkersDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete marker'**
+  String get manageMarkersDeleteFailed;
+
+  /// No description provided for @manageMarkersDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Marker deleted'**
+  String get manageMarkersDeletedToast;
+
+  /// No description provided for @manageMarkersActivationRadiusLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Activation radius (m)'**
+  String get manageMarkersActivationRadiusLabel;
+
+  /// No description provided for @manageMarkersPublishedToggleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get manageMarkersPublishedToggleTitle;
+
+  /// No description provided for @manageMarkersRequiresProximityTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Requires proximity'**
+  String get manageMarkersRequiresProximityTitle;
+
+  /// No description provided for @manageMarkersRequiresProximitySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Require users to be near the marker to activate AR'**
+  String get manageMarkersRequiresProximitySubtitle;
+
+  /// No description provided for @manageMarkersSearchNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get manageMarkersSearchNoResults;
+
+  /// No description provided for @manageMarkersPickSubjectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick {subjectType}'**
+  String manageMarkersPickSubjectTitle(Object subjectType);
+
+  /// No description provided for @manageMarkersSearchSubjectsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search subjects'**
+  String get manageMarkersSearchSubjectsHint;
+
+  /// No description provided for @manageMarkersPickArAssetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick AR asset'**
+  String get manageMarkersPickArAssetTitle;
+
+  /// No description provided for @manageMarkersSearchArAssetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search AR assets'**
+  String get manageMarkersSearchArAssetsHint;
+
+  /// No description provided for @manageMarkersClearSelectionTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get manageMarkersClearSelectionTooltip;
+
+  /// No description provided for @manageMarkersPickArAssetPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Select an AR asset'**
+  String get manageMarkersPickArAssetPlaceholder;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

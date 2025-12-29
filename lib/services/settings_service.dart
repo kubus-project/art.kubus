@@ -5,6 +5,7 @@ import '../providers/notification_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/wallet_provider.dart';
 import 'backend_api_service.dart';
+import 'onboarding_state_service.dart';
 import 'push_notification_service.dart';
 
 /// Centralized storage and side-effect helpers for settings.
@@ -136,10 +137,7 @@ class SettingsService {
     }
 
     // Reset onboarding flags so the app restarts into onboarding
-    await prefs.setBool('first_time', true);
-    await prefs.setBool('is_first_launch', true);
-    await prefs.setBool('has_seen_welcome', false);
-    await prefs.setBool('completed_onboarding', false);
+    await OnboardingStateService.reset(prefs: prefs);
     await prefs.remove('skipOnboardingForReturningUsers');
   }
 
@@ -158,10 +156,7 @@ class SettingsService {
     );
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
-    await prefs.setBool('first_time', true);
-    await prefs.setBool('is_first_launch', true);
-    await prefs.setBool('has_seen_welcome', false);
-    await prefs.setBool('completed_onboarding', false);
+    await OnboardingStateService.reset(prefs: prefs);
   }
 }
 
