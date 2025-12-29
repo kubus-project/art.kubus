@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -5,7 +7,10 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/recent_activity_provider.dart';
 import '../../config/config.dart';
+import '../../models/recent_activity.dart';
+import '../../utils/activity_navigation.dart';
 import 'desktop_home_screen.dart';
 import 'desktop_map_screen.dart';
 import 'community/desktop_community_screen.dart';
@@ -23,6 +28,7 @@ import '../onboarding/web3/onboarding_data.dart';
 import '../web3/wallet/connectwallet_screen.dart';
 import '../collab/invites_inbox_screen.dart';
 import '../../widgets/user_persona_onboarding_gate.dart';
+import '../../widgets/recent_activity_tile.dart';
 
 /// Provides in-shell navigation for subscreens that should appear in the main
 /// content area instead of pushing a fullscreen route.
@@ -357,7 +363,7 @@ class _DesktopShellState extends State<DesktopShell>
                   onToggleExpand: _toggleNavigation,
                   onProfileTap: () => _showProfileMenu(context),
                   onSettingsTap: () => _showSettingsScreen(context),
-                  onNotificationsTap: () => _showNotificationsPanel(context),
+                  onNotificationsTap: () => unawaited(_showNotificationsPanel(context)),
                   onWalletTap: () => _handleWalletTap(isSignedIn),
                   onCollabInvitesTap: isSignedIn && AppConfig.isFeatureEnabled('collabInvites')
                       ? () => _showCollabInvites()
@@ -400,11 +406,27 @@ class _DesktopShellState extends State<DesktopShell>
     );
   }
 
-  void _showNotificationsPanel(BuildContext context) {
-    showDialog(
-      context: context,
+  Future<void> _showNotificationsPanel(BuildContext context) async {
+    final parentContext = context;
+    final activityProvider = parentContext.read<RecentActivityProvider>();
+    final notificationProvider = parentContext.read<NotificationProvider>();
+
+    if (activityProvider.initialized) {
+      await activityProvider.refresh(force: true);
+    } else {
+      await activityProvider.initialize(force: true);
+    }
+
+    if (!parentContext.mounted) return;
+
+    await notificationProvider.markViewed();
+
+    if (!parentContext.mounted) return;
+
+    await showDialog(
+      context: parentContext,
       barrierColor: Colors.black26,
-      builder: (context) => Align(
+      builder: (dialogContext) => Align(
         alignment: Alignment.centerRight,
         child: Container(
           width: 400,
@@ -421,11 +443,18 @@ class _DesktopShellState extends State<DesktopShell>
             ],
           ),
           child: _NotificationsPanel(
-            onClose: () => Navigator.of(context).pop(),
+            onClose: () => Navigator.of(dialogContext).pop(),
+            onActivitySelected: (activity) async {
+              Navigator.of(dialogContext).pop();
+              await ActivityNavigation.open(parentContext, activity);
+            },
           ),
         ),
       ),
     );
+
+    if (!parentContext.mounted) return;
+    activityProvider.markAllReadLocally();
   }
 
   void _showCollabInvites() {
@@ -482,12 +511,18 @@ class _DesktopShellState extends State<DesktopShell>
 
 class _NotificationsPanel extends StatelessWidget {
   final VoidCallback onClose;
+  final Future<void> Function(RecentActivity activity) onActivitySelected;
 
-  const _NotificationsPanel({required this.onClose});
+  const _NotificationsPanel({
+    required this.onClose,
+    required this.onActivitySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final l10n = AppLocalizations.of(context)!;
+    final hasUnread = context.select<RecentActivityProvider, bool>((p) => p.hasUnread);
 
     return Column(
       children: [
@@ -504,7 +539,7 @@ class _NotificationsPanel extends StatelessWidget {
           child: Row(
             children: [
               Text(
-                'Notifications',
+                l10n.commonNotifications,
                 style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -512,14 +547,28 @@ class _NotificationsPanel extends StatelessWidget {
                 ),
               ),
               const Spacer(),
+              IconButton(
+                tooltip: l10n.commonRefresh,
+                onPressed: () => unawaited(context.read<RecentActivityProvider>().refresh(force: true)),
+                icon: Icon(
+                  Icons.refresh,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                ),
+              ),
               TextButton(
-                onPressed: () {
-                  // Mark all as read
-                },
+                onPressed: !hasUnread
+                    ? null
+                    : () async {
+                        final activityProvider = context.read<RecentActivityProvider>();
+                        await context.read<NotificationProvider>().markViewed(syncServer: true);
+                        activityProvider.markAllReadLocally();
+                      },
                 child: Text(
-                  'Mark all read',
+                  l10n.homeMarkAllReadButton,
                   style: GoogleFonts.inter(
-                    color: themeProvider.accentColor,
+                    color: hasUnread
+                        ? themeProvider.accentColor
+                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -537,9 +586,55 @@ class _NotificationsPanel extends StatelessWidget {
         
         // Notifications list
         Expanded(
-          child: Consumer<NotificationProvider>(
-            builder: (context, np, _) {
-              if (np.unreadCount == 0) {
+          child: Consumer<RecentActivityProvider>(
+            builder: (context, activityProvider, _) {
+              final activities = activityProvider.activities;
+              final scheme = Theme.of(context).colorScheme;
+
+              if (activityProvider.isLoading && activities.isEmpty) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: themeProvider.accentColor,
+                  ),
+                );
+              }
+
+              if (activityProvider.error != null && activities.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.error_outline, size: 48, color: scheme.error),
+                        const SizedBox(height: 12),
+                        Text(
+                          activityProvider.error!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: scheme.onSurface.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          onPressed: () => unawaited(activityProvider.refresh(force: true)),
+                          child: Text(
+                            l10n.commonRetry,
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: themeProvider.accentColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              if (activities.isEmpty) {
                 return Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -547,62 +642,30 @@ class _NotificationsPanel extends StatelessWidget {
                       Icon(
                         Icons.notifications_none,
                         size: 64,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                        color: scheme.onSurface.withValues(alpha: 0.3),
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No notifications yet',
+                        l10n.homeNoNotificationsTitle,
                         style: GoogleFonts.inter(
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: scheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
                   ),
                 );
               }
-              
-              // Show unread count indicator since NotificationProvider doesn't expose full list
-              return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: themeProvider.accentColor.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${np.unreadCount}',
-                          style: GoogleFonts.inter(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: themeProvider.accentColor,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'unread notifications',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'View full notifications in the mobile app',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: activities.length,
+                itemBuilder: (context, index) {
+                  final activity = activities[index];
+                  return RecentActivityTile(
+                    activity: activity,
+                    onTap: () => unawaited(onActivitySelected(activity)),
+                  );
+                },
               );
             },
           ),

@@ -729,15 +729,55 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final walletProvider = Provider.of<WalletProvider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
     final activityProvider = Provider.of<RecentActivityProvider>(context);
+    final statsProvider = context.watch<StatsProvider>();
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final isLoadingArtworks = artworkProvider.isLoading('load_artworks');
     final isLoadingActivity =
         activityProvider.isLoading && activityProvider.activities.isEmpty;
 
-    final discoveredCount = profileProvider.artworksCount > 0
-        ? profileProvider.artworksCount
-        : artworkProvider.artworks.where((a) => a.isDiscovered).length;
+    final walletAddress = (walletProvider.currentWalletAddress ?? '').trim();
+    const discoveredMetrics = <String>['artworksDiscovered'];
+    if (walletAddress.isNotEmpty) {
+      unawaited(statsProvider.ensureSnapshot(
+        entityType: 'user',
+        entityId: walletAddress,
+        metrics: discoveredMetrics,
+        scope: 'private',
+      ));
+    }
+    final discoveredSnapshot = walletAddress.isEmpty
+        ? null
+        : statsProvider.getSnapshot(
+            entityType: 'user',
+            entityId: walletAddress,
+            metrics: discoveredMetrics,
+            scope: 'private',
+          );
+    final discoveredError = walletAddress.isEmpty
+        ? null
+        : statsProvider.snapshotError(
+            entityType: 'user',
+            entityId: walletAddress,
+            metrics: discoveredMetrics,
+            scope: 'private',
+          );
+    final discoveredLoading = walletAddress.isNotEmpty &&
+        statsProvider.isSnapshotLoading(
+          entityType: 'user',
+          entityId: walletAddress,
+          metrics: discoveredMetrics,
+          scope: 'private',
+        ) &&
+        discoveredSnapshot == null &&
+        discoveredError == null;
+
+    final discoveredFromStats = discoveredSnapshot?.counters['artworksDiscovered'] ?? 0;
+    final discoveredCount = discoveredFromStats > 0
+        ? discoveredFromStats
+        : profileProvider.artworksCount > 0
+            ? profileProvider.artworksCount
+            : artworkProvider.artworks.where((a) => a.isDiscovered).length;
     final arSessions = activityProvider.activities
         .where((a) => a.category == ActivityCategory.ar)
         .length;
@@ -781,7 +821,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   height: 160,
                   child: DesktopStatCard(
                     label: l10n.desktopHomeStatArtworksDiscovered,
-                    value: discoveredCount.toString(),
+                    value: discoveredLoading ? '\u2026' : discoveredCount.toString(),
                     icon: Icons.explore,
                   ),
                 ),

@@ -444,7 +444,30 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           scope: 'private',
         );
 
-        final isLoading = series == null &&
+        final currentError = statsProvider.seriesError(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
+        final prevError = statsProvider.seriesError(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: prevFrom.toIso8601String(),
+          to: prevTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
+
+        final currentLoading = series == null &&
             statsProvider.isSeriesLoading(
               entityType: 'user',
               entityId: walletAddress,
@@ -456,6 +479,21 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               groupBy: 'targetType',
               scope: 'private',
             );
+        final prevLoading = prevSeries == null &&
+            statsProvider.isSeriesLoading(
+              entityType: 'user',
+              entityId: walletAddress,
+              metric: 'viewsReceived',
+              bucket: bucket,
+              timeframe: timeframe,
+              from: prevFrom.toIso8601String(),
+              to: prevTo.toIso8601String(),
+              groupBy: 'targetType',
+              scope: 'private',
+            );
+        final isLoading = currentLoading || prevLoading;
+        final hasError = !isLoading &&
+            ((currentError != null && series == null) || (prevError != null && prevSeries == null));
 
         final visitorGroups = <String>{'event', 'exhibition'};
         final artworkGroups = <String>{'artwork'};
@@ -465,10 +503,22 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
         final artworkViewsThis = _sumGroups(series, artworkGroups);
         final artworkViewsPrev = _sumGroups(prevSeries, artworkGroups);
 
-        final visitorValue = isLoading ? '\u2026' : visitorsThis.toString();
-        final artworkValue = isLoading ? '\u2026' : _formatNumber(artworkViewsThis);
-        final visitorChange = isLoading ? '\u2014' : _formatPercentChange(current: visitorsThis, previous: visitorsPrev);
-        final artworkChange = isLoading ? '\u2014' : _formatPercentChange(current: artworkViewsThis, previous: artworkViewsPrev);
+        final visitorValue = hasError
+            ? '\u2014'
+            : isLoading
+                ? '\u2026'
+                : visitorsThis.toString();
+        final artworkValue = hasError
+            ? '\u2014'
+            : isLoading
+                ? '\u2026'
+                : _formatNumber(artworkViewsThis);
+        final visitorChange = (isLoading || hasError)
+            ? '\u2014'
+            : _formatPercentChange(current: visitorsThis, previous: visitorsPrev);
+        final artworkChange = (isLoading || hasError)
+            ? '\u2014'
+            : _formatPercentChange(current: artworkViewsThis, previous: artworkViewsPrev);
 
         final institution = institutionProvider.institutions.isNotEmpty ? institutionProvider.institutions.first : null;
         final events = institution != null
@@ -522,6 +572,68 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               ),
             ),
             const SizedBox(height: 12),
+            if (hasError) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.errorContainer.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: scheme.error.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error_outline, color: scheme.error),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Unable to load analytics right now.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        unawaited(statsProvider.ensureSeries(
+                          entityType: 'user',
+                          entityId: walletAddress,
+                          metric: 'viewsReceived',
+                          bucket: bucket,
+                          timeframe: timeframe,
+                          from: currentFrom.toIso8601String(),
+                          to: currentTo.toIso8601String(),
+                          groupBy: 'targetType',
+                          scope: 'private',
+                          forceRefresh: true,
+                        ));
+                        unawaited(statsProvider.ensureSeries(
+                          entityType: 'user',
+                          entityId: walletAddress,
+                          metric: 'viewsReceived',
+                          bucket: bucket,
+                          timeframe: timeframe,
+                          from: prevFrom.toIso8601String(),
+                          to: prevTo.toIso8601String(),
+                          groupBy: 'targetType',
+                          scope: 'private',
+                          forceRefresh: true,
+                        ));
+                      },
+                      child: Text(
+                        'Retry',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: scheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             GridView.count(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -732,6 +844,18 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
               groupBy: 'targetType',
               scope: 'private',
             );
+        final error = statsProvider.seriesError(
+          entityType: 'user',
+          entityId: walletAddress,
+          metric: 'viewsReceived',
+          bucket: bucket,
+          timeframe: timeframe,
+          from: currentFrom.toIso8601String(),
+          to: currentTo.toIso8601String(),
+          groupBy: 'targetType',
+          scope: 'private',
+        );
+        final hasError = !isLoading && error != null && series == null;
 
         final buckets = _fillGroupBuckets(
           series: series,
@@ -754,6 +878,39 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   color: roles.web3InstitutionAccent,
+                ),
+              ),
+            ),
+          );
+        }
+
+        if (hasError) {
+          return SizedBox(
+            height: 120,
+            child: Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  unawaited(statsProvider.ensureSeries(
+                    entityType: 'user',
+                    entityId: walletAddress,
+                    metric: 'viewsReceived',
+                    bucket: bucket,
+                    timeframe: timeframe,
+                    from: currentFrom.toIso8601String(),
+                    to: currentTo.toIso8601String(),
+                    groupBy: 'targetType',
+                    scope: 'private',
+                    forceRefresh: true,
+                  ));
+                },
+                icon: Icon(Icons.refresh, color: Theme.of(context).colorScheme.primary),
+                label: Text(
+                  'Retry loading visitors',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
               ),
             ),

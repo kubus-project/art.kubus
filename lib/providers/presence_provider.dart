@@ -9,12 +9,13 @@ import '../providers/profile_provider.dart';
 import '../services/presence_api.dart';
 
 class PresenceProvider extends ChangeNotifier {
-  static const Duration _cacheTtl = Duration(seconds: 30);
+  static const Duration _cacheTtl = Duration(seconds: 15);
   static const Duration _batchDebounce = Duration(milliseconds: 60);
   static const Duration _visitDebounce = Duration(milliseconds: 400);
   static const Duration _visitDedupeWindow = Duration(minutes: 5);
-  static const Duration _autoRefreshInterval = Duration(seconds: 15);
-  static const Duration _heartbeatInterval = Duration(seconds: 45);
+  // Keep presence feeling "live" without spamming the backend.
+  static const Duration _autoRefreshInterval = Duration(seconds: 10);
+  static const Duration _heartbeatInterval = Duration(seconds: 30);
 
   final PresenceApi _api;
 
@@ -287,17 +288,23 @@ class PresenceProvider extends ChangeNotifier {
         final raw = resp['data'];
         final list = raw is List ? raw : (raw is Map<String, dynamic> && raw['data'] is List ? raw['data'] as List : const []);
 
+        var didChange = false;
         for (final entry in list) {
           if (entry is! Map) continue;
           final parsed = UserPresenceEntry.fromJson(Map<String, dynamic>.from(entry));
           final walletKey = _walletLowerOrNull(parsed.walletAddress);
           if (walletKey == null) continue;
+          final existing = _cacheByWalletLower[walletKey];
+          if (existing == null || existing.presence != parsed) {
+            didChange = true;
+          }
+
           _cacheByWalletLower[walletKey] = _PresenceCacheEntry(
-            presence: parsed,
+            presence: existing?.presence == parsed ? existing!.presence : parsed,
             fetchedAt: now,
           );
         }
-        notifyListeners();
+        if (didChange) notifyListeners();
       }
     } catch (e) {
       if (kDebugMode) {

@@ -305,7 +305,7 @@ class StatsProvider extends ChangeNotifier {
       return entry.snapshot;
     }
 
-    if (!_shouldRetryError(entry.errorAt) && entry.snapshot != null) {
+    if (!forceRefresh && entry.errorAt != null && !_shouldRetryError(entry.errorAt)) {
       return entry.snapshot;
     }
 
@@ -390,7 +390,7 @@ class StatsProvider extends ChangeNotifier {
       return entry.series;
     }
 
-    if (!_shouldRetryError(entry.errorAt) && entry.series != null) {
+    if (!forceRefresh && entry.errorAt != null && !_shouldRetryError(entry.errorAt)) {
       return entry.series;
     }
 

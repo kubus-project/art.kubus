@@ -50,6 +50,7 @@ class ArtMarker {
   final List<ExhibitionSummaryDto> exhibitionSummaries;
   final List<String> tags;
   final DateTime createdAt;
+  final DateTime? updatedAt;
   final String createdBy;
   final int viewCount;
   final int interactionCount;
@@ -58,6 +59,7 @@ class ArtMarker {
   final double activationRadius; // Meters from marker to activate AR
   final bool requiresProximity; // Must be near to activate
   final bool isPublic; // Visible to all users
+  final bool isActive; // Published/active (draft markers are inactive)
 
   const ArtMarker({
     required this.id,
@@ -80,12 +82,14 @@ class ArtMarker {
     this.exhibitionSummaries = const <ExhibitionSummaryDto>[],
     this.tags = const [],
     required this.createdAt,
+    this.updatedAt,
     required this.createdBy,
     this.viewCount = 0,
     this.interactionCount = 0,
     this.activationRadius = 50.0,
     this.requiresProximity = true,
     this.isPublic = true,
+    this.isActive = true,
   });
 
   /// Convenience getter for map visuals
@@ -192,12 +196,14 @@ class ArtMarker {
       'tags': tags,
       'category': category,
       'createdAt': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       'createdBy': createdBy,
       'viewCount': viewCount,
       'interactionCount': interactionCount,
       'activationRadius': activationRadius,
       'requiresProximity': requiresProximity,
       'isPublic': isPublic,
+      'isActive': isActive,
     };
   }
 
@@ -209,6 +215,8 @@ class ArtMarker {
       map['markerType'] ?? map['type'] ?? map['category'],
       metadata,
     );
+    final updatedAtRaw = map['updatedAt'] ?? map['updated_at'];
+    final updatedAt = DateTime.tryParse(updatedAtRaw?.toString() ?? '');
     final rotation = _normalizeRotation(map['rotation']);
     return ArtMarker(
       id: map['id']?.toString() ?? '',
@@ -237,12 +245,14 @@ class ArtMarker {
       exhibitionSummaries: exhibitionSummaries,
       tags: List<String>.from(map['tags'] ?? const []),
       createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      updatedAt: updatedAt,
       createdBy: map['createdBy']?.toString() ?? 'system',
       viewCount: _parseInt(map['viewCount'], 0),
       interactionCount: _parseInt(map['interactionCount'], 0),
       activationRadius: _parseDouble(map['activationRadius'], 50.0),
       requiresProximity: _parseBool(map['requiresProximity'], true),
       isPublic: _parseBool(map['isPublic'], true),
+      isActive: _parseBool(map['isActive'] ?? map['is_active'], true),
     );
   }
 
@@ -268,12 +278,14 @@ class ArtMarker {
     List<ExhibitionSummaryDto>? exhibitionSummaries,
     List<String>? tags,
     DateTime? createdAt,
+    DateTime? updatedAt,
     String? createdBy,
     int? viewCount,
     int? interactionCount,
     double? activationRadius,
     bool? requiresProximity,
     bool? isPublic,
+    bool? isActive,
   }) {
     return ArtMarker(
       id: id ?? this.id,
@@ -296,12 +308,14 @@ class ArtMarker {
       exhibitionSummaries: exhibitionSummaries ?? this.exhibitionSummaries,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
       createdBy: createdBy ?? this.createdBy,
       viewCount: viewCount ?? this.viewCount,
       interactionCount: interactionCount ?? this.interactionCount,
       activationRadius: activationRadius ?? this.activationRadius,
       requiresProximity: requiresProximity ?? this.requiresProximity,
       isPublic: isPublic ?? this.isPublic,
+      isActive: isActive ?? this.isActive,
     );
   }
 

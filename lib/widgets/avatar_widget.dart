@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../config/config.dart';
+import '../models/user_presence.dart';
 import '../providers/presence_provider.dart';
 import '../services/user_service.dart';
 import '../screens/community/user_profile_screen.dart' as mobile;
@@ -234,18 +235,22 @@ class _AvatarWidgetState extends State<AvatarWidget> with SingleTickerProviderSt
     }
 
     Widget base = content;
-    PresenceProvider? presenceProvider;
+    UserPresenceEntry? presence;
     try {
-      presenceProvider = Provider.of<PresenceProvider>(context);
+      presence = context.select<PresenceProvider, UserPresenceEntry?>(
+        (provider) => provider.presenceForWallet(widget.wallet),
+      );
     } catch (_) {
-      presenceProvider = null;
+      presence = null;
     }
-    final presence = presenceProvider?.presenceForWallet(widget.wallet);
     final bool presenceVisible = presence?.visible == true;
     final bool? presenceOnline = presence?.isOnline;
 
-    final bool? effectiveOnline = presence != null ? presenceOnline : widget.isOnline;
-    final bool shouldShowPresence = AppConfig.isFeatureEnabled('presence') && widget.showStatusIndicator && (presence == null ? true : presenceVisible) && effectiveOnline != null;
+    final bool? effectiveOnline = presenceOnline ?? widget.isOnline;
+    final bool shouldShowPresence = AppConfig.isFeatureEnabled('presence') &&
+        widget.showStatusIndicator &&
+        presenceVisible &&
+        effectiveOnline != null;
 
     if (shouldShowPresence) {
       final indicatorSize = (radius * 0.75).clamp(14.0, 18.0).toDouble();

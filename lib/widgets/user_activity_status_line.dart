@@ -103,20 +103,23 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
               color: scheme.onSurface.withValues(alpha: 0.6),
             );
 
-    PresenceProvider? presenceProvider;
+    UserPresenceEntry? presence;
     try {
-      presenceProvider = Provider.of<PresenceProvider>(context);
+      presence = context.select<PresenceProvider, UserPresenceEntry?>(
+        (provider) => provider.presenceForWallet(widget.walletAddress),
+      );
     } catch (_) {
-      presenceProvider = null;
+      presence = null;
     }
-    final presence = presenceProvider?.presenceForWallet(widget.walletAddress);
 
-    if (presence == null || presence.visible != true) {
+    final presenceEntry = presence;
+    if (presenceEntry == null || presenceEntry.visible != true) {
       _stopToggleTimer();
       return const SizedBox.shrink();
     }
 
-    final isOnline = presence.isOnline == true;
+    final p = presenceEntry;
+    final isOnline = p.isOnline == true;
     if (isOnline) {
       _stopToggleTimer();
       return Text(
@@ -128,7 +131,7 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
       );
     }
 
-    final lastSeenAt = presence.lastSeenAt;
+    final lastSeenAt = p.lastSeenAt;
     if (lastSeenAt == null) {
       _stopToggleTimer();
       return const SizedBox.shrink();
@@ -138,9 +141,9 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
     final timeText = l10n.presenceLastSeenLabel(timeAgo);
 
     final canShowLocation = AppConfig.isFeatureEnabled('presenceLastVisitedLocation') &&
-        presence.lastVisited != null &&
-        (presence.lastVisitedTitle ?? '').trim().isNotEmpty &&
-        presence.lastVisited!.isExpired == false;
+        p.lastVisited != null &&
+        (p.lastVisitedTitle ?? '').trim().isNotEmpty &&
+        p.lastVisited!.isExpired == false;
 
     if (!canShowLocation) {
       _stopToggleTimer();
@@ -160,11 +163,11 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
       });
     }
 
-    final locationText = l10n.presenceLastSeenAtLabel((presence.lastVisitedTitle ?? '').trim());
+    final locationText = l10n.presenceLastSeenAtLabel((p.lastVisitedTitle ?? '').trim());
     final activeChild = _showLocation
         ? InkWell(
             key: const ValueKey('presence_location'),
-            onTap: () => _openLastVisited(context, presence.lastVisited!),
+            onTap: () => _openLastVisited(context, p.lastVisited!),
             child: Text(
               locationText,
               textAlign: widget.textAlign,

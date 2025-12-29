@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -46,6 +48,9 @@ class _UserPersonaOnboardingGateState extends State<UserPersonaOnboardingGate> {
     if (!profile.needsPersonaOnboarding) return;
 
     _isShowing = true;
+    // Persist that we already surfaced this onboarding prompt so it doesn't
+    // repeatedly re-open if the user dismisses it.
+    unawaited(profile.markPersonaOnboardingSeen(walletAddress: wallet));
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
       try {
