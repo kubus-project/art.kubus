@@ -20,6 +20,9 @@ class _FakePresenceApi implements PresenceApi {
   Future<void> ensureAuthLoaded({String? walletAddress}) async {}
 
   @override
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async => {'success': true};
+
+  @override
   Future<Map<String, dynamic>> recordPresenceVisit({
     required String type,
     required String id,

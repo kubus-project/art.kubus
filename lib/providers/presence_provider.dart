@@ -14,17 +14,25 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _visitDebounce = Duration(milliseconds: 400);
   static const Duration _visitDedupeWindow = Duration(minutes: 5);
   static const Duration _autoRefreshInterval = Duration(seconds: 15);
+  static const Duration _heartbeatInterval = Duration(seconds: 45);
 
   final PresenceApi _api;
 
   AppRefreshProvider? _boundRefreshProvider;
   ProfileProvider? _profileProvider;
+  VoidCallback? _profileListener;
+
+  bool _initialized = false;
 
   Timer? _batchTimer;
   bool _batchInFlight = false;
   final Set<String> _pendingWalletsLower = <String>{};
   final Set<String> _watchedWalletsLower = <String>{};
   Timer? _autoRefreshTimer;
+
+  Timer? _heartbeatTimer;
+  bool _heartbeatInFlight = false;
+  DateTime? _lastHeartbeatAt;
 
   Timer? _visitTimer;
   ({String type, String id})? _pendingVisit;
@@ -37,6 +45,12 @@ class PresenceProvider extends ChangeNotifier {
   final Map<String, _PresenceCacheEntry> _cacheByWalletLower = <String, _PresenceCacheEntry>{};
 
   PresenceProvider({PresenceApi? api}) : _api = api ?? BackendPresenceApi();
+
+  Future<void> initialize() async {
+    if (_initialized) return;
+    _initialized = true;
+    _ensureHeartbeatTimer();
+  }
 
   void bindToRefresh(AppRefreshProvider refreshProvider) {
     if (identical(_boundRefreshProvider, refreshProvider)) return;
@@ -81,7 +95,19 @@ class PresenceProvider extends ChangeNotifier {
 
   void bindProfileProvider(ProfileProvider profileProvider) {
     if (identical(_profileProvider, profileProvider)) return;
+
+    if (_profileProvider != null && _profileListener != null) {
+      try {
+        _profileProvider!.removeListener(_profileListener!);
+      } catch (_) {}
+    }
+
     _profileProvider = profileProvider;
+    _profileListener = () {
+      _ensureHeartbeatTimer();
+    };
+    profileProvider.addListener(_profileListener!);
+    _ensureHeartbeatTimer();
   }
 
   UserPresenceEntry? presenceForWallet(String wallet) {
@@ -106,6 +132,7 @@ class PresenceProvider extends ChangeNotifier {
       _watchedWalletsLower.add(key);
     }
     _ensureAutoRefreshTimer();
+    _ensureHeartbeatTimer();
     _scheduleBatchFetch();
   }
 
@@ -122,6 +149,7 @@ class PresenceProvider extends ChangeNotifier {
     _pendingWalletsLower.add(key);
     _watchedWalletsLower.add(key);
     _ensureAutoRefreshTimer();
+    _ensureHeartbeatTimer();
     await _flushBatchFetch();
   }
 
@@ -136,6 +164,68 @@ class PresenceProvider extends ChangeNotifier {
       _pendingWalletsLower.addAll(_watchedWalletsLower);
       _scheduleBatchFetch();
     });
+  }
+
+  void _ensureHeartbeatTimer() {
+    if (!_initialized) return;
+
+    if (!AppConfig.isFeatureEnabled('presence')) {
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
+      return;
+    }
+
+    final profile = _profileProvider;
+    final signedIn = profile?.isSignedIn == true;
+    final wallet = (profile?.currentUser?.walletAddress ?? '').trim();
+    final prefs = profile?.preferences;
+    final allowVisible = prefs?.showActivityStatus == true;
+
+    if (!signedIn || wallet.isEmpty || !allowVisible) {
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = null;
+      return;
+    }
+
+    _heartbeatTimer ??= Timer.periodic(_heartbeatInterval, (_) {
+      unawaited(_sendHeartbeat());
+    });
+  }
+
+  Future<void> onAppResumed() async {
+    _ensureHeartbeatTimer();
+    await _sendHeartbeat(force: true);
+  }
+
+  Future<void> _sendHeartbeat({bool force = false}) async {
+    if (_heartbeatInFlight) return;
+    if (!AppConfig.isFeatureEnabled('presence')) return;
+
+    final profile = _profileProvider;
+    if (profile?.isSignedIn != true) return;
+    final wallet = (profile?.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return;
+
+    final prefs = profile?.preferences;
+    if (prefs?.showActivityStatus != true) return;
+
+    final last = _lastHeartbeatAt;
+    if (!force && last != null && DateTime.now().difference(last) < _heartbeatInterval) {
+      return;
+    }
+
+    _heartbeatInFlight = true;
+    try {
+      await _api.ensureAuthLoaded(walletAddress: wallet);
+      await _api.pingPresence(walletAddress: wallet);
+      _lastHeartbeatAt = DateTime.now();
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('PresenceProvider: heartbeat failed: $e');
+      }
+    } finally {
+      _heartbeatInFlight = false;
+    }
   }
 
   void recordVisit({required String type, required String id}) {
@@ -224,6 +314,12 @@ class PresenceProvider extends ChangeNotifier {
     _batchTimer?.cancel();
     _visitTimer?.cancel();
     _autoRefreshTimer?.cancel();
+    _heartbeatTimer?.cancel();
+    if (_profileProvider != null && _profileListener != null) {
+      try {
+        _profileProvider!.removeListener(_profileListener!);
+      } catch (_) {}
+    }
     super.dispose();
   }
 

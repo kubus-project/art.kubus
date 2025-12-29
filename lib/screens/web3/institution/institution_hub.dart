@@ -19,7 +19,9 @@ import '../../collab/invites_inbox_screen.dart';
 import '../../events/exhibition_list_screen.dart';
 
 class InstitutionHub extends StatefulWidget {
-  const InstitutionHub({super.key});
+  final ValueChanged<int>? onTabChanged;
+
+  const InstitutionHub({super.key, this.onTabChanged});
 
   @override
   State<InstitutionHub> createState() => _InstitutionHubState();
@@ -55,6 +57,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
       final desiredIndex = persona == UserPersona.institution ? 1 : 0;
       if (_selectedIndex != desiredIndex) {
         setState(() => _selectedIndex = desiredIndex);
+        widget.onTabChanged?.call(desiredIndex);
       }
       _hasSetInitialTabByPersona = true;
     }
@@ -598,7 +601,7 @@ class _InstitutionHubState extends State<InstitutionHub> {
     final scheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: enabled
-          ? () => setState(() => _selectedIndex = index)
+          ? () => _setSelectedIndex(index)
           : () => ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Institution tools unlock after DAO approval.')),
               ),
@@ -636,6 +639,12 @@ class _InstitutionHubState extends State<InstitutionHub> {
         ),
       ),
     );
+  }
+
+  void _setSelectedIndex(int index) {
+    if (_selectedIndex == index) return;
+    setState(() => _selectedIndex = index);
+    widget.onTabChanged?.call(index);
   }
 
   Widget _buildRoleBanner({

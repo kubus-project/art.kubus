@@ -34,6 +34,8 @@ import 'providers/collab_provider.dart';
 import 'providers/collections_provider.dart';
 import 'providers/portfolio_provider.dart';
 import 'providers/stats_provider.dart';
+import 'providers/analytics_filters_provider.dart';
+import 'providers/desktop_dashboard_state_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -45,6 +47,7 @@ import 'screens/web3/wallet/connectwallet_screen.dart';
 import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
+import 'services/socket_service.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'screens/events/event_detail_screen.dart';
@@ -248,13 +251,23 @@ class _AppLauncherState extends State<AppLauncher> {
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
               ),
+              ChangeNotifierProvider(create: (context) => DesktopDashboardStateProvider()),
+              ChangeNotifierProvider(create: (context) => AnalyticsFiltersProvider()),
               ChangeNotifierProvider(create: (context) => NavigationProvider()),
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
               ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
-              ChangeNotifierProvider(create: (context) => CollabProvider()),
+              ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, CollabProvider>(
+                create: (context) => CollabProvider(),
+                update: (context, appRefreshProvider, profileProvider, collabProvider) {
+                  final provider = collabProvider ?? CollabProvider();
+                  provider.bindToRefresh(appRefreshProvider);
+                  provider.bindProfileProvider(profileProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(create: (context) => CollectionsProvider()),
               ChangeNotifierProvider(create: (context) => PortfolioProvider()),
               ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
@@ -367,10 +380,16 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
     final ctx = context;
     if (!mounted) return;
     final walletProvider = Provider.of<WalletProvider>(ctx, listen: false);
+    final refreshProvider = Provider.of<AppRefreshProvider>(ctx, listen: false);
+    final presenceProvider = Provider.of<PresenceProvider>(ctx, listen: false);
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       walletProvider.markInactive();
     } else if (state == AppLifecycleState.resumed) {
       walletProvider.markActive();
+      // Refresh core surfaces after returning to foreground (no manual reload needed).
+      refreshProvider.triggerAll();
+      unawaited(presenceProvider.onAppResumed());
+      unawaited(SocketService().connect());
     }
   }
 

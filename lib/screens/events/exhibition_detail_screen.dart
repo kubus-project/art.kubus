@@ -408,22 +408,35 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                 );
 
                 if (isWide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  return Stack(
                     children: [
-                      Expanded(
-                        flex: 6,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                      SingleChildScrollView(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            details,
-                            const SizedBox(height: 14),
-                            artworksCard,
+                            Expanded(
+                              flex: 6,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  details,
+                                  const SizedBox(height: 14),
+                                  artworksCard,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(flex: 5, child: collab),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(flex: 5, child: collab),
+                      if (provider.isLoading)
+                        Positioned(
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          child: LinearProgressIndicator(color: scheme.primary),
+                        ),
                     ],
                   );
                 }

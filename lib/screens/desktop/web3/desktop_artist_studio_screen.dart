@@ -9,10 +9,11 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/stats_provider.dart';
+import '../../../providers/analytics_filters_provider.dart';
+import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
-import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../components/desktop_widgets.dart';
@@ -214,6 +215,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                       onOpenArtworkCreator: openArtworkCreator,
                       onOpenCollectionCreator: openCollectionCreator,
                       onOpenExhibitionCreator: openExhibitionCreator,
+                      onTabChanged: (tabIndex) {
+                        context.read<DesktopDashboardStateProvider>().updateArtistStudioSectionFromTabIndex(
+                              tabIndex: tabIndex,
+                              exhibitionsEnabled: AppConfig.isFeatureEnabled('exhibitions'),
+                            );
+                      },
                     ),
                   ),
                 ),
@@ -235,6 +242,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   Widget _buildRightPanel(ThemeProvider themeProvider) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
+    final dashboardState = context.watch<DesktopDashboardStateProvider>();
+    final section = dashboardState.artistStudioSection;
 
     // Compute approval status for gating quick actions
     final profileProvider = context.watch<ProfileProvider>();
@@ -248,6 +257,21 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
     final isApprovedArtist =
         hasArtistBadge || (reviewIsArtist && reviewStatus == 'approved');
 
+    String sectionTitle() {
+      switch (section) {
+        case DesktopArtistStudioSection.gallery:
+          return l10n.artistStudioTabGallery;
+        case DesktopArtistStudioSection.create:
+          return l10n.artistStudioTabCreate;
+        case DesktopArtistStudioSection.exhibitions:
+          return l10n.artistStudioTabExhibitions;
+        case DesktopArtistStudioSection.analytics:
+          return l10n.artistStudioTabAnalytics;
+      }
+    }
+
+    final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
+
     return Container(
       color: scheme.surface,
       child: ListView(
@@ -255,7 +279,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
         children: [
           // Header
           Text(
-            l10n.desktopArtistStudioOverviewTitle,
+            sectionTitle(),
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -268,7 +292,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           _buildVerificationStatusCard(themeProvider),
           const SizedBox(height: 20),
 
-          // Quick actions
+          // Contextual sidebar actions
           Text(
             l10n.desktopArtistStudioQuickActionsTitle,
             style: GoogleFonts.inter(
@@ -284,8 +308,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 final pending = collabProvider.pendingInviteCount;
                 final badge = pending > 0
                     ? Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: scheme.error,
                           borderRadius: BorderRadius.circular(999),
@@ -308,16 +331,14 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 return _buildQuickActionTile(
                   l10n.desktopArtistStudioQuickActionInvitesTitle,
                   pending > 0
-                      ? l10n
-                          .desktopArtistStudioQuickActionInvitesPendingSubtitle
+                      ? l10n.desktopArtistStudioQuickActionInvitesPendingSubtitle
                       : l10n.desktopArtistStudioQuickActionInvitesSubtitle,
-                  Icons.group_add_outlined,
+                  Icons.inbox_outlined,
                   scheme.primary,
                   () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
-                        title: l10n
-                            .desktopArtistStudioQuickActionCollaborationInvitesTitle,
+                        title: l10n.desktopArtistStudioQuickActionCollaborationInvitesTitle,
                         child: const InvitesInboxScreen(),
                       ),
                     );
@@ -326,28 +347,28 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 );
               },
             ),
-          if (isApprovedArtist)
+
+          if (isApprovedArtist && section == DesktopArtistStudioSection.create)
             _buildQuickActionTile(
               l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
               l10n.desktopArtistStudioQuickActionCreateArtworkSubtitle,
               Icons.add_photo_alternate_outlined,
-              AppColorUtils.tealAccent, // Collections/gallery
+              scheme.tertiary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
-                    title:
-                        l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
+                    title: l10n.desktopArtistStudioQuickActionCreateArtworkTitle,
                     child: const ArtworkCreator(),
                   ),
                 );
               },
             ),
-          if (isApprovedArtist)
+          if (isApprovedArtist && section == DesktopArtistStudioSection.create)
             _buildQuickActionTile(
               l10n.collectionCreatorTitle,
               l10n.artistStudioCreateOptionCollectionSubtitle,
               Icons.collections_bookmark_outlined,
-              KubusColorRoles.of(context).web3ArtistStudioAccent,
+              scheme.secondary,
               () {
                 final shellScope = DesktopShellScope.of(context);
                 if (shellScope == null) return;
@@ -371,7 +392,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 );
               },
             ),
-          if (isApprovedArtist)
+          if (isApprovedArtist && section == DesktopArtistStudioSection.gallery)
             _buildQuickActionTile(
               l10n.desktopArtistStudioQuickActionMyGalleryTitle,
               l10n.desktopArtistStudioQuickActionMyGallerySubtitle,
@@ -387,12 +408,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 );
               },
             ),
-          if (isApprovedArtist && AppConfig.isFeatureEnabled('exhibitions'))
+          if (isApprovedArtist && showExhibitions && section == DesktopArtistStudioSection.exhibitions)
             _buildQuickActionTile(
               l10n.desktopArtistStudioQuickActionExhibitionsTitle,
               l10n.desktopArtistStudioQuickActionExhibitionsSubtitle,
               Icons.collections_bookmark_outlined,
-              AppColorUtils.tealAccent, // Collections
+              scheme.primary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -424,12 +445,12 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 );
               },
             ),
-          if (isApprovedArtist)
+          if (isApprovedArtist && section == DesktopArtistStudioSection.analytics)
             _buildQuickActionTile(
               l10n.desktopArtistStudioQuickActionAnalyticsTitle,
               l10n.desktopArtistStudioQuickActionAnalyticsSubtitle,
               Icons.analytics_outlined,
-              AppColorUtils.indigoAccent, // Analytics
+              scheme.tertiary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -439,6 +460,14 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 );
               },
             ),
+          if (section == DesktopArtistStudioSection.analytics) ...[
+            const SizedBox(height: 8),
+            _buildAnalyticsTimeframeSelector(
+              title: 'Timeframe',
+              value: context.watch<AnalyticsFiltersProvider>().artistTimeframe,
+              onChanged: (v) => context.read<AnalyticsFiltersProvider>().setArtistTimeframe(v),
+            ),
+          ],
           const SizedBox(height: 24),
 
           // Stats
@@ -454,17 +483,83 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
           _buildStatsGrid(themeProvider),
           const SizedBox(height: 24),
 
-          // Recent activity
-          Text(
-            l10n.desktopArtistStudioRecentActivityTitle,
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface,
+          if (section == DesktopArtistStudioSection.gallery) ...[
+            Text(
+              l10n.desktopArtistStudioRecentActivityTitle,
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildRecentActivity(themeProvider),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsTimeframeSelector({
+    required String title,
+    required String value,
+    required ValueChanged<String> onChanged,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final normalized = value.trim().toLowerCase();
+    final effective = AnalyticsFiltersProvider.allowedTimeframes.contains(normalized) ? normalized : '30d';
+    String labelFor(String timeframe) {
+      switch (timeframe) {
+        case '7d':
+          return '7d';
+        case '30d':
+          return '30d';
+        case '90d':
+          return '90d';
+        case '1y':
+          return '1y';
+        default:
+          return timeframe;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          _buildRecentActivity(themeProvider),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: effective,
+              dropdownColor: scheme.surfaceContainerHighest,
+              items: AnalyticsFiltersProvider.allowedTimeframes
+                  .map(
+                    (tf) => DropdownMenuItem<String>(
+                      value: tf,
+                      child: Text(labelFor(tf)),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (next) {
+                if (next == null) return;
+                onChanged(next);
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -709,7 +804,7 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                 l10n.desktopArtistStudioStatArtworks,
                 displayCount(artworks),
                 Icons.collections_outlined,
-                AppColorUtils.tealAccent, // Collections
+                themeProvider.accentColor,
               ),
             ),
             const SizedBox(width: 12),

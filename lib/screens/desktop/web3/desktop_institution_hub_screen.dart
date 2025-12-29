@@ -9,6 +9,8 @@ import '../../../providers/dao_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../providers/collab_provider.dart';
 import '../../../providers/stats_provider.dart';
+import '../../../providers/analytics_filters_provider.dart';
+import '../../../providers/desktop_dashboard_state_provider.dart';
 import '../../../config/config.dart';
 import '../../../models/dao.dart';
 import '../../../models/user_persona.dart';
@@ -133,7 +135,7 @@ class _DesktopInstitutionHubScreenState
     return Scaffold(
       backgroundColor: themeProvider.isDarkMode
           ? Theme.of(context).scaffoldBackgroundColor
-          : const Color(0xFFF8F9FA),
+          : Theme.of(context).colorScheme.surface,
       body: AnimatedBuilder(
         animation: _animationController,
         builder: (context, child) {
@@ -160,7 +162,14 @@ class _DesktopInstitutionHubScreenState
                         ),
                       ),
                     ),
-                    child: const InstitutionHub(),
+                    child: InstitutionHub(
+                      onTabChanged: (tabIndex) {
+                        context.read<DesktopDashboardStateProvider>().updateInstitutionSectionFromTabIndex(
+                              tabIndex: tabIndex,
+                              exhibitionsEnabled: AppConfig.isFeatureEnabled('exhibitions'),
+                            );
+                      },
+                    ),
                   ),
                 ),
 
@@ -182,6 +191,9 @@ class _DesktopInstitutionHubScreenState
     final persona = context.watch<ProfileProvider>().userPersona;
     final showCreateActions =
         persona == null || persona == UserPersona.institution;
+    final dashboardState = context.watch<DesktopDashboardStateProvider>();
+    final section = dashboardState.institutionSection;
+    final showExhibitions = AppConfig.isFeatureEnabled('exhibitions');
 
     // Compute approval status for gating quick actions
     final profileProvider = context.watch<ProfileProvider>();
@@ -196,6 +208,19 @@ class _DesktopInstitutionHubScreenState
     final isApprovedInstitution = hasInstitutionBadge ||
         (reviewIsInstitution && reviewStatus == 'approved');
 
+    String sectionTitle() {
+      switch (section) {
+        case DesktopInstitutionSection.events:
+          return 'Events';
+        case DesktopInstitutionSection.exhibitions:
+          return 'Exhibitions';
+        case DesktopInstitutionSection.create:
+          return 'Create';
+        case DesktopInstitutionSection.analytics:
+          return 'Analytics';
+      }
+    }
+
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: ListView(
@@ -203,7 +228,7 @@ class _DesktopInstitutionHubScreenState
         children: [
           // Header
           Text(
-            'Institution Overview',
+            sectionTitle(),
             style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.bold,
@@ -260,7 +285,7 @@ class _DesktopInstitutionHubScreenState
                       ? 'You have pending collaboration invites'
                       : 'View collaboration invites',
                   Icons.inbox_outlined,
-                  Theme.of(context).colorScheme.primary,
+                  scheme.primary,
                   () {
                     DesktopShellScope.of(context)?.pushScreen(
                       DesktopSubScreen(
@@ -273,14 +298,15 @@ class _DesktopInstitutionHubScreenState
                 );
               },
             ),
-          if (isApprovedInstitution &&
+          if (section == DesktopInstitutionSection.create &&
+              isApprovedInstitution &&
               showCreateActions &&
               AppConfig.isFeatureEnabled('events'))
             _buildQuickActionTile(
               'Create Event',
               'Schedule a new event',
               Icons.event_outlined,
-              const Color(0xFFFFB300), // Amber
+              Theme.of(context).colorScheme.tertiary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -290,9 +316,10 @@ class _DesktopInstitutionHubScreenState
                 );
               },
             ),
-          if (isApprovedInstitution &&
+          if (section == DesktopInstitutionSection.create &&
+              isApprovedInstitution &&
               showCreateActions &&
-              AppConfig.isFeatureEnabled('exhibitions'))
+              showExhibitions)
             _buildQuickActionTile(
               'Create Exhibition',
               'Publish a new exhibition',
@@ -307,12 +334,12 @@ class _DesktopInstitutionHubScreenState
                 );
               },
             ),
-          if (isApprovedInstitution)
+          if (section == DesktopInstitutionSection.events && isApprovedInstitution)
             _buildQuickActionTile(
               'Manage Events',
               'View all events',
               Icons.event_note_outlined,
-              const Color(0xFF4ECDC4),
+              Theme.of(context).colorScheme.secondary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -322,13 +349,14 @@ class _DesktopInstitutionHubScreenState
                 );
               },
             ),
-          if (isApprovedInstitution &&
-              AppConfig.isFeatureEnabled('exhibitions'))
+          if (section == DesktopInstitutionSection.exhibitions &&
+              isApprovedInstitution &&
+              showExhibitions)
             _buildQuickActionTile(
               'My Exhibitions',
               'View hosted and collaborating exhibitions',
               Icons.collections_bookmark_outlined,
-              KubusColorRoles.of(context).web3InstitutionAccent,
+              Theme.of(context).colorScheme.primary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -360,12 +388,12 @@ class _DesktopInstitutionHubScreenState
                 );
               },
             ),
-          if (isApprovedInstitution)
+          if (section == DesktopInstitutionSection.analytics && isApprovedInstitution)
             _buildQuickActionTile(
               'Analytics',
               'View performance stats',
               Icons.analytics_outlined,
-              const Color(0xFFFF6B6B),
+              Theme.of(context).colorScheme.tertiary,
               () {
                 DesktopShellScope.of(context)?.pushScreen(
                   DesktopSubScreen(
@@ -375,6 +403,14 @@ class _DesktopInstitutionHubScreenState
                 );
               },
             ),
+          if (section == DesktopInstitutionSection.analytics) ...[
+            const SizedBox(height: 8),
+            _buildAnalyticsTimeframeSelector(
+              title: 'Timeframe',
+              value: context.watch<AnalyticsFiltersProvider>().institutionTimeframe,
+              onChanged: (v) => context.read<AnalyticsFiltersProvider>().setInstitutionTimeframe(v),
+            ),
+          ],
           const SizedBox(height: 24),
 
           // Stats
@@ -391,16 +427,69 @@ class _DesktopInstitutionHubScreenState
           const SizedBox(height: 24),
 
           // Upcoming events
-          Text(
-            'Upcoming Events',
-            style: GoogleFonts.inter(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+          if (section == DesktopInstitutionSection.events) ...[
+            Text(
+              'Upcoming Events',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildUpcomingEvents(themeProvider),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnalyticsTimeframeSelector({
+    required String title,
+    required String value,
+    required ValueChanged<String> onChanged,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    final normalized = value.trim().toLowerCase();
+    final effective = AnalyticsFiltersProvider.allowedTimeframes.contains(normalized) ? normalized : '30d';
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          _buildUpcomingEvents(themeProvider),
+          DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: effective,
+              dropdownColor: scheme.surfaceContainerHighest,
+              items: AnalyticsFiltersProvider.allowedTimeframes
+                  .map(
+                    (tf) => DropdownMenuItem<String>(
+                      value: tf,
+                      child: Text(tf),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (next) {
+                if (next == null) return;
+                onChanged(next);
+              },
+            ),
+          ),
         ],
       ),
     );

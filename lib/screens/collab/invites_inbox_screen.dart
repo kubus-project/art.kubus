@@ -182,7 +182,7 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Don\'t know how to open “${invite.entityType}”.')),
+      SnackBar(content: Text('Don\'t know how to open ${invite.entityType}.')),
     );
   }
 }

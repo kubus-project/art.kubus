@@ -25,12 +25,14 @@ class ArtistStudio extends StatefulWidget {
   final VoidCallback? onOpenArtworkCreator;
   final VoidCallback? onOpenCollectionCreator;
   final VoidCallback? onOpenExhibitionCreator;
+  final ValueChanged<int>? onTabChanged;
 
   const ArtistStudio({
     super.key,
     this.onOpenArtworkCreator,
     this.onOpenCollectionCreator,
     this.onOpenExhibitionCreator,
+    this.onTabChanged,
   });
 
   @override
@@ -61,6 +63,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
       final desiredIndex = persona == UserPersona.creator ? 1 : 0;
       if (_selectedIndex != desiredIndex) {
         _selectedIndex = desiredIndex;
+        widget.onTabChanged?.call(desiredIndex);
       }
       _hasSetInitialTabByPersona = true;
     }
@@ -194,11 +197,11 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final pages = <Widget>[
       ArtistPortfolioScreen(
         walletAddress: walletAddress,
-        onCreateRequested: () => setState(() => _selectedIndex = 1),
+        onCreateRequested: () => _setSelectedIndex(1),
       ),
       ArtistStudioCreateScreen(
-        onArtworkCreated: () => setState(() => _selectedIndex = 0),
-        onCollectionCreated: () => setState(() => _selectedIndex = 0),
+        onArtworkCreated: () => _setSelectedIndex(0),
+        onCollectionCreated: () => _setSelectedIndex(0),
         onOpenArtworkCreator: widget.onOpenArtworkCreator,
         onOpenCollectionCreator: widget.onOpenCollectionCreator,
         onOpenExhibitionCreator: widget.onOpenExhibitionCreator,
@@ -653,7 +656,7 @@ class _ArtistStudioState extends State<ArtistStudio> {
     final isSelected = _selectedIndex == index;
     return GestureDetector(
       onTap: enabled
-          ? () => setState(() => _selectedIndex = index)
+          ? () => _setSelectedIndex(index)
           : () => ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                     content: Text(AppLocalizations.of(context)!
@@ -699,6 +702,12 @@ class _ArtistStudioState extends State<ArtistStudio> {
         ),
       ),
     );
+  }
+
+  void _setSelectedIndex(int index) {
+    if (_selectedIndex == index) return;
+    setState(() => _selectedIndex = index);
+    widget.onTabChanged?.call(index);
   }
 
   Widget _buildRoleBanner({

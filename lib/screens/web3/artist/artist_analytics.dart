@@ -7,11 +7,11 @@ import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/collectibles_provider.dart';
+import '../../../providers/analytics_filters_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/artwork.dart';
 import '../../../models/stats/stats_models.dart';
-import '../../../services/stats_api_service.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/rarity_ui.dart';
@@ -29,7 +29,6 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   late Animation<double> _fadeAnimation;
   bool _didPlayEntrance = false;
   
-  String _selectedPeriod = 'Last 30 Days';
   int _currentChartIndex = 0;
   int _nftsSold = 0;
   bool _loadingNFTs = true;
@@ -143,6 +142,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
   }
 
   Widget _buildHeader() {
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -163,12 +163,14 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           ),
         ),
         const SizedBox(height: 12),
-        _buildPeriodSelector(),
+        if (!isDesktop) _buildPeriodSelector(),
       ],
     );
   }
 
   Widget _buildPeriodSelector() {
+    final filters = context.watch<AnalyticsFiltersProvider>();
+    final timeframe = filters.artistTimeframe;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -178,7 +180,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         border: Border.all(color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.2)),
       ),
       child: DropdownButton<String>(
-        value: _selectedPeriod,
+        value: timeframe,
         underline: const SizedBox(),
         isExpanded: true,
         dropdownColor: Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -187,22 +189,19 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           color: Theme.of(context).colorScheme.onSurface,
         ),
         icon: Icon(Icons.arrow_drop_down, color: Theme.of(context).colorScheme.onSurface, size: 20),
-        items: ['Last 7 Days', 'Last 30 Days', 'Last 90 Days', 'Last Year'].map((period) {
-          return DropdownMenuItem<String>(
-            value: period,
-            child: Text(period),
-          );
-        }).toList(),
+        items: const <DropdownMenuItem<String>>[
+          DropdownMenuItem(value: '7d', child: Text('Last 7 Days')),
+          DropdownMenuItem(value: '30d', child: Text('Last 30 Days')),
+          DropdownMenuItem(value: '90d', child: Text('Last 90 Days')),
+          DropdownMenuItem(value: '1y', child: Text('Last Year')),
+        ],
         onChanged: (value) {
-          setState(() {
-            _selectedPeriod = value!;
-          });
+          if (value == null) return;
+          context.read<AnalyticsFiltersProvider>().setArtistTimeframe(value);
         },
       ),
     );
   }
-
-  String _timeframeForSelectedPeriod() => StatsApiService.timeframeFromLabel(_selectedPeriod);
 
   String _bucketForTimeframe(String timeframe) {
     if (timeframe == '24h') return 'hour';
@@ -355,7 +354,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final fallbackMarkers = artworks.where((a) => a.arEnabled).length;
         final activeMarkers = snapshotCounters['arEnabledArtworks'] ?? fallbackMarkers;
 
-        final timeframe = _timeframeForSelectedPeriod();
+        final timeframe = context.watch<AnalyticsFiltersProvider>().artistTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -630,7 +629,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final themeProvider = context.watch<ThemeProvider>();
 
         final walletAddress = web3.walletAddress.trim();
-        final timeframe = _timeframeForSelectedPeriod();
+        final timeframe = context.watch<AnalyticsFiltersProvider>().artistTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
