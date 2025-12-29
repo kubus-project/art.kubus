@@ -25,6 +25,19 @@ class UserPresenceLastVisited {
       expiresAt: _parseDate(json['expiresAt'] ?? json['expires_at']),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is UserPresenceLastVisited &&
+        other.type == type &&
+        other.id == id &&
+        other.visitedAt == visitedAt &&
+        other.expiresAt == expiresAt;
+  }
+
+  @override
+  int get hashCode => Object.hash(type, id, visitedAt, expiresAt);
 }
 
 class UserPresenceEntry {
@@ -62,6 +75,30 @@ class UserPresenceEntry {
       lastVisitedTitle: (json['lastVisitedTitle'] ?? json['last_visited_title'])?.toString(),
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is UserPresenceEntry &&
+        other.walletAddress == walletAddress &&
+        other.exists == exists &&
+        other.visible == visible &&
+        other.isOnline == isOnline &&
+        other.lastSeenAt == lastSeenAt &&
+        other.lastVisited == lastVisited &&
+        other.lastVisitedTitle == lastVisitedTitle;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        walletAddress,
+        exists,
+        visible,
+        isOnline,
+        lastSeenAt,
+        lastVisited,
+        lastVisitedTitle,
+      );
 }
 
 DateTime? _parseDate(dynamic value) {
@@ -81,4 +118,3 @@ bool? _parseBoolNullable(dynamic value) {
   if (raw == 'false' || raw == '0') return false;
   return null;
 }
-

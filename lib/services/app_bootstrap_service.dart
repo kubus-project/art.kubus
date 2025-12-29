@@ -14,6 +14,7 @@ import '../providers/community_hub_provider.dart';
 import '../providers/collab_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
+import '../providers/marker_management_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/presence_provider.dart';
 import '../providers/profile_provider.dart';
@@ -60,6 +61,7 @@ class AppBootstrapService {
     final collabProvider = context.read<CollabProvider>();
     final statsProvider = context.read<StatsProvider>();
     final presenceProvider = context.read<PresenceProvider>();
+    final markerManagementProvider = context.read<MarkerManagementProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
 
@@ -117,6 +119,10 @@ class AppBootstrapService {
               scope: 'public',
             )));
       }
+    }
+
+    if (hasAuth) {
+      futures.add(_runTask('marker_management', () => markerManagementProvider.initialize(force: true)));
     }
 
     await Future.wait(futures, eagerError: false);

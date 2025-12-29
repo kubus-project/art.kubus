@@ -36,6 +36,7 @@ import 'providers/portfolio_provider.dart';
 import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
+import 'providers/marker_management_provider.dart';
 import 'core/app_initializer.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
@@ -292,6 +293,17 @@ class _AppLauncherState extends State<AppLauncher> {
                 create: (context) => WalletProvider(
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
+              ),
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider, MarkerManagementProvider>(
+                create: (context) => MarkerManagementProvider(),
+                update: (context, profileProvider, walletProvider, markerManagementProvider) {
+                  final provider = markerManagementProvider ?? MarkerManagementProvider();
+                  provider.bindWallet(profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress);
+                  if (!provider.initialized && !provider.isLoading) {
+                    unawaited(provider.initialize());
+                  }
+                  return provider;
+                },
               ),
               Provider<TileProviders>(
                 create: (context) => TileProviders(context.read<ThemeProvider>()),

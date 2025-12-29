@@ -709,6 +709,30 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
         final averageValues = values.isEmpty ? const <double>[] : List<double>.filled(values.length, avg);
 
         final hasSeries = values.any((v) => v > 0) || previousValues.any((v) => v > 0);
+        final currentError = walletAddress.isEmpty
+            ? null
+            : statsProvider.seriesError(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: metric,
+                bucket: bucket,
+                timeframe: timeframe,
+                from: currentFrom.toIso8601String(),
+                to: currentTo.toIso8601String(),
+                scope: 'private',
+              );
+        final prevError = walletAddress.isEmpty
+            ? null
+            : statsProvider.seriesError(
+                entityType: 'user',
+                entityId: walletAddress,
+                metric: metric,
+                bucket: bucket,
+                timeframe: timeframe,
+                from: prevFrom.toIso8601String(),
+                to: prevTo.toIso8601String(),
+                scope: 'private',
+              );
         final isLoading = walletAddress.isNotEmpty &&
             statsProvider.analyticsEnabled &&
             ((series == null &&
@@ -733,6 +757,10 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       to: prevTo.toIso8601String(),
                       scope: 'private',
                     )));
+        final hasError = walletAddress.isNotEmpty &&
+            statsProvider.analyticsEnabled &&
+            !isLoading &&
+            ((currentError != null && series == null) || (prevError != null && prevSeries == null));
 
         final currentLineColor = themeProvider.accentColor;
         final previousLineColor = scheme.secondary;
@@ -820,6 +848,63 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                                     strokeWidth: 2,
                                     color: themeProvider.accentColor,
                                   ),
+                                ),
+                              )
+                            : hasError
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
+                                      color: scheme.error,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Unable to load analytics right now.',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: scheme.onSurface.withValues(alpha: 0.7),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        if (walletAddress.isEmpty) return;
+                                        unawaited(statsProvider.ensureSeries(
+                                          entityType: 'user',
+                                          entityId: walletAddress,
+                                          metric: metric,
+                                          bucket: bucket,
+                                          timeframe: timeframe,
+                                          from: currentFrom.toIso8601String(),
+                                          to: currentTo.toIso8601String(),
+                                          scope: 'private',
+                                          forceRefresh: true,
+                                        ));
+                                        unawaited(statsProvider.ensureSeries(
+                                          entityType: 'user',
+                                          entityId: walletAddress,
+                                          metric: metric,
+                                          bucket: bucket,
+                                          timeframe: timeframe,
+                                          from: prevFrom.toIso8601String(),
+                                          to: prevTo.toIso8601String(),
+                                          scope: 'private',
+                                          forceRefresh: true,
+                                        ));
+                                      },
+                                      child: Text(
+                                        'Retry',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: themeProvider.accentColor,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               )
                             : !hasSeries

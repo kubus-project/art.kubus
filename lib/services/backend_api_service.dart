@@ -1080,7 +1080,7 @@ class BackendApiService {
         Uri.parse('$baseUrl/api/presence/batch'),
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'wallets': wallets}),
-      );
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -1108,7 +1108,7 @@ class BackendApiService {
         Uri.parse('$baseUrl/api/presence/visit'),
         headers: _getHeaders(includeAuth: true),
         body: jsonEncode({'type': type, 'id': id}),
-      );
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 204) {
         return {'success': true, 'stored': false};
@@ -1138,7 +1138,7 @@ class BackendApiService {
       final response = await http.post(
         Uri.parse('$baseUrl/api/presence/ping'),
         headers: _getHeaders(includeAuth: true),
-      );
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 204) {
         return {'success': true};
@@ -1383,7 +1383,9 @@ class BackendApiService {
       final encodedId = Uri.encodeComponent(entityId);
       final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId')
           .replace(queryParameters: queryParams.isEmpty ? null : queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
+      final response = await http
+          .get(uri, headers: _getHeaders(includeAuth: true))
+          .timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -1434,7 +1436,9 @@ class BackendApiService {
       final encodedId = Uri.encodeComponent(entityId);
       final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId/series')
           .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
+      final response = await http
+          .get(uri, headers: _getHeaders(includeAuth: true))
+          .timeout(const Duration(seconds: 20));
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -1534,6 +1538,106 @@ class BackendApiService {
           .toList();
     } catch (e) {
       debugPrint('Error getting nearby markers: $e');
+      rethrow;
+    }
+  }
+
+  /// Get markers owned by the authenticated user (includes drafts/private)
+  /// GET /api/art-markers/mine
+  Future<List<ArtMarker>> getMyArtMarkers() async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/art-markers/mine');
+      final response = await http
+          .get(uri, headers: _getHeaders())
+          .timeout(const Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+        final dynamic payload = decoded is Map<String, dynamic> ? (decoded['data'] ?? decoded['markers'] ?? decoded) : decoded;
+        final List<dynamic> markerList = payload is List ? payload : const <dynamic>[];
+        return markerList
+            .whereType<Map<String, dynamic>>()
+            .map(_artMarkerFromBackendJson)
+            .toList(growable: false);
+      }
+
+      throw Exception('Failed to load markers: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error getting owned markers: $e');
+      rethrow;
+    }
+  }
+
+  /// Create a marker record (server assigns ownership).
+  /// POST /api/art-markers
+  Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/art-markers');
+      final response = await http
+          .post(uri, headers: _getHeaders(), body: jsonEncode(payload))
+          .timeout(const Duration(seconds: 15));
+
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        if (decoded is Map<String, dynamic>) {
+          final marker = decoded['data'] ?? decoded['marker'] ?? decoded['artMarker'] ?? decoded;
+          if (marker is Map<String, dynamic>) {
+            return _artMarkerFromBackendJson(marker);
+          }
+        }
+        return null;
+      }
+
+      throw Exception('Failed to create marker: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error creating marker record: $e');
+      rethrow;
+    }
+  }
+
+  /// Update a marker record.
+  /// PUT /api/art-markers/:id
+  Future<ArtMarker?> updateArtMarkerRecord(String markerId, Map<String, dynamic> updates) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/art-markers/$markerId');
+      final response = await http
+          .put(uri, headers: _getHeaders(), body: jsonEncode(updates))
+          .timeout(const Duration(seconds: 15));
+
+      final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
+      if (response.statusCode == 200) {
+        if (decoded is Map<String, dynamic>) {
+          final marker = decoded['data'] ?? decoded['marker'] ?? decoded['artMarker'] ?? decoded;
+          if (marker is Map<String, dynamic>) {
+            return _artMarkerFromBackendJson(marker);
+          }
+        }
+        return null;
+      }
+
+      throw Exception('Failed to update marker: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error updating marker record: $e');
+      rethrow;
+    }
+  }
+
+  /// Delete a marker record.
+  /// DELETE /api/art-markers/:id
+  Future<bool> deleteArtMarkerRecord(String markerId) async {
+    try {
+      await _ensureAuthBeforeRequest();
+      final uri = Uri.parse('$baseUrl/api/art-markers/$markerId');
+      final response = await http
+          .delete(uri, headers: _getHeaders())
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode == 200) return true;
+      throw Exception('Failed to delete marker: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      debugPrint('Error deleting marker record: $e');
       rethrow;
     }
   }
@@ -5397,12 +5501,14 @@ ArtMarker _artMarkerFromBackendJson(Map<String, dynamic> json) {
     'tags': json['tags'],
     'category': json['category'] ?? json['markerType'] ?? json['type'] ?? 'General',
     'createdAt': json['createdAt'] ?? json['created_at'] ?? DateTime.now().toIso8601String(),
+    'updatedAt': json['updatedAt'] ?? json['updated_at'],
     'createdBy': json['createdBy'] ?? json['created_by'] ?? 'system',
     'viewCount': json['viewCount'] ?? json['views'] ?? 0,
     'interactionCount': json['interactionCount'] ?? json['interactions'] ?? 0,
     'activationRadius': json['activationRadius'] ?? json['activation_radius'] ?? 50.0,
     'requiresProximity': json['requiresProximity'] ?? json['requires_proximity'] ?? true,
     'isPublic': json['isPublic'] ?? json['is_public'] ?? true,
+    'isActive': json['isActive'] ?? json['is_active'] ?? true,
     'markerType': json['markerType'] ?? json['type'],
   };
 

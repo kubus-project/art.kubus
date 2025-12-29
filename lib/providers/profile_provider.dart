@@ -241,7 +241,18 @@ class ProfileProvider extends foundation.ChangeNotifier {
   bool get needsPersonaOnboarding {
     final wallet = _currentWalletAddress;
     if (wallet == null || wallet.isEmpty) return false;
+    // Only prompt once per wallet. If the user dismissed the prompt we should
+    // not keep resurfacing it on every rebuild.
+    if (hasCompletedPersonaOnboarding) return false;
     return userPersona == null;
+  }
+
+  Future<void> markPersonaOnboardingSeen({String? walletAddress}) async {
+    final resolved = (walletAddress ?? _currentWalletAddress ?? '').trim();
+    if (resolved.isEmpty) return;
+    try {
+      await _prefs.setBool(_personaOnboardedKeyForWallet(resolved), true);
+    } catch (_) {}
   }
   
   // Dynamic getters for profile stats (from backend)
