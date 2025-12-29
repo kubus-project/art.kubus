@@ -5,6 +5,8 @@ abstract class PresenceApi {
 
   Future<void> ensureAuthLoaded({String? walletAddress});
 
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress});
+
   Future<Map<String, dynamic>> recordPresenceVisit({
     required String type,
     required String id,
@@ -28,6 +30,11 @@ class BackendPresenceApi implements PresenceApi {
   }
 
   @override
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) {
+    return _backend.pingPresence(walletAddress: walletAddress);
+  }
+
+  @override
   Future<Map<String, dynamic>> recordPresenceVisit({
     required String type,
     required String id,
@@ -36,4 +43,3 @@ class BackendPresenceApi implements PresenceApi {
     return _backend.recordPresenceVisit(type: type, id: id, walletAddress: walletAddress);
   }
 }
-

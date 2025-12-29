@@ -15,6 +15,7 @@ import '../providers/collab_provider.dart';
 import '../providers/institution_provider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/notification_provider.dart';
+import '../providers/presence_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/recent_activity_provider.dart';
 import '../providers/saved_items_provider.dart';
@@ -58,6 +59,7 @@ class AppBootstrapService {
     final appRefreshProvider = context.read<AppRefreshProvider>();
     final collabProvider = context.read<CollabProvider>();
     final statsProvider = context.read<StatsProvider>();
+    final presenceProvider = context.read<PresenceProvider>();
 
     await _runTask('wallet_init', walletProvider.initialize);
 
@@ -75,13 +77,15 @@ class AppBootstrapService {
       _runTask('saved_items', savedItemsProvider.initialize),
       _runTask('navigation', navigationProvider.initialize),
       _runTask('stats', statsProvider.initialize),
+      _runTask('presence', presenceProvider.initialize),
       _runTask('tasks', () => Future<void>.sync(taskProvider.initializeProgress)),
       _runTask('artworks', () => artworkProvider.loadArtworks(refresh: true)),
       _runTask('collectibles', () => collectiblesProvider.initialize(loadMockIfEmpty: AppConfig.isDevelopment)),
       _runTask('institutions', () => institutionProvider.initialize(seedMockIfEmpty: AppConfig.isDevelopment)),
     ];
 
-    if (AppConfig.isFeatureEnabled('collabInvites')) {
+    final hasAuth = (backend.getAuthToken() ?? '').trim().isNotEmpty;
+    if (AppConfig.isFeatureEnabled('collabInvites') && hasAuth) {
       futures.add(_runTask('collab_invites', () async {
         await collabProvider.initialize(refresh: true);
         collabProvider.startInvitePolling();

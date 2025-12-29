@@ -6,16 +6,32 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/collab_invite.dart';
 import '../models/collab_member.dart';
 import '../config/config.dart';
-import '../services/backend_api_service.dart';
+import '../providers/app_refresh_provider.dart';
+import '../providers/profile_provider.dart';
+import '../services/backend_api_service.dart' show BackendApiRequestException;
+import '../services/collab_api.dart';
 import '../services/push_notification_service.dart';
+import '../services/socket_service.dart';
 
 class CollabProvider extends ChangeNotifier {
-  final BackendApiService _api;
+  final CollabApi _api;
   final PushNotificationService _notifications;
+  final SocketService _socket;
 
-  CollabProvider({BackendApiService? api, PushNotificationService? notifications})
-      : _api = api ?? BackendApiService(),
-        _notifications = notifications ?? PushNotificationService();
+  CollabProvider({CollabApi? api, PushNotificationService? notifications})
+      : _api = api ?? BackendCollabApi(),
+        _notifications = notifications ?? PushNotificationService(),
+        _socket = SocketService();
+
+  AppRefreshProvider? _refreshProvider;
+  ProfileProvider? _profileProvider;
+  VoidCallback? _profileListener;
+
+  int _lastGlobalVersion = 0;
+  int _lastProfileVersion = 0;
+
+  bool _socketBound = false;
+  String _lastAuthWallet = '';
 
   final Map<String, List<CollabMember>> _membersByEntityKey = <String, List<CollabMember>>{};
   final List<CollabInvite> _invitesInbox = <CollabInvite>[];
@@ -63,9 +79,136 @@ class CollabProvider extends ChangeNotifier {
     return List.unmodifiable(_membersByEntityKey[_key(entityType, entityId)] ?? const <CollabMember>[]);
   }
 
+  void bindToRefresh(AppRefreshProvider refreshProvider) {
+    if (identical(_refreshProvider, refreshProvider)) return;
+    _refreshProvider = refreshProvider;
+    _lastGlobalVersion = refreshProvider.globalVersion;
+    _lastProfileVersion = refreshProvider.profileVersion;
+
+    refreshProvider.addListener(() {
+      try {
+        final nextGlobal = refreshProvider.globalVersion;
+        final nextProfile = refreshProvider.profileVersion;
+        final changed = nextGlobal != _lastGlobalVersion || nextProfile != _lastProfileVersion;
+        _lastGlobalVersion = nextGlobal;
+        _lastProfileVersion = nextProfile;
+
+        if (changed) {
+          unawaited(refreshInvites(showLoadingIndicator: false, notifyOnNew: false));
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('CollabProvider: refresh listener error: $e');
+        }
+      }
+    });
+  }
+
+  void bindProfileProvider(ProfileProvider profileProvider) {
+    if (identical(_profileProvider, profileProvider)) return;
+
+    if (_profileProvider != null && _profileListener != null) {
+      try {
+        _profileProvider!.removeListener(_profileListener!);
+      } catch (_) {}
+    }
+
+    _profileProvider = profileProvider;
+    _profileListener = () {
+      _syncAuthState();
+    };
+    profileProvider.addListener(_profileListener!);
+    _syncAuthState();
+  }
+
+  void _bindSocketOnce() {
+    if (_socketBound) return;
+    _socketBound = true;
+    _socket.addCollabListener(_onSocketCollabEvent);
+  }
+
+  void _onSocketCollabEvent(Map<String, dynamic> payload) {
+    if (!AppConfig.isFeatureEnabled('collabInvites')) return;
+    final token = (_api.getAuthToken() ?? '').trim();
+    if (token.isEmpty) return;
+
+    final event = (payload['event'] ?? '').toString();
+    if (event == 'collab:invites-updated') {
+      if (_pollingInFlight) return;
+      _pollingInFlight = true;
+      unawaited(
+        _refreshInvitesInternal(showLoadingIndicator: false, notifyOnNew: true).whenComplete(() {
+          _pollingInFlight = false;
+        }),
+      );
+      return;
+    }
+
+    if (event == 'collab:members-updated') {
+      final rawType = (payload['entityType'] ?? payload['entity_type'] ?? '').toString();
+      final rawId = (payload['entityId'] ?? payload['entity_id'] ?? '').toString();
+      final entityType = rawType.trim();
+      final entityId = rawId.trim();
+      if (entityType.isEmpty || entityId.isEmpty) return;
+      final key = _key(entityType, entityId);
+      if (!_membersByEntityKey.containsKey(key)) return;
+      unawaited(loadCollaborators(entityType, entityId, refresh: true, showLoadingIndicator: false));
+    }
+  }
+
+  void _syncAuthState() {
+    if (!AppConfig.isFeatureEnabled('collabInvites')) return;
+
+    final profile = _profileProvider;
+    final signedIn = profile?.isSignedIn == true;
+    final wallet = (profile?.currentUser?.walletAddress ?? '').trim();
+    final token = (_api.getAuthToken() ?? '').trim();
+
+    if (!signedIn || wallet.isEmpty || token.isEmpty) {
+      if (_lastAuthWallet.isNotEmpty || _invitesInbox.isNotEmpty || _membersByEntityKey.isNotEmpty) {
+        _lastAuthWallet = '';
+        _invitesInbox.clear();
+        _membersByEntityKey.clear();
+        _error = null;
+        notifyListeners();
+      }
+      stopInvitePolling();
+      return;
+    }
+
+    _bindSocketOnce();
+
+    if (_lastAuthWallet != wallet) {
+      _lastAuthWallet = wallet;
+      _invitesInbox.clear();
+      _membersByEntityKey.clear();
+      _error = null;
+      notifyListeners();
+      unawaited(initialize(refresh: true));
+      startInvitePolling();
+      return;
+    }
+
+    if (!_initialized) {
+      unawaited(initialize(refresh: true));
+      startInvitePolling();
+    }
+  }
+
   Future<void> initialize({bool refresh = false}) async {
     if (_initialized && !refresh) return;
     _initialized = true;
+    _bindSocketOnce();
+
+    final token = (_api.getAuthToken() ?? '').trim();
+    if (token.isEmpty) {
+      // Anonymous user; keep state empty and avoid noisy errors.
+      _invitesInbox.clear();
+      _error = null;
+      notifyListeners();
+      return;
+    }
+
     await _hydrateKnownInvitesOnce();
     await refreshInvites(notifyOnNew: false);
     _readyToNotifyNewInvites = true;
@@ -80,6 +223,8 @@ class CollabProvider extends ChangeNotifier {
 
   void startInvitePolling({Duration interval = const Duration(seconds: 75)}) {
     if (!AppConfig.isFeatureEnabled('collabInvites')) return;
+    final token = (_api.getAuthToken() ?? '').trim();
+    if (token.isEmpty) return;
     _invitePollingTimer?.cancel();
     _invitePollingTimer = Timer.periodic(interval, (_) {
       if (_pollingInFlight) return;
@@ -103,6 +248,10 @@ class CollabProvider extends ChangeNotifier {
     _invitePollingTimer = null;
   }
 
+  Future<void> onAppResumed() async {
+    await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
+  }
+
   Future<void> _refreshInvitesInternal({required bool showLoadingIndicator, required bool notifyOnNew}) async {
     if (showLoadingIndicator) {
       _setLoading(true);
@@ -110,6 +259,12 @@ class CollabProvider extends ChangeNotifier {
     _error = null;
 
     try {
+      final token = (_api.getAuthToken() ?? '').trim();
+      if (token.isEmpty) {
+        _invitesInbox.clear();
+        notifyListeners();
+        return;
+      }
       final invites = await _api.listMyCollabInvites();
 
       // Successful response: clear any transient backoff.
@@ -211,13 +366,25 @@ class CollabProvider extends ChangeNotifier {
     }
   }
 
-  Future<List<CollabMember>> loadCollaborators(String entityType, String entityId, {bool refresh = true}) async {
+  Future<List<CollabMember>> loadCollaborators(
+    String entityType,
+    String entityId, {
+    bool refresh = true,
+    bool showLoadingIndicator = true,
+  }) async {
     final normalizedType = _normalizeEntityType(entityType);
-    _setLoading(true);
+    final entityKey = _key(normalizedType, entityId);
+    if (!refresh) {
+      final cached = _membersByEntityKey[entityKey];
+      if (cached != null) return List.unmodifiable(cached);
+    }
+    if (showLoadingIndicator) {
+      _setLoading(true);
+    }
     _error = null;
     try {
       final members = await _api.listCollaborators(normalizedType, entityId);
-      _membersByEntityKey[_key(normalizedType, entityId)] = members;
+      _membersByEntityKey[entityKey] = members;
       notifyListeners();
       return members;
     } catch (e) {
@@ -225,7 +392,9 @@ class CollabProvider extends ChangeNotifier {
       notifyListeners();
       rethrow;
     } finally {
-      _setLoading(false);
+      if (showLoadingIndicator) {
+        _setLoading(false);
+      }
     }
   }
 
@@ -254,12 +423,29 @@ class CollabProvider extends ChangeNotifier {
   }
 
   Future<void> acceptInvite(String inviteId) async {
+    final trimmedId = inviteId.trim();
+    CollabInvite? removed;
+    int removedIndex = -1;
+    if (trimmedId.isNotEmpty) {
+      removedIndex = _invitesInbox.indexWhere((i) => i.id.trim() == trimmedId);
+      if (removedIndex != -1) {
+        removed = _invitesInbox.removeAt(removedIndex);
+        notifyListeners();
+      }
+    }
+
     _setLoading(true);
     _error = null;
     try {
       await _api.acceptInvite(inviteId);
-      await refreshInvites();
+      await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
     } catch (e) {
+      if (removed != null) {
+        final idx = (removedIndex >= 0 && removedIndex <= _invitesInbox.length)
+            ? removedIndex
+            : _invitesInbox.length;
+        _invitesInbox.insert(idx, removed);
+      }
       _error = e.toString();
       notifyListeners();
       rethrow;
@@ -269,12 +455,29 @@ class CollabProvider extends ChangeNotifier {
   }
 
   Future<void> declineInvite(String inviteId) async {
+    final trimmedId = inviteId.trim();
+    CollabInvite? removed;
+    int removedIndex = -1;
+    if (trimmedId.isNotEmpty) {
+      removedIndex = _invitesInbox.indexWhere((i) => i.id.trim() == trimmedId);
+      if (removedIndex != -1) {
+        removed = _invitesInbox.removeAt(removedIndex);
+        notifyListeners();
+      }
+    }
+
     _setLoading(true);
     _error = null;
     try {
       await _api.declineInvite(inviteId);
-      await refreshInvites();
+      await refreshInvites(showLoadingIndicator: false, notifyOnNew: false);
     } catch (e) {
+      if (removed != null) {
+        final idx = (removedIndex >= 0 && removedIndex <= _invitesInbox.length)
+            ? removedIndex
+            : _invitesInbox.length;
+        _invitesInbox.insert(idx, removed);
+      }
       _error = e.toString();
       notifyListeners();
       rethrow;
@@ -333,6 +536,14 @@ class CollabProvider extends ChangeNotifier {
   @override
   void dispose() {
     stopInvitePolling();
+    if (_socketBound) {
+      _socket.removeCollabListener(_onSocketCollabEvent);
+    }
+    if (_profileProvider != null && _profileListener != null) {
+      try {
+        _profileProvider!.removeListener(_profileListener!);
+      } catch (_) {}
+    }
     super.dispose();
   }
 }

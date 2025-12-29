@@ -1130,6 +1130,32 @@ class BackendApiService {
     }
   }
 
+  /// Keep the authenticated user's presence lastSeen timestamp fresh.
+  /// POST /api/presence/ping
+  Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async {
+    try {
+      await _ensureAuthBeforeRequest(walletAddress: walletAddress);
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/presence/ping'),
+        headers: _getHeaders(includeAuth: true),
+      );
+
+      if (response.statusCode == 204) {
+        return {'success': true};
+      }
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {'success': true, 'data': data['data'] ?? data};
+      }
+      return {'success': false, 'status': response.statusCode, 'body': response.body};
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.pingPresence error: $e');
+      }
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
   /// Find a profile by username (helper built on top of the search endpoint)
   Future<Map<String, dynamic>?> findProfileByUsername(String username) async {
     final sanitized = username.trim().replaceFirst(RegExp(r'^@+'), '');

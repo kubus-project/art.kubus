@@ -12,10 +12,10 @@ import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/analytics_filters_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../providers/web3provider.dart';
 import '../../../models/stats/stats_models.dart';
-import '../../../services/stats_api_service.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
 import '../../../widgets/inline_loading.dart';
@@ -33,7 +33,6 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  String _selectedPeriod = 'This Month';
   bool _didPlayEntrance = false;
 
   String _resolveWalletAddress({bool listen = false}) {
@@ -46,8 +45,6 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       wallet: web3Provider.walletAddress,
     );
   }
-
-  String _timeframeForSelectedPeriod() => StatsApiService.timeframeFromLabel(_selectedPeriod);
 
   String _bucketForTimeframe(String timeframe) {
     if (timeframe == '24h') return 'hour';
@@ -248,7 +245,18 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
   }
 
   Widget _buildPeriodSelector() {
-    final periods = ['This Week', 'This Month', 'This Quarter', 'This Year'];
+    final isDesktop = MediaQuery.of(context).size.width >= 900;
+    if (isDesktop) return const SizedBox.shrink();
+
+    const labels = <String, String>{
+      '7d': 'This Week',
+      '30d': 'This Month',
+      '90d': 'This Quarter',
+      '1y': 'This Year',
+    };
+
+    final filters = context.watch<AnalyticsFiltersProvider>();
+    final selectedTimeframe = labels.containsKey(filters.institutionTimeframe) ? filters.institutionTimeframe : '30d';
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -294,7 +302,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
             ),
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
-                value: _selectedPeriod,
+                value: selectedTimeframe,
                 isExpanded: true,
                 dropdownColor:
                     Theme.of(context).colorScheme.surfaceContainerHighest,
@@ -306,20 +314,17 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
                   Icons.keyboard_arrow_down_rounded,
                   color: Theme.of(context).colorScheme.onSurface,
                 ),
-                items: periods
+                items: labels.entries
                     .map(
-                      (period) => DropdownMenuItem<String>(
-                        value: period,
-                        child: Text(period),
+                      (entry) => DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: Text(entry.value),
                       ),
                     )
-                    .toList(),
+                    .toList(growable: false),
                 onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _selectedPeriod = value;
-                    });
-                  }
+                  if (value == null) return;
+                  context.read<AnalyticsFiltersProvider>().setInstitutionTimeframe(value);
                 },
               ),
             ),
@@ -384,7 +389,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           );
         }
 
-        final timeframe = _timeframeForSelectedPeriod();
+        final timeframe = context.watch<AnalyticsFiltersProvider>().institutionTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -684,7 +689,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
           );
         }
 
-        final timeframe = _timeframeForSelectedPeriod();
+        final timeframe = context.watch<AnalyticsFiltersProvider>().institutionTimeframe;
         final bucket = _bucketForTimeframe(timeframe);
         final duration = _durationForTimeframe(timeframe);
         final now = DateTime.now().toUtc();
@@ -1358,7 +1363,14 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       return;
     }
 
-    final timeframe = _timeframeForSelectedPeriod();
+    final timeframe = context.read<AnalyticsFiltersProvider>().institutionTimeframe;
+    final periodLabel = switch (timeframe) {
+      '7d' => 'This Week',
+      '30d' => 'This Month',
+      '90d' => 'This Quarter',
+      '1y' => 'This Year',
+      _ => 'This Month',
+    };
     final bucket = _bucketForTimeframe(timeframe);
     final duration = _durationForTimeframe(timeframe);
     final now = DateTime.now().toUtc();
@@ -1410,7 +1422,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
 
     final buffer = StringBuffer()
       ..writeln('key,value')
-      ..writeln('period,${_selectedPeriod.replaceAll(",", " ")}')
+      ..writeln('period,${periodLabel.replaceAll(",", " ")}')
       ..writeln('timeframe,$timeframe')
       ..writeln('bucket,$bucket')
       ..writeln('from,${currentFrom.toIso8601String()}')
@@ -1438,7 +1450,7 @@ class _InstitutionAnalyticsState extends State<InstitutionAnalytics>
       ShareParams(
         files: [XFile(file.path)],
         subject: 'Institution analytics',
-        text: 'Exported institution analytics (${_selectedPeriod.trim()}).',
+        text: 'Exported institution analytics (${periodLabel.trim()}).',
       ),
     );
   }

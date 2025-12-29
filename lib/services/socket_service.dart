@@ -23,6 +23,7 @@ class SocketService {
   final List<NotificationCallback> _messageListeners = [];
   final List<NotificationCallback> _messageReadListeners = [];
   final List<NotificationCallback> _conversationListeners = [];
+  final List<NotificationCallback> _collabListeners = [];
   final List<VoidCallback> _connectListeners = [];
   final List<NotificationCallback> _markerListeners = [];
   // Stream controllers for consumers that prefer Streams
@@ -30,6 +31,7 @@ class SocketService {
   final StreamController<Map<String, dynamic>> _messageReadController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _conversationMemberReadController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _notificationController = StreamController<Map<String, dynamic>>.broadcast();
+  final StreamController<Map<String, dynamic>> _collabController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _postController = StreamController<Map<String, dynamic>>.broadcast();
   final StreamController<Map<String, dynamic>> _markerController = StreamController<Map<String, dynamic>>.broadcast();
   final List<NotificationCallback> _postListeners = [];
@@ -63,6 +65,16 @@ class SocketService {
   void removeNotificationListener(NotificationCallback cb) {
     _notificationListeners.remove(cb);
     _log('removeNotificationListener: total=${_notificationListeners.length}');
+  }
+
+  void addCollabListener(NotificationCallback cb) {
+    if (!_collabListeners.contains(cb)) _collabListeners.add(cb);
+    _log('addCollabListener: total=${_collabListeners.length}');
+  }
+
+  void removeCollabListener(NotificationCallback cb) {
+    _collabListeners.remove(cb);
+    _log('removeCollabListener: total=${_collabListeners.length}');
   }
 
   void addMessageListener(NotificationCallback cb) {
@@ -217,6 +229,7 @@ class SocketService {
   Stream<Map<String, dynamic>> get onMessageRead => _messageReadController.stream;
   Stream<Map<String, dynamic>> get onConversationMemberRead => _conversationMemberReadController.stream;
   Stream<Map<String, dynamic>> get onNotification => _notificationController.stream;
+  Stream<Map<String, dynamic>> get onCollab => _collabController.stream;
   Stream<Map<String, dynamic>> get onPostCreated => _postController.stream;
   Stream<Map<String, dynamic>> get onMarkerCreated => _markerController.stream;
 
@@ -406,6 +419,25 @@ class SocketService {
         _log('notification:new handler error: $e');
       }
     });
+
+    void emitCollabEvent(String eventName, dynamic data) {
+      try {
+        final mapped = mapFromPayload(data);
+        if (mapped == null) return;
+        final payload = Map<String, dynamic>.from(mapped);
+        payload['event'] = eventName;
+        _log('$eventName -> listeners=${_collabListeners.length}');
+        for (final l in _collabListeners) {
+          try { l(payload); } catch (e) { _log('$eventName listener error: $e'); }
+        }
+        try { _collabController.add(payload); } catch (e) { _log('collab controller add error: $e'); }
+      } catch (e) {
+        _log('$eventName handler error: $e');
+      }
+    }
+
+    _socket!.on('collab:invites-updated', (data) => emitCollabEvent('collab:invites-updated', data));
+    _socket!.on('collab:members-updated', (data) => emitCollabEvent('collab:members-updated', data));
 
     _socket!.on('chat:conversation-updated', (data) {
       try {
