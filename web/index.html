@@ -1,4 +1,4 @@
-<!DOCTYPE html><html><head>
+<!DOCTYPE html><html lang="en"><head>
   <!--
     If you are serving your web app in a path other than the root, change the
     href value below to reflect the base path you are serving from.
@@ -16,8 +16,34 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="art.kubus - Discover, create, and trade augmented reality art with blockchain technology. Experience immersive AR artworks in the real world.">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="index, follow">
+  <meta name="description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on KUBUS — a Web3 art marketplace.">
+  <meta name="keywords" content="augmented reality art, AR art, NFT marketplace, Web3 art, blockchain art, digital collectibles, immersive art, AR experiences, creators, Solana, razširjena resničnost, AR umetnost, NFT tržnica, digitalni zbirateljski predmeti">
   <meta name="google-signin-client_id" content="623807687386-b08lhv474n1li9kkaasq46sag1s8gjcp.apps.googleusercontent.com">
+
+  <link rel="canonical" href="https://app.kubus.site/">
+  <link rel="alternate" hreflang="en" href="https://app.kubus.site/">
+  <link rel="alternate" hreflang="sl" href="https://app.kubus.site/?lang=sl">
+  <link rel="alternate" hreflang="x-default" href="https://app.kubus.site/">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <meta property="og:site_name" content="KUBUS">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://app.kubus.site/">
+  <meta property="og:title" content="KUBUS | Augmented Reality Art & NFT Marketplace">
+  <meta property="og:description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on KUBUS — a Web3 art marketplace.">
+  <meta property="og:image" content="https://app.kubus.site/icons/Icon-512.png">
+  <meta property="og:image:alt" content="KUBUS">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="sl_SI">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="KUBUS | Augmented Reality Art & NFT Marketplace">
+  <meta name="twitter:description" content="Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on KUBUS — a Web3 art marketplace.">
+  <meta name="twitter:image" content="https://app.kubus.site/icons/Icon-512.png">
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,8 +55,63 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>art.kubus - AR Art Discovery Platform</title>
+  <title>KUBUS | Augmented Reality Art & NFT Marketplace</title>
   <link rel="manifest" href="manifest.json">
+
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "KUBUS",
+      "alternateName": "art.kubus",
+      "url": "https://app.kubus.site/",
+      "operatingSystem": "Web",
+      "applicationCategory": "EntertainmentApplication",
+      "inLanguage": ["en", "sl"],
+      "description": [
+        {
+          "@language": "en",
+          "@value": "Discover augmented reality (AR) art in real places, create immersive AR experiences, and collect and trade NFTs and digital collectibles on KUBUS — a Web3 art marketplace."
+        },
+        {
+          "@language": "sl",
+          "@value": "Odkrijte umetnost razširjene resničnosti (AR) v resničnem svetu, ustvarjajte AR izkušnje ter zbirajte in trgujte z NFT-ji in digitalnimi zbirateljskimi predmeti na platformi KUBUS."
+        }
+      ]
+    }
+  </script>
+
+  <script>
+    (function() {
+      try {
+        var params = new URLSearchParams(location.search || '');
+        var explicitLang = (params.get('lang') || params.get('hl') || '').toLowerCase();
+        var preferred = explicitLang || ((navigator.language || '').toLowerCase().startsWith('sl') ? 'sl' : 'en');
+        if (preferred !== 'sl') return;
+
+        var slTitle = 'KUBUS | AR umetnost & NFT tržnica';
+        var slDescription = 'Odkrijte umetnost razširjene resničnosti (AR) v resničnem svetu, ustvarjajte AR izkušnje ter zbirajte in trgujte z NFT-ji in digitalnimi zbirateljskimi predmeti na platformi KUBUS.';
+
+        document.documentElement.lang = 'sl';
+        document.title = slTitle;
+
+        var desc = document.querySelector('meta[name=\"description\"]');
+        if (desc) desc.setAttribute('content', slDescription);
+
+        var ogTitle = document.querySelector('meta[property=\"og:title\"]');
+        if (ogTitle) ogTitle.setAttribute('content', slTitle);
+
+        var ogDesc = document.querySelector('meta[property=\"og:description\"]');
+        if (ogDesc) ogDesc.setAttribute('content', slDescription);
+
+        var twTitle = document.querySelector('meta[name=\"twitter:title\"]');
+        if (twTitle) twTitle.setAttribute('content', slTitle);
+
+        var twDesc = document.querySelector('meta[name=\"twitter:description\"]');
+        if (twDesc) twDesc.setAttribute('content', slDescription);
+      } catch (_) {}
+    })();
+  </script>
 
   <!-- Dev helper: Unregister service workers + clear Flutter caches on local dev only.
        This is intentionally conservative so it will NOT run on production hosts.
