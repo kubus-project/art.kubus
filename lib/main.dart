@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:art_kubus/widgets/app_loading.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
@@ -138,12 +139,24 @@ class _AppLauncherState extends State<AppLauncher> {
       // early so the preference is persisted for subsequent launches.
       final service = PushNotificationService();
       await service.initialize().timeout(initTimeout);
-      await service.requestPermission().timeout(initTimeout);
-      debugPrint('AppLauncher: PushNotificationService initialized.');
+      // On web, requesting Notification permission must be triggered by a user
+      // gesture. Asking during startup produces a browser warning and is ignored.
+      if (!kIsWeb) {
+        await service.requestPermission().timeout(initTimeout);
+      }
+      if (kDebugMode) {
+        debugPrint('AppLauncher: PushNotificationService initialized.');
+      }
     } on TimeoutException catch (e) {
-      debugPrint('AppLauncher: PushNotificationService init timed out after ${initTimeout.inSeconds}s: $e');
+      if (kDebugMode) {
+        debugPrint(
+          'AppLauncher: PushNotificationService init timed out after ${initTimeout.inSeconds}s: $e',
+        );
+      }
     } catch (e, st) {
-      debugPrint('AppLauncher: PushNotificationService init failed: $e\n$st');
+      if (kDebugMode) {
+        debugPrint('AppLauncher: PushNotificationService init failed: $e\n$st');
+      }
     } finally {
       if (mounted) setState(() => _initialized = true);
     }
