@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/onboarding_state_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/gradient_icon_card.dart';
 import '../../screens/desktop/desktop_shell.dart';
@@ -371,18 +372,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
   }
 
   void _startWalletCreation() async {
-    // Mark onboarding as completed but don't force wallet creation
+    // Mark onboarding as completed but don't force wallet creation.
+    // This ensures AppInitializer treats the user as returning.
+    final navigator = Navigator.of(context);
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('completed_onboarding', true);
-    await prefs.setBool('has_seen_onboarding', true);
-    
-    if (mounted) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const SignInScreen(),
-        ),
-      );
-    }
+    await OnboardingStateService.markCompleted(prefs: prefs);
+    if (!mounted) return;
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => const SignInScreen(),
+      ),
+    );
   }
 }
 

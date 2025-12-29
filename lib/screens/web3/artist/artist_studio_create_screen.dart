@@ -5,6 +5,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_creator_screen.dart';
+import '../../map_markers/manage_markers_screen.dart';
 import 'artwork_creator.dart';
 import 'collection_creator.dart';
 
@@ -114,6 +115,18 @@ class ArtistStudioCreateScreen extends StatelessWidget {
             final navigator = Navigator.of(context);
             await navigator.push(
               MaterialPageRoute(builder: (_) => const ExhibitionCreatorScreen()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        _CreateOptionCard(
+          title: l10n.manageMarkersTitle,
+          subtitle: l10n.manageMarkersCardSubtitle,
+          icon: Icons.place_outlined,
+          accent: studioAccent,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ManageMarkersScreen()),
             );
           },
         ),

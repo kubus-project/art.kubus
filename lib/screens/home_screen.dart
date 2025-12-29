@@ -772,11 +772,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           scope: 'public',
         );
 
-        final counters = snapshot?.counters ?? const <String, int>{};
+        final isLoading = statsProvider.isSnapshotLoading(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: const ['artworks', 'followers', 'viewsReceived'],
+          scope: 'public',
+        );
+
+        final error = statsProvider.snapshotError(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: const ['artworks', 'followers', 'viewsReceived'],
+          scope: 'public',
+        );
+
+        String displayCounter(String key) {
+          if (snapshot != null) {
+            final v = (snapshot.counters[key] ?? 0);
+            return _formatCompactCount(v);
+          }
+          if (isLoading) return '…';
+          if (error != null) return '—';
+          return '0';
+        }
         final stats = [
-          ('artworks', _formatCompactCount(counters['artworks'] ?? 0), Icons.image),
-          ('followers', _formatCompactCount(counters['followers'] ?? 0), Icons.people),
-          ('views', _formatCompactCount(counters['viewsReceived'] ?? 0), Icons.visibility),
+          ('artworks', displayCounter('artworks'), Icons.image),
+          ('followers', displayCounter('followers'), Icons.people),
+          ('views', displayCounter('viewsReceived'), Icons.visibility),
         ];
 
         return LayoutBuilder(

@@ -6219,4 +6219,126 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get mnemonicRevealEnterPinDialogTitle => 'Vnesi PIN';
+
+  @override
+  String get manageMarkersTitle => 'Upravljaj označevalnike';
+
+  @override
+  String get manageMarkersCardSubtitle => 'Ustvari, objavi in uredi svoje označevalnike na zemljevidu';
+
+  @override
+  String get manageMarkersQuickActionSubtitle => 'Ustvari, objavi in uredi označevalnike';
+
+  @override
+  String get manageMarkersSearchHint => 'Išči označevalnike';
+
+  @override
+  String get manageMarkersRefreshTooltip => 'Osveži';
+
+  @override
+  String get manageMarkersStatusDraft => 'Osnutek';
+
+  @override
+  String get manageMarkersStatusPublic => 'Javno';
+
+  @override
+  String get manageMarkersStatusPrivate => 'Zasebno';
+
+  @override
+  String get manageMarkersEmptyTitle => 'Ni še označevalnikov';
+
+  @override
+  String get manageMarkersEmptySubtitle => 'Ustvari prvi označevalnik za AR izkušnjo na zemljevidu.';
+
+  @override
+  String get manageMarkersSelectTitle => 'Izberi označevalnik';
+
+  @override
+  String get manageMarkersSelectSubtitle => 'Izberi označevalnik s seznama ali ustvari novega.';
+
+  @override
+  String get manageMarkersLoadFailedTitle => 'Označevalnikov ni mogoče naložiti';
+
+  @override
+  String get manageMarkersLoadFailedSubtitle => 'Preveri povezavo in poskusi znova.';
+
+  @override
+  String get manageMarkersRetryButton => 'Poskusi znova';
+
+  @override
+  String get manageMarkersNewButton => 'Nov označevalnik';
+
+  @override
+  String get manageMarkersEditTitle => 'Uredi označevalnik';
+
+  @override
+  String get manageMarkersCloseTooltip => 'Zapri';
+
+  @override
+  String get manageMarkersCreateButton => 'Ustvari';
+
+  @override
+  String get manageMarkersSaveButton => 'Shrani';
+
+  @override
+  String get manageMarkersSaveFailed => 'Shranjevanje označevalnika ni uspelo';
+
+  @override
+  String get manageMarkersCreatedToast => 'Označevalnik ustvarjen';
+
+  @override
+  String get manageMarkersUpdatedToast => 'Označevalnik posodobljen';
+
+  @override
+  String get manageMarkersDeleteConfirmTitle => 'Izbrišem označevalnik?';
+
+  @override
+  String get manageMarkersDeleteConfirmBody => 'Tega ni mogoče razveljaviti.';
+
+  @override
+  String get manageMarkersDeleteButton => 'Izbriši';
+
+  @override
+  String get manageMarkersCancelButton => 'Prekliči';
+
+  @override
+  String get manageMarkersDeleteFailed => 'Brisanje označevalnika ni uspelo';
+
+  @override
+  String get manageMarkersDeletedToast => 'Označevalnik izbrisan';
+
+  @override
+  String get manageMarkersActivationRadiusLabel => 'Aktivacijski radij (m)';
+
+  @override
+  String get manageMarkersPublishedToggleTitle => 'Objavljeno';
+
+  @override
+  String get manageMarkersRequiresProximityTitle => 'Zahteva bližino';
+
+  @override
+  String get manageMarkersRequiresProximitySubtitle => 'Uporabnik mora biti blizu označevalnika za aktivacijo AR';
+
+  @override
+  String get manageMarkersSearchNoResults => 'Ni rezultatov';
+
+  @override
+  String manageMarkersPickSubjectTitle(Object subjectType) {
+    return 'Izberi $subjectType';
+  }
+
+  @override
+  String get manageMarkersSearchSubjectsHint => 'Išči subjekte';
+
+  @override
+  String get manageMarkersPickArAssetTitle => 'Izberi AR sredstvo';
+
+  @override
+  String get manageMarkersSearchArAssetsHint => 'Išči AR sredstva';
+
+  @override
+  String get manageMarkersClearSelectionTooltip => 'Počisti izbor';
+
+  @override
+  String get manageMarkersPickArAssetPlaceholder => 'Izberi AR sredstvo';
 }

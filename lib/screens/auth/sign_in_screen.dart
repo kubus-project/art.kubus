@@ -10,6 +10,7 @@ import '../../providers/wallet_provider.dart';
 import '../../providers/web3provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/google_auth_service.dart';
+import '../../services/onboarding_state_service.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/gradient_icon_card.dart';
@@ -60,9 +61,7 @@ class _SignInScreenState extends State<SignInScreen> {
       debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('has_seen_onboarding', true);
-    await prefs.setBool('completed_onboarding', true);
-    await prefs.setBool('first_time', false);
+    await OnboardingStateService.markCompleted(prefs: prefs);
     if (walletAddress != null && walletAddress.toString().isNotEmpty) {
       await prefs.setString('wallet_address', walletAddress.toString());
       await prefs.setString('wallet', walletAddress.toString());

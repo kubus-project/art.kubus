@@ -28,6 +28,7 @@ import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_creator_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 import '../../events/exhibition_list_screen.dart';
+import '../../map_markers/manage_markers_screen.dart';
 
 /// Desktop Artist Studio screen with split-panel layout
 /// Left: Mobile artist studio view
@@ -388,6 +389,21 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
                         );
                       },
                     ),
+                  ),
+                );
+              },
+            ),
+          if (isApprovedArtist && section == DesktopArtistStudioSection.create)
+            _buildQuickActionTile(
+              l10n.manageMarkersTitle,
+              l10n.manageMarkersQuickActionSubtitle,
+              Icons.place_outlined,
+              scheme.primary,
+              () {
+                DesktopShellScope.of(context)?.pushScreen(
+                  DesktopSubScreen(
+                    title: l10n.manageMarkersTitle,
+                    child: const ManageMarkersScreen(),
                   ),
                 );
               },

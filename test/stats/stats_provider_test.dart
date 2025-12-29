@@ -18,6 +18,7 @@ class _FakeStatsApiService extends StatsApiService {
     List<String> metrics = const [],
     String scope = 'public',
     String? groupBy,
+    bool forceRefresh = false,
   }) {
     snapshotCalls += 1;
     final completer = snapshotCompleter;

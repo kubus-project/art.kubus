@@ -3,6 +3,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/app_loading.dart';
 import '../config/config.dart';
+import '../services/onboarding_state_service.dart';
 
 /// Developer tool to reset app onboarding state
 /// This screen can be accessed from the settings or profile menu during development
@@ -29,14 +30,21 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
     
     final prefs = await SharedPreferences.getInstance();
     final state = <String, dynamic>{};
+
+    final onboardingState = await OnboardingStateService.load(prefs: prefs);
     
     // Load all onboarding-related preferences
-    state['first_time'] = prefs.getBool('first_time') ?? true;
-    state['has_seen_welcome'] = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
-    state['is_first_launch'] = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
+    state['is_first_launch'] = onboardingState.isFirstLaunch;
+    state['has_seen_welcome'] = onboardingState.hasSeenWelcome;
+    state['has_completed_onboarding'] = onboardingState.hasCompletedOnboarding;
     state['has_wallet'] = prefs.getBool('has_wallet') ?? false;
-    state['completed_onboarding'] = prefs.getBool('completed_onboarding') ?? false;
     state['skipOnboardingForReturningUsers'] = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
+
+    // Legacy keys (debug visibility)
+    state['legacy.first_time'] = prefs.getBool('first_time');
+    state['legacy.completed_onboarding'] = prefs.getBool('completed_onboarding');
+    state['legacy.has_seen_onboarding'] = prefs.getBool('has_seen_onboarding');
+    state['legacy.has_seen_permissions'] = prefs.getBool('has_seen_permissions');
     
     if (!mounted) return;
     setState(() {
@@ -88,11 +96,8 @@ class _OnboardingResetScreenState extends State<OnboardingResetScreen> {
     final prefs = await SharedPreferences.getInstance();
     
     // Reset all onboarding flags
-    await prefs.setBool('first_time', true);
-    await prefs.setBool(PreferenceKeys.hasSeenWelcome, false);
-    await prefs.setBool(PreferenceKeys.isFirstLaunch, true);
     await prefs.remove('has_wallet');
-    await prefs.remove('completed_onboarding');
+    await OnboardingStateService.reset(prefs: prefs);
     
     // Reset all Web3 feature onboarding
     final keys = prefs.getKeys();

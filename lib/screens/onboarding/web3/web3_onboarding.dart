@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../../config/config.dart';
+import '../../../services/onboarding_state_service.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../widgets/gradient_icon_card.dart';
@@ -428,14 +429,8 @@ Future<bool> isOnboardingNeeded(String featureKey) async {
   
   // Check if Web3 onboarding should be skipped for returning users
   if (userSkipWeb3Onboarding) {
-    final hasSeenWelcome = prefs.getBool(PreferenceKeys.hasSeenWelcome) ?? false;
-    final isFirstLaunch = prefs.getBool(PreferenceKeys.isFirstLaunch) ?? true;
-    final isFirstTime = prefs.getBool('first_time') ?? true;
-    
-    // If user is a returning user, skip Web3 onboarding
-    if (!isFirstTime || hasSeenWelcome || !isFirstLaunch) {
-      return false;
-    }
+    final onboardingState = await OnboardingStateService.load(prefs: prefs);
+    if (onboardingState.isReturningUser) return false;
   }
   
   // Otherwise, check if this specific feature onboarding was completed

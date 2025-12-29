@@ -17,6 +17,13 @@ class PresenceProvider extends ChangeNotifier {
   static const Duration _autoRefreshInterval = Duration(seconds: 10);
   static const Duration _heartbeatInterval = Duration(seconds: 30);
 
+  /// Prevent unbounded watched-wallet growth (e.g., scrolling long feeds).
+  ///
+  /// Presence is a "nice to have" - we prefer dropping old wallets rather
+  /// than waking the network stack forever.
+  static const int _maxWatchedWallets = 120;
+  static const Duration _watchedWalletTtl = Duration(minutes: 2);
+
   final PresenceApi _api;
 
   AppRefreshProvider? _boundRefreshProvider;
@@ -29,6 +36,7 @@ class PresenceProvider extends ChangeNotifier {
   bool _batchInFlight = false;
   final Set<String> _pendingWalletsLower = <String>{};
   final Set<String> _watchedWalletsLower = <String>{};
+  final Map<String, DateTime> _watchedWalletLastRequestedAt = <String, DateTime>{};
   Timer? _autoRefreshTimer;
 
   Timer? _heartbeatTimer;
@@ -126,12 +134,15 @@ class PresenceProvider extends ChangeNotifier {
 
   void prefetch(Iterable<String> wallets) {
     if (!AppConfig.isFeatureEnabled('presence')) return;
+    final now = DateTime.now();
     for (final w in wallets) {
       final key = _walletLowerOrNull(w);
       if (key == null) continue;
       _pendingWalletsLower.add(key);
       _watchedWalletsLower.add(key);
+      _watchedWalletLastRequestedAt[key] = now;
     }
+    _pruneWatchedWallets(now);
     _ensureAutoRefreshTimer();
     _ensureHeartbeatTimer();
     _scheduleBatchFetch();
@@ -149,6 +160,7 @@ class PresenceProvider extends ChangeNotifier {
     }
     _pendingWalletsLower.add(key);
     _watchedWalletsLower.add(key);
+    _watchedWalletLastRequestedAt[key] = DateTime.now();
     _ensureAutoRefreshTimer();
     _ensureHeartbeatTimer();
     await _flushBatchFetch();
@@ -161,10 +173,53 @@ class PresenceProvider extends ChangeNotifier {
 
     _autoRefreshTimer = Timer.periodic(_autoRefreshInterval, (_) {
       if (!AppConfig.isFeatureEnabled('presence')) return;
-      if (_watchedWalletsLower.isEmpty) return;
-      _pendingWalletsLower.addAll(_watchedWalletsLower);
+      if (_watchedWalletsLower.isEmpty) {
+        _autoRefreshTimer?.cancel();
+        _autoRefreshTimer = null;
+        return;
+      }
+
+      final now = DateTime.now();
+      _pruneWatchedWallets(now);
+      if (_watchedWalletsLower.isEmpty) {
+        _autoRefreshTimer?.cancel();
+        _autoRefreshTimer = null;
+        return;
+      }
+
+      final cutoff = now.subtract(_watchedWalletTtl);
+      for (final key in _watchedWalletsLower) {
+        final lastRequested = _watchedWalletLastRequestedAt[key];
+        if (lastRequested != null && lastRequested.isAfter(cutoff)) {
+          _pendingWalletsLower.add(key);
+        }
+      }
       _scheduleBatchFetch();
     });
+  }
+
+  void _pruneWatchedWallets(DateTime now) {
+    // Drop stale wallets first.
+    final cutoff = now.subtract(_watchedWalletTtl);
+    _watchedWalletLastRequestedAt.removeWhere((key, last) => last.isBefore(cutoff));
+    _watchedWalletsLower.removeWhere((key) => !_watchedWalletLastRequestedAt.containsKey(key));
+
+    if (_watchedWalletsLower.length <= _maxWatchedWallets) return;
+
+    // Evict least-recently requested wallets until under the cap.
+    final entries = _watchedWalletLastRequestedAt.entries
+        .where((e) => _watchedWalletsLower.contains(e.key))
+        .toList(growable: false);
+    entries.sort((a, b) => a.value.compareTo(b.value));
+
+    final overflow = _watchedWalletsLower.length - _maxWatchedWallets;
+    for (var i = 0; i < overflow && i < entries.length; i++) {
+      final key = entries[i].key;
+      _watchedWalletsLower.remove(key);
+      _watchedWalletLastRequestedAt.remove(key);
+      _pendingWalletsLower.remove(key);
+      // Keep cache entries around for now; they will naturally expire.
+    }
   }
 
   void _ensureHeartbeatTimer() {
@@ -322,6 +377,7 @@ class PresenceProvider extends ChangeNotifier {
     _visitTimer?.cancel();
     _autoRefreshTimer?.cancel();
     _heartbeatTimer?.cancel();
+    _watchedWalletLastRequestedAt.clear();
     if (_profileProvider != null && _profileListener != null) {
       try {
         _profileProvider!.removeListener(_profileListener!);

@@ -457,19 +457,27 @@ class SocketService {
       }
     });
 
-    _socket!.on('art-marker:created', (data) {
+    void emitMarkerEvent(String eventName, dynamic data, {bool deleted = false}) {
       try {
-        _log('Received art-marker:created');
+        _log('Received $eventName');
         final mapped = mapFromPayload(data);
-        if (mapped != null) {
-          _log('art-marker:created -> listeners=${_markerListeners.length}');
-          for (final l in _markerListeners) {
-            try { l(mapped); } catch (e) { _log('marker listener error: $e'); }
-          }
-          try { _markerController.add(mapped); _log('art-marker:created -> controller.added'); } catch (e) { _log('marker controller add error: $e'); }
+        if (mapped == null) return;
+        final payload = Map<String, dynamic>.from(mapped);
+        payload['event'] = eventName;
+        if (deleted) payload['deleted'] = true;
+        _log('$eventName -> listeners=${_markerListeners.length}');
+        for (final l in _markerListeners) {
+          try { l(payload); } catch (e) { _log('marker listener error: $e'); }
         }
-      } catch (e) { _log('art-marker:created handler error: $e'); }
-    });
+        try { _markerController.add(payload); _log('$eventName -> controller.added'); } catch (e) { _log('marker controller add error: $e'); }
+      } catch (e) {
+        _log('$eventName handler error: $e');
+      }
+    }
+
+    _socket!.on('art-marker:created', (data) => emitMarkerEvent('art-marker:created', data));
+    _socket!.on('art-marker:updated', (data) => emitMarkerEvent('art-marker:updated', data));
+    _socket!.on('art-marker:deleted', (data) => emitMarkerEvent('art-marker:deleted', data, deleted: true));
     // Feed updates: new posts or reposts
     _socket!.on('community:new_post', (data) {
       try {
