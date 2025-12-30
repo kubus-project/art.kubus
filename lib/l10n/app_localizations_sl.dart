@@ -69,6 +69,12 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonEdit => 'Uredi';
 
   @override
+  String get commonMore => 'Več';
+
+  @override
+  String get commonEditedTag => '(urejeno)';
+
+  @override
   String get commonLink => 'Poveži';
 
   @override
@@ -157,6 +163,36 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get commonWorking => 'V teku…';
+
+  @override
+  String get commentHistoryTitle => 'Zgodovina urejanja';
+
+  @override
+  String get commentHistoryCurrentLabel => 'Trenutno';
+
+  @override
+  String get commentHistoryOriginalLabel => 'Izvirno';
+
+  @override
+  String get commentEditTitle => 'Uredi komentar';
+
+  @override
+  String get commentUpdatedToast => 'Komentar posodobljen';
+
+  @override
+  String get commentEditFailedToast => 'Komentarja ni bilo mogoče posodobiti. Poskusi znova.';
+
+  @override
+  String get commentDeleteConfirmTitle => 'Izbrišem komentar?';
+
+  @override
+  String get commentDeleteConfirmMessage => 'To bo izbrisalo komentar in vse odgovore.';
+
+  @override
+  String get commentDeletedToast => 'Komentar izbrisan';
+
+  @override
+  String get commentDeleteFailedToast => 'Komentarja ni bilo mogoče izbrisati. Poskusi znova.';
 
   @override
   String get commonEmail => 'E-pošta';

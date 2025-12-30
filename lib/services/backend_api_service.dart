@@ -2140,6 +2140,57 @@ class BackendApiService {
     );
   }
 
+  /// Edit an artwork comment
+  /// PATCH /api/artworks/comments/:commentId
+  Future<ArtworkComment> editArtworkComment({
+    required String commentId,
+    required String content,
+  }) async {
+    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
+    final response = await http.patch(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({'content': content}),
+    );
+
+    if (response.statusCode == 200) {
+      final payload = jsonDecode(response.body);
+      if (payload is Map<String, dynamic>) {
+        final data = payload['data'] as Map<String, dynamic>? ?? payload;
+        return ArtworkComment.fromMap(data);
+      }
+      throw Exception('Unexpected editArtworkComment payload: ${response.body}');
+    }
+
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
+  /// Delete an artwork comment
+  /// DELETE /api/artworks/comments/:commentId
+  /// Returns updated commentsCount when provided by backend.
+  Future<int?> deleteArtworkComment(String commentId) async {
+    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
+    final response = await http.delete(uri, headers: _getHeaders());
+    if (response.statusCode == 200) {
+      final payload = jsonDecode(response.body);
+      if (payload is Map<String, dynamic>) {
+        return payload['commentsCount'] as int?;
+      }
+      return null;
+    }
+    throw BackendApiRequestException(
+      statusCode: response.statusCode,
+      path: uri.path,
+      body: response.body,
+    );
+  }
+
   /// Discover an artwork and return updated discovery count if available.
   /// POST /api/artworks/:id/discover
   Future<int?> discoverArtworkWithCount(String artworkId) async {
@@ -2876,7 +2927,51 @@ class BackendApiService {
         throw Exception('Failed to create comment: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error creating comment: $e');
+      if (kDebugMode) {
+        debugPrint('BackendApiService.createComment failed: $e');
+      }
+      rethrow;
+    }
+  }
+
+  /// Edit a comment on a post
+  /// PATCH /api/community/comments/:id
+  Future<Comment> editComment({
+    required String commentId,
+    required String content,
+  }) async {
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final uri = Uri.parse('$baseUrl/api/community/comments/$commentId');
+      final response = await http.patch(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({'content': content}),
+      );
+
+      if (response.statusCode == 200) {
+        final parsed = jsonDecode(response.body);
+        if (parsed is Map<String, dynamic>) {
+          final commentJson = parsed['comment'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'];
+          if (commentJson is Map<String, dynamic>) {
+            return _commentFromBackendJson(commentJson);
+          }
+          if (parsed.containsKey('id') && parsed.containsKey('content')) {
+            return _commentFromBackendJson(parsed);
+          }
+        }
+        throw Exception('Unexpected response when editing comment: ${response.body}');
+      }
+
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('BackendApiService.editComment failed: $e');
+      }
       rethrow;
     }
   }
@@ -2902,23 +2997,13 @@ class BackendApiService {
 
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
-        debugPrint('🔍 getComments: Raw response body type: ${parsed.runtimeType}');
         if (parsed is Map<String, dynamic>) {
           final raw = parsed['comments'] ?? parsed['data'] ?? parsed['result'] ?? parsed['payload'] ?? [];
-          debugPrint('🔍 getComments: Found ${(raw as List?)?.length ?? 0} comments in response');
-          if (raw is List && raw.isNotEmpty) {
-            debugPrint('🔍 getComments: First comment sample: ${raw.first}');
-          }
           if (raw is List) {
             final flat = raw
                 .whereType<Map<String, dynamic>>()
                 .map(_commentFromBackendJson)
                 .toList();
-            debugPrint('🔍 getComments: Parsed ${flat.length} comments initially');
-            if (flat.isNotEmpty) {
-              final first = flat.first;
-              debugPrint('🔍 First parsed comment: id=${first.id}, name="${first.authorName}", avatar="${first.authorAvatar}", wallet="${first.authorWallet}"');
-            }
 
             // Batch fetch profiles for comment authors to fill missing name/avatar if possible
             try {
@@ -2933,7 +3018,6 @@ class BackendApiService {
               }
 
               if (wallets.isNotEmpty) {
-                debugPrint('BackendApiService.getComments: attempting to batch-fetch profiles for ${wallets.length} authors');
                 final profilesResp = await getProfilesBatch(wallets.toList());
                 final Map<String, Map<String, dynamic>> profilesByWallet = {};
                 if (profilesResp['success'] == true && profilesResp['data'] is List) {
@@ -2959,7 +3043,6 @@ class BackendApiService {
                   }
                 }
 
-                int filled = 0;
                 for (int i = 0; i < flat.length; i++) {
                   final c = flat[i];
                   final walletKey = WalletUtils.canonical(c.authorWallet ?? c.authorId);
@@ -2979,8 +3062,6 @@ class BackendApiService {
                             ? profileUsername.trim() 
                             : c.authorName);
                     
-                    debugPrint('   Profile enrichment for comment ${c.id}: displayName=$profileDisplayName, username=$profileUsername, bestName=$bestDisplayName, avatar=$avatarCandidate');
-                    
                     final updated = c.copyWith(
                       authorAvatar: normalizedAvatar,
                       authorUsername: profileUsername ?? c.authorUsername,
@@ -2989,33 +3070,26 @@ class BackendApiService {
                       authorWallet: (profile['walletAddress'] ?? profile['wallet'] ?? profile['wallet_address'] ?? profile['publicKey'] ?? profile['public_key'])?.toString(),
                     );
                     flat[i] = updated;
-                    filled++;
                   } catch (e) {
-                    debugPrint('   Profile enrichment error for comment ${c.id}: $e');
+                    // ignore per-item enrichment errors
                   }
-                }
-                debugPrint('BackendApiService.getComments: filled $filled comment author profiles from ${profilesByWallet.length} profile results');
-                if (flat.isNotEmpty) {
-                  final first = flat.first;
-                  debugPrint('🔍 After enrichment, first comment: id=${first.id}, name="${first.authorName}", avatar="${first.authorAvatar}"');
                 }
               }
             } catch (e) {
-              debugPrint('BackendApiService.getComments: profile batch fetch error: $e');
+              // ignore enrichment failures
             }
             return _nestComments(flat);
           }
-          debugPrint('BackendApiService.getComments: unexpected payload for comments, returning empty list');
           return <Comment>[];
         }
-        debugPrint('BackendApiService.getComments: response body not a JSON object, returning empty list');
         return <Comment>[];
       } else {
-        debugPrint('BackendApiService.getComments: non-200 status ${response.statusCode}, returning empty list');
         return <Comment>[];
       }
     } catch (e) {
-      debugPrint('Error getting comments: $e');
+      if (kDebugMode) {
+        debugPrint('BackendApiService.getComments failed: $e');
+      }
       return <Comment>[];
     }
   }
@@ -3024,12 +3098,15 @@ class BackendApiService {
   /// DELETE /api/community/comments/:id
   Future<void> deleteComment(String commentId) async {
     try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       await http.delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId'),
         headers: _getHeaders(),
       );
     } catch (e) {
-      debugPrint('Error deleting comment: $e');
+      if (kDebugMode) {
+        debugPrint('BackendApiService.deleteComment failed: $e');
+      }
       rethrow;
     }
   }
@@ -6294,9 +6371,17 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
       ?? normalizedAuthor['username'] as String?
       ?? rawUsername;
 
-  try {
-    debugPrint('BackendApiService._commentFromBackendJson parsed: id=${json['id']}, authorId=$authorId, authorWallet=$resolvedAuthorWallet, authorName=$resolvedAuthorName, avatarCandidate=$avatarCandidate');
-  } catch (_) {}
+  final originalContent = (json['originalText'] ?? json['original_content'] ?? json['originalContent'])?.toString();
+  DateTime? editedAt;
+  final editedRaw = json['editedAt'] ?? json['edited_at'] ?? json['editedAtUtc'];
+  if (editedRaw != null) {
+    try {
+      editedAt = DateTime.parse(editedRaw.toString());
+    } catch (_) {
+      editedAt = null;
+    }
+  }
+
   return Comment(
   id: (json['id'] ?? '').toString(),
   authorId: authorId,
@@ -6305,6 +6390,8 @@ Comment _commentFromBackendJson(Map<String, dynamic> json) {
   authorUsername: authorUsername,
   authorWallet: resolvedAuthorWallet ?? authorId,
   parentCommentId: json['parentCommentId'] as String? ?? json['parent_comment_id']?.toString(),
+  originalContent: (originalContent != null && originalContent.trim().isNotEmpty) ? originalContent : null,
+  editedAt: editedAt,
   content: json['content'] as String,
     timestamp: json['createdAt'] != null 
       ? DateTime.parse(json['createdAt'] as String)

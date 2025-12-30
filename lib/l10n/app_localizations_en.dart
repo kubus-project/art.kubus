@@ -69,6 +69,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonEdit => 'Edit';
 
   @override
+  String get commonMore => 'More';
+
+  @override
+  String get commonEditedTag => '(edited)';
+
+  @override
   String get commonLink => 'Link';
 
   @override
@@ -157,6 +163,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get commonWorking => 'Working…';
+
+  @override
+  String get commentHistoryTitle => 'Edit history';
+
+  @override
+  String get commentHistoryCurrentLabel => 'Current';
+
+  @override
+  String get commentHistoryOriginalLabel => 'Original';
+
+  @override
+  String get commentEditTitle => 'Edit comment';
+
+  @override
+  String get commentUpdatedToast => 'Comment updated';
+
+  @override
+  String get commentEditFailedToast => 'Failed to update comment. Please try again.';
+
+  @override
+  String get commentDeleteConfirmTitle => 'Delete comment?';
+
+  @override
+  String get commentDeleteConfirmMessage => 'This will delete the comment and all replies.';
+
+  @override
+  String get commentDeletedToast => 'Comment deleted';
+
+  @override
+  String get commentDeleteFailedToast => 'Failed to delete comment. Please try again.';
 
   @override
   String get commonEmail => 'Email';

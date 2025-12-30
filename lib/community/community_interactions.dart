@@ -159,11 +159,15 @@ class Comment {
   final String? authorUsername;
   final String? authorWallet;
   final String? parentCommentId;
+  final String? originalContent;
+  final DateTime? editedAt;
   String content; // Made mutable for editing
   final DateTime timestamp;
   int likeCount;
   bool isLiked;
   List<Comment> replies;
+
+  bool get isEdited => editedAt != null;
 
   Comment({
     required this.id,
@@ -173,6 +177,8 @@ class Comment {
     this.authorUsername,
     this.authorWallet,
     this.parentCommentId,
+    this.originalContent,
+    this.editedAt,
     required this.content,
     required this.timestamp,
     this.likeCount = 0,
@@ -186,6 +192,8 @@ class Comment {
     String? authorAvatar,
     String? authorUsername,
     String? content,
+    String? originalContent,
+    DateTime? editedAt,
     List<Comment>? replies,
     String? authorName,
     String? authorId,
@@ -199,6 +207,8 @@ class Comment {
       authorUsername: authorUsername ?? this.authorUsername,
       authorWallet: authorWallet ?? this.authorWallet,
       parentCommentId: parentCommentId,
+      originalContent: originalContent ?? this.originalContent,
+      editedAt: editedAt ?? this.editedAt,
       content: content ?? this.content,
       timestamp: timestamp,
       likeCount: likeCount ?? this.likeCount,

@@ -98,7 +98,8 @@ class CommunityPostCard extends StatelessWidget {
                               children: [
                                 Row(
                                   children: [
-                                    Expanded(
+                                    Flexible(
+                                      fit: FlexFit.loose,
                                       child: Text(
                                         post.authorName,
                                         style: GoogleFonts.inter(
@@ -111,8 +112,8 @@ class CommunityPostCard extends StatelessWidget {
                                     ),
                                     CommunityAuthorRoleBadges(
                                       post: post,
-                                      fontSize: isSmallScreen ? 8 : 9,
-                                      iconOnly: true,
+                                      fontSize: isSmallScreen ? 8.5 : 9.5,
+                                      iconOnly: false,
                                     ),
                                   ],
                                 ),
@@ -560,7 +561,8 @@ class _RepostInnerCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
+                            fit: FlexFit.loose,
                             child: Text(
                               post.authorName,
                               style: GoogleFonts.inter(
@@ -574,7 +576,7 @@ class _RepostInnerCard extends StatelessWidget {
                           CommunityAuthorRoleBadges(
                             post: post,
                             fontSize: 8,
-                            iconOnly: true,
+                            iconOnly: false,
                           ),
                         ],
                       ),

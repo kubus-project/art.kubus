@@ -215,6 +215,18 @@ abstract class AppLocalizations {
   /// **'Edit'**
   String get commonEdit;
 
+  /// No description provided for @commonMore.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get commonMore;
+
+  /// No description provided for @commonEditedTag.
+  ///
+  /// In en, this message translates to:
+  /// **'(edited)'**
+  String get commonEditedTag;
+
   /// No description provided for @commonLink.
   ///
   /// In en, this message translates to:
@@ -394,6 +406,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Working…'**
   String get commonWorking;
+
+  /// No description provided for @commentHistoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit history'**
+  String get commentHistoryTitle;
+
+  /// No description provided for @commentHistoryCurrentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get commentHistoryCurrentLabel;
+
+  /// No description provided for @commentHistoryOriginalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get commentHistoryOriginalLabel;
+
+  /// No description provided for @commentEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit comment'**
+  String get commentEditTitle;
+
+  /// No description provided for @commentUpdatedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment updated'**
+  String get commentUpdatedToast;
+
+  /// No description provided for @commentEditFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update comment. Please try again.'**
+  String get commentEditFailedToast;
+
+  /// No description provided for @commentDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete comment?'**
+  String get commentDeleteConfirmTitle;
+
+  /// No description provided for @commentDeleteConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This will delete the comment and all replies.'**
+  String get commentDeleteConfirmMessage;
+
+  /// No description provided for @commentDeletedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment deleted'**
+  String get commentDeletedToast;
+
+  /// No description provided for @commentDeleteFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete comment. Please try again.'**
+  String get commentDeleteFailedToast;
 
   /// No description provided for @commonEmail.
   ///

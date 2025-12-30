@@ -5,8 +5,14 @@ class ArtworkComment {
   final String userName;
   final String? userAvatarUrl;
   final String content;
+  /// Original content before the first edit.
+  ///
+  /// Set by the backend on first edit; remains unchanged for subsequent edits.
+  final String? originalContent;
   final DateTime createdAt;
   final DateTime? updatedAt;
+  /// Timestamp when the comment was edited (if ever).
+  final DateTime? editedAt;
   final int likesCount;
   final bool isLikedByCurrentUser;
   final bool isEdited;
@@ -20,8 +26,10 @@ class ArtworkComment {
     required this.userName,
     this.userAvatarUrl,
     required this.content,
+    this.originalContent,
     required this.createdAt,
     this.updatedAt,
+    this.editedAt,
     this.likesCount = 0,
     this.isLikedByCurrentUser = false,
     this.isEdited = false,
@@ -63,8 +71,10 @@ class ArtworkComment {
       'userName': userName,
       'userAvatarUrl': userAvatarUrl,
       'content': content,
+      'originalContent': originalContent,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'editedAt': editedAt?.toIso8601String(),
       'likesCount': likesCount,
       'isLikedByCurrentUser': isLikedByCurrentUser,
       'isEdited': isEdited,
@@ -75,20 +85,43 @@ class ArtworkComment {
 
   /// Create from Map (from storage/API)
   factory ArtworkComment.fromMap(Map<String, dynamic> map) {
+    DateTime? tryParseDateTime(dynamic value) {
+      if (value == null) return null;
+      if (value is DateTime) return value;
+      return DateTime.tryParse(value.toString());
+    }
+
+    String? normalizeOptionalString(dynamic value) {
+      final s = value?.toString();
+      if (s == null) return null;
+      final trimmed = s.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    final createdAt = tryParseDateTime(map['createdAt'] ?? map['created_at']) ?? DateTime.now();
+    final updatedAt = tryParseDateTime(map['updatedAt'] ?? map['updated_at']);
+    final editedAt = tryParseDateTime(map['editedAt'] ?? map['edited_at'] ?? map['editedAtUtc']);
+    final explicitIsEdited = map['isEdited'];
+    final isEdited = (explicitIsEdited is bool)
+        ? explicitIsEdited
+        : (editedAt != null);
+
     return ArtworkComment(
-      id: map['id'] ?? '',
-      artworkId: map['artworkId'] ?? '',
-      userId: map['userId'] ?? '',
-      userName: map['userName'] ?? '',
+      id: map['id']?.toString() ?? '',
+      artworkId: map['artworkId']?.toString() ?? map['artwork_id']?.toString() ?? '',
+      userId: map['userId']?.toString() ?? map['authorId']?.toString() ?? map['author_id']?.toString() ?? '',
+      userName: map['userName']?.toString() ?? '',
       userAvatarUrl: map['userAvatarUrl'],
       content: map['content'] ?? '',
-      createdAt: DateTime.tryParse(map['createdAt'] ?? '') ?? DateTime.now(),
-      updatedAt: map['updatedAt'] != null 
-          ? DateTime.tryParse(map['updatedAt']) 
-          : null,
+      originalContent: normalizeOptionalString(
+        map['originalContent'] ?? map['original_content'] ?? map['originalText'],
+      ),
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      editedAt: editedAt,
       likesCount: map['likesCount']?.toInt() ?? 0,
       isLikedByCurrentUser: map['isLikedByCurrentUser'] ?? false,
-      isEdited: map['isEdited'] ?? false,
+      isEdited: isEdited,
       parentCommentId: map['parentCommentId'],
       replies: (map['replies'] as List<dynamic>?)
           ?.map((replyMap) => ArtworkComment.fromMap(replyMap))
@@ -104,8 +137,10 @@ class ArtworkComment {
     String? userName,
     String? userAvatarUrl,
     String? content,
+    String? originalContent,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? editedAt,
     int? likesCount,
     bool? isLikedByCurrentUser,
     bool? isEdited,
@@ -119,8 +154,10 @@ class ArtworkComment {
       userName: userName ?? this.userName,
       userAvatarUrl: userAvatarUrl ?? this.userAvatarUrl,
       content: content ?? this.content,
+      originalContent: originalContent ?? this.originalContent,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      editedAt: editedAt ?? this.editedAt,
       likesCount: likesCount ?? this.likesCount,
       isLikedByCurrentUser: isLikedByCurrentUser ?? this.isLikedByCurrentUser,
       isEdited: isEdited ?? this.isEdited,

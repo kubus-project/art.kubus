@@ -13,6 +13,7 @@ import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../services/backend_api_service.dart';
 import '../../providers/app_refresh_provider.dart';
+import '../../providers/community_comments_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state_card.dart';
@@ -81,6 +82,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       _post = widget.post;
       _loading = false;
       _maybeRunInitialAction();
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final post = _post;
+        if (!mounted || post == null) return;
+        context.read<CommunityCommentsProvider>().loadComments(post.id, force: true);
+      });
     } else if (widget.postId != null) {
       _fetchPost(widget.postId!);
     }
@@ -138,6 +145,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _post = post;
         _loading = false;
       });
+      if (mounted) {
+        // Load comments via provider so edited/original fields and nesting are
+        // consistent and mutations can update UI without manual refresh.
+        unawaited(context.read<CommunityCommentsProvider>().loadComments(post.id, force: true));
+      }
       _maybeRunInitialAction();
     } catch (e) {
       if (kDebugMode) {
@@ -244,6 +256,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Future<void> _submitComment() async {
     if (_post == null) return;
     final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
     final text = _commentController.text.trim();
     if (text.isEmpty) return;
     _commentController.clear();
@@ -253,57 +266,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _replyToAuthorName = null;
     if (_commentFocusNode.hasFocus) _commentFocusNode.unfocus();
 
-    String authorName = l10n.commonYou;
-    String? authorAvatar;
     try {
-      final profileResp = await BackendApiService().getMyProfile();
-      if (profileResp['success'] == true && profileResp['data'] is Map<String, dynamic>) {
-        final p = profileResp['data'] as Map<String, dynamic>;
-        authorName = (p['displayName'] ?? p['display_name'] ?? p['username'] ?? authorName).toString();
-        authorAvatar = p['avatar'] as String? ?? p['profileImage'] as String? ?? p['profile_image'] as String?;
-      }
-    } catch (_) {}
-
-    try {
-      final newComment = await CommunityService.addComment(
-        _post!,
-        text,
-        authorName,
-        parentCommentId: parentId,
-        authorAvatar: authorAvatar,
-      );
-
-      // Service already updated the post/comments optimistically, refresh UI
+      await context.read<CommunityCommentsProvider>().addComment(
+            postId: _post!.id,
+            content: text,
+            parentCommentId: parentId,
+          );
       if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.postDetailCommentAddedToast)),
+      );
       setState(() {});
-
-      // Show undo snackbar which attempts to delete the comment from backend and locally
-      if (!mounted) return;
-      final scheme = Theme.of(context).colorScheme;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.postDetailCommentAddedToast),
-          action: SnackBarAction(
-            label: l10n.commonUndo,
-            textColor: scheme.secondary,
-            onPressed: () async {
-              try {
-                // Attempt server delete
-                await BackendApiService().deleteComment(newComment.id);
-              } catch (_) {}
-              // Remove locally
-              CommunityService.deleteComment(_post!, newComment.id);
-              if (mounted) setState(() {});
-            },
-          ),
-        ),
-      );
     } catch (e) {
       if (kDebugMode) {
         debugPrint('PostDetailScreen: add comment failed: $e');
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.postDetailAddCommentFailedToast)));
+      // Backend can reject unauthenticated requests.
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.postDetailAddCommentFailedToast)),
+      );
     }
   }
 
@@ -1311,12 +1293,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                     children: [
                                       Row(
                                         children: [
-                                          Text(_post!.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14)),
-                                              CommunityAuthorRoleBadges(
-                                                post: _post!,
-                                                fontSize: 10,
-                                                iconOnly: true,
-                                              ),
+                                          Flexible(
+                                            fit: FlexFit.loose,
+                                            child: Text(
+                                              _post!.authorName,
+                                              style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          CommunityAuthorRoleBadges(
+                                            post: _post!,
+                                            fontSize: 9.5,
+                                            iconOnly: false,
+                                          ),
                                         ],
                                       ),
                                       Text(_timeAgo(_post!.timestamp), style: GoogleFonts.inter(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
@@ -1417,188 +1406,394 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         },
                       ),
                       const SizedBox(height: 24),
-                      Text(l10n.commonComments, style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-                      if (_post!.comments.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: EmptyStateCard(
-                            icon: Icons.comment_bank_outlined,
-                            title: l10n.postDetailNoCommentsTitle,
-                            description: l10n.postDetailNoCommentsDescription,
-                          ),
-                        )
-                      else
-                        Column(
-                          children: _post!.comments.map((c) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  leading: CircleAvatar(
-                                    backgroundImage: c.authorAvatar != null && c.authorAvatar!.isNotEmpty ? NetworkImage(c.authorAvatar!) : null,
-                                    child: c.authorAvatar == null || c.authorAvatar!.isEmpty ? Text(c.authorName.isNotEmpty ? c.authorName[0] : '?') : null,
-                                  ),
-                                  title: Text(c.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(c.content, style: GoogleFonts.inter()),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          IconButton(
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            icon: Icon(
-                                              c.isLiked ? Icons.favorite : Icons.favorite_border,
-                                              size: 18,
-                                              color: c.isLiked ? Theme.of(context).colorScheme.error : Theme.of(context).iconTheme.color,
-                                            ),
-                                            onPressed: () async {
-                                              final messenger = ScaffoldMessenger.of(context);
-                                              // optimistic toggle
-                                              final prevLiked = c.isLiked;
-                                              final prevCount = c.likeCount;
-                                              setState(() {
-                                                c.isLiked = !c.isLiked;
-                                                c.likeCount = (c.likeCount + (c.isLiked ? 1 : -1)).clamp(0, 1 << 30);
-                                              });
-                                              try {
-                                                await CommunityService.toggleCommentLike(c, _post!.id);
-                                              } catch (e) {
-                                                if (kDebugMode) {
-                                                  debugPrint('PostDetailScreen: toggle comment like failed: $e');
-                                                }
-                                                // rollback
-                                                if (!mounted) return;
-                                                setState(() {
-                                                  c.isLiked = prevLiked;
-                                                  c.likeCount = prevCount;
-                                                });
-                                                messenger.showSnackBar(SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)));
-                                              }
-                                            },
-                                          ),
-                                          GestureDetector(
-                                            behavior: HitTestBehavior.opaque,
-                                            onTap: () => _showCommentLikes(c.id),
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                                              child: Text('${c.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          TextButton(
-                                            onPressed: () {
-                                              setState(() {
-                                                _replyToCommentId = c.id;
-                                                _replyToAuthorName = c.authorName;
-                                              });
-                                              // prefill mention and focus
-                                              _commentController.text = '@${c.authorName} ';
-                                              _commentController.selection = TextSelection.fromPosition(TextPosition(offset: _commentController.text.length));
-                                              FocusScope.of(context).requestFocus(_commentFocusNode);
-                                            },
-                                            child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
+                      Consumer<CommunityCommentsProvider>(
+                        builder: (context, commentsProvider, _) {
+                          final post = _post;
+                          final count = post == null ? 0 : commentsProvider.totalCountForPost(post.id);
+                          return Row(
+                            children: [
+                              Text(
+                                l10n.commonComments,
+                                style: GoogleFonts.inter(fontWeight: FontWeight.bold),
+                              ),
+                              const Spacer(),
+                              Text(
+                                l10n.commonCommentsCount(count),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
-                                // Replies
-                                if (c.replies.isNotEmpty)
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 56.0),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Consumer<CommunityCommentsProvider>(
+                        builder: (context, commentsProvider, _) {
+                          final post = _post;
+                          if (post == null) return const SizedBox.shrink();
+
+                          final scheme = Theme.of(context).colorScheme;
+                          final currentWallet = WalletUtils.canonical(_currentWalletAddress() ?? '');
+                          final loading = commentsProvider.isLoading(post.id);
+                          final error = commentsProvider.errorForPost(post.id);
+                          final comments = commentsProvider.commentsForPost(post.id);
+
+                          bool canModify(Comment c) {
+                            if (currentWallet.isEmpty) return false;
+                            final authorKey = WalletUtils.canonical((c.authorWallet ?? c.authorId).toString());
+                            return authorKey.isNotEmpty && authorKey == currentWallet;
+                          }
+
+                          Future<void> showHistory(Comment c) async {
+                            if (!c.isEdited || c.originalContent == null) return;
+                            await showDialog<void>(
+                              context: context,
+                              builder: (dialogContext) {
+                                return AlertDialog(
+                                  title: Text(l10n.commentHistoryTitle),
+                                  content: SingleChildScrollView(
                                     child: Column(
-                                      children: c.replies.map((r) {
-                                        return Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 6.0),
-                                          child: Row(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              CircleAvatar(radius: 12, backgroundImage: r.authorAvatar != null && r.authorAvatar!.isNotEmpty ? NetworkImage(r.authorAvatar!) : null, child: r.authorAvatar == null || r.authorAvatar!.isEmpty ? Text(r.authorName.isNotEmpty ? r.authorName[0] : '?', style: GoogleFonts.inter(fontSize: 12)) : null),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(r.authorName, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-                                                    const SizedBox(height: 2),
-                                                    Text(r.content, style: GoogleFonts.inter(fontSize: 14)),
-                                                    const SizedBox(height: 6),
-                                                    Row(
-                                                      children: [
-                                                        IconButton(
-                                                          padding: EdgeInsets.zero,
-                                                          constraints: const BoxConstraints(),
-                                                          icon: Icon(
-                                                            r.isLiked ? Icons.favorite : Icons.favorite_border,
-                                                            size: 14,
-                                                            color: r.isLiked ? Theme.of(context).colorScheme.error : Theme.of(context).iconTheme.color,
-                                                          ),
-                                                          onPressed: () async {
-                                                            final messenger = ScaffoldMessenger.of(context);
-                                                            final prevLiked = r.isLiked;
-                                                            final prevCount = r.likeCount;
-                                                            setState(() {
-                                                              r.isLiked = !r.isLiked;
-                                                              r.likeCount = (r.likeCount + (r.isLiked ? 1 : -1)).clamp(0, 1 << 30);
-                                                            });
-                                                            try {
-                                                              await CommunityService.toggleCommentLike(r, _post!.id);
-                                                            } catch (e) {
-                                                              if (kDebugMode) {
-                                                                debugPrint('PostDetailScreen: toggle reply like failed: $e');
-                                                              }
-                                                              if (!mounted) return;
-                                                              setState(() {
-                                                                r.isLiked = prevLiked;
-                                                                r.likeCount = prevCount;
-                                                              });
-                                                              messenger.showSnackBar(SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)));
-                                                            }
-                                                          },
-                                                        ),
-                                                        GestureDetector(
-                                                          behavior: HitTestBehavior.opaque,
-                                                          onTap: () => _showCommentLikes(r.id),
-                                                          child: Padding(
-                                                            padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                                                            child: Text('${r.likeCount}', style: GoogleFonts.inter(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(width: 12),
-                                                        TextButton(
-                                                          onPressed: () {
-                                                            setState(() {
-                                                              _replyToCommentId = r.id;
-                                                              _replyToAuthorName = r.authorName;
-                                                            });
-                                                            _commentController.text = '@${r.authorName} ';
-                                                            _commentController.selection = TextSelection.fromPosition(TextPosition(offset: _commentController.text.length));
-                                                            FocusScope.of(context).requestFocus(_commentFocusNode);
-                                                          },
-                                                          child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(l10n.commentHistoryCurrentLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 8),
+                                        SelectableText(c.content, style: GoogleFonts.inter()),
+                                        const SizedBox(height: 16),
+                                        Text(l10n.commentHistoryOriginalLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                        const SizedBox(height: 8),
+                                        SelectableText(c.originalContent ?? '', style: GoogleFonts.inter()),
+                                      ],
                                     ),
                                   ),
-                                const SizedBox(height: 8),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(),
+                                      child: Text(l10n.commonClose),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          }
+
+                          Future<void> promptEdit(Comment c) async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final controller = TextEditingController(text: c.content);
+                            bool saving = false;
+                            await showDialog<void>(
+                              context: context,
+                              barrierDismissible: !saving,
+                              builder: (dialogContext) {
+                                return StatefulBuilder(
+                                  builder: (context, setDialogState) {
+                                    return AlertDialog(
+                                      title: Text(l10n.commentEditTitle),
+                                      content: TextField(
+                                        controller: controller,
+                                        maxLines: null,
+                                        autofocus: true,
+                                        decoration: InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                                          child: Text(l10n.commonCancel),
+                                        ),
+                                        FilledButton(
+                                          onPressed: saving
+                                              ? null
+                                              : () async {
+                                                  final next = controller.text.trim();
+                                                  if (next.isEmpty) return;
+                                                  setDialogState(() => saving = true);
+                                                  try {
+                                                    await commentsProvider.editComment(
+                                                      postId: post.id,
+                                                      commentId: c.id,
+                                                      content: next,
+                                                    );
+                                                    if (!mounted) return;
+                                                    if (!dialogContext.mounted) return;
+                                                    Navigator.of(dialogContext).pop();
+                                                    messenger.showSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                                                  } catch (_) {
+                                                    if (!mounted) return;
+                                                    messenger.showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(l10n.commentEditFailedToast),
+                                                        backgroundColor: scheme.errorContainer,
+                                                      ),
+                                                    );
+                                                  } finally {
+                                                    if (dialogContext.mounted) {
+                                                      setDialogState(() => saving = false);
+                                                    }
+                                                  }
+                                                },
+                                          child: Text(l10n.commonSave),
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                            controller.dispose();
+                          }
+
+                          Future<void> promptDelete(Comment c) async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            final confirmed = await showDialog<bool>(
+                              context: context,
+                              builder: (dialogContext) {
+                                return AlertDialog(
+                                  title: Text(l10n.commentDeleteConfirmTitle),
+                                  content: Text(l10n.commentDeleteConfirmMessage),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(false),
+                                      child: Text(l10n.commonCancel),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.of(dialogContext).pop(true),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: scheme.error,
+                                        foregroundColor: scheme.onError,
+                                      ),
+                                      child: Text(l10n.commonDelete),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (confirmed != true) return;
+                            try {
+                              await commentsProvider.deleteComment(postId: post.id, commentId: c.id);
+                              if (!mounted) return;
+                              messenger.showSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+                            } catch (_) {
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.commentDeleteFailedToast),
+                                  backgroundColor: scheme.errorContainer,
+                                ),
+                              );
+                            }
+                          }
+
+                          Widget buildComment(Comment c, {required int depth}) {
+                            final isReply = depth > 0;
+                            final avatar = (c.authorAvatar != null && c.authorAvatar!.isNotEmpty)
+                                ? NetworkImage(c.authorAvatar!)
+                                : null;
+
+                            final timeLine = Row(
+                              children: [
+                                Text(
+                                  _timeAgo(c.timestamp),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: scheme.onSurface.withValues(alpha: 0.55),
+                                  ),
+                                ),
+                                if (c.isEdited) ...[
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    l10n.commonEditedTag,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      color: scheme.onSurface.withValues(alpha: 0.55),
+                                    ),
+                                  ),
+                                ],
                               ],
                             );
-                          }).toList(),
-                        ),
+
+                            final canEditDelete = canModify(c);
+
+                            return Padding(
+                              padding: EdgeInsets.only(left: depth * 56.0, bottom: 8),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  CircleAvatar(
+                                    radius: isReply ? 12 : 16,
+                                    backgroundImage: avatar,
+                                    child: avatar == null
+                                        ? Text(
+                                            c.authorName.isNotEmpty ? c.authorName[0] : '?',
+                                            style: GoogleFonts.inter(fontSize: isReply ? 12 : 14),
+                                          )
+                                        : null,
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                c.authorName,
+                                                style: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: isReply ? 13 : 14,
+                                                ),
+                                              ),
+                                            ),
+                                            if (canEditDelete)
+                                              PopupMenuButton<String>(
+                                                tooltip: l10n.commonMore,
+                                                onSelected: (value) async {
+                                                  if (value == 'edit') {
+                                                    await promptEdit(c);
+                                                  } else if (value == 'delete') {
+                                                    await promptDelete(c);
+                                                  }
+                                                },
+                                                itemBuilder: (context) => [
+                                                  PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
+                                                  PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                                                ],
+                                              ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 2),
+                                        timeLine,
+                                        const SizedBox(height: 6),
+                                        GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: (c.isEdited && c.originalContent != null) ? () => showHistory(c) : null,
+                                          child: Text(
+                                            c.content,
+                                            style: GoogleFonts.inter(fontSize: isReply ? 14 : 14),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            IconButton(
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(),
+                                              icon: Icon(
+                                                c.isLiked ? Icons.favorite : Icons.favorite_border,
+                                                size: isReply ? 14 : 18,
+                                                color: c.isLiked ? scheme.error : Theme.of(context).iconTheme.color,
+                                              ),
+                                              onPressed: () async {
+                                                final messenger = ScaffoldMessenger.of(context);
+                                                final prevLiked = c.isLiked;
+                                                final prevCount = c.likeCount;
+                                                setState(() {
+                                                  c.isLiked = !c.isLiked;
+                                                  c.likeCount = (c.likeCount + (c.isLiked ? 1 : -1)).clamp(0, 1 << 30);
+                                                });
+                                                try {
+                                                  await CommunityService.toggleCommentLike(c, post.id);
+                                                } catch (e) {
+                                                  if (kDebugMode) {
+                                                    debugPrint('PostDetailScreen: toggle comment like failed: $e');
+                                                  }
+                                                  if (!mounted) return;
+                                                  setState(() {
+                                                    c.isLiked = prevLiked;
+                                                    c.likeCount = prevCount;
+                                                  });
+                                                  messenger.showSnackBar(
+                                                    SnackBar(content: Text(l10n.postDetailUpdateCommentLikeFailedToast)),
+                                                  );
+                                                }
+                                              },
+                                            ),
+                                            GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () => _showCommentLikes(c.id),
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                                child: Text(
+                                                  '${c.likeCount}',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 12,
+                                                    color: scheme.onSurface.withValues(alpha: 0.6),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            TextButton(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _replyToCommentId = c.id;
+                                                  _replyToAuthorName = c.authorName;
+                                                });
+                                                _commentController.text = '@${c.authorName} ';
+                                                _commentController.selection = TextSelection.fromPosition(
+                                                  TextPosition(offset: _commentController.text.length),
+                                                );
+                                                FocusScope.of(context).requestFocus(_commentFocusNode);
+                                              },
+                                              child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          List<Widget> buildCommentTree(Comment c, {required int depth}) {
+                            final widgets = <Widget>[buildComment(c, depth: depth)];
+                            for (final r in c.replies) {
+                              widgets.addAll(buildCommentTree(r, depth: depth + 1));
+                            }
+                            return widgets;
+                          }
+
+                          if (loading && comments.isEmpty) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 24),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+
+                          if (error != null && comments.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: EmptyStateCard(
+                                icon: Icons.error_outline,
+                                title: l10n.postDetailNoCommentsTitle,
+                                description: error,
+                              ),
+                            );
+                          }
+
+                          if (comments.isEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8.0),
+                              child: EmptyStateCard(
+                                icon: Icons.comment_bank_outlined,
+                                title: l10n.postDetailNoCommentsTitle,
+                                description: l10n.postDetailNoCommentsDescription,
+                              ),
+                            );
+                          }
+
+                          return Column(
+                            children: [
+                              for (final c in comments) ...[
+                                ...buildCommentTree(c, depth: 0),
+                              ],
+                            ],
+                          );
+                        },
+                      ),
                       const SizedBox(height: 12),
                       if (_replyToAuthorName != null)
                         Padding(

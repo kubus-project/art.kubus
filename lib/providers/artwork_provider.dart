@@ -570,6 +570,60 @@ class ArtworkProvider extends ChangeNotifier {
     }
   }
 
+  /// Edit an existing artwork comment.
+  ///
+  /// This refreshes the comment thread from the backend to ensure edited/original
+  /// fields are consistent and nested replies remain correct.
+  Future<void> editArtworkComment({
+    required String artworkId,
+    required String commentId,
+    required String content,
+  }) async {
+    final operation = 'edit_comment_${artworkId}_$commentId';
+    if (isLoading(operation)) return;
+    _commentSubmitErrors[artworkId] = null;
+    _setLoading(operation, true);
+    try {
+      await _backendApi.editArtworkComment(commentId: commentId, content: content);
+      await loadComments(artworkId, force: true);
+    } catch (e) {
+      _commentSubmitErrors[artworkId] = 'Failed to edit comment: $e';
+      _setError(_commentSubmitErrors[artworkId]!);
+      rethrow;
+    } finally {
+      _setLoading(operation, false);
+    }
+  }
+
+  /// Delete an artwork comment (and its replies, server-side).
+  ///
+  /// Updates the artwork commentsCount when the backend returns the new value.
+  Future<void> deleteArtworkComment({
+    required String artworkId,
+    required String commentId,
+  }) async {
+    final operation = 'delete_comment_${artworkId}_$commentId';
+    if (isLoading(operation)) return;
+    _commentSubmitErrors[artworkId] = null;
+    _setLoading(operation, true);
+    try {
+      final updatedCount = await _backendApi.deleteArtworkComment(commentId);
+      if (updatedCount != null) {
+        final artwork = getArtworkById(artworkId);
+        if (artwork != null && artwork.commentsCount != updatedCount) {
+          addOrUpdateArtwork(artwork.copyWith(commentsCount: updatedCount));
+        }
+      }
+      await loadComments(artworkId, force: true);
+    } catch (e) {
+      _commentSubmitErrors[artworkId] = 'Failed to delete comment: $e';
+      _setError(_commentSubmitErrors[artworkId]!);
+      rethrow;
+    } finally {
+      _setLoading(operation, false);
+    }
+  }
+
   /// Load initial artworks
   Future<void> loadArtworks({bool refresh = false}) async {
     _setLoading('load_artworks', true);

@@ -2937,7 +2937,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   children: [
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
+                          fit: FlexFit.loose,
                           child: Text(
                             post.authorName,
                             style: GoogleFonts.inter(
@@ -2951,7 +2952,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                             CommunityAuthorRoleBadges(
                               post: post,
                               fontSize: 9,
-                              iconOnly: true,
+                              iconOnly: false,
                             ),
                       ],
                     ),
@@ -3509,7 +3510,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         children: [
           Row(
             children: [
-              Expanded(
+              Flexible(
+                fit: FlexFit.loose,
                 child: Text(
                   displayPost.authorName,
                   style: GoogleFonts.inter(
@@ -3522,7 +3524,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
               CommunityAuthorRoleBadges(
                 post: displayPost,
                 fontSize: 8,
-                iconOnly: true,
+                iconOnly: false,
               ),
             ],
           ),

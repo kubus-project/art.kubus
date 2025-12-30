@@ -847,6 +847,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildCommentItem(ArtworkComment comment, ArtworkProvider provider) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final currentUser = context.read<ProfileProvider>().currentUser;
+    final canModify = currentUser != null &&
+        (currentUser.id == comment.userId || currentUser.walletAddress == comment.userId);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
@@ -876,16 +882,166 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    Text(
-                      comment.timeAgo,
-                      style: GoogleFonts.outfit(
-                        fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          comment.timeAgo,
+                          style: GoogleFonts.outfit(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                        if (comment.isEdited) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.commonEditedTag,
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              color: scheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
               ),
+              if (canModify)
+                PopupMenuButton<String>(
+                  tooltip: l10n.commonMore,
+                  onSelected: (value) async {
+                    if (value == 'edit') {
+                      final navigator = Navigator.of(context);
+                      final messenger = ScaffoldMessenger.of(context);
+                      final controller = TextEditingController(text: comment.content);
+                      bool saving = false;
+
+                      await showDialog<void>(
+                        context: context,
+                        barrierDismissible: !saving,
+                        builder: (dialogContext) {
+                          return StatefulBuilder(
+                            builder: (context, setDialogState) {
+                              return AlertDialog(
+                                title: Text(l10n.commentEditTitle),
+                                content: TextField(
+                                  controller: controller,
+                                  maxLines: null,
+                                  autofocus: true,
+                                  decoration: InputDecoration(
+                                    hintText: l10n.postDetailWriteCommentHint,
+                                  ),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: saving
+                                        ? null
+                                        : () => Navigator.of(dialogContext).pop(),
+                                    child: Text(l10n.commonCancel),
+                                  ),
+                                  FilledButton(
+                                    onPressed: saving
+                                        ? null
+                                        : () async {
+                                            final next = controller.text.trim();
+                                            if (next.isEmpty) return;
+                                            setDialogState(() => saving = true);
+                                            try {
+                                              await provider.editArtworkComment(
+                                                artworkId: widget.artworkId,
+                                                commentId: comment.id,
+                                                content: next,
+                                              );
+                                              if (!mounted) return;
+                                              if (!dialogContext.mounted) return;
+                                              Navigator.of(dialogContext).pop();
+                                              messenger.showSnackBar(
+                                                SnackBar(content: Text(l10n.commentUpdatedToast)),
+                                              );
+                                            } catch (_) {
+                                              if (!mounted) return;
+                                              messenger.showSnackBar(
+                                                SnackBar(
+                                                  content: Text(l10n.commentEditFailedToast),
+                                                  backgroundColor: scheme.errorContainer,
+                                                ),
+                                              );
+                                            } finally {
+                                              if (dialogContext.mounted) {
+                                                setDialogState(() => saving = false);
+                                              }
+                                            }
+                                          },
+                                    child: Text(l10n.commonSave),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      );
+
+                      controller.dispose();
+                      if (!mounted) return;
+                      navigator; // keep reference (no-op)
+                    } else if (value == 'delete') {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) {
+                          return AlertDialog(
+                            title: Text(l10n.commentDeleteConfirmTitle),
+                            content: Text(l10n.commentDeleteConfirmMessage),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(false),
+                                child: Text(l10n.commonCancel),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(true),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: scheme.error,
+                                  foregroundColor: scheme.onError,
+                                ),
+                                child: Text(l10n.commonDelete),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (confirmed != true) return;
+                      try {
+                        await provider.deleteArtworkComment(
+                          artworkId: widget.artworkId,
+                          commentId: comment.id,
+                        );
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(l10n.commentDeletedToast)),
+                        );
+                      } catch (_) {
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.commentDeleteFailedToast),
+                            backgroundColor: scheme.errorContainer,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Text(l10n.commonEdit),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Text(l10n.commonDelete),
+                    ),
+                  ],
+                ),
               IconButton(
                 onPressed: () => provider.toggleCommentLike(widget.artworkId, comment.id),
                 icon: Icon(
@@ -902,9 +1058,56 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            comment.content,
-            style: GoogleFonts.outfit(fontSize: 14),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: (comment.isEdited && comment.originalContent != null)
+                ? () {
+                    showDialog<void>(
+                      context: context,
+                      builder: (dialogContext) {
+                        return AlertDialog(
+                          title: Text(l10n.commentHistoryTitle),
+                          content: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  l10n.commentHistoryCurrentLabel,
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 8),
+                                SelectableText(
+                                  comment.content,
+                                  style: GoogleFonts.outfit(fontSize: 14),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  l10n.commentHistoryOriginalLabel,
+                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 8),
+                                SelectableText(
+                                  comment.originalContent ?? '',
+                                  style: GoogleFonts.outfit(fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(dialogContext).pop(),
+                              child: Text(l10n.commonClose),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  }
+                : null,
+            child: Text(
+              comment.content,
+              style: GoogleFonts.outfit(fontSize: 14),
+            ),
           ),
         ],
       ),
