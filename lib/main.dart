@@ -26,6 +26,7 @@ import 'providers/app_refresh_provider.dart';
 import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/community_hub_provider.dart';
+import 'providers/community_comments_provider.dart';
 import 'providers/presence_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/events_provider.dart';
@@ -258,6 +259,7 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
               ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
+              ChangeNotifierProvider(create: (context) => CommunityCommentsProvider()),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, CollabProvider>(

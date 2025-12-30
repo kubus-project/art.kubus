@@ -31,6 +31,7 @@ import '../../providers/institution_provider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
+import '../../providers/community_comments_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/block_list_service.dart';
@@ -2301,7 +2302,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     children: [
                                       Row(
                                         children: [
-                                          Expanded(
+                                          Flexible(
+                                            fit: FlexFit.loose,
                                             child: Text(
                                               post.authorName,
                                               style: GoogleFonts.inter(
@@ -2316,8 +2318,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                                           ),
                                               CommunityAuthorRoleBadges(
                                                 post: post,
-                                                fontSize: isSmallScreen ? 8 : 9,
-                                                iconOnly: true,
+                                                fontSize: isSmallScreen ? 8.5 : 9.5,
+                                                iconOnly: false,
                                               ),
                                         ],
                                       ),
@@ -2881,7 +2883,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     children: [
                       Row(
                         children: [
-                          Expanded(
+                          Flexible(
+                            fit: FlexFit.loose,
                             child: Text(
                               originalPost.authorName,
                               style: GoogleFonts.inter(
@@ -2894,7 +2897,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                           CommunityAuthorRoleBadges(
                             post: originalPost,
                             fontSize: 8,
-                            iconOnly: true,
+                            iconOnly: false,
                           ),
                         ],
                       ),
@@ -6293,46 +6296,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     final l10n = AppLocalizations.of(context)!;
 
     final post = _communityPosts[index];
-    if (kDebugMode) {
-      debugPrint('CommunityScreen: opening comments for post ${post.id}');
-    }
-
-    // Fetch comments from backend to ensure we have fresh, nested replies and author avatars
-    try {
-      if (kDebugMode) {
-        debugPrint('CommunityScreen: fetching backend comments…');
-      }
-      final backendComments =
-          await BackendApiService().getComments(postId: post.id);
-      if (kDebugMode) {
-        debugPrint(
-            'CommunityScreen: received ${backendComments.length} root comments from backend');
-      }
-
-      // Count total comments including nested replies
-      int totalComments = backendComments.length;
-      for (final comment in backendComments) {
-        totalComments += comment.replies.length;
-        if (kDebugMode) {
-          debugPrint(
-              'CommunityScreen: comment ${comment.id} has ${comment.replies.length} replies');
-        }
-      }
-      if (kDebugMode) {
-        debugPrint('CommunityScreen: total comments (including nested): $totalComments');
-      }
-
-      // Replace current comments with backend-provided nested comments
-      post.comments = backendComments;
-      post.commentCount = totalComments;
-
-      if (mounted) setState(() {});
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-            'CommunityScreen: failed to load backend comments for post ${post.id}: $e');
-      }
-    }
+    // Load comments via provider so edited/original fields and mutations stay consistent.
+    unawaited(context.read<CommunityCommentsProvider>().loadComments(post.id, force: true));
 
     final TextEditingController commentController = TextEditingController();
     String? replyToCommentId; // Track which comment is being replied to
@@ -6373,388 +6338,406 @@ class _CommunityScreenState extends State<CommunityScreen>
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      l10n.commonCommentsCount(post.commentCount),
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
-                      ),
+                    Consumer<CommunityCommentsProvider>(
+                      builder: (context, commentsProvider, _) {
+                        final count = commentsProvider.totalCountForPost(post.id);
+                        return Text(
+                          l10n.commonCommentsCount(count),
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: post.comments.length,
-                  itemBuilder: (context, commentIndex) => Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Avatar (if available) or fallback initial avatar
-                        AvatarWidget(
-                          wallet: post.comments[commentIndex].authorWallet ??
-                              post.comments[commentIndex].authorId,
-                          avatarUrl: post.comments[commentIndex].authorAvatar,
-                          radius: 16,
-                          allowFabricatedFallback: true,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                post.comments[commentIndex].authorName,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color:
-                                      Theme.of(context).colorScheme.onSurface,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                post.comments[commentIndex].content,
-                                style: GoogleFonts.inter(
-                                  fontSize: 13,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.8),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _getTimeAgo(
-                                    post.comments[commentIndex].timestamp),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.5),
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              // Comment actions: like and reply
-                              Row(
+                child: Consumer<CommunityCommentsProvider>(
+                  builder: (context, commentsProvider, _) {
+                    final scheme = Theme.of(context).colorScheme;
+                    final comments = commentsProvider.commentsForPost(post.id);
+                    final loading = commentsProvider.isLoading(post.id);
+                    final error = commentsProvider.errorForPost(post.id);
+                    final currentWallet = WalletUtils.canonical(
+                      Provider.of<WalletProvider>(context, listen: false).currentWalletAddress ?? '',
+                    );
+
+                    bool canModify(Comment c) {
+                      if (currentWallet.isEmpty) return false;
+                      final authorKey = WalletUtils.canonical((c.authorWallet ?? c.authorId).toString());
+                      return authorKey.isNotEmpty && authorKey == currentWallet;
+                    }
+
+                    Future<void> showHistory(Comment c) async {
+                      if (!c.isEdited || c.originalContent == null) return;
+                      await showDialog<void>(
+                        context: context,
+                        builder: (dialogContext) {
+                          return AlertDialog(
+                            title: Text(l10n.commentHistoryTitle),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  IconButton(
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    icon: Icon(
-                                      post.comments[commentIndex].isLiked
-                                          ? Icons.favorite
-                                          : Icons.favorite_border,
-                                      size: 18,
-                                      color: post.comments[commentIndex].isLiked
-                                          ? KubusColorRoles.of(context).likeAction
-                                          : Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6),
-                                    ),
-                                    onPressed: () async {
-                                      // Optimistic toggle
-                                      setModalState(() {
-                                        post.comments[commentIndex].isLiked =
-                                            !post
-                                                .comments[commentIndex].isLiked;
-                                        post.comments[commentIndex].likeCount +=
-                                            post.comments[commentIndex].isLiked
-                                                ? 1
-                                                : -1;
-                                      });
-                                      try {
-                                        await CommunityService
-                                            .toggleCommentLike(
-                                                post.comments[commentIndex],
-                                                post.id);
-                                      } catch (e) {
-                                        // rollback on error
-                                        setModalState(() {
-                                          post.comments[commentIndex].isLiked =
-                                              !post.comments[commentIndex]
-                                                  .isLiked;
-                                          post.comments[commentIndex]
-                                              .likeCount += post
-                                                  .comments[commentIndex]
-                                                  .isLiked
-                                              ? 1
-                                              : -1;
-                                        });
-                                        // Show error feedback
-                                        if (context.mounted) {
-                                          final l10n = AppLocalizations.of(context)!;
-                                          final scheme = Theme.of(context).colorScheme;
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
-                                            SnackBar(
-                                              content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
-                                              backgroundColor: scheme.errorContainer,
-                                              duration:
-                                                  const Duration(seconds: 2),
-                                            ),
-                                          );
-                                        }
-                                      }
-                                    },
+                                  Text(l10n.commentHistoryCurrentLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 8),
+                                  SelectableText(c.content, style: GoogleFonts.inter()),
+                                  const SizedBox(height: 16),
+                                  Text(l10n.commentHistoryOriginalLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                                  const SizedBox(height: 8),
+                                  SelectableText(c.originalContent ?? '', style: GoogleFonts.inter()),
+                                ],
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(),
+                                child: Text(l10n.commonClose),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+
+                    Future<void> promptEdit(Comment c) async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final controller = TextEditingController(text: c.content);
+                      bool saving = false;
+                      await showDialog<void>(
+                        context: context,
+                        barrierDismissible: !saving,
+                        builder: (dialogContext) {
+                          return StatefulBuilder(
+                            builder: (context, setDialogState) {
+                              return AlertDialog(
+                                title: Text(l10n.commentEditTitle),
+                                content: TextField(
+                                  controller: controller,
+                                  maxLines: null,
+                                  autofocus: true,
+                                  decoration: InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                                    child: Text(l10n.commonCancel),
                                   ),
-                                  const SizedBox(width: 4),
+                                  FilledButton(
+                                    onPressed: saving
+                                        ? null
+                                        : () async {
+                                            final next = controller.text.trim();
+                                            if (next.isEmpty) return;
+                                            setDialogState(() => saving = true);
+                                            try {
+                                              await commentsProvider.editComment(
+                                                postId: post.id,
+                                                commentId: c.id,
+                                                content: next,
+                                              );
+                                              post.commentCount = commentsProvider.totalCountForPost(post.id);
+                                              if (mounted) setState(() {});
+                                              if (!dialogContext.mounted) return;
+                                              Navigator.of(dialogContext).pop();
+                                              messenger.showSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                                            } catch (_) {
+                                              messenger.showSnackBar(
+                                                SnackBar(
+                                                  content: Text(l10n.commentEditFailedToast),
+                                                  backgroundColor: scheme.errorContainer,
+                                                ),
+                                              );
+                                            } finally {
+                                              if (dialogContext.mounted) {
+                                                setDialogState(() => saving = false);
+                                              }
+                                            }
+                                          },
+                                    child: Text(l10n.commonSave),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      );
+                      controller.dispose();
+                    }
+
+                    Future<void> promptDelete(Comment c) async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (dialogContext) {
+                          return AlertDialog(
+                            title: Text(l10n.commentDeleteConfirmTitle),
+                            content: Text(l10n.commentDeleteConfirmMessage),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(false),
+                                child: Text(l10n.commonCancel),
+                              ),
+                              FilledButton(
+                                onPressed: () => Navigator.of(dialogContext).pop(true),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: scheme.error,
+                                  foregroundColor: scheme.onError,
+                                ),
+                                child: Text(l10n.commonDelete),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      if (confirmed != true) return;
+                      try {
+                        await commentsProvider.deleteComment(postId: post.id, commentId: c.id);
+                        post.commentCount = commentsProvider.totalCountForPost(post.id);
+                        if (mounted) setState(() {});
+                        messenger.showSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+                      } catch (_) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.commentDeleteFailedToast),
+                            backgroundColor: scheme.errorContainer,
+                          ),
+                        );
+                      }
+                    }
+
+                    Widget buildComment(Comment c, {required int depth}) {
+                      final isReply = depth > 0;
+                      final bubbleColor = isReply ? scheme.surface : scheme.primaryContainer;
+                      final bubbleTextColor = scheme.onSurface;
+
+                      return Container(
+                        margin: EdgeInsets.only(left: depth * 24.0, bottom: 12),
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: bubbleColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AvatarWidget(
+                              wallet: c.authorWallet ?? c.authorId,
+                              avatarUrl: c.authorAvatar,
+                              radius: isReply ? 12 : 16,
+                              allowFabricatedFallback: true,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          c.authorName,
+                                          style: GoogleFonts.inter(
+                                            fontSize: isReply ? 13 : 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: bubbleTextColor,
+                                          ),
+                                        ),
+                                      ),
+                                      if (canModify(c))
+                                        PopupMenuButton<String>(
+                                          tooltip: l10n.commonMore,
+                                          onSelected: (value) async {
+                                            if (value == 'edit') {
+                                              await promptEdit(c);
+                                            } else if (value == 'delete') {
+                                              await promptDelete(c);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
+                                            PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                                          ],
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _getTimeAgo(c.timestamp),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: bubbleTextColor.withValues(alpha: 0.55),
+                                        ),
+                                      ),
+                                      if (c.isEdited) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          l10n.commonEditedTag,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: bubbleTextColor.withValues(alpha: 0.55),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
                                   GestureDetector(
                                     behavior: HitTestBehavior.opaque,
-                                    onTap: () => _showCommentLikes(
-                                        post.comments[commentIndex].id),
+                                    onTap: (c.isEdited && c.originalContent != null) ? () => showHistory(c) : null,
                                     child: Text(
-                                      '${post.comments[commentIndex].likeCount}',
+                                      c.content,
                                       style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface
-                                              .withValues(alpha: 0.6)),
+                                        fontSize: 13,
+                                        color: bubbleTextColor.withValues(alpha: 0.85),
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  GestureDetector(
-                                    onTap: () {
-                                      // Set reply parent and prefill mention
-                                      final authorName = post
-                                          .comments[commentIndex].authorName;
-                                      final fallbackId =
-                                          post.comments[commentIndex].authorId;
-                                      String mention;
-                                      if (authorName.isNotEmpty) {
-                                        final sanitized =
-                                            authorName.replaceAll(' ', '');
-                                        mention =
-                                            '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
-                                      } else if (fallbackId.isNotEmpty) {
-                                        mention =
-                                            '@${fallbackId.substring(0, 8)} ';
-                                      } else {
-                                        mention = '';
-                                      }
-                                      setModalState(() {
-                                        replyToCommentId = post
-                                            .comments[commentIndex]
-                                            .id; // Track parent comment
-                                        commentController.text = mention;
-                                        // place cursor at end
-                                        commentController.selection =
-                                            TextSelection.fromPosition(
-                                                TextPosition(
-                                                    offset: commentController
-                                                        .text.length));
-                                      });
-                                    },
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.reply_outlined,
-                                            size: 18,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6)),
-                                        const SizedBox(width: 6),
-                                        Text(l10n.commonReply,
-                                            style: GoogleFonts.inter(
-                                                fontSize: 12,
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.6))),
-                                      ],
-                                    ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: Icon(
+                                          c.isLiked ? Icons.favorite : Icons.favorite_border,
+                                          size: isReply ? 14 : 18,
+                                          color: c.isLiked
+                                              ? KubusColorRoles.of(context).likeAction
+                                              : bubbleTextColor.withValues(alpha: 0.6),
+                                        ),
+                                        onPressed: () async {
+                                          // Optimistic toggle
+                                          setModalState(() {
+                                            c.isLiked = !c.isLiked;
+                                            c.likeCount += c.isLiked ? 1 : -1;
+                                          });
+                                          try {
+                                            await CommunityService.toggleCommentLike(c, post.id);
+                                          } catch (_) {
+                                            // rollback on error
+                                            setModalState(() {
+                                              c.isLiked = !c.isLiked;
+                                              c.likeCount += c.isLiked ? 1 : -1;
+                                            });
+                                            if (context.mounted) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(
+                                                  content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
+                                                  backgroundColor: scheme.errorContainer,
+                                                  duration: const Duration(seconds: 2),
+                                                ),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                      const SizedBox(width: 4),
+                                      GestureDetector(
+                                        behavior: HitTestBehavior.opaque,
+                                        onTap: () => _showCommentLikes(c.id),
+                                        child: Text(
+                                          '${c.likeCount}',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            color: bubbleTextColor.withValues(alpha: 0.6),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      GestureDetector(
+                                        onTap: () {
+                                          final authorName = c.authorName;
+                                          final fallbackId = c.authorId;
+                                          String mention;
+                                          if (authorName.isNotEmpty) {
+                                            final sanitized = authorName.replaceAll(' ', '');
+                                            mention = '@${sanitized.length > 20 ? sanitized.substring(0, 20) : sanitized} ';
+                                          } else if (fallbackId.isNotEmpty) {
+                                            mention = '@${fallbackId.substring(0, 8)} ';
+                                          } else {
+                                            mention = '';
+                                          }
+                                          setModalState(() {
+                                            replyToCommentId = c.id;
+                                            commentController.text = mention;
+                                            commentController.selection = TextSelection.fromPosition(
+                                              TextPosition(offset: commentController.text.length),
+                                            );
+                                          });
+                                        },
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.reply_outlined, size: 18, color: bubbleTextColor.withValues(alpha: 0.6)),
+                                            const SizedBox(width: 6),
+                                            Text(
+                                              l10n.commonReply,
+                                              style: GoogleFonts.inter(fontSize: 12, color: bubbleTextColor.withValues(alpha: 0.6)),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              // Nested replies (rendered indented)
-                              if (post.comments[commentIndex].replies
-                                  .isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: post.comments[commentIndex].replies
-                                      .map((reply) {
-                                    return Container(
-                                      margin: const EdgeInsets.only(top: 8),
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .surface,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          AvatarWidget(
-                                            wallet: reply.authorWallet ??
-                                                reply.authorId,
-                                            avatarUrl: reply.authorAvatar,
-                                            radius: 12,
-                                            allowFabricatedFallback: true,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(reply.authorName,
-                                                    style: GoogleFonts.inter(
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .onSurface)),
-                                                const SizedBox(height: 4),
-                                                Text(reply.content,
-                                                    style: GoogleFonts.inter(
-                                                        fontSize: 13,
-                                                        color: Theme.of(context)
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(
-                                                                alpha: 0.8))),
-                                                const SizedBox(height: 6),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                        _getTimeAgo(
-                                                            reply.timestamp),
-                                                        style: GoogleFonts.inter(
-                                                            fontSize: 12,
-                                                            color: Theme.of(
-                                                                    context)
-                                                                .colorScheme
-                                                                .onSurface
-                                                                .withValues(
-                                                                    alpha:
-                                                                        0.5))),
-                                                    const SizedBox(width: 16),
-                                                    Row(
-                                                      children: [
-                                                        IconButton(
-                                                          padding:
-                                                              EdgeInsets.zero,
-                                                          constraints:
-                                                              const BoxConstraints(),
-                                                          icon: Icon(
-                                                            reply.isLiked
-                                                                ? Icons.favorite
-                                                                : Icons
-                                                                    .favorite_border,
-                                                            size: 14,
-                                                            color: reply.isLiked
-                                                                ? KubusColorRoles.of(context).likeAction
-                                                                : Theme.of(
-                                                                        context)
-                                                                    .colorScheme
-                                                                    .onSurface
-                                                                    .withValues(
-                                                                        alpha:
-                                                                            0.6),
-                                                          ),
-                                                          onPressed: () async {
-                                                            final l10n = AppLocalizations.of(context)!;
-                                                            final scheme = Theme.of(context).colorScheme;
-                                                            setModalState(() {
-                                                              reply.isLiked =
-                                                                  !reply
-                                                                      .isLiked;
-                                                              reply.likeCount +=
-                                                                  reply.isLiked
-                                                                      ? 1
-                                                                      : -1;
-                                                            });
-                                                            try {
-                                                              await CommunityService
-                                                                  .toggleCommentLike(
-                                                                      reply,
-                                                                      post.id);
-                                                            } catch (e) {
-                                                              setModalState(() {
-                                                                reply.isLiked =
-                                                                    !reply
-                                                                        .isLiked;
-                                                                reply.likeCount +=
-                                                                    reply.isLiked
-                                                                        ? 1
-                                                                        : -1;
-                                                              });
-                                                              // Show error feedback
-                                                              if (context
-                                                                  .mounted) {
-                                                                ScaffoldMessenger.of(
-                                                                        context)
-                                                                    .showSnackBar(
-                                                                  SnackBar(
-                                                                    content: Text(l10n.postDetailUpdateCommentLikeFailedToast),
-                                                                    backgroundColor: scheme.errorContainer,
-                                                                    duration: const Duration(
-                                                                        seconds:
-                                                                            2),
-                                                                  ),
-                                                                );
-                                                              }
-                                                            }
-                                                          },
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 4),
-                                                        GestureDetector(
-                                                          behavior:
-                                                              HitTestBehavior
-                                                                  .opaque,
-                                                          onTap: () =>
-                                                              _showCommentLikes(
-                                                                  reply.id),
-                                                          child: Text(
-                                                            '${reply.likeCount}',
-                                                            style: GoogleFonts.inter(
-                                                                fontSize: 12,
-                                                                color: Theme.of(
-                                                                        context)
-                                                                    .colorScheme
-                                                                    .onSurface
-                                                                    .withValues(
-                                                                        alpha:
-                                                                            0.6)),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ],
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      );
+                    }
+
+                    List<Widget> buildTree(Comment c, {required int depth}) {
+                      final widgets = <Widget>[buildComment(c, depth: depth)];
+                      for (final r in c.replies) {
+                        widgets.addAll(buildTree(r, depth: depth + 1));
+                      }
+                      return widgets;
+                    }
+
+                    if (loading && comments.isEmpty) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (error != null && comments.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: EmptyStateCard(
+                          icon: Icons.error_outline,
+                          title: l10n.postDetailNoCommentsTitle,
+                          description: error,
+                        ),
+                      );
+                    }
+
+                    if (comments.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: EmptyStateCard(
+                          icon: Icons.comment_bank_outlined,
+                          title: l10n.postDetailNoCommentsTitle,
+                          description: l10n.postDetailNoCommentsDescription,
+                        ),
+                      );
+                    }
+
+                    // Keep the post card count roughly in sync when this sheet is open.
+                    post.commentCount = commentsProvider.totalCountForPost(post.id);
+
+                    return ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      children: [
+                        for (final c in comments) ...buildTree(c, depth: 0),
                       ],
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ),
               // Comment input section
@@ -6906,6 +6889,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             onSubmitted: (value) async {
                               if (value.trim().isNotEmpty) {
                                 final messenger = ScaffoldMessenger.of(context);
+                                final commentsProvider = context.read<CommunityCommentsProvider>();
                                 try {
                                   final authorContext =
                                       await _resolveCommentAuthorContext();
@@ -6919,32 +6903,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     );
                                     return;
                                   }
-                                  if (kDebugMode) {
-                                    debugPrint('CommunityScreen: adding comment (submit) parentCommentId=$replyToCommentId');
-                                  }
-                                  await CommunityService.addComment(
-                                    post,
-                                    value.trim(),
-                                    authorContext.displayName,
-                                    currentUserId: authorContext.userId,
-                                    parentCommentId:
-                                        replyToCommentId, // Pass parent comment ID for nesting
-                                    userName: authorContext.displayName,
-                                    authorWallet: authorContext.walletAddress,
-                                    authorAvatar: authorContext.avatarUrl,
-                                  );
-                                  // Refresh comments from backend to ensure server state (avatars, real ids)
-                                  try {
-                                    final backendComments =
-                                        await BackendApiService()
-                                            .getComments(postId: post.id);
-                                    post.comments = backendComments;
-                                    post.commentCount = post.comments.length;
-                                  } catch (e) {
-                                    if (kDebugMode) {
-                                      debugPrint('CommunityScreen: failed to refresh comments after submit: $e');
-                                    }
-                                  }
+                                  await commentsProvider.addComment(
+                                        postId: post.id,
+                                        content: value.trim(),
+                                        parentCommentId: replyToCommentId,
+                                      );
+                                  post.commentCount = commentsProvider.totalCountForPost(post.id);
                                   if (!mounted) return;
                                   // Reset reply state
                                   replyToCommentId = null;
@@ -6991,6 +6955,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                             onPressed: () async {
                               if (commentController.text.trim().isNotEmpty) {
                                 final messenger = ScaffoldMessenger.of(context);
+                                final commentsProvider = context.read<CommunityCommentsProvider>();
                                 try {
                                   final commentText =
                                       commentController.text.trim();
@@ -7006,32 +6971,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                                     );
                                     return;
                                   }
-                                  if (kDebugMode) {
-                                    debugPrint('CommunityScreen: adding comment (button) parentCommentId=$replyToCommentId');
-                                  }
-                                  await CommunityService.addComment(
-                                    post,
-                                    commentText,
-                                    authorContext.displayName,
-                                    currentUserId: authorContext.userId,
-                                    parentCommentId:
-                                        replyToCommentId, // Pass parent comment ID for nesting
-                                    userName: authorContext.displayName,
-                                    authorWallet: authorContext.walletAddress,
-                                    authorAvatar: authorContext.avatarUrl,
-                                  );
-                                  // Refresh comments to reflect server state
-                                  try {
-                                    final backendComments =
-                                        await BackendApiService()
-                                            .getComments(postId: post.id);
-                                    post.comments = backendComments;
-                                    post.commentCount = post.comments.length;
-                                  } catch (e) {
-                                    if (kDebugMode) {
-                                      debugPrint('CommunityScreen: failed to refresh comments after send: $e');
-                                    }
-                                  }
+                                  await commentsProvider.addComment(
+                                        postId: post.id,
+                                        content: commentText,
+                                        parentCommentId: replyToCommentId,
+                                      );
+                                  post.commentCount = commentsProvider.totalCountForPost(post.id);
                                   if (!mounted) return;
 
                                   // Reset reply state
