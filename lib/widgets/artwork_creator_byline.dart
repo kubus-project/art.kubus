@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../models/artwork.dart';
+import '../models/user.dart';
+import '../services/event_bus.dart';
+import '../services/user_service.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/user_profile_navigation.dart';
 
-class ArtworkCreatorByline extends StatelessWidget {
+class ArtworkCreatorByline extends StatefulWidget {
   final Artwork artwork;
   final TextStyle? style;
   final int maxLines;
@@ -19,17 +24,99 @@ class ArtworkCreatorByline extends StatelessWidget {
   });
 
   @override
+  State<ArtworkCreatorByline> createState() => _ArtworkCreatorBylineState();
+}
+
+class _ArtworkCreatorBylineState extends State<ArtworkCreatorByline> {
+  List<_CreatorRef> _creators = const <_CreatorRef>[];
+  final Map<String, String> _resolvedLabelsByUserId = <String, String>{};
+  StreamSubscription<Map<String, dynamic>>? _profileUpdatedSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshCreators();
+
+    // If the local user updates their profile (displayName/avatar), refresh labels.
+    _profileUpdatedSub = EventBus().on('profile_updated').listen((event) {
+      if (!mounted) return;
+      final payload = event['payload'];
+      String? wallet;
+      try {
+        if (payload is Map) {
+          wallet = (payload['walletAddress'] ?? payload['wallet_address'])?.toString();
+        } else {
+          // UserProfile model is not imported here; best-effort extraction.
+          wallet = (payload?.walletAddress ?? payload?.wallet_address)?.toString();
+        }
+      } catch (_) {
+        wallet = null;
+      }
+
+      final normalized = (wallet ?? '').trim();
+      if (normalized.isEmpty) return;
+      if (_creators.any((c) => (c.userId ?? '').toLowerCase() == normalized.toLowerCase())) {
+        _resolveCreatorNames(forceRefresh: true);
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant ArtworkCreatorByline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.artwork.id != widget.artwork.id ||
+        oldWidget.artwork.artist != widget.artwork.artist ||
+        oldWidget.artwork.metadata != widget.artwork.metadata) {
+      _refreshCreators();
+    }
+  }
+
+  @override
+  void dispose() {
+    _profileUpdatedSub?.cancel();
+    super.dispose();
+  }
+
+  void _refreshCreators() {
+    final next = _extractCreators(widget.artwork);
+    _creators = next;
+    _resolveCreatorNames(forceRefresh: false);
+  }
+
+  Future<void> _resolveCreatorNames({required bool forceRefresh}) async {
+    final ids = _creators
+        .map((c) => (c.userId ?? '').trim())
+        .where((id) => id.isNotEmpty)
+        .toSet();
+    if (ids.isEmpty) return;
+
+    final futures = ids.map((id) async {
+      try {
+        final User? user = await UserService.getUserById(id, forceRefresh: forceRefresh);
+        final name = (user?.name ?? '').trim();
+        if (name.isNotEmpty) {
+          _resolvedLabelsByUserId[id] = name;
+        }
+      } catch (_) {}
+    });
+
+    await Future.wait(futures);
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final baseStyle = style ?? DefaultTextStyle.of(context).style;
+    final baseStyle = widget.style ?? DefaultTextStyle.of(context).style;
     final colorScheme = Theme.of(context).colorScheme;
 
-    final creators = _extractCreators(artwork);
+    final creators = _creators;
     if (creators.isEmpty) {
       return Text(
-        artwork.artist.isNotEmpty ? artwork.artist : 'Unknown',
+        widget.artwork.artist.isNotEmpty ? widget.artwork.artist : 'Unknown',
         style: baseStyle,
-        maxLines: maxLines,
+        maxLines: widget.maxLines,
         overflow: TextOverflow.ellipsis,
       );
     }
@@ -60,8 +147,10 @@ class ArtworkCreatorByline extends StatelessWidget {
         spans.add(TextSpan(text: ', ', style: baseStyle));
       }
 
-      final label = creator.label;
       final userId = creator.userId;
+      final label = (userId != null && userId.isNotEmpty)
+          ? (_resolvedLabelsByUserId[userId] ?? creator.label)
+          : creator.label;
       if (userId != null && userId.isNotEmpty) {
         spans.add(
           WidgetSpan(
@@ -87,7 +176,7 @@ class ArtworkCreatorByline extends StatelessWidget {
     }
 
     return RichText(
-      maxLines: maxLines,
+      maxLines: widget.maxLines,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(style: baseStyle, children: spans),
     );

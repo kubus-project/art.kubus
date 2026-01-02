@@ -285,19 +285,83 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> _writeLastInactiveTs(String value) async {
+    // FlutterSecureStorage can throw on web (plugin implementation differences).
+    // Use SharedPreferences on web, and as a fallback elsewhere.
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('last_inactive_ts', value);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WalletProvider: failed to write last_inactive_ts to SharedPreferences: $e');
+      }
+    }
+
+    if (kIsWeb) return;
+
+    try {
+      await _secureStorage.write(key: 'last_inactive_ts', value: value);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WalletProvider: failed to write last_inactive_ts to secure storage: $e');
+      }
+    }
+  }
+
+  Future<String?> _readLastInactiveTs() async {
+    // Prefer secure storage on native; fall back to SharedPreferences.
+    if (!kIsWeb) {
+      try {
+        final fromSecure = await _secureStorage.read(key: 'last_inactive_ts');
+        if (fromSecure != null && fromSecure.trim().isNotEmpty) return fromSecure;
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('WalletProvider: failed to read last_inactive_ts from secure storage: $e');
+        }
+      }
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('last_inactive_ts');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WalletProvider: failed to read last_inactive_ts from SharedPreferences: $e');
+      }
+      return null;
+    }
+  }
+
+  Future<void> _deleteLastInactiveTs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('last_inactive_ts');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WalletProvider: failed to delete last_inactive_ts from SharedPreferences: $e');
+      }
+    }
+
+    if (kIsWeb) return;
+
+    try {
+      await _secureStorage.delete(key: 'last_inactive_ts');
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('WalletProvider: failed to delete last_inactive_ts from secure storage: $e');
+      }
+    }
+  }
+
   // Mark app inactive (store timestamp)
   Future<void> markInactive() async {
-    try {
-      await _secureStorage.write(key: 'last_inactive_ts', value: DateTime.now().millisecondsSinceEpoch.toString());
-    } catch (e) {
-      debugPrint('Failed to write last_inactive_ts: $e');
-    }
+    await _writeLastInactiveTs(DateTime.now().millisecondsSinceEpoch.toString());
   }
 
   // Mark app active (check if lock threshold exceeded)
   Future<void> markActive() async {
     try {
-      final tsStr = await _secureStorage.read(key: 'last_inactive_ts');
+      final tsStr = await _readLastInactiveTs();
       if (tsStr != null && _lockTimeoutSeconds > 0) {
         final ts = int.tryParse(tsStr);
         if (ts != null) {
@@ -314,7 +378,7 @@ class WalletProvider extends ChangeNotifier {
       _isLocked = false;
       _pendingShowMnemonic = false;
       // clear stored timestamp
-      await _secureStorage.delete(key: 'last_inactive_ts');
+      await _deleteLastInactiveTs();
       notifyListeners();
     } catch (e) {
       debugPrint('Error during markActive: $e');

@@ -469,7 +469,9 @@ class _MarkerEditorViewState extends State<MarkerEditorView> {
       'name': _nameController.text.trim(),
       'description': _descriptionController.text.trim(),
       'category': category.isEmpty ? _subjectType.defaultCategory : category,
-      'type': markerType,
+      // Backend DB constraint expects marker_type in {geolocation,image,qr,nfc}.
+      // The app-level semantic type (artwork/event/etc.) is stored in markerType.
+      'type': 'geolocation',
       'markerType': markerType,
       'latitude': lat,
       'longitude': lng,

@@ -19,6 +19,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/themeprovider.dart';
 import '../providers/navigation_provider.dart';
 import '../providers/exhibitions_provider.dart';
+import '../providers/marker_management_provider.dart';
 import '../providers/presence_provider.dart';
 import '../models/artwork.dart';
 import '../models/task.dart';
@@ -719,7 +720,9 @@ class _MapScreenState extends State<MapScreen>
     }
 
     try {
-      context.read<PresenceProvider>().recordVisit(type: visit.type, id: visit.id);
+      context
+          .read<PresenceProvider>()
+          .recordVisit(type: visit.type, id: visit.id);
     } catch (_) {}
   }
 
@@ -943,6 +946,7 @@ class _MapScreenState extends State<MapScreen>
 
     try {
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
+      final markerManagementProvider = context.read<MarkerManagementProvider>();
 
       // Snap to the nearest grid cell center at the current zoom level
       // We use the current camera zoom to determine which grid level is most relevant
@@ -999,6 +1003,10 @@ class _MapScreenState extends State<MapScreen>
 
       if (marker != null) {
         debugPrint('Marker created and saved: ${marker.id}');
+
+        // Keep the management surface in sync even when markers are created
+        // outside of ManageMarkersScreen.
+        markerManagementProvider.ingestMarker(marker);
 
         if (form.subjectType == MarkerSubjectType.exhibition) {
           final exhibitionId = (form.subject?.id ?? '').trim();
@@ -1443,7 +1451,8 @@ class _MapScreenState extends State<MapScreen>
             Center(
               child: ArtworkCreatorByline(
                 artwork: artwork,
-                style: GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
+                style:
+                    GoogleFonts.outfit(fontSize: 14, color: Colors.grey[600]),
                 maxLines: 1,
               ),
             ),
@@ -2295,7 +2304,8 @@ class _MapScreenState extends State<MapScreen>
 
     final fetched = await (() async {
       try {
-        return await exhibitionsProvider.fetchExhibition(resolved.id, force: true);
+        return await exhibitionsProvider.fetchExhibition(resolved.id,
+            force: true);
       } catch (_) {
         return null;
       }

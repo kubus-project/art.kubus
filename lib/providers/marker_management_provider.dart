@@ -21,6 +21,13 @@ class MarkerManagementProvider extends ChangeNotifier {
   String? get error => _error;
   List<ArtMarker> get markers => List<ArtMarker>.unmodifiable(_markers);
 
+  /// Merge a marker into the local list (used when markers are created/updated
+  /// from other surfaces like the map screen).
+  void ingestMarker(ArtMarker marker) {
+    _markers = <ArtMarker>[marker, ..._markers.where((m) => m.id != marker.id)];
+    notifyListeners();
+  }
+
   void bindWallet(String? walletAddress) {
     final normalized = (walletAddress ?? '').trim();
     if (normalized == (_boundWallet ?? '')) return;
@@ -32,25 +39,38 @@ class MarkerManagementProvider extends ChangeNotifier {
   }
 
   Future<void> initialize({bool force = false}) async {
-    if (_initialized && !force) return;
-    _initialized = true;
-    if ((_api.getAuthToken() ?? '').trim().isEmpty) {
+    if (_loading) return;
+
+    final token = (_api.getAuthToken() ?? '').trim();
+    if (token.isEmpty) {
+      // Important: do NOT permanently mark initialized when auth isn't ready yet.
+      // This provider is wired via ProxyProvider update() and will be called
+      // again once auth is loaded.
+      _initialized = false;
       return;
     }
+
+    if (_initialized && !force) return;
+    _initialized = true;
     await refresh(force: true);
   }
 
   Future<void> refresh({bool force = false}) async {
     if (_loading) return;
-    if (!_initialized) {
-      _initialized = true;
-    }
-    if ((_api.getAuthToken() ?? '').trim().isEmpty) {
-      _markers = const <ArtMarker>[];
-      _error = null;
-      notifyListeners();
+
+    final token = (_api.getAuthToken() ?? '').trim();
+    if (token.isEmpty) {
+      // Auth not ready (or user signed out). Keep provider re-initializable.
+      _initialized = false;
+      if (_markers.isNotEmpty || _error != null) {
+        _markers = const <ArtMarker>[];
+        _error = null;
+        notifyListeners();
+      }
       return;
     }
+
+    _initialized = true;
 
     _loading = true;
     _error = null;

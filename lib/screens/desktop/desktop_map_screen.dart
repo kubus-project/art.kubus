@@ -12,6 +12,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/exhibitions_provider.dart';
+import '../../providers/marker_management_provider.dart';
 import '../../providers/presence_provider.dart';
 import '../../providers/tile_providers.dart';
 import '../../providers/wallet_provider.dart';
@@ -146,7 +147,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
       // Only animate camera to user location when we're not deep-linking to a target.
       // When initialCenter is provided (e.g. "Open on Map"), keep the camera focused on that target.
-      final bool shouldAnimateToUser = widget.initialCenter == null && widget.autoFollow;
+      final bool shouldAnimateToUser =
+          widget.initialCenter == null && widget.autoFollow;
       _refreshUserLocation(animate: shouldAnimateToUser);
       _prefetchMarkerSubjects();
     });
@@ -2458,7 +2460,9 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
     }
 
     try {
-      context.read<PresenceProvider>().recordVisit(type: visit.type, id: visit.id);
+      context
+          .read<PresenceProvider>()
+          .recordVisit(type: visit.type, id: visit.id);
     } catch (_) {}
   }
 
@@ -3115,7 +3119,8 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
 
     final fetched = await (() async {
       try {
-        return await exhibitionsProvider.fetchExhibition(resolved.id, force: true);
+        return await exhibitionsProvider.fetchExhibition(resolved.id,
+            force: true);
       } catch (_) {
         return null;
       }
@@ -3373,6 +3378,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
   }) async {
     try {
       final exhibitionsProvider = context.read<ExhibitionsProvider>();
+      final markerManagementProvider = context.read<MarkerManagementProvider>();
       final currentZoom = _effectiveZoom;
       final gridCell = GridUtils.gridCellForZoom(position, currentZoom);
       final tileProviders = Provider.of<TileProviders?>(context, listen: false);
@@ -3421,6 +3427,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
       );
 
       if (marker != null) {
+        markerManagementProvider.ingestMarker(marker);
         if (form.subjectType == MarkerSubjectType.exhibition) {
           final exhibitionId = (form.subject?.id ?? '').trim();
           if (exhibitionId.isNotEmpty) {
