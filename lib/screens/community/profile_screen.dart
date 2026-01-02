@@ -30,6 +30,7 @@ import '../../widgets/avatar_widget.dart';
 import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/profile_artist_info_fields.dart';
 import 'post_detail_screen.dart';
 import '../art/art_detail_screen.dart';
 import '../art/collection_detail_screen.dart';
@@ -525,6 +526,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                       onAction: _editProfile,
                     ),
                   ),
+                const SizedBox(height: 12),
+                ProfileArtistInfoFields(
+                  fieldOfWork:
+                      profileProvider.currentUser?.artistInfo?.specialty ?? const <String>[],
+                  yearsActive: profileProvider.currentUser?.artistInfo?.yearsActive ?? 0,
+                ),
                 SizedBox(height: isSmallScreen ? 20 : 24),
                 isSmallScreen 
                   ? Column(

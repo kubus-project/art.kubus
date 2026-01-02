@@ -39,7 +39,7 @@ import 'web3/desktop_wallet_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
 import '../onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import '../art/art_detail_screen.dart';
+import 'art/desktop_artwork_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import 'desktop_settings_screen.dart';
 import 'desktop_shell.dart';
@@ -1341,13 +1341,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           shellScope.pushScreen(
             DesktopSubScreen(
               title: artwork.title,
-              child: ArtDetailScreen(artworkId: artwork.id),
+              child: DesktopArtworkDetailScreen(artworkId: artwork.id),
             ),
           );
         } else {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (context) => ArtDetailScreen(artworkId: artwork.id),
+              builder: (context) => DesktopArtworkDetailScreen(artworkId: artwork.id, showAppBar: true),
             ),
           );
         }
@@ -1768,14 +1768,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             shellScope.pushScreen(
               DesktopSubScreen(
                 title: entry.title,
-                child: ArtDetailScreen(artworkId: entry.artworkId!),
+                child: DesktopArtworkDetailScreen(artworkId: entry.artworkId!),
               ),
             );
           } else {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) =>
-                    ArtDetailScreen(artworkId: entry.artworkId!),
+                    DesktopArtworkDetailScreen(artworkId: entry.artworkId!, showAppBar: true),
               ),
             );
           }
@@ -3016,13 +3016,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         shellScope.pushScreen(
           DesktopSubScreen(
             title: suggestion.label,
-            child: ArtDetailScreen(artworkId: suggestion.id!),
+            child: DesktopArtworkDetailScreen(artworkId: suggestion.id!),
           ),
         );
       } else {
         await Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ArtDetailScreen(artworkId: suggestion.id!),
+            builder: (_) => DesktopArtworkDetailScreen(artworkId: suggestion.id!, showAppBar: true),
           ),
         );
       }

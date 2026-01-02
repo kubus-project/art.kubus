@@ -54,11 +54,84 @@ class BackendApiRequestException implements Exception {
   }
 }
 
-class BackendApiService {
+/// Minimal contract for artwork endpoints used by providers.
+///
+/// Providers depend on this interface to allow deterministic unit tests without
+/// binding to a real HTTP server.
+abstract class ArtworkBackendApi {
+  Future<List<Artwork>> getArtworks({
+    String? category,
+    bool? arEnabled,
+    int page = 1,
+    int limit = 20,
+    String? walletAddress,
+    bool includePrivateForWallet = false,
+  });
+
+  Future<Artwork> getArtwork(String artworkId);
+  Future<Artwork?> publishArtwork(String artworkId);
+  Future<Artwork?> unpublishArtwork(String artworkId);
+  Future<int?> likeArtwork(String artworkId);
+  Future<int?> unlikeArtwork(String artworkId);
+  Future<int?> discoverArtworkWithCount(String artworkId);
+  Future<int?> recordArtworkView(String artworkId);
+
+  Future<List<ArtworkComment>> getArtworkComments({
+    required String artworkId,
+    int page = 1,
+    int limit = 50,
+  });
+
+  Future<ArtworkComment> createArtworkComment({
+    required String artworkId,
+    required String content,
+    String? parentCommentId,
+  });
+
+  Future<ArtworkComment> editArtworkComment({
+    required String commentId,
+    required String content,
+  });
+
+  Future<int?> deleteArtworkComment(String commentId);
+  Future<int?> likeComment(String commentId);
+  Future<int?> unlikeComment(String commentId);
+}
+
+/// Minimal contract for profile endpoints used by providers.
+abstract class ProfileBackendApi {
+  String get baseUrl;
+
+  Future<Map<String, dynamic>> registerWallet({
+    required String walletAddress,
+    String? username,
+  });
+
+  Future<Map<String, dynamic>> getProfileByWallet(String walletAddress);
+  Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData);
+
+  Future<Map<String, dynamic>> updateProfile(String walletAddress, Map<String, dynamic> updates);
+
+  Future<Map<String, dynamic>> uploadAvatarToProfile({
+    required List<int> fileBytes,
+    required String fileName,
+    required String fileType,
+    Map<String, String>? metadata,
+  });
+
+  Future<void> followUser(String walletAddress);
+  Future<void> unfollowUser(String walletAddress);
+  Future<bool> isFollowing(String walletAddress);
+
+  Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet});
+}
+
+class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
   BackendApiService._internal();
 
+  @override
   final String baseUrl = AppConfig.baseApiUrl;
   String? _authToken;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -255,7 +328,9 @@ class BackendApiService {
     debugPrint('BackendApiService: Auth token set (in-memory)');
     // Persist token to secure storage and shared preferences (web fallback)
     try {
-      await _secureStorage.write(key: 'jwt_token', value: token);
+      await _secureStorage
+          .write(key: 'jwt_token', value: token)
+          .timeout(const Duration(milliseconds: 800));
       debugPrint('BackendApiService: Auth token written to secure storage');
     } catch (e) {
       debugPrint('BackendApiService: failed to write secure storage token: $e');
@@ -274,7 +349,9 @@ class BackendApiService {
     try {
       String? token;
       try {
-        token = await _secureStorage.read(key: 'jwt_token');
+        token = await _secureStorage
+            .read(key: 'jwt_token')
+            .timeout(const Duration(milliseconds: 800));
       } catch (e) {
         debugPrint('BackendApiService: secure storage read failed: $e');
       }
@@ -322,7 +399,9 @@ class BackendApiService {
   Future<void> clearAuth() async {
     _authToken = null;
     try {
-      await _secureStorage.delete(key: 'jwt_token');
+      await _secureStorage
+          .delete(key: 'jwt_token')
+          .timeout(const Duration(milliseconds: 800));
       debugPrint('BackendApiService: Auth cleared from secure storage');
     } catch (e) {
       debugPrint('BackendApiService: Error clearing auth token: $e');
@@ -487,6 +566,7 @@ class BackendApiService {
   /// Register a wallet-based user via auth endpoint
   /// POST /api/auth/register { walletAddress, username? }
   /// On success stores returned JWT token for subsequent authenticated calls.
+  @override
   Future<Map<String, dynamic>> registerWallet({
     required String walletAddress,
     String? username,
@@ -1005,6 +1085,7 @@ class BackendApiService {
 
   /// Update user profile (preferences / metadata)
   /// POST /api/profiles
+  @override
   Future<Map<String, dynamic>> updateProfile(
     String walletAddress,
     Map<String, dynamic> updates,
@@ -1038,6 +1119,7 @@ class BackendApiService {
 
   /// Get profile by wallet address
   /// GET /api/profiles/:walletAddress
+  @override
   Future<Map<String, dynamic>> getProfileByWallet(String walletAddress) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
@@ -1207,6 +1289,7 @@ class BackendApiService {
 
   /// Create or update profile
   /// POST /api/profiles
+  @override
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
     // Backend requires authentication (verifyToken). Make sure we have a token
     // available before attempting to save.
@@ -1218,7 +1301,9 @@ class BackendApiService {
     while (true) {
       attempt++;
       try {
-        debugPrint('BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
+        if (kDebugMode) {
+          debugPrint('BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
+        }
         final uri = Uri.parse('$baseUrl/api/profiles');
         final response = await http.post(uri, headers: _getHeaders(includeAuth: true), body: jsonEncode(profileData));
 
@@ -1246,7 +1331,9 @@ class BackendApiService {
           // Some legacy backends used to return a token. Keep support.
           if (data['token'] is String && (data['token'] as String).isNotEmpty) {
             await setAuthToken(data['token'] as String);
-            debugPrint('JWT token received and stored from profile creation');
+            if (kDebugMode) {
+              debugPrint('BackendApiService.saveProfile: token received and stored from profile creation');
+            }
           }
 
           final payload = data['data'] ?? data;
@@ -1725,6 +1812,7 @@ class BackendApiService {
 
   /// Get artworks with filters
   /// GET /api/artworks
+  @override
   Future<List<Artwork>> getArtworks({
     String? category,
     bool? arEnabled,
@@ -1766,6 +1854,7 @@ class BackendApiService {
 
   /// Get single artwork by ID
   /// GET /api/artworks/:id
+  @override
   Future<Artwork> getArtwork(String artworkId) async {
     try {
       try {
@@ -1810,6 +1899,7 @@ class BackendApiService {
 
   /// Publish an artwork
   /// POST /api/artworks/:id/publish
+  @override
   Future<Artwork?> publishArtwork(String artworkId) async {
     try {
       await _ensureAuthWithStoredWallet();
@@ -1834,6 +1924,7 @@ class BackendApiService {
 
   /// Unpublish an artwork
   /// POST /api/artworks/:id/unpublish
+  @override
   Future<Artwork?> unpublishArtwork(String artworkId) async {
     try {
       await _ensureAuthWithStoredWallet();
@@ -1963,6 +2054,7 @@ class BackendApiService {
 
   /// Like an artwork
   /// POST /api/artworks/:id/like
+  @override
   Future<int?> likeArtwork(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
@@ -1988,6 +2080,7 @@ class BackendApiService {
 
   /// Unlike an artwork
   /// DELETE /api/artworks/:id/like
+  @override
   Future<int?> unlikeArtwork(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
@@ -2013,6 +2106,7 @@ class BackendApiService {
 
   /// Record a view for an artwork
   /// POST /api/artworks/:id/view
+  @override
   Future<int?> recordArtworkView(String artworkId) async {
     try {
       // Views are allowed anonymously, but include auth when available
@@ -2088,6 +2182,7 @@ class BackendApiService {
 
   /// Get comments for an artwork
   /// GET /api/artworks/:id/comments
+  @override
   Future<List<ArtworkComment>> getArtworkComments({
     required String artworkId,
     int page = 1,
@@ -2119,6 +2214,7 @@ class BackendApiService {
 
   /// Create a comment for an artwork
   /// POST /api/artworks/:id/comments
+  @override
   Future<ArtworkComment> createArtworkComment({
     required String artworkId,
     required String content,
@@ -2154,6 +2250,7 @@ class BackendApiService {
 
   /// Edit an artwork comment
   /// PATCH /api/artworks/comments/:commentId
+  @override
   Future<ArtworkComment> editArtworkComment({
     required String commentId,
     required String content,
@@ -2185,6 +2282,7 @@ class BackendApiService {
   /// Delete an artwork comment
   /// DELETE /api/artworks/comments/:commentId
   /// Returns updated commentsCount when provided by backend.
+  @override
   Future<int?> deleteArtworkComment(String commentId) async {
     try { await _ensureAuthWithStoredWallet(); } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
@@ -2205,6 +2303,7 @@ class BackendApiService {
 
   /// Discover an artwork and return updated discovery count if available.
   /// POST /api/artworks/:id/discover
+  @override
   Future<int?> discoverArtworkWithCount(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
@@ -3125,6 +3224,7 @@ class BackendApiService {
 
   /// Like a comment
   /// POST /api/community/comments/:id/like
+  @override
   Future<int?> likeComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
@@ -3146,6 +3246,7 @@ class BackendApiService {
 
   /// Unlike a comment
   /// DELETE /api/community/comments/:id/like
+  @override
   Future<int?> unlikeComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
@@ -3225,6 +3326,7 @@ class BackendApiService {
 
   /// Follow a user
   /// POST /api/community/follow/:walletAddress
+  @override
   Future<void> followUser(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
@@ -3253,6 +3355,7 @@ class BackendApiService {
 
   /// Unfollow a user
   /// DELETE /api/community/follow/:walletAddress
+  @override
   Future<void> unfollowUser(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
@@ -3361,6 +3464,7 @@ class BackendApiService {
 
   /// Check if current user is following a user
   /// GET /api/community/follow/:walletAddress/status
+  @override
   Future<bool> isFollowing(String walletAddress) async {
     final encoded = Uri.encodeComponent(walletAddress);
     try {
@@ -3957,6 +4061,7 @@ class BackendApiService {
 
   /// Get a single DAO review by id or wallet address
   /// GET /api/dao/reviews/:id
+  @override
   Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet');
@@ -4875,6 +4980,7 @@ class BackendApiService {
 
   /// Upload avatar specifically to profile avatars endpoint
   /// POST /api/profiles/avatars
+  @override
   Future<Map<String, dynamic>> uploadAvatarToProfile({
     required List<int> fileBytes,
     required String fileName,

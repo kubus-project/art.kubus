@@ -23,10 +23,13 @@ class ArtworkProvider extends ChangeNotifier {
   TaskProvider? _taskProvider;
   SavedItemsProvider? _savedItemsProvider;
   bool _useMockData = false;
-  final BackendApiService _backendApi = BackendApiService();
+  final ArtworkBackendApi _backendApi;
   static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
+
+  ArtworkProvider({ArtworkBackendApi? backendApi})
+      : _backendApi = backendApi ?? BackendApiService();
 
   List<Artwork> get artworks => List.unmodifiable(_artworks);
   String? get error => _error;
@@ -438,7 +441,9 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtworkComments(artworkId: artworkId, page: 1, limit: 100);
-      _comments[artworkId] = _nestArtworkComments(fetched);
+      // Ensure newest comments show first (mobile + desktop). Backend ordering is not guaranteed.
+      final sorted = [...fetched]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      _comments[artworkId] = _nestArtworkComments(sorted);
       notifyListeners();
     } catch (e) {
       _commentLoadErrors[artworkId] = 'Failed to load comments: $e';
@@ -498,14 +503,11 @@ class ArtworkProvider extends ChangeNotifier {
         final idx = list.indexWhere((c) => c.id == tempId);
         if (idx >= 0) {
           list[idx] = created;
-          _comments[artworkId] = _nestArtworkComments(list);
-        } else {
-          // If the temp comment isn't present anymore, refresh from backend.
-          await loadComments(artworkId, force: true);
         }
       }
 
-      // Refresh comments from backend to avoid stale caches / ordering issues.
+      // Refresh comments from backend to pick up canonical ordering and ensure
+      // any server-side transforms are reflected.
       await loadComments(artworkId, force: true);
       notifyListeners();
 

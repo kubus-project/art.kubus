@@ -24,6 +24,7 @@ import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../widgets/profile_artist_info_fields.dart';
 import '../../../screens/community/post_detail_screen.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/socket_service.dart';
@@ -31,7 +32,7 @@ import '../../../screens/community/profile_screen_methods.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
-import '../../art/art_detail_screen.dart';
+import '../art/desktop_artwork_detail_screen.dart';
 import '../../art/collection_detail_screen.dart';
 
 /// Desktop user profile screen - viewing another user's profile
@@ -573,6 +574,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                      const SizedBox(height: 10),
+                      ProfileArtistInfoFields(
+                        fieldOfWork: user!.fieldOfWork,
+                        yearsActive: user!.yearsActive,
+                        textAlign: TextAlign.left,
+                      ),
                       const SizedBox(height: 8),
                       Text(
                         l10n.userProfileJoinedLabel(user!.joinedDate),
@@ -837,7 +844,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
       onTap: artworkId != null ? () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: artworkId)),
+          MaterialPageRoute(builder: (_) => DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true)),
         );
       } : null,
       child: MouseRegion(

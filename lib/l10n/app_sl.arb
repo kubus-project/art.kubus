@@ -2,6 +2,7 @@
   "@@locale": "sl",
   "appTitle": "art.kubus",
   "commonCancel": "Prekliči",
+  "commonSignIn": "Prijava",
   "commonClear": "Počisti",
   "commonClose": "Zapri",
   "commonContinue": "Nadaljuj",
@@ -2786,6 +2787,22 @@
   "@mnemonicRevealPinLockedError": {
     "placeholders": {
       "seconds": {}
+    }
+  },
+  "artworkCommentAddButton": "Dodaj komentar",
+  "artworkCommentAddTitle": "Dodaj komentar",
+  "artworkCommentAddHint": "Deli svoje misli o tej umetnini...",
+  "artworkCommentPostButton": "Objavi komentar",
+  "artworkCommentAddedToast": "Komentar je dodan!",
+  "profileFieldOfWorkLabel": "Področje dela",
+  "profileYearsActiveLabel": "Leta delovanja",
+  "profileYearsActiveValue": "{count, plural, one {# leto} two {# leti} few {# leta} other {# let}}",
+  "@profileYearsActiveValue": {
+    "description": "Humanized years active value for profile display.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
     }
   }
 }

@@ -40,7 +40,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
-import '../art/art_detail_screen.dart';
+import 'art/desktop_artwork_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import '../../services/search_service.dart';
@@ -859,14 +859,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             shellScope.pushScreen(
                               DesktopSubScreen(
                                 title: artwork.title,
-                                child: ArtDetailScreen(artworkId: artwork.id),
+                                child: DesktopArtworkDetailScreen(artworkId: artwork.id),
                               ),
                             );
                           } else {
                             unawaited(Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    ArtDetailScreen(artworkId: artwork.id),
+                                    DesktopArtworkDetailScreen(artworkId: artwork.id, showAppBar: true),
                               ),
                             ));
                           }
@@ -889,14 +889,14 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                             shellScope.pushScreen(
                               DesktopSubScreen(
                                 title: artwork.title,
-                                child: ArtDetailScreen(artworkId: artwork.id),
+                                child: DesktopArtworkDetailScreen(artworkId: artwork.id),
                               ),
                             );
                           } else {
                             unawaited(Navigator.of(context).push(
                               MaterialPageRoute(
                                 builder: (_) =>
-                                    ArtDetailScreen(artworkId: artwork.id),
+                                    DesktopArtworkDetailScreen(artworkId: artwork.id, showAppBar: true),
                               ),
                             ));
                           }
@@ -1984,13 +1984,13 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
             shellScope.pushScreen(
               DesktopSubScreen(
                 title: hydrated.title,
-                child: ArtDetailScreen(artworkId: hydrated.id),
+                child: DesktopArtworkDetailScreen(artworkId: hydrated.id),
               ),
             );
           } else {
             unawaited(Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => ArtDetailScreen(artworkId: hydrated.id),
+                builder: (_) => DesktopArtworkDetailScreen(artworkId: hydrated.id, showAppBar: true),
               ),
             ));
           }

@@ -107,6 +107,12 @@ abstract class AppLocalizations {
   /// **'Cancel'**
   String get commonCancel;
 
+  /// No description provided for @commonSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get commonSignIn;
+
   /// No description provided for @commonClear.
   ///
   /// In en, this message translates to:
@@ -12028,6 +12034,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear selection'**
   String get manageMarkersClearSelectionTooltip;
+
+  /// No description provided for @artworkCommentAddButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Comment'**
+  String get artworkCommentAddButton;
+
+  /// No description provided for @artworkCommentAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Comment'**
+  String get artworkCommentAddTitle;
+
+  /// No description provided for @artworkCommentAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Share your thoughts about this artwork...'**
+  String get artworkCommentAddHint;
+
+  /// No description provided for @artworkCommentPostButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Post Comment'**
+  String get artworkCommentPostButton;
+
+  /// No description provided for @artworkCommentAddedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Comment added successfully!'**
+  String get artworkCommentAddedToast;
+
+  /// No description provided for @profileFieldOfWorkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Field of work'**
+  String get profileFieldOfWorkLabel;
+
+  /// No description provided for @profileYearsActiveLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Years active'**
+  String get profileYearsActiveLabel;
+
+  /// Humanized years active value for profile display.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {# year} other {# years}}'**
+  String profileYearsActiveValue(int count);
 
   /// No description provided for @manageMarkersPickArAssetPlaceholder.
   ///

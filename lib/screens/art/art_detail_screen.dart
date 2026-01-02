@@ -764,7 +764,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Comments (${artwork.commentsCount})',
+          '${l10n.commonComments} (${artwork.commentsCount})',
           style: GoogleFonts.outfit(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -811,12 +811,26 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               borderRadius: BorderRadius.circular(12),
             ),
             child: Center(
-              child: Text(
-                'No comments yet. Be the first to comment!',
-                style: GoogleFonts.outfit(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                ),
-                textAlign: TextAlign.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    l10n.postDetailNoCommentsTitle,
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    l10n.postDetailNoCommentsDescription,
+                    style: GoogleFonts.outfit(
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
           )
@@ -839,7 +853,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               },
               icon: const Icon(Icons.login),
               label: Text(
-                'Sign in to comment',
+                l10n.commonSignIn,
                 style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
               ),
             ),
@@ -1117,17 +1131,19 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildCommentFAB(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     return FloatingActionButton.extended(
       onPressed: () => _showAddCommentDialog(artwork),
       icon: const Icon(Icons.add_comment),
       label: Text(
-        'Add Comment',
+        l10n.artworkCommentAddButton,
         style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
       ),
     );
   }
 
   void _showAddCommentDialog(Artwork artwork) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1163,7 +1179,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Add Comment',
+                  l10n.artworkCommentAddTitle,
                   style: GoogleFonts.outfit(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -1175,7 +1191,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   controller: _commentController,
                   maxLines: 4,
                   decoration: InputDecoration(
-                    hintText: 'Share your thoughts about this artwork...',
+                    hintText: l10n.artworkCommentAddHint,
                     hintStyle: GoogleFonts.outfit(),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -1193,7 +1209,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                           Navigator.pop(context);
                         },
                         child: Text(
-                          'Cancel',
+                          l10n.commonCancel,
                           style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -1216,7 +1232,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                     child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
                                   )
                                 : Text(
-                                    'Post Comment',
+                                    l10n.artworkCommentPostButton,
                                     style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
                                   ),
                           );
@@ -1246,7 +1262,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         SnackBar(
           content: Text(l10n.communityCommentAuthRequiredToast, style: GoogleFonts.outfit()),
           action: SnackBarAction(
-            label: 'Sign in',
+            label: l10n.commonSignIn,
             onPressed: () {
               navigator.pushNamed(
                 '/sign-in',
@@ -1284,7 +1300,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
       messenger.showSnackBar(
         SnackBar(
-          content: Text('Comment added successfully!', style: GoogleFonts.outfit()),
+          content: Text(l10n.artworkCommentAddedToast, style: GoogleFonts.outfit()),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -1321,7 +1337,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           ),
           action: authRequired
               ? SnackBarAction(
-                  label: 'Sign in',
+                  label: l10n.commonSignIn,
                   onPressed: () {
                     navigator.pushNamed(
                       '/sign-in',

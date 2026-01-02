@@ -443,11 +443,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
           'website': _websiteController.text.trim(),
-          // Store artist specialty and years active in social for now
-          // (until backend supports dedicated artistInfo fields)
-          if (_isArtist) 'specialty': _specialtyController.text.trim(),
-          if (_isArtist) 'yearsActive': _yearsActiveController.text.trim(),
         },
+        fieldOfWork: _specialtyController.text
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList(growable: false),
+        yearsActive: int.tryParse(_yearsActiveController.text.trim()) ?? 0,
       );
 
       if (!mounted) return;

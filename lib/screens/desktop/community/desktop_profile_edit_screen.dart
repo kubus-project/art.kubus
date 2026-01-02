@@ -1085,9 +1085,13 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> with TickerProvid
           'twitter': _twitterController.text.trim(),
           'instagram': _instagramController.text.trim(),
           'website': _websiteController.text.trim(),
-          if (_isArtist || _isInstitution) 'specialty': _specialtyController.text.trim(),
-          if (_isArtist || _isInstitution) 'yearsActive': _yearsActiveController.text.trim(),
         },
+        fieldOfWork: _specialtyController.text
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList(growable: false),
+        yearsActive: int.tryParse(_yearsActiveController.text.trim()) ?? 0,
       );
 
       if (!mounted) return;

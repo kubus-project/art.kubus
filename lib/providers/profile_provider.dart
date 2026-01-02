@@ -28,9 +28,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
   int _realFollowingCount = 0;
   int _realPostsCount = 0;
   late SharedPreferences _prefs;
-  final BackendApiService _apiService = BackendApiService();
+  final ProfileBackendApi _apiService;
   Map<String, dynamic>? _lastUploadDebug;
   ProfilePreferences? _cachedPreferences;
+
+  ProfileProvider({ProfileBackendApi? apiService})
+      : _apiService = apiService ?? BackendApiService();
 
   /// Debug info for last upload attempt (raw server response + extraction + verification)
   Map<String, dynamic>? get lastUploadDebug => _lastUploadDebug;
@@ -429,9 +432,23 @@ class ProfileProvider extends foundation.ChangeNotifier {
             coverImage: MediaUrlResolver.resolve(user.coverImageUrl),
             isArtist: user.isArtist,
             isInstitution: user.isInstitution,
+            artistInfo: (user.fieldOfWork.isNotEmpty || user.yearsActive > 0)
+                ? ArtistInfo(
+                    verified: user.isVerified,
+                    specialty: user.fieldOfWork,
+                    yearsActive: user.yearsActive,
+                  )
+                : null,
             createdAt: DateTime.now(),
             updatedAt: DateTime.now(),
           );
+
+          // Fetch authoritative profile fields (preferences, artistInfo, etc.)
+          // even when UserService already had a cached lightweight user record.
+          try {
+            final profileData = await _apiService.getProfileByWallet(walletAddress);
+            _currentUser = UserProfile.fromJson(profileData);
+          } catch (_) {}
         } else {
           final profileData = await _apiService.getProfileByWallet(walletAddress);
           try {
@@ -495,9 +512,22 @@ class ProfileProvider extends foundation.ChangeNotifier {
               bio: user.bio,
               avatar: user.profileImageUrl ?? '',
               coverImage: MediaUrlResolver.resolve(user.coverImageUrl),
+              artistInfo: (user.fieldOfWork.isNotEmpty || user.yearsActive > 0)
+                  ? ArtistInfo(
+                      verified: user.isVerified,
+                      specialty: user.fieldOfWork,
+                      yearsActive: user.yearsActive,
+                    )
+                  : null,
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
             );
+
+            // Fetch authoritative profile fields after registration.
+            try {
+              final profileData = await _apiService.getProfileByWallet(walletAddress);
+              _currentUser = UserProfile.fromJson(profileData);
+            } catch (_) {}
           } else {
           final profileData = await _apiService.getProfileByWallet(walletAddress);
           _currentUser = UserProfile.fromJson(profileData);
@@ -553,9 +583,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
     String? avatar,
     String? coverImage,
     Map<String, String>? social,
+    List<String>? fieldOfWork,
+    int? yearsActive,
     bool? isArtist,
     bool? isInstitution,
     ProfilePreferences? preferences,
+    bool reloadStats = true,
   }) async {
     _isLoading = true;
     _error = null;
@@ -574,6 +607,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
       final effectiveAvatar = avatar ?? _currentUser?.avatar;
       final effectiveCover = coverImage ?? _currentUser?.coverImage;
       final effectiveSocial = social ?? _currentUser?.social;
+      final effectiveFieldOfWork = fieldOfWork ?? _currentUser?.artistInfo?.specialty;
+      final effectiveYearsActive = yearsActive ?? _currentUser?.artistInfo?.yearsActive;
       final effectiveIsArtist = isArtist ?? _currentUser?.isArtist;
       final effectiveIsInstitution = isInstitution ?? _currentUser?.isInstitution;
       final effectivePreferences = preferences;
@@ -588,6 +623,12 @@ class ProfileProvider extends foundation.ChangeNotifier {
         if (effectiveSocial != null) 'social': effectiveSocial,
         if (effectiveIsArtist != null) 'isArtist': effectiveIsArtist,
         if (effectiveIsInstitution != null) 'isInstitution': effectiveIsInstitution,
+        if ((effectiveIsArtist == true || effectiveIsInstitution == true) &&
+            (effectiveFieldOfWork != null || effectiveYearsActive != null))
+          'artistInfo': {
+            if (effectiveFieldOfWork != null) 'specialty': effectiveFieldOfWork,
+            if (effectiveYearsActive != null) 'yearsActive': effectiveYearsActive,
+          },
         if (effectivePreferences != null) 'preferences': effectivePreferences.toJson(),
       };
 
@@ -630,7 +671,9 @@ class ProfileProvider extends foundation.ChangeNotifier {
       } catch (_) {}
       
       // Reload stats after profile update
-      await _loadBackendStats(walletAddress);
+      if (reloadStats) {
+        await _loadBackendStats(walletAddress);
+      }
       
       // Update sign-in state
       _isSignedIn = true;
@@ -658,6 +701,8 @@ class ProfileProvider extends foundation.ChangeNotifier {
              bio: u.bio,
              profileImageUrl: u.avatar,
              coverImageUrl: MediaUrlResolver.resolve(u.coverImage),
+             fieldOfWork: u.artistInfo?.specialty ?? const <String>[],
+             yearsActive: u.artistInfo?.yearsActive ?? 0,
              followersCount: u.stats?.followersCount ?? 0,
              followingCount: u.stats?.followingCount ?? 0,
              postsCount: u.stats?.artworksCreated ?? 0,
