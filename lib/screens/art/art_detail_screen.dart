@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/inline_loading.dart';
@@ -1290,10 +1292,31 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     } on BackendApiRequestException catch (e) {
       if (!mounted) return;
       final authRequired = e.statusCode == 401 || e.statusCode == 403;
+      String? backendMessage;
+      if (!authRequired) {
+        try {
+          final raw = (e.body ?? '').trim();
+          if (raw.isNotEmpty) {
+            final decoded = jsonDecode(raw);
+            if (decoded is Map<String, dynamic>) {
+              final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+              if (msg.isNotEmpty) {
+                backendMessage = msg.length > 140 ? '${msg.substring(0, 140)}…' : msg;
+              }
+            }
+          }
+        } catch (_) {
+          // Ignore body parse failures and fall back to a generic message.
+        }
+      }
+
+      final fallbackMessage = authRequired
+          ? l10n.communityCommentAuthRequiredToast
+          : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})');
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            authRequired ? l10n.communityCommentAuthRequiredToast : l10n.commonSomethingWentWrong,
+            fallbackMessage,
             style: GoogleFonts.outfit(),
           ),
           action: authRequired
@@ -1313,11 +1336,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           duration: const Duration(seconds: 4),
         ),
       );
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
+      final raw = e.toString();
+      final looksLikeNetwork = raw.contains('XMLHttpRequest error') ||
+          raw.contains('ClientException') ||
+          raw.contains('Failed to fetch') ||
+          raw.contains('fetch failed') ||
+          raw.contains('Failed host lookup') ||
+          raw.contains('Connection refused') ||
+          raw.contains('NetworkError') ||
+          raw.contains('CORS');
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.commonSomethingWentWrong, style: GoogleFonts.outfit()),
+          content: Text(
+            looksLikeNetwork
+                ? 'Network error while posting comment (backend unreachable / blocked).'
+                : l10n.commonSomethingWentWrong,
+            style: GoogleFonts.outfit(),
+          ),
           duration: const Duration(seconds: 4),
         ),
       );

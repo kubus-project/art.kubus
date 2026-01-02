@@ -56,7 +56,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
   bool _matchesQuery(ArtMarker marker, String query) {
     if (query.isEmpty) return true;
     final q = query.toLowerCase();
-    final subject = (marker.subjectTitle ?? '').toLowerCase();
+    final subject = (marker.resolvedExhibitionSummary?.title ?? marker.subjectTitle ?? '').toLowerCase();
     return marker.name.toLowerCase().contains(q) ||
         marker.description.toLowerCase().contains(q) ||
         subject.contains(q);
@@ -171,6 +171,8 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
           final updated = marker.updatedAt ?? marker.createdAt;
           final updatedLabel = MaterialLocalizations.of(context).formatShortDate(updated);
           final selected = marker.id == _selectedMarkerId && !_creatingNew;
+          final subjectLabel =
+              (marker.resolvedExhibitionSummary?.title ?? marker.subjectTitle ?? '').trim();
 
           return ListTile(
             selected: selected,
@@ -182,7 +184,7 @@ class _ManageMarkersScreenState extends State<ManageMarkersScreen> {
             ),
             subtitle: Text(
               [
-                if ((marker.subjectTitle ?? '').trim().isNotEmpty) marker.subjectTitle!.trim(),
+                if (subjectLabel.isNotEmpty) subjectLabel,
                 '${marker.position.latitude.toStringAsFixed(4)}, ${marker.position.longitude.toStringAsFixed(4)}',
               ].join(' · '),
               maxLines: 1,

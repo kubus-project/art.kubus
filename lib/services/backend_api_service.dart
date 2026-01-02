@@ -183,16 +183,19 @@ class BackendApiService {
       final shouldIssueForWallet = (!hasToken) &&
           (forceWalletIssuance || (walletAddress != null && walletAddress.isNotEmpty));
       if (shouldIssueForWallet && walletAddress != null && walletAddress.isNotEmpty) {
-        // Try to issue a token once for the provided wallet
+        // Prefer the real auth flow.
+        // NOTE: /api/profiles/issue-token is debug-only (API key/admin gated) and
+        // should not be used for client auto-auth in production.
         try {
-          final issued = await issueTokenForWallet(walletAddress);
-          if (issued) {
-            await loadAuthToken();
-          } else {
-            debugPrint('BackendApiService._doAuthInit: issueTokenForWallet returned false for $walletAddress');
-          }
+          await registerWallet(
+            walletAddress: walletAddress,
+            username: 'user_${walletAddress.substring(0, walletAddress.length >= 8 ? 8 : walletAddress.length)}',
+          );
+          await loadAuthToken();
         } catch (e) {
-          debugPrint('BackendApiService._doAuthInit: issueTokenForWallet threw: $e');
+          if (kDebugMode) {
+            debugPrint('BackendApiService._doAuthInit: registerWallet failed: $e');
+          }
         }
       }
     } finally {
@@ -212,15 +215,24 @@ class BackendApiService {
       final prefs = await SharedPreferences.getInstance();
       final storedWallet = prefs.getString('wallet_address') ?? prefs.getString('wallet') ?? prefs.getString('walletAddress') ?? prefs.getString('user_id');
       if (storedWallet != null && storedWallet.isNotEmpty) {
-        debugPrint('BackendApiService: Attempting token issuance for stored wallet: $storedWallet');
+        // Attempt to obtain a real JWT for the wallet.
+        // This is idempotent server-side (returns token for existing users too).
         try {
-          await ensureAuthLoaded(walletAddress: storedWallet);
+          await registerWallet(
+            walletAddress: storedWallet,
+            username: 'user_${storedWallet.substring(0, storedWallet.length >= 8 ? 8 : storedWallet.length)}',
+          );
+          await loadAuthToken();
         } catch (e) {
-          debugPrint('BackendApiService: ensureAuthLoaded failed for stored wallet: $e');
+          if (kDebugMode) {
+            debugPrint('BackendApiService: registerWallet failed for stored wallet: $e');
+          }
         }
       }
     } catch (e) {
-      debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
+      if (kDebugMode) {
+        debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
+      }
     }
   }
 

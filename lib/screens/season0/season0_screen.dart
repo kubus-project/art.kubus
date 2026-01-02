@@ -15,7 +15,7 @@ import '../web3/institution/institution_hub.dart';
 class Season0Screen extends StatelessWidget {
   const Season0Screen({super.key});
 
-  static const String _newsletterUrl = 'https://kubus.site/newsletter';
+  static const String _newsletterUrl = 'https://art.kubus.site/newsletter';
 
   @override
   Widget build(BuildContext context) {
