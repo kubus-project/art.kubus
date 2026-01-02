@@ -25,6 +25,7 @@ import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
+import '../../widgets/profile_artist_info_fields.dart';
 import 'post_detail_screen.dart';
 import '../art/art_detail_screen.dart';
 import '../art/collection_detail_screen.dart';
@@ -727,6 +728,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
               color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          ProfileArtistInfoFields(
+            fieldOfWork: user!.fieldOfWork,
+            yearsActive: user!.yearsActive,
           ),
           const SizedBox(height: 8),
           

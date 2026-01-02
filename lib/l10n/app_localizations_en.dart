@@ -15,6 +15,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonCancel => 'Cancel';
 
   @override
+  String get commonSignIn => 'Sign in';
+
+  @override
   String get commonClear => 'Clear';
 
   @override
@@ -6352,6 +6355,38 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manageMarkersClearSelectionTooltip => 'Clear selection';
+
+  @override
+  String get artworkCommentAddButton => 'Add Comment';
+
+  @override
+  String get artworkCommentAddTitle => 'Add Comment';
+
+  @override
+  String get artworkCommentAddHint => 'Share your thoughts about this artwork...';
+
+  @override
+  String get artworkCommentPostButton => 'Post Comment';
+
+  @override
+  String get artworkCommentAddedToast => 'Comment added successfully!';
+
+  @override
+  String get profileFieldOfWorkLabel => 'Field of work';
+
+  @override
+  String get profileYearsActiveLabel => 'Years active';
+
+  @override
+  String profileYearsActiveValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# years',
+      one: '# year',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get manageMarkersPickArAssetPlaceholder => 'Select an AR asset';

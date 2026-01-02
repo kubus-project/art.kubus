@@ -15,6 +15,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonCancel => 'Prekliči';
 
   @override
+  String get commonSignIn => 'Prijava';
+
+  @override
   String get commonClear => 'Počisti';
 
   @override
@@ -6374,6 +6377,40 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get manageMarkersClearSelectionTooltip => 'Počisti izbor';
+
+  @override
+  String get artworkCommentAddButton => 'Dodaj komentar';
+
+  @override
+  String get artworkCommentAddTitle => 'Dodaj komentar';
+
+  @override
+  String get artworkCommentAddHint => 'Deli svoje misli o tej umetnini...';
+
+  @override
+  String get artworkCommentPostButton => 'Objavi komentar';
+
+  @override
+  String get artworkCommentAddedToast => 'Komentar je dodan!';
+
+  @override
+  String get profileFieldOfWorkLabel => 'Področje dela';
+
+  @override
+  String get profileYearsActiveLabel => 'Leta delovanja';
+
+  @override
+  String profileYearsActiveValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '# let',
+      few: '# leta',
+      two: '# leti',
+      one: '# leto',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get manageMarkersPickArAssetPlaceholder => 'Izberi AR sredstvo';

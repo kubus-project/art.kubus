@@ -2,6 +2,7 @@
   "@@locale": "en",
   "appTitle": "art.kubus",
   "commonCancel": "Cancel",
+  "commonSignIn": "Sign in",
   "commonClear": "Clear",
   "commonClose": "Close",
   "commonContinue": "Continue",
@@ -2959,5 +2960,23 @@
   "manageMarkersPickArAssetTitle": "Pick AR asset",
   "manageMarkersSearchArAssetsHint": "Search AR assets",
   "manageMarkersClearSelectionTooltip": "Clear selection",
+
+  "artworkCommentAddButton": "Add Comment",
+  "artworkCommentAddTitle": "Add Comment",
+  "artworkCommentAddHint": "Share your thoughts about this artwork...",
+  "artworkCommentPostButton": "Post Comment",
+  "artworkCommentAddedToast": "Comment added successfully!",
+
+  "profileFieldOfWorkLabel": "Field of work",
+  "profileYearsActiveLabel": "Years active",
+  "profileYearsActiveValue": "{count, plural, one {# year} other {# years}}",
+  "@profileYearsActiveValue": {
+    "description": "Humanized years active value for profile display.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "manageMarkersPickArAssetPlaceholder": "Select an AR asset"
 }

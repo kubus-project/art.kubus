@@ -24,13 +24,14 @@ import 'desktop_profile_edit_screen.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
+import '../../../widgets/profile_artist_info_fields.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
-import '../../art/art_detail_screen.dart';
+import '../art/desktop_artwork_detail_screen.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
@@ -552,6 +553,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                           overflow: TextOverflow.ellipsis,
                         ),
                       ],
+                      const SizedBox(height: 12),
+                      ProfileArtistInfoFields(
+                        fieldOfWork: user?.artistInfo?.specialty ?? const <String>[],
+                        yearsActive: user?.artistInfo?.yearsActive ?? 0,
+                        textAlign: TextAlign.left,
+                      ),
                       // Social links
                       if (user?.social.isNotEmpty == true) ...[
                         const SizedBox(height: 16),
@@ -1096,7 +1103,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       onTap: artworkId != null ? () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: artworkId)),
+          MaterialPageRoute(builder: (_) => DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true)),
         );
       } : null,
       child: MouseRegion(
@@ -1390,7 +1397,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => ArtDetailScreen(artworkId: artworkId),
+            builder: (_) => DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true),
           ),
         );
       } : null,

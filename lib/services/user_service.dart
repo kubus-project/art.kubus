@@ -170,6 +170,43 @@ class UserService {
         }
       }
 
+      List<String> fieldOfWork = const <String>[];
+      int yearsActive = 0;
+      try {
+        final artistInfo = profile['artistInfo'] ?? profile['artist_info'];
+        if (artistInfo is Map<String, dynamic>) {
+          final rawSpecialty = artistInfo['specialty'] ?? artistInfo['fieldOfWork'] ?? artistInfo['field_of_work'];
+          if (rawSpecialty is List) {
+            fieldOfWork = rawSpecialty
+                .map((v) => (v ?? '').toString().trim())
+                .where((v) => v.isNotEmpty)
+                .toList(growable: false);
+          } else if (rawSpecialty is String) {
+            fieldOfWork = rawSpecialty
+                .split(',')
+                .map((v) => v.trim())
+                .where((v) => v.isNotEmpty)
+                .toList(growable: false);
+          }
+          yearsActive = _parseInt(artistInfo['yearsActive'] ?? artistInfo['years_active']);
+        } else {
+          final raw = profile['fieldOfWork'] ?? profile['field_of_work'];
+          if (raw is List) {
+            fieldOfWork = raw
+                .map((v) => (v ?? '').toString().trim())
+                .where((v) => v.isNotEmpty)
+                .toList(growable: false);
+          } else if (raw is String) {
+            fieldOfWork = raw
+                .split(',')
+                .map((v) => v.trim())
+                .where((v) => v.isNotEmpty)
+                .toList(growable: false);
+          }
+          yearsActive = _parseInt(profile['yearsActive'] ?? profile['years_active']);
+        }
+      } catch (_) {}
+
       // Convert backend profile to User model
       // Safely compute defaults, avoid substring errors when wallet length is short
       final safeId = userId.toString();
@@ -187,6 +224,8 @@ class UserService {
         isVerified: profile['isVerified'] ?? false,
         isArtist: isArtist,
         isInstitution: isInstitution,
+        fieldOfWork: fieldOfWork,
+        yearsActive: yearsActive,
         joinedDate: profile['createdAt'] != null 
             ? 'Joined ${DateTime.parse(profile['createdAt']).month}/${DateTime.parse(profile['createdAt']).year}'
             : 'Joined recently',

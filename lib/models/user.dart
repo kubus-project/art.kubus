@@ -7,6 +7,12 @@ class User {
   final String bio;
   final String? profileImageUrl;
   final String? coverImageUrl;
+  /// Artist profile: field(s) of work (aka specialty/categories).
+  ///
+  /// Kept as plain strings (no UI concern).
+  final List<String> fieldOfWork;
+  /// Artist profile: years active (0 when unset).
+  final int yearsActive;
   final int followersCount;
   final int followingCount;
   final int postsCount;
@@ -24,6 +30,8 @@ class User {
     required this.bio,
     this.profileImageUrl,
     this.coverImageUrl,
+    this.fieldOfWork = const <String>[],
+    this.yearsActive = 0,
     required this.followersCount,
     required this.followingCount,
     required this.postsCount,
@@ -66,6 +74,8 @@ class User {
     String? bio,
     String? profileImageUrl,
     String? coverImageUrl,
+    List<String>? fieldOfWork,
+    int? yearsActive,
     int? followersCount,
     int? followingCount,
     int? postsCount,
@@ -83,6 +93,8 @@ class User {
       bio: bio ?? this.bio,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       coverImageUrl: coverImageUrl ?? this.coverImageUrl,
+      fieldOfWork: fieldOfWork ?? this.fieldOfWork,
+      yearsActive: yearsActive ?? this.yearsActive,
       followersCount: followersCount ?? this.followersCount,
       followingCount: followingCount ?? this.followingCount,
       postsCount: postsCount ?? this.postsCount,
