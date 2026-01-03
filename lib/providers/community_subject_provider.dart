@@ -92,7 +92,19 @@ class CommunitySubjectProvider extends ChangeNotifier {
           subtitle: preview.subtitle,
           imageUrl: resolvedImage,
         );
-        _cache[normalizedPreview.ref.key] = normalizedPreview;
+        final existing = _cache[normalizedPreview.ref.key];
+        if (existing == null) {
+          _cache[normalizedPreview.ref.key] = normalizedPreview;
+        } else {
+          _cache[normalizedPreview.ref.key] = CommunitySubjectPreview(
+            ref: normalizedPreview.ref,
+            title: normalizedPreview.title.isNotEmpty
+                ? normalizedPreview.title
+                : existing.title,
+            subtitle: normalizedPreview.subtitle ?? existing.subtitle,
+            imageUrl: normalizedPreview.imageUrl ?? existing.imageUrl,
+          );
+        }
         updated = true;
       }
       if (updated) {

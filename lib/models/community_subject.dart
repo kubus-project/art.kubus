@@ -28,11 +28,22 @@ class CommunitySubjectPreview {
   factory CommunitySubjectPreview.fromMap(Map<String, dynamic> map) {
     final type = (map['type'] ?? map['subjectType'] ?? map['subject_type'] ?? '').toString();
     final id = (map['id'] ?? map['subjectId'] ?? map['subject_id'] ?? '').toString();
+    final image = map['imageUrl'] ??
+        map['image_url'] ??
+        map['coverImageUrl'] ??
+        map['cover_image_url'] ??
+        map['coverUrl'] ??
+        map['cover_url'] ??
+        map['thumbnailUrl'] ??
+        map['thumbnail_url'] ??
+        map['avatar'] ??
+        map['avatarUrl'] ??
+        map['avatar_url'];
     return CommunitySubjectPreview(
       ref: CommunitySubjectRef(type: type, id: id),
       title: (map['title'] ?? map['name'] ?? 'Untitled').toString(),
       subtitle: map['subtitle']?.toString(),
-      imageUrl: map['imageUrl']?.toString(),
+      imageUrl: image?.toString(),
     );
   }
 }
