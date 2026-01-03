@@ -10,6 +10,8 @@ import '../../../models/user.dart';
 import '../../../services/user_service.dart';
 import '../../../models/achievements.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/share/share_service.dart';
+import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
@@ -395,11 +397,12 @@ class _UserProfileScreenState extends State<UserProfileScreen>
           label: l10n.userProfileShareTooltip,
           icon: Icons.share_outlined,
           onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(l10n.userProfileSharedToast),
-                duration: Duration(seconds: 2),
-              ),
+            final targetWallet = user?.id.toString().trim();
+            if (targetWallet == null || targetWallet.isEmpty) return;
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.profile(walletAddress: targetWallet, title: user?.name),
+              sourceScreen: 'desktop_user_profile',
             );
           },
           isPrimary: false,

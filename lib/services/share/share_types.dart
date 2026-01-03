@@ -13,6 +13,13 @@ enum ShareEntityType {
   collection,
 }
 
+enum ShareAction {
+  createPost,
+  sendMessage,
+  shareExternal,
+  copyLink,
+}
+
 extension ShareEntityTypeX on ShareEntityType {
   /// Stable string sent to backend/analytics.
   String get analyticsTargetType {
@@ -43,6 +50,28 @@ extension ShareEntityTypeX on ShareEntityType {
       if (type.analyticsTargetType == value) return type;
     }
     return null;
+  }
+
+  /// Canonical URL path segment for share links.
+  String get canonicalPathSegment {
+    switch (this) {
+      case ShareEntityType.post:
+        return 'post';
+      case ShareEntityType.artwork:
+        return 'artwork';
+      case ShareEntityType.profile:
+        return 'profile';
+      case ShareEntityType.event:
+        return 'event';
+      case ShareEntityType.exhibition:
+        return 'exhibition';
+      case ShareEntityType.collection:
+        return 'collection';
+      case ShareEntityType.marker:
+        return 'marker';
+      case ShareEntityType.nft:
+        return 'nft';
+    }
   }
 }
 
@@ -90,4 +119,3 @@ class ShareTarget {
     return ShareTarget(type: ShareEntityType.collection, shareId: collectionId, title: title);
   }
 }
-

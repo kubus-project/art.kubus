@@ -7,7 +7,8 @@ import '../../utils/app_animations.dart';
 import '../../widgets/app_loading.dart';
 import '../../utils/app_color_utils.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -2123,59 +2124,17 @@ class _ARScreenState extends State<ARScreen> with TickerProviderStateMixin {
 
   // Social interaction handlers
   Future<void> _handleShare(Map<String, dynamic> artwork) async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    final scheme = Theme.of(context).colorScheme;
+    final artworkId = (artwork['artworkId'] ?? artwork['id'])?.toString().trim();
+    if (artworkId == null || artworkId.isEmpty) return;
 
-    try {
-      final shareText = l10n.arShareText(
-        artwork['title']?.toString() ?? l10n.commonUnknown,
-        artwork['artist']?.toString() ?? l10n.commonUnknown,
-      );
-
-      // Use share_plus to share
-      await SharePlus.instance.share(ShareParams(text: shareText));
-
-      // Track share in community interactions
-      final post = CommunityPost(
-        id: artwork['id'],
-        authorId: artwork['artworkId'] ?? artwork['id'],
-        authorName: artwork['artist'],
-        content: artwork['title'],
-        timestamp: DateTime.parse(artwork['timestamp']),
-      );
-
-      await CommunityService.sharePost(post);
-
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: scheme.onPrimary),
-                const SizedBox(width: 8),
-                Text(l10n.arShareSuccessToast),
-              ],
-            ),
-            backgroundColor: scheme.primary,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('ARScreen: Share error: $e');
-      }
-      if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(
-            content: Text(l10n.arShareFailedToast),
-            backgroundColor: scheme.error,
-          ),
-        );
-      }
-    }
+    await ShareService().showShareSheet(
+      context,
+      target: ShareTarget.artwork(
+        artworkId: artworkId,
+        title: artwork['title']?.toString(),
+      ),
+      sourceScreen: 'ar_screen',
+    );
   }
 
   Future<void> _handleLike(Map<String, dynamic> artwork) async {

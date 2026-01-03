@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
+import '../../../services/share/share_service.dart';
+import '../../../services/share/share_types.dart';
 import '../../../models/institution.dart';
 import '../../../providers/institution_provider.dart';
 import '../../../utils/kubus_color_roles.dart';
@@ -680,11 +681,11 @@ class _EventManagerState extends State<EventManager>
   }
 
   void _shareEvent(Event event) {
-    final shareText =
-        '${event.title}\n${event.location}\n${_formatDate(event.startDate)}';
-    Clipboard.setData(ClipboardData(text: shareText));
-    ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Copied "${event.title}" to clipboard')));
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.event(eventId: event.id, title: event.title),
+      sourceScreen: 'institution_event_manager',
+    );
   }
 
   void _deleteEvent(Event event) {

@@ -14,6 +14,8 @@ import '../../../providers/task_provider.dart';
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/stats_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/share/share_service.dart';
+import '../../../services/share/share_types.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
 import '../../web3/achievements/achievements_page.dart';
@@ -1925,11 +1927,16 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _shareProfile() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile link copied to clipboard'),
-        duration: Duration(seconds: 2),
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return;
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.profile(
+        walletAddress: wallet,
+        title: profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username,
       ),
+      sourceScreen: 'desktop_profile',
     );
   }
 

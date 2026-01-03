@@ -48,6 +48,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonActionFailedToast => 'Something went wrong. Please try again.';
 
   @override
+  String get commonNetworkErrorToast => 'Network error. Please try again.';
+
+  @override
   String get commonTitle => 'Title';
 
   @override
@@ -5296,6 +5299,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailShareViaEllipsis => 'Share via…';
 
   @override
+  String get shareOptionCreatePost => 'Create community post';
+
+  @override
+  String get shareOptionSendMessage => 'Send in message';
+
+  @override
+  String get shareOptionShareExternal => 'Share outside app';
+
+  @override
+  String get shareLinkCopiedToast => 'Link copied to clipboard';
+
+  @override
+  String get shareMessageTitle => 'Send in message';
+
+  @override
+  String get shareMessageSearchHint => 'Search profiles…';
+
+  @override
+  String get shareMessageNoteHint => 'Add a message (optional)';
+
+  @override
+  String get shareDmDefaultMessage => 'Check this out on art.kubus';
+
+  @override
+  String shareMessageSentToast(Object recipient) {
+    return 'Sent to $recipient';
+  }
+
+  @override
+  String get shareMessageFailedToast => 'Failed to send message.';
+
+  @override
   String get postDetailNoProfilesFoundTitle => 'No profiles found';
 
   @override
@@ -6382,8 +6417,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '# years',
-      one: '# year',
+      other: '$count years',
+      one: '$count year',
     );
     return '$_temp0';
   }

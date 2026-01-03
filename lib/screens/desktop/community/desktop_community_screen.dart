@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../../config/config.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../providers/themeprovider.dart';
@@ -22,6 +21,8 @@ import '../../../models/conversation.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
 import '../../../services/user_service.dart';
+import '../../../services/share/share_service.dart';
+import '../../../services/share/share_types.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/inline_loading.dart';
@@ -116,6 +117,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   bool _showMessagesPanel = false;
   bool _isComposerExpanded = false;
   bool _isPosting = false;
+  int _lastHandledComposerOpenNonce = 0;
   final TextEditingController _composeController = TextEditingController();
   final List<_ComposerImagePayload> _selectedImages = [];
   String? _selectedLocation;
@@ -652,6 +654,8 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
 
   @override
   Widget build(BuildContext context) {
+    final hub = context.watch<CommunityHubProvider>();
+    _maybeHandleComposerOpenRequest(hub);
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
     final screenWidth = MediaQuery.of(context).size.width;
@@ -3289,65 +3293,31 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
   }
 
   Future<void> _showShareDialog(CommunityPost post) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final shareUrl = _buildPostShareLink(post);
-
-    await showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Share post'),
-          content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: Icon(Icons.link, color: themeProvider.accentColor),
-                  title: const Text('Copy link'),
-                  onTap: () async {
-                    final navigator = Navigator.of(dialogContext);
-                    navigator.pop();
-                    await Clipboard.setData(ClipboardData(text: shareUrl));
-                    if (!mounted) return;
-                    messenger.showSnackBar(
-                      const SnackBar(content: Text('Link copied to clipboard')),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: Icon(Icons.share_outlined,
-                      color: themeProvider.accentColor),
-                  title: const Text('Share via...'),
-                  onTap: () async {
-                    Navigator.of(dialogContext).pop();
-                    try {
-                      await SharePlus.instance.share(
-                        ShareParams(
-                          text: '${post.content}\n\n$shareUrl',
-                        ),
-                      );
-                    } catch (e) {
-                      if (!mounted) return;
-                      messenger.showSnackBar(
-                        SnackBar(content: Text('Unable to share post: $e')),
-                      );
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(AppLocalizations.of(dialogContext)!.commonClose),
-            ),
-          ],
-        );
+    await ShareService().showShareSheet(
+      context,
+      target: ShareTarget.post(postId: post.id, title: post.content),
+      sourceScreen: 'desktop_community_feed',
+      onCreatePostRequested: () async {
+        if (!mounted) return;
+        await _showRepostOptions(post);
       },
     );
+  }
+
+  void _maybeHandleComposerOpenRequest(CommunityHubProvider hub) {
+    final nonce = hub.composerOpenNonce;
+    if (nonce == 0) return;
+    if (nonce == _lastHandledComposerOpenNonce) return;
+    _lastHandledComposerOpenNonce = nonce;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_isComposerExpanded) return;
+      setState(() {
+        _isComposerExpanded = true;
+        _selectedCategory = hub.draft.category.isNotEmpty ? hub.draft.category : _selectedCategory;
+      });
+    });
   }
 
   Future<void> _showRepostOptions(CommunityPost post) async {
@@ -3543,9 +3513,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       ),
     );
   }
-
-  String _buildPostShareLink(CommunityPost post) =>
-      'https://app.kubus.site/post/${post.id}';
 
   void _openLocationOnMap(CommunityLocation location) {
     final lat = location.lat;
@@ -5711,6 +5678,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           draft.targetGroup!.id,
           content: _composeController.text.trim(),
           category: draft.category,
+          artworkId: draft.artwork?.id,
+          subjectType: draft.subjectType,
+          subjectId: draft.subjectId,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,
@@ -5722,6 +5692,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         await api.createCommunityPost(
           content: _composeController.text.trim(),
           category: draft.category,
+          artworkId: draft.artwork?.id,
+          subjectType: draft.subjectType,
+          subjectId: draft.subjectId,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,
@@ -7782,6 +7755,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
           postType: postType,
           category: draft.category,
+          artworkId: draft.artwork?.id,
+          subjectType: draft.subjectType,
+          subjectId: draft.subjectId,
           tags: draft.tags,
           mentions: draft.mentions,
           location: location,

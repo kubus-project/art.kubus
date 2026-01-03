@@ -14,6 +14,7 @@ import '../providers/wallet_provider.dart';
 import '../providers/web3provider.dart';
 import '../providers/cache_provider.dart';
 import '../providers/locale_provider.dart';
+import '../providers/deep_link_provider.dart';
 import '../services/backend_api_service.dart';
 import '../services/app_bootstrap_service.dart';
 import '../services/onboarding_state_service.dart';
@@ -23,6 +24,8 @@ import '../screens/desktop/desktop_shell.dart';
 import '../main_app.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../widgets/app_loading.dart';
+import '../utils/share_deep_link_navigation.dart';
+import 'app_navigator.dart';
 
 class AppInitializer extends StatefulWidget {
   const AppInitializer({super.key});
@@ -155,6 +158,30 @@ class _AppInitializerState extends State<AppInitializer> {
       context: context,
       walletAddress: walletAddress,
     );
+
+    // If a share/deep link landed the user on this initializer, open the target
+    // once the main shell is ready. Deep links should not be blocked by
+    // onboarding/sign-in gates (users can still browse public content).
+    final pendingDeepLink = (() {
+      try {
+        return Provider.of<DeepLinkProvider>(context, listen: false).consumePending();
+      } catch (_) {
+        return null;
+      }
+    })();
+    if (pendingDeepLink != null) {
+      await warmupFuture;
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainApp()),
+      );
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final linkContext = appNavigatorKey.currentContext;
+        if (linkContext == null) return;
+        await ShareDeepLinkNavigation.open(linkContext, pendingDeepLink);
+      });
+      return;
+    }
     
     if (shouldSkipOnboarding) {
       // Returning user - skip onboarding and go directly to main app

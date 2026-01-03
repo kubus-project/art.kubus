@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 import '../../models/event.dart';
 import '../../providers/events_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../utils/map_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
@@ -78,6 +80,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               },
               icon: const Icon(Icons.map_outlined),
             ),
+          IconButton(
+            tooltip: l10n.commonShare,
+            onPressed: () {
+              ShareService().showShareSheet(
+                context,
+                target: ShareTarget.event(eventId: widget.eventId, title: event.title),
+                sourceScreen: 'event_detail',
+              );
+            },
+            icon: const Icon(Icons.share_outlined),
+          ),
           IconButton(
             tooltip: 'Invites',
             onPressed: () {

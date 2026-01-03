@@ -13,6 +13,7 @@
   "commonSave": "Shrani",
   "commonSavedToast": "Shranjeno",
   "commonActionFailedToast": "Nekaj je šlo narobe. Poskusi znova.",
+  "commonNetworkErrorToast": "Napaka omrežja. Poskusi znova.",
   "commonTitle": "Naslov",
   "commonDescription": "Opis",
   "commonPrice": "Cena",
@@ -42,6 +43,24 @@
   "commonSearch": "Išči",
   "commonNotifications": "Obvestila",
   "commonShare": "Deli",
+  "shareOptionCreatePost": "Ustvari objavo v skupnosti",
+  "shareOptionSendMessage": "Pošlji v sporočilu",
+  "shareOptionShareExternal": "Deli izven aplikacije",
+  "shareLinkCopiedToast": "Povezava kopirana v odložišče",
+  "shareMessageTitle": "Pošlji v sporočilu",
+  "shareMessageSearchHint": "Išči profile…",
+  "shareMessageNoteHint": "Dodaj sporočilo (neobvezno)",
+  "shareDmDefaultMessage": "Poglej si to na art.kubus",
+  "shareMessageSentToast": "Poslano: {recipient}",
+  "@shareMessageSentToast": {
+    "description": "Toast shown after a share DM is sent.",
+    "placeholders": {
+      "recipient": {
+        "type": "String"
+      }
+    }
+  },
+  "shareMessageFailedToast": "Pošiljanje sporočila ni uspelo.",
   "commonFeed": "Objave",
   "commonGroup": "Skupina",
   "commonImage": "Slika",
