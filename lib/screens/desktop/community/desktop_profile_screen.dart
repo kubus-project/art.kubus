@@ -303,26 +303,18 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 tooltip: 'Back',
               ),
-            if (Navigator.of(context).canPop()) const SizedBox(width: 8),
+            if (Navigator.of(context).canPop()) const SizedBox(width: DetailSpacing.sm),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Profile',
-                  style: GoogleFonts.inter(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                    letterSpacing: -0.5,
-                  ),
+                  style: DetailTypography.screenTitle(context),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: DetailSpacing.xs),
                 Text(
                   'Manage your identity and content',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                  style: DetailTypography.caption(context),
                 ),
               ],
             ),
@@ -336,7 +328,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               onPressed: _shareProfile,
               isPrimary: false,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DetailSpacing.md),
             DesktopActionButton(
               label: 'Invites',
               icon: Icons.inbox_outlined,
@@ -348,7 +340,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               },
               isPrimary: false,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DetailSpacing.md),
             DesktopActionButton(
               label: 'Settings',
               icon: Icons.settings_outlined,
@@ -388,7 +380,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             clipBehavior: Clip.none,
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
                 child: Container(
                   height: hasCoverImage ? 140 : 80,
                   width: double.infinity,
@@ -647,7 +639,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -666,11 +658,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           )
         else
           SizedBox(
-            height: 280,
+            height: 300,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _artistArtworks.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: DetailSpacing.lg),
               itemBuilder: (context, index) => _buildArtworkShowcaseCard(_artistArtworks[index]),
             ),
           ),
@@ -694,7 +686,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -713,11 +705,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           )
         else
           SizedBox(
-            height: 220,
+            height: 240,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _artistCollections.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: DetailSpacing.lg),
               itemBuilder: (context, index) => _buildCollectionShowcaseCard(_artistCollections[index]),
             ),
           ),
@@ -734,7 +726,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           subtitle: 'Your upcoming and past events',
           icon: Icons.event,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -753,11 +745,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           )
         else
           SizedBox(
-            height: 220,
+            height: 240,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _artistEvents.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: DetailSpacing.lg),
               itemBuilder: (context, index) => _buildEventShowcaseCard(_artistEvents[index]),
             ),
           ),
@@ -774,7 +766,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           subtitle: 'Your featured exhibitions and events',
           icon: Icons.museum,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -793,11 +785,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           )
         else
           SizedBox(
-            height: 260,
+            height: 280,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _artistEvents.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: DetailSpacing.lg),
               itemBuilder: (context, index) => _buildEventShowcaseCard(_artistEvents[index], isInstitution: true),
             ),
           ),
@@ -821,7 +813,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (_artistDataLoading && !_artistDataLoaded)
           DesktopCard(
             child: Container(
@@ -840,11 +832,11 @@ class _ProfileScreenState extends State<ProfileScreen>
           )
         else
           SizedBox(
-            height: 220,
+            height: 240,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: _artistCollections.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 16),
+              separatorBuilder: (_, __) => const SizedBox(width: DetailSpacing.lg),
               itemBuilder: (context, index) => _buildCollectionShowcaseCard(_artistCollections[index]),
             ),
           ),
@@ -892,7 +884,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     )
                   : null,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DetailSpacing.xl),
             if (viewedArtworks.isEmpty)
               DesktopCard(
                 child: EmptyStateCard(
@@ -903,11 +895,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               )
             else
               SizedBox(
-                height: 240,
+                height: 260,
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: viewedArtworks.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  separatorBuilder: (_, __) => const SizedBox(width: DetailSpacing.lg),
                   itemBuilder: (context, index) {
                     final artwork = viewedArtworks[index];
                     return _buildShowcaseCard(
@@ -1016,7 +1008,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               subtitle: 'Your activity and engagement metrics',
               icon: Icons.analytics_outlined,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DetailSpacing.xl),
             DesktopGrid(
               minCrossAxisCount: 2,
               maxCrossAxisCount: 4,
@@ -1059,14 +1051,14 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DetailSpacing.md),
             decoration: BoxDecoration(
               color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Icon(icon, color: themeProvider.accentColor, size: 24),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: DetailSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1074,17 +1066,15 @@ class _ProfileScreenState extends State<ProfileScreen>
               children: [
                 Text(
                   value,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.cardTitle(context).copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   label,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.caption(context).copyWith(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -1112,7 +1102,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       child: MouseRegion(
         cursor: artworkId != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
         child: SizedBox(
-          width: 220,
+          width: 240,
           child: DesktopCard(
             padding: EdgeInsets.zero,
             enableHover: true,
@@ -1120,41 +1110,38 @@ class _ProfileScreenState extends State<ProfileScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
                   child: imageUrl != null
                       ? Image.network(
                           _normalizeMediaUrl(imageUrl) ?? '',
-                          height: 160,
+                          height: 180,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholderImage(160, Icons.image_outlined),
+                          errorBuilder: (_, __, ___) => _buildPlaceholderImage(180, Icons.image_outlined),
                         )
-                      : _buildPlaceholderImage(160, Icons.image_outlined),
+                      : _buildPlaceholderImage(180, Icons.image_outlined),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(DetailSpacing.lg),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         title,
-                        style: GoogleFonts.inter(
+                        style: DetailTypography.cardTitle(context).copyWith(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: DetailSpacing.xs),
                       Text(
                         category,
-                        style: GoogleFonts.inter(
+                        style: DetailTypography.caption(context).copyWith(
                           fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: DetailSpacing.sm),
                       Row(
                         children: [
                           Icon(
@@ -1162,12 +1149,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                             size: 14,
                             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: DetailSpacing.xs),
                           Text(
                             '$likesCount',
-                            style: GoogleFonts.inter(
+                            style: DetailTypography.caption(context).copyWith(
                               fontSize: 12,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -1200,7 +1186,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
     
     return SizedBox(
-      width: 200,
+      width: 220,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
@@ -1219,45 +1205,42 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
               child: imageUrl != null
                   ? Image.network(
                       _normalizeMediaUrl(imageUrl) ?? '',
-                      height: 120,
+                      height: 140,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(120, Icons.collections_outlined),
+                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(140, Icons.collections_outlined),
                     )
-                  : _buildPlaceholderImage(120, Icons.collections_outlined),
+                  : _buildPlaceholderImage(140, Icons.collections_outlined),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DetailSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.cardTitle(context).copyWith(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: DetailSpacing.xs),
                   Text(
                     '$count artworks',
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.caption(context).copyWith(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                   if (description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
+                    const SizedBox(height: DetailSpacing.xs),
                     Text(
                       description,
-                      style: GoogleFonts.inter(
+                      style: DetailTypography.caption(context).copyWith(
                         fontSize: 11,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
@@ -1289,7 +1272,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     final eventId = (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
     
     return SizedBox(
-      width: isInstitution ? 260 : 220,
+      width: isInstitution ? 280 : 240,
       child: DesktopCard(
         padding: EdgeInsets.zero,
         enableHover: true,
@@ -1307,33 +1290,31 @@ class _ProfileScreenState extends State<ProfileScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
               child: imageUrl != null
                   ? Image.network(
                       _normalizeMediaUrl(imageUrl) ?? '',
-                      height: isInstitution ? 140 : 120,
+                      height: isInstitution ? 160 : 140,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(isInstitution ? 140 : 120, Icons.event),
+                      errorBuilder: (_, __, ___) => _buildPlaceholderImage(isInstitution ? 160 : 140, Icons.event),
                     )
-                  : _buildPlaceholderImage(isInstitution ? 140 : 120, Icons.event),
+                  : _buildPlaceholderImage(isInstitution ? 160 : 140, Icons.event),
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DetailSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.cardTitle(context).copyWith(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: DetailSpacing.sm),
                   Row(
                     children: [
                       Icon(
@@ -1341,17 +1322,16 @@ class _ProfileScreenState extends State<ProfileScreen>
                         size: 12,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: DetailSpacing.xs),
                       Text(
                         dateLabel,
-                        style: GoogleFonts.inter(
+                        style: DetailTypography.caption(context).copyWith(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: DetailSpacing.xs),
                   Row(
                     children: [
                       Icon(
@@ -1359,13 +1339,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                         size: 12,
                         color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: DetailSpacing.xs),
                       Expanded(
                         child: Text(
                           location,
-                          style: GoogleFonts.inter(
+                          style: DetailTypography.caption(context).copyWith(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -1388,7 +1367,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       width: double.infinity,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
       ),
       child: Center(child: Icon(icon, size: 48, color: Theme.of(context).colorScheme.onPrimaryContainer.withValues(alpha: 0.4))),
     );
@@ -1405,7 +1384,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         );
       } : null,
       child: SizedBox(
-        width: 200,
+        width: 220,
         child: DesktopCard(
           padding: EdgeInsets.zero,
           child: Column(
@@ -1413,14 +1392,14 @@ class _ProfileScreenState extends State<ProfileScreen>
           children: [
             if (imageUrl != null)
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
                 child: Image.network(
                   _normalizeMediaUrl(imageUrl) ?? '',
-                  height: 140,
+                  height: 160,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
-                    height: 140,
+                    height: 160,
                     color: Theme.of(context).colorScheme.primaryContainer,
                     child: const Icon(Icons.image_outlined, size: 48),
                   ),
@@ -1428,34 +1407,31 @@ class _ProfileScreenState extends State<ProfileScreen>
               )
             else
               Container(
-                height: 140,
+                height: 160,
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.primaryContainer,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
                 ),
                 child: const Center(child: Icon(Icons.image_outlined, size: 48)),
               ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(DetailSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.cardTitle(context).copyWith(
                       fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: DetailSpacing.xs),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.caption(context).copyWith(
                       fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],

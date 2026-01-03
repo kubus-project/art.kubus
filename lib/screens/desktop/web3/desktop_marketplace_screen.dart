@@ -8,6 +8,7 @@ import '../../../models/artwork.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../widgets/artwork_creator_byline.dart';
+import '../../../widgets/detail/detail_shell_components.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/ar_screen.dart';
 import 'desktop_wallet_screen.dart';
@@ -123,26 +124,22 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildHeader(ThemeProvider themeProvider) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(DetailSpacing.xl),
       child: Row(
         children: [
           Text(
             'Marketplace',
-            style: GoogleFonts.inter(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: DetailTypography.screenTitle(context),
           ),
           const Spacer(),
           SizedBox(
-            width: 360,
+            width: 400,
             child: DesktopSearchBar(
               hintText: 'Search NFTs, collections, artists...',
               onSubmitted: (value) {},
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DetailSpacing.lg),
           Consumer<Web3Provider>(
             builder: (context, web3Provider, _) {
               return ElevatedButton.icon(
@@ -162,9 +159,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                   backgroundColor: themeProvider.accentColor,
                   foregroundColor: Colors.white,
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      EdgeInsets.symmetric(horizontal: DetailSpacing.lg + DetailSpacing.xs, vertical: DetailSpacing.md + 2),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(DetailRadius.md),
                   ),
                 ),
               );
@@ -177,7 +174,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildCategoryTabs(ThemeProvider themeProvider) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -192,14 +189,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         labelColor: themeProvider.accentColor,
         unselectedLabelColor:
             Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        labelStyle: GoogleFonts.inter(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: GoogleFonts.inter(
-          fontSize: 15,
-          fontWeight: FontWeight.normal,
-        ),
+        labelStyle: DetailTypography.label(context),
+        unselectedLabelStyle: DetailTypography.body(context),
         indicatorColor: themeProvider.accentColor,
         indicatorWeight: 3,
         dividerColor: Colors.transparent,
@@ -210,8 +201,8 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildStatsBanner(ThemeProvider themeProvider) {
     return Container(
-      margin: const EdgeInsets.all(24),
-      padding: const EdgeInsets.all(24),
+      margin: EdgeInsets.all(DetailSpacing.xl),
+      padding: EdgeInsets.all(DetailSpacing.xl),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -221,7 +212,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             themeProvider.accentColor.withValues(alpha: 0.8),
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(DetailRadius.xl),
       ),
       child: Consumer<ArtworkProvider>(
         builder: (context, artworkProvider, _) {
@@ -250,17 +241,17 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   Widget _buildStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 24),
-        const SizedBox(height: 8),
+        Icon(icon, color: Colors.white.withValues(alpha: 0.7), size: 26),
+        SizedBox(height: DetailSpacing.sm),
         Text(
           value,
           style: GoogleFonts.inter(
-            fontSize: 24,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
-        const SizedBox(height: 4),
+        SizedBox(height: DetailSpacing.xs),
         Text(
           label,
           style: GoogleFonts.inter(
@@ -282,7 +273,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
   Widget _buildToolbar(ThemeProvider themeProvider) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xl, vertical: DetailSpacing.md),
       child: Row(
         children: [
           // Filter button
@@ -303,26 +294,20 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     .outline
                     .withValues(alpha: 0.3),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg, vertical: DetailSpacing.md),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DetailSpacing.lg),
 
           // Results count
           Consumer<ArtworkProvider>(
             builder: (context, artworkProvider, _) {
               return Text(
                 '${artworkProvider.artworks.length} items',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
+                style: DetailTypography.caption(context),
               );
             },
           ),
@@ -330,10 +315,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
           // Sort dropdown
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            padding: EdgeInsets.symmetric(horizontal: DetailSpacing.md),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
               border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -362,13 +347,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               },
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: DetailSpacing.md),
 
           // View toggle
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(DetailRadius.sm + 2),
             ),
             child: Row(
               children: [
@@ -391,12 +376,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         onTap: () {
           setState(() => _selectedView = view);
         },
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(DetailRadius.sm),
         child: Container(
-          padding: const EdgeInsets.all(10),
+          padding: EdgeInsets.all(DetailSpacing.md),
           decoration: BoxDecoration(
             color: isActive ? themeProvider.accentColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DetailRadius.sm),
           ),
           child: Icon(
             icon,
@@ -424,7 +409,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         ),
       ),
       child: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(DetailSpacing.xl),
         children: [
           // Header
           Row(
@@ -432,11 +417,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             children: [
               Text(
                 'Filters',
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                style: DetailTypography.sectionTitle(context),
               ),
               TextButton(
                 onPressed: () {
@@ -451,7 +432,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: DetailSpacing.xl),
 
           // Status
           _buildFilterSection('Status', [
@@ -460,18 +441,14 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             _buildCheckboxFilter('New', false, themeProvider),
             _buildCheckboxFilter('Has Offers', false, themeProvider),
           ]),
-          const SizedBox(height: 24),
+          SizedBox(height: DetailSpacing.xl),
 
           // Price range
           Text(
             'Price Range (SOL)',
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: DetailTypography.label(context),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: DetailSpacing.md),
           RangeSlider(
             values: _priceRange,
             min: 0,
@@ -487,27 +464,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             children: [
               Text(
                 '${_priceRange.start.toInt()} SOL',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
+                style: DetailTypography.caption(context),
               ),
               Text(
                 '${_priceRange.end.toInt()} SOL',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.6),
-                ),
+                style: DetailTypography.caption(context),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: DetailSpacing.xl),
 
           // Blockchain
           _buildFilterSection('Blockchain', [
@@ -515,7 +480,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
             _buildCheckboxFilter('Ethereum', false, themeProvider),
             _buildCheckboxFilter('Polygon', false, themeProvider),
           ]),
-          const SizedBox(height: 24),
+          SizedBox(height: DetailSpacing.xl),
 
           // AR Features
           _buildFilterSection('Features', [
@@ -534,13 +499,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
       children: [
         Text(
           title,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+          style: DetailTypography.label(context),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: DetailSpacing.md),
         ...children,
       ],
     );
@@ -549,7 +510,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
   Widget _buildCheckboxFilter(
       String label, bool checked, ThemeProvider themeProvider) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: DetailSpacing.sm),
       child: Row(
         children: [
           SizedBox(
@@ -564,13 +525,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: DetailSpacing.md),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: DetailTypography.body(context),
           ),
         ],
       ),
@@ -589,34 +547,26 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
               children: [
                 Icon(
                   Icons.collections,
-                  size: 64,
+                  size: 72,
                   color: Theme.of(context)
                       .colorScheme
                       .onSurface
-                      .withValues(alpha: 0.3),
+                      .withValues(alpha: 0.25),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: DetailSpacing.lg),
                 Text(
                   'No NFTs found',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  style: DetailTypography.cardTitle(context).copyWith(
                     color: Theme.of(context)
                         .colorScheme
                         .onSurface
                         .withValues(alpha: 0.5),
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: DetailSpacing.sm),
                 Text(
                   'Try adjusting your filters',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.4),
-                  ),
+                  style: DetailTypography.caption(context),
                 ),
               ],
             ),
@@ -625,11 +575,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
 
         return GridView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(DetailSpacing.xl),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: isLarge ? 4 : 3,
-            crossAxisSpacing: 20,
-            mainAxisSpacing: 20,
+            crossAxisSpacing: DetailSpacing.lg + DetailSpacing.xs,
+            mainAxisSpacing: DetailSpacing.lg + DetailSpacing.xs,
             childAspectRatio: 0.75,
           ),
           itemCount: artworks.length,
@@ -665,28 +615,28 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                   ],
                 ),
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                    BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
               ),
               child: Stack(
                 children: [
                   const Center(
                     child: Icon(
                       Icons.image,
-                      size: 48,
+                      size: 52,
                       color: Colors.white,
                     ),
                   ),
                   // AR badge
                   if (artwork.arEnabled)
                     Positioned(
-                      top: 12,
-                      right: 12,
+                      top: DetailSpacing.md,
+                      right: DetailSpacing.md,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: DetailSpacing.sm, vertical: DetailSpacing.xs),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4ECDC4),
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(DetailRadius.xs),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
@@ -706,10 +656,10 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                     ),
                   // Favorite button
                   Positioned(
-                    top: 12,
-                    left: 12,
+                    top: DetailSpacing.md,
+                    left: DetailSpacing.md,
                     child: Container(
-                      padding: const EdgeInsets.all(6),
+                      padding: EdgeInsets.all(DetailSpacing.sm),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.3),
                         shape: BoxShape.circle,
@@ -732,21 +682,17 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
           Expanded(
             flex: 2,
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(DetailSpacing.lg),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     artwork.title,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: DetailTypography.cardTitle(context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: DetailSpacing.xs),
                   ArtworkCreatorByline(
                     artwork: artwork,
                     style: GoogleFonts.inter(
@@ -764,21 +710,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                         children: [
                           Text(
                             'Price',
-                            style: GoogleFonts.inter(
+                            style: DetailTypography.caption(context).copyWith(
                               fontSize: 11,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
                             ),
                           ),
                           Text(
                             '${(artwork.id.hashCode % 10 + 1) / 2.0} SOL',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                            style: DetailTypography.cardTitle(context),
                           ),
                         ],
                       ),
@@ -792,15 +730,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 .onSurface
                                 .withValues(alpha: 0.4),
                           ),
-                          const SizedBox(width: 4),
+                          SizedBox(width: DetailSpacing.xs),
                           Text(
                             '${artwork.likesCount}',
-                            style: GoogleFonts.inter(
+                            style: DetailTypography.caption(context).copyWith(
                               fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ],
@@ -823,11 +757,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
         return Dialog(
           backgroundColor: Colors.transparent,
           child: Container(
-            width: 800,
-            constraints: const BoxConstraints(maxHeight: 600),
+            width: 860,
+            constraints: const BoxConstraints(maxHeight: 640),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(DetailRadius.xl),
             ),
             child: Row(
               children: [
@@ -843,23 +777,23 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                           themeProvider.accentColor.withValues(alpha: 0.1),
                         ],
                       ),
-                      borderRadius: const BorderRadius.horizontal(
-                          left: Radius.circular(20)),
+                      borderRadius: BorderRadius.horizontal(
+                          left: Radius.circular(DetailRadius.xl)),
                     ),
                     child: Stack(
                       children: [
                         const Center(
                           child: Icon(
                             Icons.view_in_ar,
-                            size: 100,
+                            size: 110,
                             color: Colors.white,
                           ),
                         ),
                         if (artwork.arEnabled)
                           Positioned(
-                            bottom: 20,
-                            left: 20,
-                            right: 20,
+                            bottom: DetailSpacing.lg + DetailSpacing.xs,
+                            left: DetailSpacing.lg + DetailSpacing.xs,
+                            right: DetailSpacing.lg + DetailSpacing.xs,
                             child: ElevatedButton.icon(
                               onPressed: () {
                                 Navigator.of(context).push(
@@ -874,9 +808,9 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 backgroundColor: Colors.white,
                                 foregroundColor: themeProvider.accentColor,
                                 padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                    EdgeInsets.symmetric(vertical: DetailSpacing.lg),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(DetailRadius.md),
                                 ),
                               ),
                             ),
@@ -889,19 +823,18 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                 // Info side
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.all(32),
+                    padding: EdgeInsets.all(DetailSpacing.xxl),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              artwork.title,
-                              style: GoogleFonts.inter(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+                            Expanded(
+                              child: Text(
+                                artwork.title,
+                                style: DetailTypography.screenTitle(context),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                             IconButton(
@@ -910,41 +843,35 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        SizedBox(height: DetailSpacing.sm),
                         Text(
                           'by ${artwork.artist}',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
+                          style: DetailTypography.body(context).copyWith(
                             color: themeProvider.accentColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
                         if (artwork.description.isNotEmpty)
                           Expanded(
                             child: SingleChildScrollView(
                               child: Text(
                                 artwork.description,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  height: 1.6,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurface
-                                      .withValues(alpha: 0.7),
+                                style: DetailTypography.body(context).copyWith(
+                                  height: 1.7,
                                 ),
                               ),
                             ),
                           ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
 
                         // Price
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: EdgeInsets.all(DetailSpacing.lg + DetailSpacing.xs),
                           decoration: BoxDecoration(
                             color:
                                 Theme.of(context).colorScheme.primaryContainer,
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(DetailRadius.lg),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -954,19 +881,13 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 children: [
                                   Text(
                                     'Current Price',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
+                                    style: DetailTypography.caption(context),
                                   ),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: DetailSpacing.xs),
                                   Text(
                                     '${(artwork.id.hashCode % 10 + 1) / 2.0} SOL',
                                     style: GoogleFonts.inter(
-                                      fontSize: 28,
+                                      fontSize: 30,
                                       fontWeight: FontWeight.bold,
                                       color: Theme.of(context)
                                           .colorScheme
@@ -983,11 +904,11 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                           size: 16,
                                           color: Colors.red
                                               .withValues(alpha: 0.7)),
-                                      const SizedBox(width: 4),
+                                      SizedBox(width: DetailSpacing.xs),
                                       Text('${artwork.likesCount}'),
                                     ],
                                   ),
-                                  const SizedBox(height: 4),
+                                  SizedBox(height: DetailSpacing.xs),
                                   Row(
                                     children: [
                                       Icon(Icons.visibility,
@@ -996,7 +917,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                               .colorScheme
                                               .onSurface
                                               .withValues(alpha: 0.5)),
-                                      const SizedBox(width: 4),
+                                      SizedBox(width: DetailSpacing.xs),
                                       Text('${artwork.viewsCount}'),
                                     ],
                                   ),
@@ -1005,7 +926,7 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
 
                         // Actions
                         Row(
@@ -1024,15 +945,15 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                   backgroundColor: themeProvider.accentColor,
                                   foregroundColor: Colors.white,
                                   padding:
-                                      const EdgeInsets.symmetric(vertical: 16),
+                                      EdgeInsets.symmetric(vertical: DetailSpacing.lg),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(DetailRadius.md),
                                   ),
                                 ),
                                 child: const Text('Buy Now'),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: DetailSpacing.md),
                             OutlinedButton(
                               onPressed: () {
                                 Navigator.of(context).push(
@@ -1043,12 +964,12 @@ class _DesktopMarketplaceScreenState extends State<DesktopMarketplaceScreen>
                                 );
                               },
                               style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 16, horizontal: 20),
+                                padding: EdgeInsets.symmetric(
+                                    vertical: DetailSpacing.lg, horizontal: DetailSpacing.lg + DetailSpacing.xs),
                                 side: BorderSide(
                                     color: themeProvider.accentColor),
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                  borderRadius: BorderRadius.circular(DetailRadius.md),
                                 ),
                               ),
                               child: const Text('Make Offer'),

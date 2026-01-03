@@ -15,6 +15,7 @@ import '../providers/stats_provider.dart';
 import '../models/artwork.dart';
 import '../models/recent_activity.dart';
 import '../models/user_persona.dart';
+import '../models/user_profile.dart';
 import 'web3/dao/governance_hub.dart';
 import 'web3/artist/artist_studio.dart';
 import 'web3/institution/institution_hub.dart';
@@ -493,7 +494,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final frequentScreens =
             navigationProvider.getQuickActionScreens(maxItems: 12);
         final persona = profileProvider.userPersona;
-        final suggestedKeys = _suggestedQuickActionKeys(persona)
+        final suggestedKeys = _suggestedQuickActionKeys(persona, profileProvider.currentUser)
             .where(
                 (key) => NavigationProvider.screenDefinitions.containsKey(key))
             .toList(growable: false);
@@ -625,17 +626,41 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  List<String> _suggestedQuickActionKeys(UserPersona? persona) {
+  List<String> _suggestedQuickActionKeys(UserPersona? persona, UserProfile? currentUser) {
+    // Base suggestions by persona
+    List<String> suggestions;
     switch (persona) {
       case UserPersona.lover:
-        return const ['map', 'community', 'marketplace'];
+        suggestions = const ['map', 'community', 'marketplace'];
+        break;
       case UserPersona.creator:
-        return const ['studio', 'ar', 'map'];
+        suggestions = const ['studio', 'ar', 'map'];
+        break;
       case UserPersona.institution:
-        return const ['institution_hub', 'map', 'community'];
+        suggestions = const ['institution_hub', 'map', 'community'];
+        break;
       case null:
-        return const ['map', 'studio', 'institution_hub'];
+        suggestions = const ['map', 'studio', 'institution_hub'];
+        break;
     }
+
+    // If user has both badges, hide the one not currently active
+    // If only one badge is active, show it; if both active, show the first one they earned
+    final isArtist = currentUser?.isArtist ?? false;
+    final isInstitution = currentUser?.isInstitution ?? false;
+
+    if (isArtist && isInstitution) {
+      // Both badges are active - hide institution_hub, keep studio
+      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+    } else if (isInstitution && !isArtist) {
+      // Only institution badge is active - hide studio
+      suggestions = suggestions.where((key) => key != 'studio').toList();
+    } else if (isArtist && !isInstitution) {
+      // Only artist badge is active - hide institution_hub
+      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+    }
+
+    return suggestions;
   }
 
   Widget _buildActionCard(

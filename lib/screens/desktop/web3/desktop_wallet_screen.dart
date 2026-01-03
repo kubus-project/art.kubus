@@ -12,6 +12,7 @@ import '../../../providers/wallet_provider.dart';
 import '../../../models/wallet.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../widgets/detail/detail_shell_components.dart';
 import '../components/desktop_widgets.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../web3/wallet/token_swap.dart';
@@ -133,7 +134,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             // Balance card
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(32, 0, 32, 24),
+                padding: EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xl),
                 child: _buildBalanceCard(themeProvider, web3Provider),
               ),
             ),
@@ -142,7 +143,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             if (!isLarge)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(32, 0, 32, 24),
+                  padding: EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xl),
                   child: _buildQuickActionsRow(themeProvider),
                 ),
               ),
@@ -173,44 +174,36 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
   Widget _buildConnectWalletView(ThemeProvider themeProvider) {
     return Center(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 480),
-        padding: const EdgeInsets.all(48),
+        constraints: const BoxConstraints(maxWidth: 520),
+        padding: EdgeInsets.all(DetailSpacing.xxl + DetailSpacing.lg),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 120,
-              height: 120,
+              width: 140,
+              height: 140,
               decoration: BoxDecoration(
                 color: themeProvider.accentColor.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.account_balance_wallet_outlined,
-                size: 56,
+                size: 64,
                 color: themeProvider.accentColor,
               ),
             ),
-            const SizedBox(height: 32),
+            SizedBox(height: DetailSpacing.xxl),
             Text(
               'Connect Your Wallet',
-              style: GoogleFonts.inter(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+              style: DetailTypography.screenTitle(context),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: DetailSpacing.md),
             Text(
               'Connect your Solana wallet to access your assets, send & receive tokens, and interact with the marketplace.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                height: 1.6,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+              style: DetailTypography.body(context).copyWith(height: 1.7),
             ),
-            const SizedBox(height: 40),
+            SizedBox(height: DetailSpacing.xxl + DetailSpacing.sm),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -223,13 +216,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeProvider.accentColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xxl, vertical: DetailSpacing.lg),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(DetailRadius.md),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: DetailSpacing.lg),
                 OutlinedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pushNamed('/import-wallet');
@@ -237,16 +230,16 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   icon: const Icon(Icons.download),
                   label: const Text('Import Wallet'),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xxl, vertical: DetailSpacing.lg),
                     side: BorderSide(color: themeProvider.accentColor),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(DetailRadius.md),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: DetailSpacing.xl),
             TextButton.icon(
               onPressed: () {
                 final l10n = AppLocalizations.of(context)!;
@@ -273,7 +266,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
 
   Widget _buildHeader(ThemeProvider themeProvider, Web3Provider web3Provider) {
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(DetailSpacing.xxl),
       child: Row(
         children: [
           Column(
@@ -281,30 +274,23 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             children: [
               Text(
                 'Wallet',
-                style: GoogleFonts.inter(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                style: DetailTypography.screenTitle(context),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: DetailSpacing.xs),
               Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 10,
+                    height: 10,
                     decoration: const BoxDecoration(
                       color: Color(0xFF4ADE80),
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: DetailSpacing.sm),
                   Text(
                     'Connected to ${web3Provider.currentNetwork}',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
+                    style: DetailTypography.caption(context),
                   ),
                 ],
               ),
@@ -313,10 +299,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           const Spacer(),
           // Network selector
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg, vertical: DetailSpacing.md),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
               border: Border.all(
                 color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
               ),
@@ -338,7 +324,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               },
             ),
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: DetailSpacing.md),
           IconButton(
             onPressed: () async {
               // Refresh wallet data
@@ -370,7 +356,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           padding: EdgeInsets.zero,
           showBorder: false,
           child: Container(
-            padding: const EdgeInsets.all(32),
+            padding: EdgeInsets.all(DetailSpacing.xxl),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -380,7 +366,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   themeProvider.accentColor.withValues(alpha: 0.8),
                 ],
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(DetailRadius.xl),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,12 +392,12 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                             SnackBar(content: Text(l10n.walletHomeAddressCopiedToast)),
                           );
                         },
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(DetailRadius.sm),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: EdgeInsets.symmetric(horizontal: DetailSpacing.md, vertical: DetailSpacing.sm),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(DetailRadius.sm),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -423,7 +409,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                                   color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              SizedBox(width: DetailSpacing.sm),
                               const Icon(Icons.copy, size: 14, color: Colors.white),
                             ],
                           ),
@@ -432,25 +418,25 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
                       solBalance.toStringAsFixed(4),
                       style: GoogleFonts.inter(
-                        fontSize: 48,
+                        fontSize: 52,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: DetailSpacing.md),
                     Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
+                      padding: EdgeInsets.only(bottom: DetailSpacing.md),
                       child: Text(
                         'SOL',
                         style: GoogleFonts.inter(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.w500,
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
@@ -458,7 +444,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: DetailSpacing.sm),
                 Text(
                   '≈ \$${(solBalance * 150).toStringAsFixed(2)} USD',
                   style: GoogleFonts.inter(
@@ -466,22 +452,22 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     color: Colors.white.withValues(alpha: 0.7),
                   ),
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: DetailSpacing.xl),
                 // KUB8 balance
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(DetailSpacing.lg),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(DetailRadius.md),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(DetailRadius.md),
                         ),
                         child: Center(
                           child: Text(
@@ -494,22 +480,19 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: DetailSpacing.lg),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'KUB8 Token',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
+                            style: DetailTypography.caption(context).copyWith(
                               color: Colors.white.withValues(alpha: 0.8),
                             ),
                           ),
                           Text(
                             '${kub8Balance.toStringAsFixed(2)} KUB8',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                            style: DetailTypography.cardTitle(context).copyWith(
                               color: Colors.white,
                             ),
                           ),
@@ -554,7 +537,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             () => setState(() => _showSendDialog = true),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: DetailSpacing.md),
         Expanded(
           child: _buildActionButton(
             'Receive',
@@ -563,7 +546,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             () => setState(() => _showReceiveDialog = true),
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: DetailSpacing.md),
         Expanded(
           child: _buildActionButton(
             'Swap',
@@ -572,7 +555,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             () {},
           ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: DetailSpacing.md),
         Expanded(
           child: _buildActionButton(
             'Buy',
@@ -591,22 +574,18 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       child: Column(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Icon(icon, color: color),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: DetailSpacing.md),
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: DetailTypography.label(context),
           ),
         ],
       ),
@@ -615,7 +594,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
 
   Widget _buildTabs(ThemeProvider themeProvider) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
+      padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xxl),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -629,8 +608,8 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         tabAlignment: TabAlignment.start,
         labelColor: themeProvider.accentColor,
         unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        labelStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.inter(fontSize: 15),
+        labelStyle: DetailTypography.label(context),
+        unselectedLabelStyle: DetailTypography.body(context),
         indicatorColor: themeProvider.accentColor,
         indicatorWeight: 3,
         dividerColor: Colors.transparent,
@@ -651,15 +630,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               children: [
                 Icon(
                   Icons.account_balance_wallet_outlined,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  size: 72,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: DetailSpacing.lg),
                 Text(
                   'No assets yet',
-                  style: GoogleFonts.inter(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  style: DetailTypography.cardTitle(context).copyWith(
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
@@ -669,7 +646,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(DetailSpacing.xxl),
           itemCount: tokens.length,
           itemBuilder: (context, index) {
             return _buildTokenRow(tokens[index], themeProvider);
@@ -683,47 +660,39 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     final isPositive = token.changePercentage >= 0;
 
     return DesktopCard(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: DetailSpacing.md),
       onTap: () {},
       child: Row(
         children: [
           Container(
-            width: 48,
-            height: 48,
+            width: 52,
+            height: 52,
             decoration: BoxDecoration(
               color: themeProvider.accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Center(
               child: Text(
                 token.symbol.substring(0, 1).toUpperCase(),
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                style: DetailTypography.cardTitle(context).copyWith(
                   color: themeProvider.accentColor,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DetailSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   token.name,
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                  style: DetailTypography.cardTitle(context),
                 ),
+                SizedBox(height: DetailSpacing.xs),
                 Text(
                   token.symbol.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
+                  style: DetailTypography.caption(context),
                 ),
               ],
             ),
@@ -733,29 +702,23 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             children: [
               Text(
                 token.formattedBalance,
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                style: DetailTypography.cardTitle(context),
               ),
+              SizedBox(height: DetailSpacing.xs),
               Text(
                 token.formattedValue,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                ),
+                style: DetailTypography.caption(context),
               ),
             ],
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DetailSpacing.lg),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding: EdgeInsets.symmetric(horizontal: DetailSpacing.md, vertical: DetailSpacing.sm),
             decoration: BoxDecoration(
               color: isPositive
                   ? const Color(0xFF4ADE80).withValues(alpha: 0.1)
                   : const Color(0xFFEF4444).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(DetailRadius.sm),
             ),
             child: Text(
               token.formattedChange,
@@ -849,7 +812,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         if (transactions.isEmpty) {
           return Center(
             child: Padding(
-              padding: const EdgeInsets.all(24),
+              padding: EdgeInsets.all(DetailSpacing.xl),
               child: EmptyStateCard(
                 icon: Icons.history,
                 title: 'No transactions yet',
@@ -863,7 +826,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         }
 
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: EdgeInsets.symmetric(horizontal: DetailSpacing.xl, vertical: DetailSpacing.lg),
           itemBuilder: (context, index) {
             final tx = transactions[index];
             final color = _transactionColor(tx.type);
@@ -872,36 +835,30 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               child: Row(
                 children: [
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(DetailRadius.md),
                     ),
                     child: Icon(
                       _transactionIcon(tx.type),
                       color: color,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: DetailSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           tx.displayTitle,
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+                          style: DetailTypography.cardTitle(context),
                         ),
-                        const SizedBox(height: 2),
+                        SizedBox(height: DetailSpacing.xs),
                         Text(
                           tx.shortAddress.isNotEmpty ? tx.shortAddress : tx.txHash.substring(0, 10),
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
+                          style: DetailTypography.caption(context),
                         ),
                       ],
                     ),
@@ -911,17 +868,14 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     children: [
                       Text(
                         '${tx.formattedAmount} ${tx.token}',
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w700,
+                        style: DetailTypography.cardTitle(context).copyWith(
                           color: color,
                         ),
                       ),
+                      SizedBox(height: DetailSpacing.xs),
                       Text(
                         tx.timeAgo,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                        ),
+                        style: DetailTypography.caption(context),
                       ),
                     ],
                   ),
@@ -929,7 +883,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               ),
             );
           },
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, __) => SizedBox(height: DetailSpacing.md),
           itemCount: transactions.length,
         );
       },
@@ -950,7 +904,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     if (_nftError != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(DetailSpacing.xl),
           child: EmptyStateCard(
             icon: Icons.error_outline,
             title: 'Could not load NFTs',
@@ -966,7 +920,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     if (_nfts.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(DetailSpacing.xl),
           child: EmptyStateCard(
             icon: Icons.auto_awesome_motion,
             title: 'No collectibles yet',
@@ -980,11 +934,11 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      padding: EdgeInsets.all(DetailSpacing.xl),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+        crossAxisSpacing: DetailSpacing.lg,
+        mainAxisSpacing: DetailSpacing.lg,
         childAspectRatio: 0.85,
       ),
       itemCount: _nfts.length,
@@ -1000,7 +954,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               AspectRatio(
                 aspectRatio: 1,
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(DetailRadius.md),
                   child: imageUrl != null && imageUrl.isNotEmpty
                       ? Image.network(
                           imageUrl,
@@ -1015,26 +969,20 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                         ),
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: DetailSpacing.md),
               Text(
                 title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w700,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                style: DetailTypography.cardTitle(context),
               ),
               if (creator.isNotEmpty) ...[
-                const SizedBox(height: 4),
+                SizedBox(height: DetailSpacing.xs),
                 Text(
                   'by $creator',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                  style: DetailTypography.caption(context),
                 ),
               ],
             ],
@@ -1049,7 +997,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
       builder: (context, walletProvider, _) {
         final rewardBalance = walletProvider.achievementTokenTotal.toStringAsFixed(2);
         return ListView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(DetailSpacing.xl),
           children: [
             DesktopCard(
               child: Row(
@@ -1059,31 +1007,26 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     height: 56,
                     decoration: BoxDecoration(
                       color: themeProvider.accentColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(DetailRadius.md),
                     ),
                     child: Icon(
                       Icons.savings,
                       color: themeProvider.accentColor,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: DetailSpacing.lg),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'KUB8 Rewards',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
+                          style: DetailTypography.cardTitle(context),
                         ),
+                        SizedBox(height: DetailSpacing.xs),
                         Text(
                           '$rewardBalance KUB8 available from achievements',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
+                          style: DetailTypography.caption(context),
                         ),
                       ],
                     ),
@@ -1099,36 +1042,29 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                     },
                     child: Text(
                       'Swap',
-                      style: GoogleFonts.inter(
+                      style: DetailTypography.label(context).copyWith(
                         color: themeProvider.accentColor,
-                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: DetailSpacing.lg),
             DesktopCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Stake SOL for gas savings',
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: DetailTypography.cardTitle(context),
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(height: DetailSpacing.sm),
                   Text(
                     'Lock SOL to cover future transaction fees and keep your gallery publishing smooth.',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
+                    style: DetailTypography.body(context),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: DetailSpacing.lg),
                   Row(
                     children: [
                       ElevatedButton.icon(
@@ -1136,7 +1072,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                         icon: const Icon(Icons.safety_check),
                         label: const Text('Stake now'),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: DetailSpacing.md),
                       OutlinedButton(
                         onPressed: walletProvider.refreshData,
                         child: const Text('Refresh rates'),
@@ -1156,17 +1092,13 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(DetailSpacing.xl),
         children: [
           Text(
             'Quick Actions',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: DetailTypography.sectionTitle(context),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
 
           _buildQuickActionTile(
             'Send',
@@ -1197,48 +1129,39 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
             () {},
           ),
 
-          const SizedBox(height: 32),
+          SizedBox(height: DetailSpacing.xxl),
 
           Text(
             'Recent Activity',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            style: DetailTypography.sectionTitle(context),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: DetailSpacing.lg),
 
           // Show empty state for transaction history (will be populated from backend)
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(DetailSpacing.xl),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Column(
               children: [
                 Icon(
                   Icons.history,
-                  size: 32,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  size: 36,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: DetailSpacing.md),
                 Text(
                   'No recent transactions',
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                  style: DetailTypography.label(context).copyWith(
                     color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: DetailSpacing.xs),
                 Text(
                   'Your transaction history will appear here',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
-                  ),
+                  style: DetailTypography.caption(context),
                 ),
               ],
             ),
@@ -1256,38 +1179,32 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
     VoidCallback onTap,
   ) {
     return DesktopCard(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: DetailSpacing.md),
       onTap: onTap,
       child: Row(
         children: [
           Container(
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: DetailSpacing.lg),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                  style: DetailTypography.cardTitle(context),
                 ),
+                SizedBox(height: DetailSpacing.xs),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
+                  style: DetailTypography.caption(context),
                 ),
               ],
             ),
@@ -1312,22 +1229,22 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('Recipient Address', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          Text('Recipient Address', style: DetailTypography.label(context)),
+          SizedBox(height: DetailSpacing.sm),
           TextField(
             decoration: InputDecoration(
               hintText: 'Enter Solana address',
               filled: true,
               fillColor: Theme.of(context).colorScheme.primaryContainer,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DetailRadius.md),
                 borderSide: BorderSide.none,
               ),
             ),
           ),
-          const SizedBox(height: 20),
-          Text('Amount', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+          Text('Amount', style: DetailTypography.label(context)),
+          SizedBox(height: DetailSpacing.sm),
           TextField(
             decoration: InputDecoration(
               hintText: '0.00',
@@ -1335,7 +1252,7 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
               filled: true,
               fillColor: Theme.of(context).colorScheme.primaryContainer,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DetailRadius.md),
                 borderSide: BorderSide.none,
               ),
             ),
@@ -1364,22 +1281,22 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 180,
-            height: 180,
+            width: 200,
+            height: 200,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(DetailRadius.lg),
             ),
             child: const Center(
-              child: Icon(Icons.qr_code_2, size: 120),
+              child: Icon(Icons.qr_code_2, size: 140),
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: DetailSpacing.xl),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(DetailSpacing.lg),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Row(
               children: [
@@ -1430,15 +1347,15 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
           child: GestureDetector(
             onTap: () {},
             child: Container(
-              width: 440,
-              padding: const EdgeInsets.all(32),
+              width: 480,
+              padding: EdgeInsets.all(DetailSpacing.xxl),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(DetailRadius.xl),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 20,
+                    blurRadius: 24,
                   ),
                 ],
               ),
@@ -1448,22 +1365,18 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                   Row(
                     children: [
                       Container(
-                        width: 44,
-                        height: 44,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: iconColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(DetailRadius.md),
                         ),
                         child: Icon(icon, color: iconColor),
                       ),
-                      const SizedBox(width: 16),
+                      SizedBox(width: DetailSpacing.lg),
                       Text(
                         title,
-                        style: GoogleFonts.inter(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                        style: DetailTypography.sectionTitle(context),
                       ),
                       const Spacer(),
                       IconButton(
@@ -1472,10 +1385,10 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: DetailSpacing.xl),
                   content,
                   if (onConfirm != null) ...[
-                    const SizedBox(height: 24),
+                    SizedBox(height: DetailSpacing.xl),
                     Builder(
                       builder: (context) {
                         final l10n = AppLocalizations.of(context)!;
@@ -1485,24 +1398,24 @@ class _DesktopWalletScreenState extends State<DesktopWalletScreen>
                               child: OutlinedButton(
                                 onPressed: onCancel,
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: EdgeInsets.symmetric(vertical: DetailSpacing.md + 2),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(DetailRadius.md),
                                   ),
                                 ),
                                 child: Text(l10n.commonCancel),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: DetailSpacing.md),
                             Expanded(
                               child: ElevatedButton(
                                 onPressed: onConfirm,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: themeProvider.accentColor,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: EdgeInsets.symmetric(vertical: DetailSpacing.md + 2),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(DetailRadius.md),
                                   ),
                                 ),
                                 child: Text(l10n.commonSend),
