@@ -38,7 +38,9 @@ import 'providers/stats_provider.dart';
 import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
+import 'providers/auth_session_provider.dart';
 import 'core/app_initializer.dart';
+import 'core/app_navigator.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -50,6 +52,7 @@ import 'services/push_notification_service.dart';
 import 'services/notification_handler.dart';
 import 'services/solana_wallet_service.dart';
 import 'services/socket_service.dart';
+import 'services/backend_api_service.dart';
 
 import 'screens/collab/invites_inbox_screen.dart';
 import 'screens/events/event_detail_screen.dart';
@@ -181,6 +184,7 @@ class _AppLauncherState extends State<AppLauncher> {
           if (!_initialized) {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
+              navigatorKey: appNavigatorKey,
               locale: localeProvider.locale,
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -296,6 +300,19 @@ class _AppLauncherState extends State<AppLauncher> {
                   solanaWalletService: context.read<SolanaWalletService>(),
                 ),
               ),
+              ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider, AuthSessionProvider>(
+                create: (context) => AuthSessionProvider(),
+                update: (context, profileProvider, walletProvider, authSessionProvider) {
+                  final provider = authSessionProvider ?? AuthSessionProvider();
+                  provider.bindOnSessionRestored(() async {
+                    final walletAddress = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
+                    if (walletAddress == null || walletAddress.isEmpty) return;
+                    await profileProvider.loadProfile(walletAddress);
+                  });
+                  BackendApiService().bindAuthCoordinator(provider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProxyProvider2<ProfileProvider, WalletProvider, MarkerManagementProvider>(
                 create: (context) => MarkerManagementProvider(),
                 update: (context, profileProvider, walletProvider, markerManagementProvider) {
@@ -330,8 +347,6 @@ class ArtKubus extends StatefulWidget {
 }
 
 class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
   @override
   void initState() {
     super.initState();
@@ -342,7 +357,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
   void _initNotificationRouting() {
     final handler = NotificationHandler();
     handler.onNavigate = (route, params) {
-      final navigator = _navigatorKey.currentState;
+      final navigator = appNavigatorKey.currentState;
       if (navigator == null) return;
 
       if (route == '/collab_invite') {
@@ -414,7 +429,7 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
         return MaterialApp(
           title: 'art.kubus',
           debugShowCheckedModeBanner: false,
-          navigatorKey: _navigatorKey,
+          navigatorKey: appNavigatorKey,
           locale: localeProvider.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,

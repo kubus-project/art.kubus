@@ -17,9 +17,11 @@ import '../community/community_interactions.dart';
 import '../utils/wallet_utils.dart';
 import '../utils/search_suggestions.dart';
 import '../utils/media_url_resolver.dart';
+import 'share/share_types.dart';
 import '../config/config.dart';
 import 'storage_config.dart';
 import 'user_action_logger.dart';
+import 'auth_session_coordinator.dart';
 
 /// Backend API Service
 /// 
@@ -131,6 +133,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   factory BackendApiService() => _instance;
   BackendApiService._internal();
 
+  http.Client _client = http.Client();
+  AuthSessionCoordinator? _authCoordinator;
+
   @override
   final String baseUrl = AppConfig.baseApiUrl;
   String? _authToken;
@@ -147,6 +152,20 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   bool? get institutionsApiAvailable => _institutionsApiAvailable;
   bool? get eventsApiAvailable => _eventsApiAvailable;
 
+  void bindAuthCoordinator(AuthSessionCoordinator coordinator) {
+    _authCoordinator = coordinator;
+  }
+
+  @visibleForTesting
+  void setHttpClient(http.Client client) {
+    _client = client;
+  }
+
+  @visibleForTesting
+  void setAuthTokenForTesting(String? token) {
+    _authToken = token;
+  }
+
   void _debugLogThrottled(
     String key,
     String message, {
@@ -157,7 +176,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     final lastAt = _debugLogThrottle[key];
     if (lastAt != null && now.difference(lastAt) < throttle) return;
     _debugLogThrottle[key] = now;
-    debugPrint(message);
+    AppConfig.debugPrint(message);
   }
 
   bool _isExhibitionsPath(Uri uri) {
@@ -267,7 +286,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           await loadAuthToken();
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('BackendApiService._doAuthInit: registerWallet failed: $e');
+            AppConfig.debugPrint('BackendApiService._doAuthInit: registerWallet failed: $e');
           }
         }
       }
@@ -298,13 +317,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           await loadAuthToken();
         } catch (e) {
           if (kDebugMode) {
-            debugPrint('BackendApiService: registerWallet failed for stored wallet: $e');
+            AppConfig.debugPrint('BackendApiService: registerWallet failed for stored wallet: $e');
           }
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
+        AppConfig.debugPrint('BackendApiService: _ensureAuthWithStoredWallet failed: $e');
       }
     }
   }
@@ -317,7 +336,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       try {
         await ensureAuthLoaded(walletAddress: walletAddress);
       } catch (e) {
-        debugPrint('BackendApiService: ensureAuthLoaded for $walletAddress failed: $e');
+        AppConfig.debugPrint('BackendApiService: ensureAuthLoaded for $walletAddress failed: $e');
       }
     }
   }
@@ -325,22 +344,22 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Set authentication token for API requests
   Future<void> setAuthToken(String token) async {
     _authToken = token;
-    debugPrint('BackendApiService: Auth token set (in-memory)');
+    AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
     // Persist token to secure storage and shared preferences (web fallback)
     try {
       await _secureStorage
           .write(key: 'jwt_token', value: token)
           .timeout(const Duration(milliseconds: 800));
-      debugPrint('BackendApiService: Auth token written to secure storage');
+      AppConfig.debugPrint('BackendApiService: Auth token written to secure storage');
     } catch (e) {
-      debugPrint('BackendApiService: failed to write secure storage token: $e');
+      AppConfig.debugPrint('BackendApiService: failed to write secure storage token: $e');
     }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
-      debugPrint('BackendApiService: Auth token written to SharedPreferences fallback');
+      AppConfig.debugPrint('BackendApiService: Auth token written to SharedPreferences fallback');
     } catch (e) {
-      debugPrint('BackendApiService: failed to write prefs token: $e');
+      AppConfig.debugPrint('BackendApiService: failed to write prefs token: $e');
     }
   }
 
@@ -353,7 +372,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
             .read(key: 'jwt_token')
             .timeout(const Duration(milliseconds: 800));
       } catch (e) {
-        debugPrint('BackendApiService: secure storage read failed: $e');
+        AppConfig.debugPrint('BackendApiService: secure storage read failed: $e');
       }
 
       // Fallback to SharedPreferences (useful for web builds where secure storage may not persist)
@@ -362,14 +381,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           final prefs = await SharedPreferences.getInstance();
           // Try a few known keys for backward compatibility
           token = prefs.getString('jwt_token') ?? prefs.getString('token') ?? prefs.getString('auth_token') ?? prefs.getString('authToken');
-          if (token != null && token.isNotEmpty) debugPrint('BackendApiService: Auth token loaded from SharedPreferences fallback');
+          if (token != null && token.isNotEmpty) {
+            AppConfig.debugPrint('BackendApiService: Auth token loaded from SharedPreferences fallback');
+          }
         } catch (e) {
-          debugPrint('BackendApiService: SharedPreferences fallback failed: $e');
+          AppConfig.debugPrint('BackendApiService: SharedPreferences fallback failed: $e');
         }
       }
       if (token != null && token.isNotEmpty) {
         _authToken = token;
-        debugPrint('BackendApiService: Auth token loaded (in-memory)');
+        AppConfig.debugPrint('BackendApiService: Auth token loaded (in-memory)');
         // Attempt to decode exp field for debug information
         try {
           final parts = token.split('.');
@@ -381,37 +402,38 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
               final exp = (map['exp'] as num).toInt();
               final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
               final secsLeft = exp - now;
-              debugPrint('BackendApiService: token expiry in $secsLeft seconds');
+              AppConfig.debugPrint('BackendApiService: token expiry in $secsLeft seconds');
             }
           }
         } catch (e) {
-          debugPrint('BackendApiService: failed to decode token expiry: $e');
+          AppConfig.debugPrint('BackendApiService: failed to decode token expiry: $e');
         }
       } else {
-        debugPrint('BackendApiService: No stored auth token found');
+        AppConfig.debugPrint('BackendApiService: No stored auth token found');
       }
     } catch (e) {
-      debugPrint('BackendApiService: Error loading auth token: $e');
+      AppConfig.debugPrint('BackendApiService: Error loading auth token: $e');
     }
   }
 
   /// Clear authentication
   Future<void> clearAuth() async {
     _authToken = null;
+    _authCoordinator?.reset();
     try {
       await _secureStorage
           .delete(key: 'jwt_token')
           .timeout(const Duration(milliseconds: 800));
-      debugPrint('BackendApiService: Auth cleared from secure storage');
+      AppConfig.debugPrint('BackendApiService: Auth cleared from secure storage');
     } catch (e) {
-      debugPrint('BackendApiService: Error clearing auth token: $e');
+      AppConfig.debugPrint('BackendApiService: Error clearing auth token: $e');
     }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('jwt_token');
-      debugPrint('BackendApiService: Auth cleared from SharedPreferences');
+      AppConfig.debugPrint('BackendApiService: Auth cleared from SharedPreferences');
     } catch (e) {
-      debugPrint('BackendApiService: Error clearing prefs auth token: $e');
+      AppConfig.debugPrint('BackendApiService: Error clearing prefs auth token: $e');
     }
   }
 
@@ -427,6 +449,287 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     }
 
     return headers;
+  }
+
+  Map<String, String> _applyAuthHeader(
+    Map<String, String> headers, {
+    required bool includeAuth,
+  }) {
+    if (!includeAuth) return headers;
+    if ((_authToken ?? '').isEmpty) return headers;
+    headers.putIfAbsent('Authorization', () => 'Bearer $_authToken');
+    return headers;
+  }
+
+  bool _looksLikeTokenErrorMessage(String message) {
+    final lower = message.toLowerCase();
+    if (!lower.contains('token') && !lower.contains('auth')) return false;
+    return lower.contains('expired') ||
+        lower.contains('invalid') ||
+        lower.contains('authentication required') ||
+        lower.contains('unauthorized');
+  }
+
+  bool _isAuthFailureStatus({
+    required int statusCode,
+    required String? responseBody,
+  }) {
+    if (statusCode == 401) return true;
+    if (statusCode != 403) return false;
+
+    final body = (responseBody ?? '').trim();
+    if (body.isEmpty) return false;
+
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        final msg = (decoded['error'] ?? decoded['message'] ?? decoded['detail'] ?? '').toString();
+        if (msg.trim().isEmpty) return false;
+        return _looksLikeTokenErrorMessage(msg);
+      }
+      if (decoded is String) {
+        return _looksLikeTokenErrorMessage(decoded);
+      }
+    } catch (_) {
+      return _looksLikeTokenErrorMessage(body);
+    }
+
+    return false;
+  }
+
+  Future<http.Response> _request(
+    String method,
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+    bool retriedAfterReauth = false,
+  }) async {
+    if (includeAuth && _authCoordinator != null && _authCoordinator!.isResolving) {
+      final settled = await _authCoordinator!.waitForResolution();
+      if (settled != null && !settled.isSuccess) {
+        throw BackendApiRequestException(
+          statusCode: 401,
+          path: uri.path,
+          body: settled.message,
+        );
+      }
+    }
+
+    final resolvedHeaders = _applyAuthHeader(
+      Map<String, String>.from(headers ?? _getHeaders(includeAuth: includeAuth)),
+      includeAuth: includeAuth,
+    );
+
+    final http.Response response;
+    switch (method.toUpperCase()) {
+      case 'GET':
+        response = await _client.get(uri, headers: resolvedHeaders).timeout(timeout);
+        break;
+      case 'POST':
+        response = await _client.post(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        break;
+      case 'PUT':
+        response = await _client.put(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        break;
+      case 'PATCH':
+        response = await _client.patch(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        break;
+      case 'DELETE':
+        response = await _client.delete(uri, headers: resolvedHeaders, body: body, encoding: encoding).timeout(timeout);
+        break;
+      default:
+        throw ArgumentError('Unsupported method: $method');
+    }
+
+    final coordinator = _authCoordinator;
+    final isAuthFailure = includeAuth &&
+        coordinator != null &&
+        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+        _isAuthFailureStatus(statusCode: response.statusCode, responseBody: response.body);
+
+    if (!isAuthFailure) return response;
+
+    if (retriedAfterReauth) {
+      return response;
+    }
+
+    final result = await coordinator.handleAuthFailure(
+      AuthFailureContext(
+        statusCode: response.statusCode,
+        method: method.toUpperCase(),
+        path: uri.path,
+        body: response.body,
+      ),
+    );
+
+    final canRetry = isIdempotent || method.toUpperCase() == 'GET' || method.toUpperCase() == 'HEAD';
+    if (result.isSuccess && canRetry) {
+      if ((_authToken ?? '').isEmpty) {
+        await loadAuthToken();
+      }
+      return _request(
+        method,
+        uri,
+        includeAuth: includeAuth,
+        headers: headers,
+        body: body,
+        encoding: encoding,
+        isIdempotent: isIdempotent,
+        timeout: timeout,
+        retriedAfterReauth: true,
+      );
+    }
+
+    return response;
+  }
+
+  Future<http.Response> _get(
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Duration timeout = AppConfig.requestTimeout,
+  }) {
+    return _request(
+      'GET',
+      uri,
+      includeAuth: includeAuth,
+      headers: headers,
+      isIdempotent: true,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> _post(
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+  }) {
+    return _request(
+      'POST',
+      uri,
+      includeAuth: includeAuth,
+      headers: headers,
+      body: body,
+      encoding: encoding,
+      isIdempotent: isIdempotent,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> _put(
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+  }) {
+    return _request(
+      'PUT',
+      uri,
+      includeAuth: includeAuth,
+      headers: headers,
+      body: body,
+      encoding: encoding,
+      isIdempotent: isIdempotent,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> _patch(
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+  }) {
+    return _request(
+      'PATCH',
+      uri,
+      includeAuth: includeAuth,
+      headers: headers,
+      body: body,
+      encoding: encoding,
+      isIdempotent: isIdempotent,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> _delete(
+    Uri uri, {
+    bool includeAuth = true,
+    Map<String, String>? headers,
+    Object? body,
+    Encoding? encoding,
+    bool isIdempotent = false,
+    Duration timeout = AppConfig.requestTimeout,
+  }) {
+    return _request(
+      'DELETE',
+      uri,
+      includeAuth: includeAuth,
+      headers: headers,
+      body: body,
+      encoding: encoding,
+      isIdempotent: isIdempotent,
+      timeout: timeout,
+    );
+  }
+
+  Future<http.Response> _sendMultipart(
+    http.MultipartRequest request, {
+    bool includeAuth = true,
+    Duration timeout = AppConfig.requestTimeout,
+  }) async {
+    if (includeAuth && _authCoordinator != null && _authCoordinator!.isResolving) {
+      final settled = await _authCoordinator!.waitForResolution();
+      if (settled != null && !settled.isSuccess) {
+        throw BackendApiRequestException(
+          statusCode: 401,
+          path: request.url.path,
+          body: settled.message,
+        );
+      }
+    }
+
+    final baseHeaders = <String, String>{
+      'Accept': 'application/json',
+      ...request.headers,
+    };
+    request.headers
+      ..clear()
+      ..addAll(_applyAuthHeader(baseHeaders, includeAuth: includeAuth));
+
+    final streamed = await _client.send(request).timeout(timeout);
+    final response = await http.Response.fromStream(streamed);
+
+    final coordinator = _authCoordinator;
+    if (includeAuth &&
+        coordinator != null &&
+        AppConfig.isFeatureEnabled('rePromptLoginOnExpiry') &&
+        _isAuthFailureStatus(statusCode: response.statusCode, responseBody: response.body)) {
+      await coordinator.handleAuthFailure(
+        AuthFailureContext(
+          statusCode: response.statusCode,
+          method: request.method,
+          path: request.url.path,
+          body: response.body,
+        ),
+      );
+    }
+
+    return response;
   }
 
   Future<void> _persistTokenFromResponse(Map<String, dynamic> body) async {
@@ -468,7 +771,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     final headers = _getHeaders(includeAuth: includeAuth);
     http.Response? primaryResponse;
     try {
-      primaryResponse = await http.get(uri, headers: headers);
+      primaryResponse = await _request(
+        'GET',
+        uri,
+        includeAuth: includeAuth,
+        headers: headers,
+        isIdempotent: true,
+      );
       if (_isSuccessStatus(primaryResponse.statusCode)) {
         if (_isExhibitionsPath(uri)) {
           _exhibitionsApiAvailable = true;
@@ -516,7 +825,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     }
 
     final fallbackUri = _withOrbitSource(uri);
-    final fallbackResponse = await http.get(fallbackUri, headers: headers);
+    final fallbackResponse = await _request(
+      'GET',
+      fallbackUri,
+      includeAuth: includeAuth,
+      headers: headers,
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(fallbackResponse.statusCode)) {
       final data = jsonDecode(fallbackResponse.body) as Map<String, dynamic>;
       data['source'] = data['source'] ?? 'orbitdb';
@@ -576,8 +891,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'walletAddress': walletAddress,
         if (username != null) 'username': username,
       };
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/auth/register'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode(body),
       );
@@ -589,7 +905,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Register failed: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error in registerWallet: $e');
+      AppConfig.debugPrint('BackendApiService.registerWallet failed: $e');
       rethrow;
     }
   }
@@ -602,8 +918,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required String message,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/auth/login'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({
           'walletAddress': walletAddress,
@@ -620,7 +937,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Login failed: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error logging in: $e');
+      AppConfig.debugPrint('BackendApiService.loginWithWallet failed: $e');
       rethrow;
     }
   }
@@ -645,8 +962,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         if (username != null && username.isNotEmpty) 'username': username,
         if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
       };
-      final response = await http.post(
+      final response = await _post(
         uri,
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode(body),
       );
@@ -664,7 +982,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Email registration failed: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error in registerWithEmail: $e');
+      AppConfig.debugPrint('BackendApiService.registerWithEmail failed: $e');
       rethrow;
     }
   }
@@ -681,8 +999,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (_isRateLimited(key)) {
         throw Exception(_rateLimitMessage(key));
       }
-      final response = await http.post(
+      final response = await _post(
         uri,
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -697,7 +1016,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Email login failed: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error logging in with email: $e');
+      AppConfig.debugPrint('BackendApiService.loginWithEmail failed: $e');
       rethrow;
     }
   }
@@ -722,8 +1041,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         if (username != null && username.isNotEmpty) 'username': username,
         if (walletAddress != null && walletAddress.isNotEmpty) 'walletAddress': walletAddress,
       };
-      final response = await http.post(
+      final response = await _post(
         uri,
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode(body),
       );
@@ -749,7 +1069,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Google login failed: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error logging in with Google: $e');
+      AppConfig.debugPrint('BackendApiService.loginWithGoogle failed: $e');
       rethrow;
     }
   }
@@ -758,7 +1078,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/users/:userId
   Future<Map<String, dynamic>> getUserProfile(String userId) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/users/$userId'),
         headers: _getHeaders(),
       );
@@ -769,7 +1089,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get profile: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting profile: $e');
+      AppConfig.debugPrint('BackendApiService.getUserProfile failed: $e');
       rethrow;
     }
   }
@@ -783,14 +1103,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/profiles/me
   Future<Map<String, dynamic>> getMyProfile() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/api/profiles/me'), headers: _getHeaders());
+      final response = await _get(
+        Uri.parse('$baseUrl/api/profiles/me'),
+        headers: _getHeaders(),
+      );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return {'success': true, 'data': data['data'] ?? data};
       }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error in getMyProfile: $e');
+      AppConfig.debugPrint('BackendApiService.getMyProfile failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -799,30 +1122,31 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// POST /api/profiles/issue-token { walletAddress }
   Future<bool> issueTokenForWallet(String walletAddress) async {
     try {
-      final resp = await http.post(
+      final resp = await _post(
         Uri.parse('$baseUrl/api/profiles/issue-token'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'walletAddress': walletAddress}),
       );
-      debugPrint('BackendApiService.issueTokenForWallet: status=${resp.statusCode}');
-      debugPrint('BackendApiService.issueTokenForWallet: bodyLen=${resp.body.length}');
+      AppConfig.debugPrint('BackendApiService.issueTokenForWallet: status=${resp.statusCode}');
+      AppConfig.debugPrint('BackendApiService.issueTokenForWallet: bodyLen=${resp.body.length}');
       if (resp.statusCode == 200 || resp.statusCode == 201) {
         final body = jsonDecode(resp.body) as Map<String, dynamic>;
         final token = body['token'] as String? ?? body['data']?['token'] as String?;
-        debugPrint('BackendApiService.issueTokenForWallet: tokenPresent=${token != null && token.isNotEmpty}');
+        AppConfig.debugPrint('BackendApiService.issueTokenForWallet: tokenPresent=${token != null && token.isNotEmpty}');
         if (token != null && token.isNotEmpty) {
           await setAuthToken(token);
           try {
             await _secureStorage.write(key: 'jwt_token', value: token);
           } catch (e) {
-            debugPrint('issueTokenForWallet: failed to persist token: $e');
+            AppConfig.debugPrint('BackendApiService.issueTokenForWallet: failed to persist token: $e');
           }
           return true;
         }
       }
       return false;
     } catch (e) {
-      debugPrint('Error issuing token for wallet: $e');
+      AppConfig.debugPrint('BackendApiService.issueTokenForWallet failed: $e');
       return false;
     }
   }
@@ -833,25 +1157,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       // Ensure we attempt to load persisted token before every protected call
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      debugPrint('BackendApiService.fetchConversations: authToken present=${_authToken != null && _authToken!.isNotEmpty}');
-      final response = await http.get(Uri.parse('$baseUrl/api/messages'), headers: _getHeaders());
-      // If unauthorized, try once more after reloading persisted token (short-lived tokens can expire)
-      if (response.statusCode == 401) {
-        debugPrint('BackendApiService.fetchConversations: 401 received, retrying after reload of auth token');
-        try { await loadAuthToken(); } catch (_) {}
-        try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-        final retryResp = await http.get(Uri.parse('$baseUrl/api/messages'), headers: _getHeaders());
-        if (retryResp.statusCode == 200) {
-          return jsonDecode(retryResp.body) as Map<String, dynamic>;
-        }
-        return {'success': false, 'status': retryResp.statusCode};
-      }
+      AppConfig.debugPrint('BackendApiService.fetchConversations: authToken present=${_authToken != null && _authToken!.isNotEmpty}');
+      final response = await _get(Uri.parse('$baseUrl/api/messages'), headers: _getHeaders());
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
       }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error fetching conversations: $e');
+      AppConfig.debugPrint('BackendApiService.fetchConversations failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -862,24 +1175,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       // Ensure we attempt to load persisted token before every protected call (and attempt issuance for stored wallet if missing)
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      debugPrint('BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${_authToken != null && _authToken!.isNotEmpty}');
+      AppConfig.debugPrint('BackendApiService.fetchMessages: conversationId=$conversationId authToken present=${_authToken != null && _authToken!.isNotEmpty}');
       final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages').replace(queryParameters: {
         'page': page.toString(),
         'limit': limit.toString(),
       });
-      final response = await http.get(uri, headers: _getHeaders());
-      if (response.statusCode == 401) {
-        debugPrint('BackendApiService.fetchMessages: 401 received, retrying after auth reload');
-        try { await loadAuthToken(); } catch (_) {}
-        try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-        final retryResp = await http.get(uri, headers: _getHeaders());
-        if (retryResp.statusCode == 200) return jsonDecode(retryResp.body) as Map<String, dynamic>;
-        return {'success': false, 'status': retryResp.statusCode};
-      }
+      final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error fetching messages: $e');
+      AppConfig.debugPrint('BackendApiService.fetchMessages failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -893,7 +1198,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (replyToId != null && replyToId.isNotEmpty) {
         body['replyToId'] = replyToId;
       }
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/messages/$conversationId/messages'),
         headers: _getHeaders(),
         body: jsonEncode(body),
@@ -903,7 +1208,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return {'success': false, 'status': response.statusCode, 'body': response.body};
     } catch (e) {
-      debugPrint('Error sending message: $e');
+      AppConfig.debugPrint('BackendApiService.sendMessage failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -914,15 +1219,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       // Ensure persisted token is loaded and token issuance attempted once (use stored wallet fallback)
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.get(Uri.parse('$baseUrl/api/messages/$conversationId/members'), headers: _getHeaders());
+      final response = await _get(Uri.parse('$baseUrl/api/messages/$conversationId/members'), headers: _getHeaders());
       if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
       if (response.statusCode == 429) {
-        debugPrint('BackendApiService.fetchConversationMembers: 429 Too Many Requests for $conversationId');
+        AppConfig.debugPrint('BackendApiService.fetchConversationMembers: 429 Too Many Requests for $conversationId');
         return {'success': false, 'status': 429, 'retryAfter': response.headers['retry-after']};
       }
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error fetching conversation members: $e');
+      AppConfig.debugPrint('BackendApiService.fetchConversationMembers failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -932,17 +1237,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       final uri = Uri.parse('$baseUrl/api/messages/$conversationId/messages');
       final request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(_getHeaders());
+      request.headers.addAll({'Accept': 'application/json'});
       request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
       final placeholder = filename.isNotEmpty ? 'Attachment • $filename' : 'Shared an attachment';
       request.fields['message'] = placeholder;
       request.fields['content'] = placeholder;
-      final streamed = await request.send();
-      final resp = await http.Response.fromStream(streamed);
+      final resp = await _sendMultipart(request, includeAuth: true);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
       return {'success': false, 'status': resp.statusCode, 'body': resp.body};
     } catch (e) {
-      debugPrint('Error uploading message attachment: $e');
+      AppConfig.debugPrint('BackendApiService.uploadMessageAttachment failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -951,7 +1255,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// POST /api/messages { title, members }
   Future<Map<String, dynamic>> createConversation({String? title, bool isGroup = false, List<String>? members}) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/messages'),
         headers: _getHeaders(),
         body: jsonEncode({'title': title, 'members': members ?? [], 'isGroup': isGroup}),
@@ -959,7 +1263,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error creating conversation: $e');
+      AppConfig.debugPrint('BackendApiService.createConversation failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -970,24 +1274,22 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       // Try conversation-specific avatar endpoint first
       var uri = Uri.parse('$baseUrl/api/conversations/$conversationId/avatar');
       var request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(_getHeaders());
+      request.headers.addAll({'Accept': 'application/json'});
       request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
-      var streamed = await request.send();
-      var resp = await http.Response.fromStream(streamed);
+      var resp = await _sendMultipart(request, includeAuth: true);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
 
       // Fallback to messages-based endpoint
       uri = Uri.parse('$baseUrl/api/messages/$conversationId/avatar');
       request = http.MultipartRequest('POST', uri);
-      request.headers.addAll(_getHeaders());
+      request.headers.addAll({'Accept': 'application/json'});
       request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename, contentType: MediaType.parse(contentType)));
-      streamed = await request.send();
-      resp = await http.Response.fromStream(streamed);
+      resp = await _sendMultipart(request, includeAuth: true);
       if (resp.statusCode == 200 || resp.statusCode == 201) return jsonDecode(resp.body) as Map<String, dynamic>;
 
       return {'success': false, 'status': resp.statusCode, 'body': resp.body};
     } catch (e) {
-      debugPrint('Error uploading conversation avatar: $e');
+      AppConfig.debugPrint('BackendApiService.uploadConversationAvatar failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -995,7 +1297,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Add a member to conversation
   Future<Map<String, dynamic>> addConversationMember(String conversationId, String walletAddress) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/messages/$conversationId/members'),
         headers: _getHeaders(),
         body: jsonEncode({'walletAddress': walletAddress}),
@@ -1003,7 +1305,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error adding conversation member: $e');
+      AppConfig.debugPrint('BackendApiService.addConversationMember failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1013,16 +1315,24 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       // Try a DELETE endpoint first (may not exist on server)
       final uri = Uri.parse('$baseUrl/api/messages/$conversationId/members');
-      final response = await http.delete(uri, headers: _getHeaders(), body: jsonEncode({'walletAddress': walletOrUsername, 'username': walletOrUsername}));
+      final response = await _delete(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({'walletAddress': walletOrUsername, 'username': walletOrUsername}),
+      );
       if (response.statusCode == 200 || response.statusCode == 204) return {'success': true};
 
       // Fallback: call a removal helper endpoint (non-standard)
-      final fallback = await http.post(Uri.parse('$baseUrl/api/messages/$conversationId/members/remove'), headers: _getHeaders(), body: jsonEncode({'walletAddress': walletOrUsername}));
+      final fallback = await _post(
+        Uri.parse('$baseUrl/api/messages/$conversationId/members/remove'),
+        headers: _getHeaders(),
+        body: jsonEncode({'walletAddress': walletOrUsername}),
+      );
       if (fallback.statusCode == 200 || fallback.statusCode == 201) return jsonDecode(fallback.body) as Map<String, dynamic>;
 
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error removing conversation member: $e');
+      AppConfig.debugPrint('BackendApiService.removeConversationMember failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1030,7 +1340,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Transfer conversation ownership (best-effort)
   Future<Map<String, dynamic>> transferConversationOwner(String conversationId, String newOwnerWallet) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/messages/$conversationId/transfer-owner'),
         headers: _getHeaders(),
         body: jsonEncode({'newOwnerWallet': newOwnerWallet}),
@@ -1038,7 +1348,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (response.statusCode == 200 || response.statusCode == 201) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error transferring conversation owner: $e');
+      AppConfig.debugPrint('BackendApiService.transferConversationOwner failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1046,11 +1356,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Mark conversation as read
   Future<Map<String, dynamic>> markConversationRead(String conversationId) async {
     try {
-      final response = await http.put(Uri.parse('$baseUrl/api/messages/$conversationId/read'), headers: _getHeaders());
+      final response = await _put(Uri.parse('$baseUrl/api/messages/$conversationId/read'), headers: _getHeaders());
       if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error marking conversation read: $e');
+      AppConfig.debugPrint('BackendApiService.markConversationRead failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1058,18 +1368,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Mark a specific message as read
   Future<Map<String, dynamic>> markMessageRead(String conversationId, String messageId) async {
     try {
-      final response = await http.put(Uri.parse('$baseUrl/api/messages/$conversationId/messages/$messageId/read'), headers: _getHeaders());
+      final response = await _put(Uri.parse('$baseUrl/api/messages/$conversationId/messages/$messageId/read'), headers: _getHeaders());
       if (response.statusCode == 200) return jsonDecode(response.body) as Map<String, dynamic>;
       return {'success': false, 'status': response.statusCode};
     } catch (e) {
-      debugPrint('Error marking message read: $e');
+      AppConfig.debugPrint('BackendApiService.markMessageRead failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
 
   Future<Map<String, dynamic>> renameConversation(String conversationId, String newTitle) async {
     try {
-      final response = await http.patch(
+      final response = await _patch(
         Uri.parse('$baseUrl/api/messages/$conversationId/rename'),
         headers: _getHeaders(),
         body: jsonEncode({'title': newTitle}),
@@ -1098,7 +1408,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'walletAddress': walletAddress,
         ...updates,
       };
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/profiles'),
         headers: _getHeaders(),
         body: jsonEncode(payload),
@@ -1110,7 +1420,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to update profile: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error updating profile: $e');
+      AppConfig.debugPrint('BackendApiService.updateProfile failed: $e');
       rethrow;
     }
   }
@@ -1132,12 +1442,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       final dynamic data = await _fetchJson(uri, includeAuth: true, allowOrbitFallback: true);
       final raw = data['data'] ?? data;
       if (raw is Map<String, dynamic>) {
-        debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
+        AppConfig.debugPrint('BackendApiService.getProfileByWallet: parsed profile keys: ${raw.keys.toList()}');
         return raw;
       }
       throw Exception('Invalid profile payload');
     } catch (e) {
-      debugPrint('Error getting profile by wallet: $e');
+      AppConfig.debugPrint('BackendApiService.getProfileByWallet failed: $e');
       rethrow;
     }
   }
@@ -1148,7 +1458,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
       await _ensureAuthBeforeRequest();
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/profiles/batch'),
         headers: _getHeaders(),
         body: jsonEncode({'wallets': wallets}),
@@ -1160,7 +1470,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return {'success': false, 'status': response.statusCode, 'body': response.body};
     } catch (e) {
-      debugPrint('Error in getProfilesBatch: $e');
+      AppConfig.debugPrint('BackendApiService.getProfilesBatch failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1170,11 +1480,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>> getPresenceBatch(List<String> wallets) async {
     try {
       if (wallets.isEmpty) return {'success': true, 'data': <dynamic>[]};
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/presence/batch'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
         body: jsonEncode({'wallets': wallets}),
-      ).timeout(const Duration(seconds: 8));
+        timeout: const Duration(seconds: 8),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -1182,9 +1494,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return {'success': false, 'status': response.statusCode, 'body': response.body};
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.getPresenceBatch error: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.getPresenceBatch failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1198,11 +1508,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/presence/visit'),
         headers: _getHeaders(includeAuth: true),
         body: jsonEncode({'type': type, 'id': id}),
-      ).timeout(const Duration(seconds: 8));
+        timeout: const Duration(seconds: 8),
+      );
 
       if (response.statusCode == 204) {
         return {'success': true, 'stored': false};
@@ -1217,9 +1528,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return {'success': false, 'status': response.statusCode, 'body': response.body};
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.recordPresenceVisit error: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.recordPresenceVisit failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1229,10 +1538,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>> pingPresence({String? walletAddress}) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/presence/ping'),
         headers: _getHeaders(includeAuth: true),
-      ).timeout(const Duration(seconds: 8));
+        timeout: const Duration(seconds: 8),
+      );
 
       if (response.statusCode == 204) {
         return {'success': true};
@@ -1243,9 +1553,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return {'success': false, 'status': response.statusCode, 'body': response.body};
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.pingPresence error: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.pingPresence failed: $e');
       return {'success': false, 'error': e.toString()};
     }
   }
@@ -1282,7 +1590,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         return profiles.first as Map<String, dynamic>;
       }
     } catch (e) {
-      debugPrint('BackendApiService.findProfileByUsername error: $e');
+      AppConfig.debugPrint('BackendApiService.findProfileByUsername failed: $e');
     }
     return null;
   }
@@ -1305,26 +1613,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           debugPrint('BackendApiService.saveProfile: POST /api/profiles payload: ${jsonEncode(profileData)}');
         }
         final uri = Uri.parse('$baseUrl/api/profiles');
-        final response = await http.post(uri, headers: _getHeaders(includeAuth: true), body: jsonEncode(profileData));
-
-        // If we get 401, try reloading/issuing a token and retry (can happen when
-        // a singleton instance has token in storage but not yet loaded).
-        if (response.statusCode == 401) {
-          if (attempt < maxRetries) {
-            try {
-              await loadAuthToken();
-              await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-            } catch (_) {}
-            final backoff = 1 << (attempt - 1);
-            await Future.delayed(Duration(seconds: backoff));
-            continue;
-          }
-          throw BackendApiRequestException(
-            statusCode: response.statusCode,
-            path: uri.path,
-            body: response.body,
-          );
-        }
+        final response = await _post(
+          uri,
+          headers: _getHeaders(includeAuth: true),
+          body: jsonEncode(profileData),
+        );
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -1349,7 +1642,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           final retryAfter = response.headers['retry-after'];
           final waitSeconds = int.tryParse(retryAfter ?? '') ?? (2 << (attempt - 1));
           if (attempt < maxRetries) {
-            debugPrint('saveProfile received 429, retrying in $waitSeconds seconds (attempt $attempt)');
+            AppConfig.debugPrint('BackendApiService.saveProfile: 429 retry in $waitSeconds seconds (attempt $attempt)');
             await Future.delayed(Duration(seconds: waitSeconds));
             continue;
           } else {
@@ -1363,15 +1656,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           body: response.body,
         );
       } catch (e) {
+        if (e is BackendApiRequestException && (e.statusCode == 401 || e.statusCode == 403)) {
+          rethrow;
+        }
         // If we've exhausted retries, rethrow
         if (attempt >= maxRetries) {
-          debugPrint('Error saving profile (final): $e');
+          AppConfig.debugPrint('BackendApiService.saveProfile failed (final): $e');
           rethrow;
         }
 
         // If this was a transient error, wait briefly and retry
         final backoff = 1 << (attempt - 1);
-        debugPrint('saveProfile transient error, retrying in $backoff seconds: $e');
+        AppConfig.debugPrint('BackendApiService.saveProfile transient error, retrying in $backoff seconds: $e');
         await Future.delayed(Duration(seconds: backoff));
       }
     }
@@ -1394,7 +1690,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (featured != null) queryParams['featured'] = featured.toString();
 
       final uri = Uri.parse('$baseUrl/api/profiles/artists/list').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -1403,7 +1699,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to list artists: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error listing artists: $e');
+      AppConfig.debugPrint('BackendApiService.listArtists failed: $e');
       rethrow;
     }
   }
@@ -1424,7 +1720,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       if (status != null) queryParams['status'] = status;
 
       final uri = Uri.parse('$baseUrl/api/profiles/$walletAddress/artworks').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -1433,7 +1729,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get artist artworks: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting artist artworks: $e');
+      AppConfig.debugPrint('BackendApiService.getArtistArtworks failed: $e');
       rethrow;
     }
   }
@@ -1442,8 +1738,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/profiles/:walletAddress/stats
   Future<Map<String, dynamic>> getUserStats(String walletAddress) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/profiles/$walletAddress/stats'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
 
@@ -1454,7 +1751,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get user stats: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting user stats: $e');
+      AppConfig.debugPrint('BackendApiService.getUserStats failed: $e');
       rethrow;
     }
   }
@@ -1482,9 +1779,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       final encodedId = Uri.encodeComponent(entityId);
       final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId')
           .replace(queryParameters: queryParams.isEmpty ? null : queryParams);
-      final response = await http
-          .get(uri, headers: _getHeaders(includeAuth: true))
-          .timeout(const Duration(seconds: 12));
+      final response = await _get(
+        uri,
+        headers: _getHeaders(includeAuth: true),
+        timeout: const Duration(seconds: 12),
+      );
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -1498,7 +1797,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       throw Exception('Failed to get stats snapshot (${response.statusCode})');
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('BackendApiService.getStatsSnapshot: $e');
+        AppConfig.debugPrint('BackendApiService.getStatsSnapshot failed: $e');
       }
       rethrow;
     }
@@ -1535,9 +1834,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       final encodedId = Uri.encodeComponent(entityId);
       final uri = Uri.parse('$baseUrl/api/stats/$entityType/$encodedId/series')
           .replace(queryParameters: queryParams);
-      final response = await http
-          .get(uri, headers: _getHeaders(includeAuth: true))
-          .timeout(const Duration(seconds: 20));
+      final response = await _get(
+        uri,
+        headers: _getHeaders(includeAuth: true),
+        timeout: const Duration(seconds: 20),
+      );
 
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -1550,9 +1851,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       throw Exception('Failed to get stats series (${response.statusCode})');
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.getStatsSeries: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.getStatsSeries failed: $e');
       rethrow;
     }
   }
@@ -1563,8 +1862,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/mock/artworks
   Future<List<Map<String, dynamic>>> getMockArtworks() async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/mock/artworks'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
 
@@ -1577,7 +1877,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get mock artworks: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting mock artworks: $e');
+      AppConfig.debugPrint('BackendApiService.getMockArtworks failed: $e');
       rethrow;
     }
   }
@@ -1586,8 +1886,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/mock/community-posts
   Future<List<Map<String, dynamic>>> getMockCommunityPosts() async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/mock/community-posts'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
 
@@ -1600,7 +1901,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get mock posts: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting mock community posts: $e');
+      AppConfig.debugPrint('BackendApiService.getMockCommunityPosts failed: $e');
       rethrow;
     }
   }
@@ -1636,7 +1937,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           .map((json) => _artMarkerFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('Error getting nearby markers: $e');
+      AppConfig.debugPrint('BackendApiService.getNearbyArtMarkers failed: $e');
       rethrow;
     }
   }
@@ -1647,9 +1948,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers/mine');
-      final response = await http
-          .get(uri, headers: _getHeaders())
-          .timeout(const Duration(seconds: 15));
+      final response = await _get(
+        uri,
+        headers: _getHeaders(),
+        timeout: const Duration(seconds: 15),
+      );
 
       if (response.statusCode == 200) {
         final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
@@ -1663,7 +1966,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       throw Exception('Failed to load markers: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error getting owned markers: $e');
+      AppConfig.debugPrint('BackendApiService.getMyArtMarkers failed: $e');
       rethrow;
     }
   }
@@ -1674,9 +1977,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers');
-      final response = await http
-          .post(uri, headers: _getHeaders(), body: jsonEncode(payload))
-          .timeout(const Duration(seconds: 15));
+      final response = await _post(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(payload),
+        timeout: const Duration(seconds: 15),
+      );
 
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 201 || response.statusCode == 200) {
@@ -1691,7 +1997,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       throw Exception('Failed to create marker: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error creating marker record: $e');
+      AppConfig.debugPrint('BackendApiService.createArtMarkerRecord failed: $e');
       rethrow;
     }
   }
@@ -1702,9 +2008,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers/$markerId');
-      final response = await http
-          .put(uri, headers: _getHeaders(), body: jsonEncode(updates))
-          .timeout(const Duration(seconds: 15));
+      final response = await _put(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode(updates),
+        timeout: const Duration(seconds: 15),
+      );
 
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
@@ -1719,7 +2028,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       throw Exception('Failed to update marker: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error updating marker record: $e');
+      AppConfig.debugPrint('BackendApiService.updateArtMarkerRecord failed: $e');
       rethrow;
     }
   }
@@ -1730,13 +2039,15 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/art-markers/$markerId');
-      final response = await http
-          .delete(uri, headers: _getHeaders())
-          .timeout(const Duration(seconds: 15));
+      final response = await _delete(
+        uri,
+        headers: _getHeaders(),
+        timeout: const Duration(seconds: 15),
+      );
       if (response.statusCode == 200) return true;
       throw Exception('Failed to delete marker: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error deleting marker record: $e');
+      AppConfig.debugPrint('BackendApiService.deleteArtMarkerRecord failed: $e');
       rethrow;
     }
   }
@@ -1754,7 +2065,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     String storageProvider = 'ipfs',
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/art-markers'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -1777,7 +2088,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to create marker: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error creating AR marker: $e');
+      AppConfig.debugPrint('BackendApiService.createArtMarker failed: $e');
       rethrow;
     }
   }
@@ -1786,12 +2097,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// POST /api/art-markers/:id/view
   Future<void> incrementMarkerViews(String markerId) async {
     try {
-      await http.post(
+      await _post(
         Uri.parse('$baseUrl/api/art-markers/$markerId/view'),
         headers: _getHeaders(),
       );
     } catch (e) {
-      debugPrint('Error incrementing marker views: $e');
+      AppConfig.debugPrint('BackendApiService.incrementMarkerViews failed: $e');
     }
   }
 
@@ -1799,12 +2110,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// POST /api/art-markers/:id/interact
   Future<void> incrementMarkerInteractions(String markerId) async {
     try {
-      await http.post(
+      await _post(
         Uri.parse('$baseUrl/api/art-markers/$markerId/interact'),
         headers: _getHeaders(),
       );
     } catch (e) {
-      debugPrint('Error incrementing marker interactions: $e');
+      AppConfig.debugPrint('BackendApiService.incrementMarkerInteractions failed: $e');
     }
   }
 
@@ -1847,7 +2158,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       final List<dynamic> artworks = listCandidate is List ? listCandidate : <dynamic>[];
       return artworks.map((json) => _artworkFromBackendJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
-      debugPrint('Error getting artworks: $e');
+      AppConfig.debugPrint('BackendApiService.getArtworks failed: $e');
       rethrow;
     }
   }
@@ -1868,7 +2179,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Invalid artwork payload');
     } catch (e) {
-      debugPrint('Error getting artwork: $e');
+      AppConfig.debugPrint('BackendApiService.getArtwork failed: $e');
       rethrow;
     }
   }
@@ -1879,7 +2190,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final response = await http.put(uri, headers: _getHeaders(), body: jsonEncode(updates));
+      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates));
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
@@ -1892,7 +2203,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to update artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error updating artwork: $e');
+      AppConfig.debugPrint('BackendApiService.updateArtwork failed: $e');
       rethrow;
     }
   }
@@ -1904,7 +2215,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/publish');
-      final response = await http.post(uri, headers: _getHeaders());
+      final response = await _post(uri, headers: _getHeaders());
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
@@ -1917,7 +2228,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to publish artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error publishing artwork: $e');
+      AppConfig.debugPrint('BackendApiService.publishArtwork failed: $e');
       rethrow;
     }
   }
@@ -1929,7 +2240,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/unpublish');
-      final response = await http.post(uri, headers: _getHeaders());
+      final response = await _post(uri, headers: _getHeaders());
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
@@ -1942,7 +2253,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to unpublish artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error unpublishing artwork: $e');
+      AppConfig.debugPrint('BackendApiService.unpublishArtwork failed: $e');
       rethrow;
     }
   }
@@ -1953,13 +2264,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthWithStoredWallet();
       final uri = Uri.parse('$baseUrl/api/artworks/$artworkId');
-      final response = await http.delete(uri, headers: _getHeaders());
+      final response = await _delete(uri, headers: _getHeaders());
       if (response.statusCode == 200 || response.statusCode == 204) return true;
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
       throw Exception('Failed to delete artwork: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error deleting artwork: $e');
+      AppConfig.debugPrint('BackendApiService.deleteArtwork failed: $e');
       rethrow;
     }
   }
@@ -2013,10 +2324,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         if (metadata != null) 'metadata': metadata,
       };
 
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/artworks'),
         headers: _getHeaders(),
         body: jsonEncode(body),
+        isIdempotent: true,
       );
 
       if (response.statusCode == 201 || response.statusCode == 200) {
@@ -2033,7 +2345,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to create artwork: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error creating artwork record: $e');
+      AppConfig.debugPrint('BackendApiService.createArtworkRecord failed: $e');
       return null;
     }
   }
@@ -2043,12 +2355,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<void> discoverArtwork(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      await http.post(
+      await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
         headers: _getHeaders(),
       );
     } catch (e) {
-      debugPrint('Error recording artwork discovery: $e');
+      AppConfig.debugPrint('BackendApiService.discoverArtwork failed: $e');
     }
   }
 
@@ -2058,7 +2370,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> likeArtwork(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
         headers: _getHeaders(),
       );
@@ -2073,7 +2385,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to like artwork (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error liking artwork: $e');
+      AppConfig.debugPrint('BackendApiService.likeArtwork failed: $e');
       rethrow;
     }
   }
@@ -2084,7 +2396,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> unlikeArtwork(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/artworks/$artworkId/like'),
         headers: _getHeaders(),
       );
@@ -2099,7 +2411,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to unlike artwork (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error unliking artwork: $e');
+      AppConfig.debugPrint('BackendApiService.unlikeArtwork failed: $e');
       rethrow;
     }
   }
@@ -2111,7 +2423,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       // Views are allowed anonymously, but include auth when available
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/view'),
         headers: _getHeaders(),
       );
@@ -2127,7 +2439,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       throw Exception('Failed to record artwork view (${response.statusCode})');
     } catch (e) {
       // View counting should be non-fatal for the UI.
-      debugPrint('Error recording artwork view: $e');
+      AppConfig.debugPrint('BackendApiService.recordArtworkView failed: $e');
       return null;
     }
   }
@@ -2147,12 +2459,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
             : null,
       );
 
-      final response = await http.post(uri, headers: _getHeaders(includeAuth: true));
+      final response = await _post(uri, headers: _getHeaders(includeAuth: true));
       if (response.statusCode == 200) return;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.recordEventView: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.recordEventView failed: $e');
     }
   }
 
@@ -2171,12 +2481,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
             : null,
       );
 
-      final response = await http.post(uri, headers: _getHeaders(includeAuth: true));
+      final response = await _post(uri, headers: _getHeaders(includeAuth: true));
       if (response.statusCode == 200) return;
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.recordExhibitionView: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.recordExhibitionView failed: $e');
     }
   }
 
@@ -2194,7 +2502,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       'page': page.toString(),
       'limit': limit.toString(),
     });
-    final response = await http.get(uri, headers: _getHeaders());
+    final response = await _get(uri, headers: _getHeaders());
 
     if (response.statusCode == 200) {
       final payload = jsonDecode(response.body);
@@ -2222,7 +2530,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try { await _ensureAuthWithStoredWallet(); } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments');
-    final response = await http.post(
+    final response = await _post(
       uri,
       headers: _getHeaders(),
       body: jsonEncode({
@@ -2257,7 +2565,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try { await _ensureAuthWithStoredWallet(); } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
-    final response = await http.patch(
+    final response = await _patch(
       uri,
       headers: _getHeaders(),
       body: jsonEncode({'content': content}),
@@ -2286,7 +2594,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> deleteArtworkComment(String commentId) async {
     try { await _ensureAuthWithStoredWallet(); } catch (_) {}
     final uri = Uri.parse('$baseUrl/api/artworks/comments/$commentId');
-    final response = await http.delete(uri, headers: _getHeaders());
+    final response = await _delete(uri, headers: _getHeaders());
     if (response.statusCode == 200) {
       final payload = jsonDecode(response.body);
       if (payload is Map<String, dynamic>) {
@@ -2307,7 +2615,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> discoverArtworkWithCount(String artworkId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/artworks/$artworkId/discover'),
         headers: _getHeaders(),
       );
@@ -2321,7 +2629,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return null;
     } catch (e) {
-      debugPrint('Error discovering artwork: $e');
+      AppConfig.debugPrint('BackendApiService.discoverArtworkWithCount failed: $e');
       return null;
     }
   }
@@ -2420,7 +2728,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Unexpected post payload');
     } catch (e) {
-      debugPrint('Error getting community post by id: $e');
+      AppConfig.debugPrint('BackendApiService.getCommunityPostById failed: $e');
       rethrow;
     }
   }
@@ -2466,16 +2774,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         locationLng: locationLng,
       );
       
-      debugPrint('Creating post with body: $requestBody');
-      
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts'),
         headers: _getHeaders(),
         body: jsonEncode(requestBody),
       );
-      
-      debugPrint('Create post response status: ${response.statusCode}');
-      debugPrint('Create post response body: ${response.body}');
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -2489,14 +2792,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
                 : (createdPost.imageUrl != null ? <String>[createdPost.imageUrl!] : null),
           );
         } catch (e) {
-          debugPrint('UserActionLogger.logPostCreated failed: $e');
+          AppConfig.debugPrint('UserActionLogger.logPostCreated failed: $e');
         }
         return createdPost;
       } else {
         throw Exception('Failed to create post: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error creating post: $e');
+      AppConfig.debugPrint('BackendApiService.createCommunityPost failed: $e');
       rethrow;
     }
   }
@@ -2514,7 +2817,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
 
-      final response = await http.put(
+      final response = await _put(
         Uri.parse('$baseUrl/api/community/posts/$postId'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -2542,7 +2845,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
 
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/community/posts/$postId'),
         headers: _getHeaders(),
       );
@@ -2562,7 +2865,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> likePost(String postId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
       );
@@ -2573,7 +2876,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to like post (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error liking post: $e');
+      AppConfig.debugPrint('BackendApiService.likePost failed: $e');
       rethrow;
     }
   }
@@ -2582,12 +2885,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// POST /api/community/posts/:id/share
   Future<void> sharePost(String postId) async {
     try {
-      await http.post(
+      await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/share'),
         headers: _getHeaders(),
       );
     } catch (e) {
-      debugPrint('Error sharing post: $e');
+      AppConfig.debugPrint('BackendApiService.sharePost failed: $e');
     }
   }
 
@@ -2599,7 +2902,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/repost'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -2615,7 +2918,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to create repost: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error creating repost: $e');
+      AppConfig.debugPrint('BackendApiService.createRepost failed: $e');
       rethrow;
     }
   }
@@ -2698,7 +3001,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         }
         return <CommunityGroupSummary>[];
       }
-      debugPrint('Error listing community groups: $e');
+      AppConfig.debugPrint('BackendApiService.listCommunityGroups failed: $e');
       rethrow;
     }
   }
@@ -2717,7 +3020,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'isPublic': isPublic,
         if (coverImage != null && coverImage.isNotEmpty) 'coverImage': coverImage,
       };
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/groups'),
         headers: _getHeaders(),
         body: jsonEncode(body),
@@ -2732,7 +3035,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to create group: ${response.statusCode}');
     } catch (e) {
-      debugPrint('Error creating group: $e');
+      AppConfig.debugPrint('BackendApiService.createCommunityGroup failed: $e');
       rethrow;
     }
   }
@@ -2740,9 +3043,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Join a community group
   Future<CommunityGroupSummary?> joinCommunityGroup(String groupId) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/groups/$groupId/join'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -2754,7 +3058,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to join group: ${response.statusCode}');
     } catch (e) {
-      debugPrint('Error joining group: $e');
+      AppConfig.debugPrint('BackendApiService.joinCommunityGroup failed: $e');
       rethrow;
     }
   }
@@ -2762,9 +3066,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Leave a community group
   Future<CommunityGroupSummary?> leaveCommunityGroup(String groupId) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/groups/$groupId/leave'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
       if (response.statusCode == 200) {
         final decoded = jsonDecode(response.body);
@@ -2776,7 +3081,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to leave group: ${response.statusCode}');
     } catch (e) {
-      debugPrint('Error leaving group: $e');
+      AppConfig.debugPrint('BackendApiService.leaveCommunityGroup failed: $e');
       rethrow;
     }
   }
@@ -2801,7 +3106,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           .map((json) => _communityPostFromBackendJson(json as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      debugPrint('Error loading group posts: $e');
+      AppConfig.debugPrint('BackendApiService.getGroupPosts failed: $e');
       rethrow;
     }
   }
@@ -2848,7 +3153,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         locationLng: locationLng,
       );
 
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/groups/$groupId/posts'),
         headers: _getHeaders(),
         body: jsonEncode(body),
@@ -2868,7 +3173,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
                   : (created.imageUrl != null ? <String>[created.imageUrl!] : null),
             );
           } catch (e) {
-            debugPrint('UserActionLogger.logPostCreated (group) failed: $e');
+            AppConfig.debugPrint('BackendApiService.createGroupPost: UserActionLogger failed: $e');
           }
           return created;
         }
@@ -2876,7 +3181,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to create group post: ${response.statusCode} - ${response.body}');
     } catch (e) {
-      debugPrint('Error creating group post: $e');
+      AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');
       rethrow;
     }
   }
@@ -2890,7 +3195,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/messages/share'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -2904,7 +3209,52 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to share post via DM: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error sharing post via DM: $e');
+      AppConfig.debugPrint('BackendApiService.sharePostViaDM failed: $e');
+      rethrow;
+    }
+  }
+
+  /// Share any entity via direct message.
+  ///
+  /// - Posts: uses the dedicated `postId` flow so chat UIs can render rich cards.
+  /// - Other entities: sends a link + metadata (backend accepts `share` payload).
+  Future<void> shareEntityViaDM({
+    required String recipientWallet,
+    required String message,
+    required ShareTarget target,
+    required String url,
+  }) async {
+    if (target.type == ShareEntityType.post) {
+      await sharePostViaDM(
+        postId: target.shareId,
+        recipientWallet: recipientWallet,
+        message: message,
+      );
+      return;
+    }
+
+    try {
+      try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+      final response = await _post(
+        Uri.parse('$baseUrl/api/community/messages/share'),
+        headers: _getHeaders(),
+        body: jsonEncode({
+          'recipientWallet': recipientWallet,
+          if (message.isNotEmpty) 'message': message,
+          'share': {
+            'entityType': target.type.analyticsTargetType,
+            'entityId': target.shareId,
+            'url': url,
+            if ((target.title ?? '').trim().isNotEmpty) 'title': target.title,
+          },
+        }),
+      );
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception('Failed to share via DM: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.shareEntityViaDM failed: $e');
       rethrow;
     }
   }
@@ -2917,7 +3267,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     int limit = 50,
   }) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/community/posts/$postId/reposts?page=$page&limit=$limit'),
         headers: _getHeaders(),
       );
@@ -2930,7 +3280,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get reposts: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting reposts: $e');
+      AppConfig.debugPrint('BackendApiService.getPostReposts failed: $e');
       rethrow;
     }
   }
@@ -2940,16 +3290,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<void> deleteRepost(String repostId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/community/posts/$repostId/repost'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to delete repost: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error deleting repost: $e');
+      AppConfig.debugPrint('BackendApiService.deleteRepost failed: $e');
       rethrow;
     }
   }
@@ -2959,25 +3310,31 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<void> trackAnalyticsEvent({
     required String eventType,
     String? postId,
+    String? targetType,
+    String? targetId,
+    String? eventCategory,
     Map<String, dynamic>? metadata,
   }) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/analytics/event'),
         headers: _getHeaders(),
         body: jsonEncode({
           'eventType': eventType,
           if (postId != null) 'postId': postId,
+          if (targetType != null) 'targetType': targetType,
+          if (targetId != null) 'targetId': targetId,
+          if (eventCategory != null) 'eventCategory': eventCategory,
           if (metadata != null) 'metadata': metadata,
         }),
       );
 
       if (response.statusCode != 200 && response.statusCode != 201) {
-        debugPrint('Failed to track analytics event: ${response.statusCode}');
+        AppConfig.debugPrint('BackendApiService.trackAnalyticsEvent failed (${response.statusCode})');
       }
     } catch (e) {
-      debugPrint('Error tracking analytics event: $e');
+      AppConfig.debugPrint('BackendApiService.trackAnalyticsEvent failed: $e');
       // Don't rethrow - analytics failures shouldn't break user experience
     }
   }
@@ -2987,9 +3344,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> unlikePost(String postId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/community/posts/$postId/like'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode == 200) {
@@ -2998,7 +3356,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to unlike post (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error unliking post: $e');
+      AppConfig.debugPrint('BackendApiService.unlikePost failed: $e');
       rethrow;
     }
   }
@@ -3012,7 +3370,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/posts/$postId/comments'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3054,7 +3412,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
       final uri = Uri.parse('$baseUrl/api/community/comments/$commentId');
-      final response = await http.patch(
+      final response = await _patch(
         uri,
         headers: _getHeaders(),
         body: jsonEncode({'content': content}),
@@ -3080,9 +3438,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         body: response.body,
       );
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.editComment failed: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.editComment failed: $e');
       rethrow;
     }
   }
@@ -3104,7 +3460,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       final uri = Uri.parse('$baseUrl/api/community/posts/$postId/comments')
           .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final parsed = jsonDecode(response.body);
@@ -3198,9 +3554,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         return <Comment>[];
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.getComments failed: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.getComments failed: $e');
       return <Comment>[];
     }
   }
@@ -3210,14 +3564,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<void> deleteComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      await http.delete(
+      await _delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService.deleteComment failed: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.deleteComment failed: $e');
       rethrow;
     }
   }
@@ -3228,9 +3581,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> likeComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode == 200) {
@@ -3239,7 +3593,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to like comment (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error liking comment: $e');
+      AppConfig.debugPrint('BackendApiService.likeComment failed: $e');
       rethrow;
     }
   }
@@ -3250,7 +3604,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<int?> unlikeComment(String commentId) async {
     try {
       try { await _ensureAuthWithStoredWallet(); } catch (_) {}
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/community/comments/$commentId/like'),
         headers: _getHeaders(),
       );
@@ -3261,7 +3615,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to unlike comment (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error unliking comment: $e');
+      AppConfig.debugPrint('BackendApiService.unlikeComment failed: $e');
       rethrow;
     }
   }
@@ -3275,7 +3629,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'offset': offset.toString(),
       });
 
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic> && payload['data'] is List) {
@@ -3289,7 +3643,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to fetch post likes (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error fetching post likes: $e');
+      AppConfig.debugPrint('BackendApiService.getPostLikes failed: $e');
       rethrow;
     }
   }
@@ -3303,7 +3657,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'offset': offset.toString(),
       });
 
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
         if (payload is Map<String, dynamic> && payload['data'] is List) {
@@ -3317,7 +3671,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to fetch comment likes (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error fetching comment likes: $e');
+      AppConfig.debugPrint('BackendApiService.getCommentLikes failed: $e');
       rethrow;
     }
   }
@@ -3332,23 +3686,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
-      http.Response response = await http.post(uri, headers: _getHeaders());
-
-      if (response.statusCode == 401) {
-        debugPrint('BackendApiService.followUser: received 401, retrying after refreshing token');
-        try {
-          await loadAuthToken();
-        } catch (_) {}
-        await _ensureAuthBeforeRequest();
-        response = await http.post(uri, headers: _getHeaders());
-      }
+      final response = await _post(uri, headers: _getHeaders(), isIdempotent: true);
 
       if (!_isSuccessStatus(response.statusCode)) {
         final body = response.body.isNotEmpty ? response.body : 'No response body';
         throw Exception('Failed to follow user (${response.statusCode}): $body');
       }
     } catch (e) {
-      debugPrint('Error following user: $e');
+      AppConfig.debugPrint('BackendApiService.followUser failed: $e');
       rethrow;
     }
   }
@@ -3361,23 +3706,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded');
-      http.Response response = await http.delete(uri, headers: _getHeaders());
-
-      if (response.statusCode == 401) {
-        debugPrint('BackendApiService.unfollowUser: received 401, retrying after refreshing token');
-        try {
-          await loadAuthToken();
-        } catch (_) {}
-        await _ensureAuthBeforeRequest();
-        response = await http.delete(uri, headers: _getHeaders());
-      }
+      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
 
       if (!_isSuccessStatus(response.statusCode)) {
         final body = response.body.isNotEmpty ? response.body : 'No response body';
         throw Exception('Failed to unfollow user (${response.statusCode}): $body');
       }
     } catch (e) {
-      debugPrint('Error unfollowing user: $e');
+      AppConfig.debugPrint('BackendApiService.unfollowUser failed: $e');
       rethrow;
     }
   }
@@ -3402,7 +3738,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       final uri = Uri.parse('$baseUrl/api/community/followers/$encoded')
           .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
@@ -3417,7 +3753,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get followers: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting followers: $e');
+      AppConfig.debugPrint('BackendApiService.getFollowers failed: $e');
       rethrow;
     }
   }
@@ -3442,7 +3778,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       final uri = Uri.parse('$baseUrl/api/community/following/$encoded')
           .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final payload = jsonDecode(response.body);
@@ -3457,7 +3793,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get following: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting following: $e');
+      AppConfig.debugPrint('BackendApiService.getFollowing failed: $e');
       rethrow;
     }
   }
@@ -3470,16 +3806,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/community/follow/$encoded/status');
-      http.Response response = await http.get(uri, headers: _getHeaders());
-
-      if (response.statusCode == 401) {
-        debugPrint('BackendApiService.isFollowing: received 401, retrying after refreshing token');
-        try {
-          await loadAuthToken();
-        } catch (_) {}
-        await _ensureAuthBeforeRequest();
-        response = await http.get(uri, headers: _getHeaders());
-      }
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -3492,7 +3819,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       throw Exception('Failed to check follow status (${response.statusCode})');
     } catch (e) {
-      debugPrint('Error checking follow status: $e');
+      AppConfig.debugPrint('BackendApiService.isFollowing failed: $e');
       rethrow;
     }
   }
@@ -3516,7 +3843,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     double? royaltyPercentage,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/nfts/series'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3541,7 +3868,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to create NFT series: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error creating NFT series: $e');
+      AppConfig.debugPrint('BackendApiService.createNFTSeries failed: $e');
       rethrow;
     }
   }
@@ -3554,7 +3881,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     Map<String, dynamic>? properties,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/nfts/mint'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3570,7 +3897,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to mint NFT: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error minting NFT: $e');
+      AppConfig.debugPrint('BackendApiService.mintNFT failed: $e');
       rethrow;
     }
   }
@@ -3579,7 +3906,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/nfts/series/artwork/:artworkId
   Future<Map<String, dynamic>?> getNFTSeriesByArtwork(String artworkId) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/nfts/series/artwork/$artworkId'),
         headers: _getHeaders(),
       );
@@ -3593,7 +3920,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get NFT series: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting NFT series: $e');
+      AppConfig.debugPrint('BackendApiService.getNFTSeriesByArtwork failed: $e');
       return null;
     }
   }
@@ -3613,7 +3940,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       final uri = Uri.parse('$baseUrl/api/nfts/user/$userId')
           .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -3624,7 +3951,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get user NFTs: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting user NFTs: $e');
+      AppConfig.debugPrint('BackendApiService.getUserNFTs failed: $e');
       rethrow;
     }
   }
@@ -3636,7 +3963,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required double price,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/nfts/$nftId/list'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3648,7 +3975,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to list NFT: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error listing NFT: $e');
+      AppConfig.debugPrint('BackendApiService.listNFT failed: $e');
       rethrow;
     }
   }
@@ -3660,7 +3987,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required String transactionHash,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/nfts/$nftId/buy'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3674,7 +4001,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to buy NFT: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error buying NFT: $e');
+      AppConfig.debugPrint('BackendApiService.buyNFT failed: $e');
       rethrow;
     }
   }
@@ -3698,7 +4025,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       final uri = Uri.parse('$baseUrl/api/nfts/marketplace')
           .replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -3709,7 +4036,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get marketplace NFTs: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting marketplace NFTs: $e');
+      AppConfig.debugPrint('BackendApiService.getMarketplaceNFTs failed: $e');
       rethrow;
     }
   }
@@ -3722,7 +4049,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/achievements/user/:walletAddress
   Future<Map<String, dynamic>> getUserAchievements(String walletAddress) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/achievements/user/$walletAddress'),
         headers: _getHeaders(),
       );
@@ -3733,7 +4060,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get user achievements: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting user achievements: $e');
+      AppConfig.debugPrint('BackendApiService.getUserAchievements failed: $e');
       return {
         'success': false,
         'unlocked': [],
@@ -3750,7 +4077,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     Map<String, dynamic>? data,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/achievements/unlock'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3765,7 +4092,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to unlock achievement: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error unlocking achievement: $e');
+      AppConfig.debugPrint('BackendApiService.unlockAchievement failed: $e');
       rethrow;
     }
   }
@@ -3783,7 +4110,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           if (status != null && status.isNotEmpty) 'status': status,
         },
       );
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -3795,7 +4122,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get DAO proposals: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting DAO proposals: $e');
+      AppConfig.debugPrint('BackendApiService.getDAOProposals failed: $e');
       return [];
     }
   }
@@ -3815,7 +4142,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/dao/proposals'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3838,7 +4165,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to create proposal: ${response.statusCode} ${response.body}');
       }
     } catch (e) {
-      debugPrint('Error creating DAO proposal: $e');
+      AppConfig.debugPrint('BackendApiService.createDAOProposal failed: $e');
       rethrow;
     }
   }
@@ -3856,7 +4183,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
               'limit': '$limit',
               'offset': '$offset',
             });
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -3868,7 +4195,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get DAO votes: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting DAO votes: $e');
+      AppConfig.debugPrint('BackendApiService.getDAOVotes failed: $e');
       return [];
     }
   }
@@ -3885,7 +4212,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/dao/proposals/$proposalId/votes'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3903,7 +4230,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to submit DAO vote: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error submitting DAO vote: $e');
+      AppConfig.debugPrint('BackendApiService.submitDAOVote failed: $e');
       rethrow;
     }
   }
@@ -3912,8 +4239,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/dao/delegates
   Future<List<Map<String, dynamic>>> getDAODelegates() async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/dao/delegates'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
 
@@ -3927,7 +4255,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get DAO delegates: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting DAO delegates: $e');
+      AppConfig.debugPrint('BackendApiService.getDAODelegates failed: $e');
       return [];
     }
   }
@@ -3942,7 +4270,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/dao/delegations'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -3959,7 +4287,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to delegate voting power: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error delegating voting power: $e');
+      AppConfig.debugPrint('BackendApiService.delegateVotingPower failed: $e');
       rethrow;
     }
   }
@@ -3968,8 +4296,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/dao/transactions
   Future<List<Map<String, dynamic>>> getDAOTransactions() async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/dao/transactions'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
 
@@ -3983,7 +4312,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get DAO transactions: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting DAO transactions: $e');
+      AppConfig.debugPrint('BackendApiService.getDAOTransactions failed: $e');
       return [];
     }
   }
@@ -4009,13 +4338,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         if (metadata != null) 'metadata': metadata,
       });
 
-      http.Response response = await http.post(uri, headers: _getHeaders(), body: body);
-      if (response.statusCode == 401 && walletAddress.isNotEmpty) {
-        // Token likely expired or missing; clear and retry once
-        await clearAuth();
-        await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-        response = await http.post(uri, headers: _getHeaders(), body: body);
-      }
+      final response = await _post(uri, headers: _getHeaders(), body: body);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         if (response.body.isEmpty) return null;
@@ -4028,7 +4351,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to submit DAO review: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error submitting DAO review: $e');
+      AppConfig.debugPrint('BackendApiService.submitDAOReview failed: $e');
       return null;
     }
   }
@@ -4039,7 +4362,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews')
           .replace(queryParameters: {'limit': '$limit', 'offset': '$offset'});
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -4048,13 +4371,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       } else if (response.statusCode == 404) {
         return [];
       } else if (response.statusCode >= 500) {
-        debugPrint('getDAOReviews: backend returned ${response.statusCode}, returning empty list');
+        AppConfig.debugPrint('BackendApiService.getDAOReviews: backend returned ${response.statusCode}, returning empty list');
         return [];
       } else {
         throw Exception('Failed to get DAO reviews: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting DAO reviews: $e');
+      AppConfig.debugPrint('BackendApiService.getDAOReviews failed: $e');
       return [];
     }
   }
@@ -4065,7 +4388,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/dao/reviews/$idOrWallet');
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         return (data['data'] ?? data['review'] ?? data) as Map<String, dynamic>;
@@ -4075,7 +4398,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get DAO review: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting DAO review: $e');
+      AppConfig.debugPrint('BackendApiService.getDAOReview failed: $e');
       return null;
     }
   }
@@ -4097,7 +4420,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'status': status,
         if (reviewerNotes != null) 'reviewerNotes': reviewerNotes,
       });
-      final response = await http.post(uri, headers: _getHeaders(), body: body);
+      final response = await _post(uri, headers: _getHeaders(), body: body);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -4113,7 +4436,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to update review: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error deciding DAO review: $e');
+      AppConfig.debugPrint('BackendApiService.decideDAOReview failed: $e');
       rethrow;
     }
   }
@@ -4129,7 +4452,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         'limit': '$limit',
         'offset': '$offset',
       });
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         _institutionsApiAvailable = true;
@@ -4145,9 +4468,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
     } catch (e) {
       // Treat missing/unstable endpoints as optional; avoid noisy logs in release builds.
-      if (kDebugMode) {
-        debugPrint('BackendApiService: Error listing institutions: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.listInstitutions failed: $e');
       return [];
     }
   }
@@ -4156,8 +4477,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/institutions/:id
   Future<Map<String, dynamic>?> getInstitution(String id) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/institutions/$id'),
+        includeAuth: false,
         headers: _getHeaders(includeAuth: false),
       );
 
@@ -4170,7 +4492,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get institution: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting institution: $e');
+      AppConfig.debugPrint('BackendApiService.getInstitution failed: $e');
       return null;
     }
   }
@@ -4215,7 +4537,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
+      final response = await _get(uri, headers: _getHeaders(includeAuth: true));
 
       if (response.statusCode == 200) {
         _eventsApiAvailable = true;
@@ -4250,7 +4572,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         if (radiusKm != null) retryQuery['radiusKm'] = radiusKm.toString();
         if (hostUserId != null && hostUserId.trim().isNotEmpty) retryQuery['hostUserId'] = hostUserId.trim();
         final retryUri = Uri.parse('$baseUrl/api/events').replace(queryParameters: retryQuery);
-        final retryRes = await http.get(retryUri, headers: _getHeaders(includeAuth: true));
+        final retryRes = await _get(retryUri, headers: _getHeaders(includeAuth: true));
         if (retryRes.statusCode == 200) {
           _eventsApiAvailable = true;
           final decoded = jsonDecode(retryRes.body);
@@ -4273,9 +4595,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to list events: ${response.statusCode}');
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('BackendApiService: Error listing events: $e');
-      }
+      AppConfig.debugPrint('BackendApiService.listEvents failed: $e');
       return [];
     }
   }
@@ -4296,7 +4616,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting event: $e');
+      AppConfig.debugPrint('BackendApiService.getEvent failed: $e');
       rethrow;
     }
   }
@@ -4307,7 +4627,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events');
-      final response = await http.post(uri, headers: _getHeaders(), body: jsonEncode(payload));
+      final response = await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (decoded is Map<String, dynamic>) {
@@ -4319,7 +4639,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to create event: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error creating event: $e');
+      AppConfig.debugPrint('BackendApiService.createEvent failed: $e');
       rethrow;
     }
   }
@@ -4330,7 +4650,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final response = await http.put(uri, headers: _getHeaders(), body: jsonEncode(updates));
+      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates), isIdempotent: true);
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
@@ -4342,7 +4662,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to update event: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error updating event: $e');
+      AppConfig.debugPrint('BackendApiService.updateEvent failed: $e');
       rethrow;
     }
   }
@@ -4353,13 +4673,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/events/$id');
-      final response = await http.delete(uri, headers: _getHeaders());
+      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (response.statusCode == 200 || response.statusCode == 204) return true;
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
       throw Exception('Failed to delete event: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error deleting event: $e');
+      AppConfig.debugPrint('BackendApiService.deleteEvent failed: $e');
       rethrow;
     }
   }
@@ -4388,7 +4708,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return const [];
     } catch (e) {
-      debugPrint('Error listing event exhibitions: $e');
+      AppConfig.debugPrint('BackendApiService.listEventExhibitions failed: $e');
       rethrow;
     }
   }
@@ -4437,7 +4757,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return const [];
     } catch (e) {
-      debugPrint('Error listing exhibitions: $e');
+      AppConfig.debugPrint('BackendApiService.listExhibitions failed: $e');
       rethrow;
     }
   }
@@ -4458,7 +4778,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting exhibition: $e');
+      AppConfig.debugPrint('BackendApiService.getExhibition failed: $e');
       rethrow;
     }
   }
@@ -4469,7 +4789,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions');
-      final response = await http.post(uri, headers: _getHeaders(), body: jsonEncode(payload));
+      final response = await _post(uri, headers: _getHeaders(), body: jsonEncode(payload));
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (decoded is Map<String, dynamic>) {
@@ -4481,7 +4801,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to create exhibition: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error creating exhibition: $e');
+      AppConfig.debugPrint('BackendApiService.createExhibition failed: $e');
       rethrow;
     }
   }
@@ -4492,7 +4812,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
-      final response = await http.put(uri, headers: _getHeaders(), body: jsonEncode(updates));
+      final response = await _put(uri, headers: _getHeaders(), body: jsonEncode(updates), isIdempotent: true);
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (response.statusCode == 200) {
         if (decoded is Map<String, dynamic>) {
@@ -4504,7 +4824,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to update exhibition: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error updating exhibition: $e');
+      AppConfig.debugPrint('BackendApiService.updateExhibition failed: $e');
       rethrow;
     }
   }
@@ -4515,13 +4835,13 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$id');
-      final response = await http.delete(uri, headers: _getHeaders());
+      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (response.statusCode == 200 || response.statusCode == 204) return true;
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (decoded is Map<String, dynamic> && decoded['success'] == true) return true;
       throw Exception('Failed to delete exhibition: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error deleting exhibition: $e');
+      AppConfig.debugPrint('BackendApiService.deleteExhibition failed: $e');
       rethrow;
     }
   }
@@ -4531,7 +4851,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>> linkExhibitionArtworks(String exhibitionId, List<String> artworkIds) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks');
-    final response = await http.post(uri, headers: _getHeaders(), body: jsonEncode({'artworkIds': artworkIds}));
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({'artworkIds': artworkIds}),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
     }
@@ -4543,7 +4868,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>> unlinkExhibitionArtwork(String exhibitionId, String artworkId) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/artworks/$artworkId');
-    final response = await http.delete(uri, headers: _getHeaders());
+    final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
     }
@@ -4555,7 +4880,12 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>> linkExhibitionMarkers(String exhibitionId, List<String> markerIds) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers');
-    final response = await http.post(uri, headers: _getHeaders(), body: jsonEncode({'markerIds': markerIds}));
+    final response = await _post(
+      uri,
+      headers: _getHeaders(),
+      body: jsonEncode({'markerIds': markerIds}),
+      isIdempotent: true,
+    );
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
     }
@@ -4567,7 +4897,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<Map<String, dynamic>> unlinkExhibitionMarker(String exhibitionId, String markerId) async {
     await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/markers/$markerId');
-    final response = await http.delete(uri, headers: _getHeaders());
+    final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
     if (_isSuccessStatus(response.statusCode)) {
       return response.body.isNotEmpty ? (jsonDecode(response.body) as Map<String, dynamic>) : {'success': true};
     }
@@ -4589,7 +4919,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return null;
     } catch (e) {
-      debugPrint('Error getting exhibition POAP: $e');
+      AppConfig.debugPrint('BackendApiService.getExhibitionPoap failed: $e');
       rethrow;
     }
   }
@@ -4600,7 +4930,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/exhibitions/$exhibitionId/poap/claim');
-      final response = await http.post(uri, headers: _getHeaders());
+      final response = await _post(uri, headers: _getHeaders());
       final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : null;
       if (_isSuccessStatus(response.statusCode)) {
         if (decoded is Map<String, dynamic>) {
@@ -4613,7 +4943,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to claim exhibition POAP: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error claiming exhibition POAP: $e');
+      AppConfig.debugPrint('BackendApiService.claimExhibitionPoap failed: $e');
       rethrow;
     }
   }
@@ -4631,7 +4961,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/invites');
-      final response = await http.post(
+      final response = await _post(
         uri,
         headers: _getHeaders(),
         body: jsonEncode({'invited': invitedIdentifier, 'role': role}),
@@ -4647,7 +4977,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Failed to invite collaborator: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error inviting collaborator: $e');
+      AppConfig.debugPrint('BackendApiService.inviteCollaborator failed: $e');
       rethrow;
     }
   }
@@ -4674,7 +5004,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       return const [];
     } catch (e) {
-      debugPrint('Error listing collaborators: $e');
+      AppConfig.debugPrint('BackendApiService.listCollaborators failed: $e');
       rethrow;
     }
   }
@@ -4685,7 +5015,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/invites');
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: true));
+      final response = await _get(uri, headers: _getHeaders(includeAuth: true));
       if (_isSuccessStatus(response.statusCode)) {
         final decoded = response.body.isNotEmpty ? jsonDecode(response.body) : const <String, dynamic>{};
         final payload = decoded is Map<String, dynamic> ? (decoded['data'] ?? decoded) : null;
@@ -4716,11 +5046,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/invites/$inviteId/accept');
-      final response = await http.post(uri, headers: _getHeaders());
+      final response = await _post(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
       throw Exception('Failed to accept invite: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error accepting invite: $e');
+      AppConfig.debugPrint('BackendApiService.acceptInvite failed: $e');
       rethrow;
     }
   }
@@ -4731,11 +5061,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/invites/$inviteId/decline');
-      final response = await http.post(uri, headers: _getHeaders());
+      final response = await _post(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
       throw Exception('Failed to decline invite: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error declining invite: $e');
+      AppConfig.debugPrint('BackendApiService.declineInvite failed: $e');
       rethrow;
     }
   }
@@ -4746,11 +5076,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
-      final response = await http.patch(uri, headers: _getHeaders(), body: jsonEncode({'role': role}));
+      final response = await _patch(
+        uri,
+        headers: _getHeaders(),
+        body: jsonEncode({'role': role}),
+        isIdempotent: true,
+      );
       if (_isSuccessStatus(response.statusCode)) return true;
       throw Exception('Failed to update collaborator role: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error updating collaborator role: $e');
+      AppConfig.debugPrint('BackendApiService.updateCollaboratorRole failed: $e');
       rethrow;
     }
   }
@@ -4761,11 +5096,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       await _ensureAuthBeforeRequest();
       final uri = Uri.parse('$baseUrl/api/collab/$entityType/$entityId/members/$memberUserId');
-      final response = await http.delete(uri, headers: _getHeaders());
+      final response = await _delete(uri, headers: _getHeaders(), isIdempotent: true);
       if (_isSuccessStatus(response.statusCode)) return true;
       throw Exception('Failed to remove collaborator: ${response.statusCode} ${response.body}');
     } catch (e) {
-      debugPrint('Error removing collaborator: $e');
+      AppConfig.debugPrint('BackendApiService.removeCollaborator failed: $e');
       rethrow;
     }
   }
@@ -4774,7 +5109,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/achievements
   Future<List<Map<String, dynamic>>> getAchievements() async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/achievements'),
         headers: _getHeaders(),
       );
@@ -4786,7 +5121,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get achievements: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting achievements: $e');
+      AppConfig.debugPrint('BackendApiService.getAchievements failed: $e');
       return [];
     }
   }
@@ -4798,9 +5133,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required int progress,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/achievements/progress'),
         headers: _getHeaders(),
+        isIdempotent: true,
         body: jsonEncode({
           'achievementId': achievementId,
           'progress': progress,
@@ -4813,7 +5149,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to update achievement progress: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error updating achievement progress: $e');
+      AppConfig.debugPrint('BackendApiService.updateAchievementProgress failed: $e');
       rethrow;
     }
   }
@@ -4822,7 +5158,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/achievements/stats/:walletAddress
   Future<Map<String, dynamic>> getAchievementStats(String walletAddress) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/achievements/stats/$walletAddress'),
         headers: _getHeaders(),
       );
@@ -4834,7 +5170,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get achievement stats: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting achievement stats: $e');
+      AppConfig.debugPrint('BackendApiService.getAchievementStats failed: $e');
       return {
         'total': 0,
         'unlocked': 0,
@@ -4852,7 +5188,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     String type = 'tokens',
   }) async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/achievements/leaderboard?limit=$limit&type=$type'),
         headers: _getHeaders(),
       );
@@ -4864,7 +5200,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to get leaderboard: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error getting leaderboard: $e');
+      AppConfig.debugPrint('BackendApiService.getAchievementLeaderboard failed: $e');
       return [];
     }
   }
@@ -5107,12 +5443,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     try {
       final uri = Uri.parse('$baseUrl/api/telemetry');
       final body = jsonEncode({'event': eventName, 'params': params ?? {}});
-      final response = await http.post(uri, headers: _getHeaders(), body: body);
+      final response = await _post(
+        uri,
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        body: body,
+        isIdempotent: true,
+      );
       if (response.statusCode >= 200 && response.statusCode < 300) return;
       // Non-fatal: ignore telemetry failures
-      debugPrint('Telemetry event post returned ${response.statusCode}');
+      AppConfig.debugPrint('BackendApiService.sendTelemetryEvent: status ${response.statusCode}');
     } catch (e) {
-      debugPrint('Error sending telemetry event: $e');
+      AppConfig.debugPrint('BackendApiService.sendTelemetryEvent failed: $e');
     }
   }
 
@@ -5120,13 +5462,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /health
   Future<bool> checkHealth() async {
     try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/health'))
-          .timeout(const Duration(seconds: 5));
+      final response = await _get(
+        Uri.parse('$baseUrl/health'),
+        includeAuth: false,
+        headers: _getHeaders(includeAuth: false),
+        timeout: const Duration(seconds: 5),
+      );
 
       return response.statusCode == 200;
     } catch (e) {
-      debugPrint('Backend health check failed: $e');
+      AppConfig.debugPrint('BackendApiService.checkHealth failed: $e');
       return false;
     }
   }
@@ -5169,7 +5514,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       throw Exception('Unexpected collections response shape');
     } catch (e) {
-      debugPrint('Error fetching collections: $e');
+      AppConfig.debugPrint('BackendApiService.getCollections failed: $e');
       return [];
     }
   }
@@ -5192,7 +5537,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
       throw Exception('Unexpected collection response shape');
     } catch (e) {
-      debugPrint('Error fetching collection: $e');
+      AppConfig.debugPrint('BackendApiService.getCollection failed: $e');
       rethrow;
     }
   }
@@ -5206,7 +5551,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     String? thumbnailUrl,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/collections'),
         headers: _getHeaders(),
         body: jsonEncode({
@@ -5224,7 +5569,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to create collection: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error creating collection: $e');
+      AppConfig.debugPrint('BackendApiService.createCollection failed: $e');
       rethrow;
     }
   }
@@ -5247,10 +5592,11 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
       };
 
-      final response = await http.put(
+      final response = await _put(
         Uri.parse('$baseUrl/api/collections/$collectionId'),
         headers: _getHeaders(),
         body: jsonEncode(payload),
+        isIdempotent: true,
       );
 
       if (response.statusCode == 200) {
@@ -5274,16 +5620,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// DELETE /api/collections/:id
   Future<void> deleteCollection(String collectionId) async {
     try {
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/collections/$collectionId'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to delete collection: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error deleting collection: $e');
+      AppConfig.debugPrint('BackendApiService.deleteCollection failed: $e');
       rethrow;
     }
   }
@@ -5296,9 +5643,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     String? notes,
   }) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/collections/$collectionId/artworks'),
         headers: _getHeaders(),
+        isIdempotent: true,
         body: jsonEncode({
           'artworkId': artworkId,
           if (notes != null) 'notes': notes,
@@ -5309,7 +5657,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to add artwork to collection: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error adding artwork to collection: $e');
+      AppConfig.debugPrint('BackendApiService.addArtworkToCollection failed: $e');
       rethrow;
     }
   }
@@ -5321,16 +5669,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required String artworkId,
   }) async {
     try {
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/collections/$collectionId/artworks/$artworkId'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to remove artwork from collection: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error removing artwork from collection: $e');
+      AppConfig.debugPrint('BackendApiService.removeArtworkFromCollection failed: $e');
       rethrow;
     }
   }
@@ -5357,7 +5706,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
 
       final uri = Uri.parse('$baseUrl/api/notifications').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders());
+      final response = await _get(uri, headers: _getHeaders());
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -5367,7 +5716,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to fetch notifications: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error fetching notifications: $e');
+      AppConfig.debugPrint('BackendApiService.getNotifications failed: $e');
       return [];
     }
   }
@@ -5376,7 +5725,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// GET /api/notifications/unread-count
   Future<int> getUnreadNotificationCount() async {
     try {
-      final response = await http.get(
+      final response = await _get(
         Uri.parse('$baseUrl/api/notifications/unread-count'),
         headers: _getHeaders(),
       );
@@ -5388,7 +5737,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         return 0;
       }
     } catch (e) {
-      debugPrint('Error fetching unread count: $e');
+      AppConfig.debugPrint('BackendApiService.getUnreadNotificationCount failed: $e');
       return 0;
     }
   }
@@ -5397,16 +5746,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// PUT /api/notifications/:id/read
   Future<void> markNotificationAsRead(String notificationId) async {
     try {
-      final response = await http.put(
+      final response = await _put(
         Uri.parse('$baseUrl/api/notifications/$notificationId/read'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to mark notification as read: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error marking notification as read: $e');
+      AppConfig.debugPrint('BackendApiService.markNotificationAsRead failed: $e');
       rethrow;
     }
   }
@@ -5415,16 +5765,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// PUT /api/notifications/read-all
   Future<void> markAllNotificationsAsRead() async {
     try {
-      final response = await http.put(
+      final response = await _put(
         Uri.parse('$baseUrl/api/notifications/read-all'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to mark all notifications as read: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error marking all notifications as read: $e');
+      AppConfig.debugPrint('BackendApiService.markAllNotificationsAsRead failed: $e');
       rethrow;
     }
   }
@@ -5433,16 +5784,17 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// DELETE /api/notifications/:id
   Future<void> deleteNotification(String notificationId) async {
     try {
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/notifications/$notificationId'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to delete notification: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error deleting notification: $e');
+      AppConfig.debugPrint('BackendApiService.deleteNotification failed: $e');
       rethrow;
     }
   }
@@ -5452,15 +5804,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   Future<void> deleteMyAccountData({String? walletAddress}) async {
     try {
       await _ensureAuthBeforeRequest(walletAddress: walletAddress);
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/profiles/me'),
         headers: _getHeaders(),
+        isIdempotent: true,
       );
       if (response.statusCode != 200 && response.statusCode != 204) {
         throw Exception('Failed to delete account data: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error deleting account data: $e');
+      AppConfig.debugPrint('BackendApiService.deleteMyAccountData failed: $e');
       rethrow;
     }
   }
@@ -5484,7 +5837,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       };
 
       final uri = Uri.parse('$baseUrl/api/search').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body) as Map<String, dynamic>;
@@ -5492,7 +5845,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Search failed: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error performing search: $e');
+      AppConfig.debugPrint('BackendApiService.search failed: $e');
       return {
         'success': false,
         'query': query,
@@ -5524,7 +5877,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       dynamic data;
 
       Future<dynamic> tryFetch(Uri target) async {
-        final response = await http.get(target, headers: headers);
+        final response = await _get(target, headers: headers, includeAuth: true);
         if (_isSuccessStatus(response.statusCode)) {
           return jsonDecode(response.body);
         }
@@ -5553,10 +5906,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           return suggestions.whereType<Map<String, dynamic>>().toList();
         }
       }
-      debugPrint('getSearchSuggestions: unexpected payload shape for query "$query": $data');
+      AppConfig.debugPrint('BackendApiService.getSearchSuggestions: unexpected payload for "$query"');
       return const [];
     } catch (e) {
-      debugPrint('Error fetching search suggestions for "$query": $e');
+      AppConfig.debugPrint('BackendApiService.getSearchSuggestions failed for "$query": $e');
       return const [];
     }
   }
@@ -5570,7 +5923,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       };
 
       final uri = Uri.parse('$baseUrl/api/search/trending').replace(queryParameters: queryParams);
-      final response = await http.get(uri, headers: _getHeaders(includeAuth: false));
+      final response = await _get(uri, includeAuth: false, headers: _getHeaders(includeAuth: false));
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body) as Map<String, dynamic>;
@@ -5580,7 +5933,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         return [];
       }
     } catch (e) {
-      debugPrint('Error fetching trending searches: $e');
+      AppConfig.debugPrint('BackendApiService.getTrendingSearches failed: $e');
       return [];
     }
   }
@@ -5591,9 +5944,10 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// POST /api/conversations/:conversationId/messages/:messageId/reactions
   Future<void> addMessageReaction(String conversationId, String messageId, String emoji) async {
     try {
-      final response = await http.post(
+      final response = await _post(
         Uri.parse('$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
         headers: _getHeaders(),
+        isIdempotent: true,
         body: jsonEncode({'emoji': emoji}),
       );
 
@@ -5601,7 +5955,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         throw Exception('Failed to add reaction: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error adding message reaction: $e');
+      AppConfig.debugPrint('BackendApiService.addMessageReaction failed: $e');
       rethrow;
     }
   }
@@ -5610,17 +5964,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// DELETE /api/conversations/:conversationId/messages/:messageId/reactions
   Future<void> removeMessageReaction(String conversationId, String messageId, String emoji) async {
     try {
-      final response = await http.delete(
+      final response = await _delete(
         Uri.parse('$baseUrl/api/conversations/$conversationId/messages/$messageId/reactions'),
         headers: _getHeaders(),
         body: jsonEncode({'emoji': emoji}),
+        isIdempotent: true,
       );
 
       if (response.statusCode != 200) {
         throw Exception('Failed to remove reaction: ${response.statusCode}');
       }
     } catch (e) {
-      debugPrint('Error removing message reaction: $e');
+      AppConfig.debugPrint('BackendApiService.removeMessageReaction failed: $e');
       rethrow;
     }
   }
@@ -6325,7 +6680,7 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     try {
       originalPost = _communityPostFromBackendJson(nested);
     } catch (e) {
-      debugPrint('Failed to parse nested original post: $e');
+      AppConfig.debugPrint('BackendApiService: Failed to parse nested original post: $e');
     }
   }
 

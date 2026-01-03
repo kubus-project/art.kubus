@@ -55,6 +55,9 @@ class AppConfig {
   static const bool enablePresence = true;
   static const bool enablePresenceLastVisitedLocation = true;
 
+  // Auth UX: re-prompt login when backend token expires.
+  static const bool enableRePromptLoginOnExpiry = true;
+
   /// Collaboration (events/exhibitions)
   static const bool enableCollabInvites = true;
   static const bool enableCollabInviteNotifications = true;
@@ -113,6 +116,14 @@ class AppConfig {
   static const String baseApiUrl = String.fromEnvironment(
     'BACKEND_BASE_URL',
     defaultValue: isDevelopment ? 'http://localhost:3000' : 'https://api.kubus.site',
+  );
+
+  /// Canonical app base URL used for share links (web + deep links).
+  ///
+  /// Example: https://app.kubus.site
+  static const String appBaseUrl = String.fromEnvironment(
+    'APP_BASE_URL',
+    defaultValue: 'https://app.kubus.site',
   );
   
   /// Mock data endpoint (when useBackendMockData is true)
@@ -225,6 +236,8 @@ class AppConfig {
       case 'backendMockData': return useBackendMockData;
       case 'liking': return enableLiking;
       case 'commenting': return enableCommenting;
+      case 'sharing': return enableSharing;
+      case 'messaging': return enableMessaging;
       case 'web3': return enableWeb3;
       case 'daoOnchainTreasury': return enableDaoOnchainTreasury;
       case 'daoReviewDecisions': return enableDaoReviewDecisions;
@@ -248,6 +261,7 @@ class AppConfig {
       case 'labs': return enableLabs;
       case 'presence': return enablePresence;
       case 'presenceLastVisitedLocation': return enablePresenceLastVisitedLocation;
+      case 'rePromptLoginOnExpiry': return enableRePromptLoginOnExpiry;
       default: return false;
     }
   }

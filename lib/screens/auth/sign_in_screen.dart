@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -25,10 +27,12 @@ class SignInScreen extends StatefulWidget {
     super.key,
     this.redirectRoute,
     this.redirectArguments,
+    this.onAuthSuccess,
   });
 
   final String? redirectRoute;
   final Object? redirectArguments;
+  final FutureOr<void> Function(Map<String, dynamic> payload)? onAuthSuccess;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -58,7 +62,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       walletAddress = await _ensureWalletProvisioned(walletAddress?.toString(), desiredUsername: usernameFromUser);
     } catch (e) {
-      debugPrint('SignInScreen: wallet provisioning failed: $e');
+      AppConfig.debugPrint('SignInScreen: wallet provisioning failed: $e');
     }
     final prefs = await SharedPreferences.getInstance();
     await OnboardingStateService.markCompleted(prefs: prefs);
@@ -79,7 +83,7 @@ class _SignInScreenState extends State<SignInScreen> {
             .timeout(const Duration(seconds: 5));
       }
     } catch (e) {
-      debugPrint('SignInScreen: profile load skipped/failed: $e');
+      AppConfig.debugPrint('SignInScreen: profile load skipped/failed: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.authSignedInProfileRefreshSoon)),
@@ -87,6 +91,17 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     }
     if (!mounted) return;
+
+    if (widget.onAuthSuccess != null) {
+      try {
+        await widget.onAuthSuccess!(payload);
+      } catch (e) {
+        AppConfig.debugPrint('SignInScreen: onAuthSuccess callback failed: $e');
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      return;
+    }
 
     if (redirectRoute != null && redirectRoute.isNotEmpty) {
       Navigator.of(context).pushReplacementNamed(
@@ -117,7 +132,7 @@ class _SignInScreenState extends State<SignInScreen> {
         try {
           await walletProvider.connectWalletWithAddress(address);
         } catch (e) {
-          debugPrint('SignInScreen: connectWalletWithAddress failed: $e');
+          AppConfig.debugPrint('SignInScreen: connectWalletWithAddress failed: $e');
         }
       }
       try {
@@ -125,7 +140,7 @@ class _SignInScreenState extends State<SignInScreen> {
           await web3Provider.connectExistingWallet(address);
         }
       } catch (e) {
-        debugPrint('SignInScreen: connectExistingWallet failed: $e');
+        AppConfig.debugPrint('SignInScreen: connectExistingWallet failed: $e');
       }
       return address;
     }
@@ -138,15 +153,15 @@ class _SignInScreenState extends State<SignInScreen> {
       try {
         await web3Provider.importWallet(mnemonic);
       } catch (e) {
-        debugPrint('SignInScreen: web3 import failed: $e');
+        AppConfig.debugPrint('SignInScreen: web3 import failed: $e');
       }
       try {
         await BackendApiService().issueTokenForWallet(address);
       } catch (e) {
-        debugPrint('SignInScreen: issueTokenForWallet failed: $e');
+        AppConfig.debugPrint('SignInScreen: issueTokenForWallet failed: $e');
       }
     } catch (e) {
-      debugPrint('SignInScreen: wallet creation failed: $e');
+      AppConfig.debugPrint('SignInScreen: wallet creation failed: $e');
     }
 
     if (address != null && address.isNotEmpty && createdFreshWallet) {
@@ -162,7 +177,7 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       await profileProvider.createProfileFromWallet(walletAddress: address, username: effectiveUsername);
     } catch (e) {
-      debugPrint('SignInScreen: createProfileFromWallet failed: $e');
+      AppConfig.debugPrint('SignInScreen: createProfileFromWallet failed: $e');
     }
     if (effectiveUsername != null && effectiveUsername.isNotEmpty) {
       try {
@@ -171,7 +186,7 @@ class _SignInScreenState extends State<SignInScreen> {
           'displayName': effectiveUsername,
         });
       } catch (err) {
-        debugPrint('SignInScreen: updateProfile username patch failed: $err');
+        AppConfig.debugPrint('SignInScreen: updateProfile username patch failed: $err');
       }
     }
   }
