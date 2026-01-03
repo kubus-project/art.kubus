@@ -14,12 +14,17 @@ import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
+import '../../providers/community_subject_provider.dart';
 import '../../providers/themeprovider.dart';
 import '../../providers/wallet_provider.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
+import '../../widgets/community/community_subject_picker.dart';
+import '../../models/community_subject.dart';
+import '../../utils/community_subject_navigation.dart';
+import '../../utils/media_url_resolver.dart';
 
 enum PostDetailInitialAction { edit, delete, report, options }
 
@@ -140,6 +145,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           walletAddress: _currentWalletAddress(),
         );
       } catch (_) {}
+      if (mounted) {
+        try {
+          context.read<CommunitySubjectProvider>().primeFromPosts([post]);
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _post = post;
@@ -173,6 +183,36 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (diff.inHours > 0) return l10n.commonTimeAgoHours(diff.inHours);
     if (diff.inMinutes > 0) return l10n.commonTimeAgoMinutes(diff.inMinutes);
     return l10n.commonTimeAgoJustNow;
+  }
+
+  String _subjectTypeLabel(AppLocalizations l10n, String type) {
+    switch (type.toLowerCase()) {
+      case 'artwork':
+        return l10n.commonArtwork;
+      case 'exhibition':
+        return l10n.commonExhibition;
+      case 'collection':
+        return l10n.commonCollection;
+      case 'institution':
+        return l10n.commonInstitution;
+      default:
+        return l10n.commonDetails;
+    }
+  }
+
+  IconData _subjectTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'artwork':
+        return Icons.view_in_ar;
+      case 'exhibition':
+        return Icons.event_outlined;
+      case 'collection':
+        return Icons.collections_bookmark_outlined;
+      case 'institution':
+        return Icons.apartment_outlined;
+      default:
+        return Icons.info_outline;
+    }
   }
 
   Future<void> _toggleLike() async {
@@ -752,13 +792,55 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     final controller = TextEditingController(text: post.content);
     bool saving = false;
+    final subjectProvider = context.read<CommunitySubjectProvider>();
+    CommunitySubjectPreview? selectedPreview;
+    String? selectedSubjectType = post.subjectType;
+    String? selectedSubjectId = post.subjectId;
+
+    if ((selectedSubjectType ?? '').trim().isEmpty && post.artwork != null) {
+      selectedSubjectType = 'artwork';
+      selectedSubjectId = post.artwork!.id;
+    }
+
+    CommunitySubjectPreview? resolvePreview() {
+      if (selectedPreview != null) return selectedPreview;
+      final type = (selectedSubjectType ?? '').trim();
+      final id = (selectedSubjectId ?? '').trim();
+      if (type.isNotEmpty && id.isNotEmpty) {
+        return subjectProvider.previewFor(CommunitySubjectRef(type: type, id: id));
+      }
+      if (post.artwork != null) {
+        return CommunitySubjectPreview(
+          ref: CommunitySubjectRef(type: 'artwork', id: post.artwork!.id),
+          title: post.artwork!.title,
+          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ?? post.artwork!.imageUrl,
+        );
+      }
+      return null;
+    }
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setModalState) {
+      builder: (context, setModalState) {
+          final preview = resolvePreview();
+          final subjectSet = (selectedSubjectType ?? '').trim().isNotEmpty &&
+              (selectedSubjectId ?? '').trim().isNotEmpty;
+          final resolvedType = subjectSet
+              ? (selectedSubjectType ?? '').trim()
+              : (preview?.ref.normalizedType ?? '');
+          final hasSubject = preview != null || subjectSet;
+          final label = hasSubject
+              ? l10n.communitySubjectLinkedLabel(
+                  _subjectTypeLabel(l10n, resolvedType),
+                )
+              : l10n.communitySubjectSelectPrompt;
+          final title = preview?.title ??
+              (hasSubject
+                  ? _subjectTypeLabel(l10n, resolvedType)
+                  : l10n.communitySubjectSelectTitle);
           return Padding(
             padding: EdgeInsets.only(
               bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
@@ -818,6 +900,113 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                     ),
                   ),
                   Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () async {
+                          final selection = await CommunitySubjectPicker.pick(
+                            sheetContext,
+                            initialType: selectedSubjectType,
+                          );
+                          if (!mounted) return;
+                          if (selection == null) return;
+                          if (selection.cleared) {
+                            setModalState(() {
+                              selectedSubjectType = null;
+                              selectedSubjectId = null;
+                              selectedPreview = null;
+                            });
+                            return;
+                          }
+                          final selected = selection.preview;
+                          if (selected == null) return;
+                          subjectProvider.upsertPreview(selected);
+                          setModalState(() {
+                            selectedSubjectType = selected.ref.normalizedType;
+                            selectedSubjectId = selected.ref.id;
+                            selectedPreview = selected;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: hasSubject
+                                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
+                                : theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: hasSubject
+                                  ? theme.colorScheme.primary.withValues(alpha: 0.3)
+                                  : theme.colorScheme.outline.withValues(alpha: 0.2),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              if (preview?.imageUrl != null && preview!.imageUrl!.isNotEmpty)
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: Image.network(
+                                    preview.imageUrl!,
+                                    width: 44,
+                                    height: 44,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      _subjectTypeIcon(resolvedType),
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                )
+                              else
+                                Icon(
+                                  hasSubject ? _subjectTypeIcon(resolvedType) : Icons.link,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      title,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      label,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (hasSubject)
+                                IconButton(
+                                  tooltip: l10n.communitySubjectRemoveTooltip,
+                                  onPressed: () {
+                                    setModalState(() {
+                                      selectedSubjectType = null;
+                                      selectedSubjectId = null;
+                                      selectedPreview = null;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.close),
+                                )
+                              else
+                                const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Padding(
                     padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                     child: Row(
                       children: [
@@ -853,6 +1042,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                                 post.imageUrl!.trim().isNotEmpty)
                                             ? [post.imageUrl!.trim()]
                                             : <String>[];
+                                    final normalizedSubjectType =
+                                        (selectedSubjectType ?? '').trim();
+                                    final normalizedSubjectId =
+                                        (selectedSubjectId ?? '').trim();
+                                    final subjectTypePayload = normalizedSubjectType.isNotEmpty
+                                        ? normalizedSubjectType
+                                        : null;
+                                    final subjectIdPayload = normalizedSubjectId.isNotEmpty
+                                        ? normalizedSubjectId
+                                        : null;
+                                    final artworkIdPayload =
+                                        subjectTypePayload == 'artwork'
+                                            ? subjectIdPayload
+                                            : null;
                                     if (content.isEmpty && existingMediaUrls.isEmpty) {
                                       messenger.showSnackBar(
                                         SnackBar(
@@ -870,10 +1073,33 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                                         postId: post.id,
                                         content: content,
                                         mediaUrls: existingMediaUrls,
+                                        subjectType: subjectTypePayload,
+                                        subjectId: subjectIdPayload,
+                                        artworkId: artworkIdPayload,
+                                        includeSubject: true,
                                       );
                                       if (!mounted) return;
+                                      CommunityArtworkReference? updatedArtwork;
+                                      if (subjectTypePayload == 'artwork' &&
+                                          subjectIdPayload != null &&
+                                          subjectIdPayload.isNotEmpty) {
+                                        if (selectedPreview != null) {
+                                          updatedArtwork = CommunityArtworkReference(
+                                            id: subjectIdPayload,
+                                            title: selectedPreview!.title,
+                                            imageUrl: selectedPreview!.imageUrl,
+                                          );
+                                        } else if (post.artwork?.id == subjectIdPayload) {
+                                          updatedArtwork = post.artwork;
+                                        }
+                                      }
                                       setState(() {
-                                        _post = post.copyWith(content: content);
+                                        _post = post.copyWith(
+                                          content: content,
+                                          subjectType: subjectTypePayload,
+                                          subjectId: subjectIdPayload,
+                                          artwork: updatedArtwork,
+                                        );
                                       });
                                       appRefresh?.triggerCommunity();
                                       navigator.pop();
@@ -1246,13 +1472,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                         onMoreOptions: _showPostOptionsMenu,
                         onShowLikes: _showPostLikes,
                         onShowReposts: _showPostReposts,
-                        onOpenArtwork: (artwork) {
-                          Navigator.pushNamed(
-                            context,
-                            '/artwork',
-                            arguments: {'artworkId': artwork.id},
-                          );
-                        },
+                        onOpenSubject: (preview) => CommunitySubjectNavigation.open(
+                          context,
+                          subject: preview.ref,
+                          titleOverride: preview.title,
+                        ),
                       ),
                       const SizedBox(height: 24),
                       Consumer<CommunityCommentsProvider>(

@@ -35,6 +35,8 @@ class AppConfig {
   static const bool enableNFTMinting = true;
   static const bool enableEvents = true;
   static const bool enableExhibitions = true;
+  static const bool enableCollections = true;
+  static const bool enableInstitutions = true;
   static const bool enableDaoOnchainTreasury = true;
   static const bool enableDaoReviewDecisions = true;
   static const bool enableWalletConnect = true;
@@ -248,6 +250,8 @@ class AppConfig {
       case 'marketplace': return enableMarketplace;
       case 'events': return enableEvents;
       case 'exhibitions': return enableExhibitions;
+      case 'collections': return enableCollections;
+      case 'institutions': return enableInstitutions;
       case 'ar': return enableARViewer;
       case 'analytics': return enableAnalytics;
       case 'debug': return enableDebugPrints;

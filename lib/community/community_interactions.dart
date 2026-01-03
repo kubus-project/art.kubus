@@ -24,6 +24,8 @@ class CommunityPost {
   final CommunityGroupReference? group;
   final String? groupId;
   final CommunityArtworkReference? artwork;
+  final String? subjectType;
+  final String? subjectId;
   final double? distanceKm;
   final String? postType; // 'post', 'repost', 'shared_post'
   final String? originalPostId; // If this is a repost
@@ -57,6 +59,8 @@ class CommunityPost {
     this.group,
     this.groupId,
     this.artwork,
+    this.subjectType,
+    this.subjectId,
     this.distanceKm,
     this.postType,
     this.originalPostId,
@@ -94,6 +98,8 @@ class CommunityPost {
     CommunityGroupReference? group,
     String? groupId,
     CommunityArtworkReference? artwork,
+    String? subjectType,
+    String? subjectId,
     double? distanceKm,
     String? imageUrl,
     bool? authorIsArtist,
@@ -117,6 +123,8 @@ class CommunityPost {
       group: group ?? this.group,
       groupId: groupId ?? this.groupId,
       artwork: artwork ?? this.artwork,
+      subjectType: subjectType ?? this.subjectType,
+      subjectId: subjectId ?? this.subjectId,
       distanceKm: distanceKm ?? this.distanceKm,
       postType: postType,
       originalPostId: originalPostId,

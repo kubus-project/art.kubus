@@ -12178,6 +12178,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select an AR asset'**
   String get manageMarkersPickArAssetPlaceholder;
+
+  /// No description provided for @commonExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'Exhibition'**
+  String get commonExhibition;
+
+  /// No description provided for @commonCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection'**
+  String get commonCollection;
+
+  /// No description provided for @commonInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'Institution'**
+  String get commonInstitution;
+
+  /// No description provided for @commonDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get commonDetails;
+
+  /// No description provided for @communitySubjectLinkedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked {subjectType}'**
+  String communitySubjectLinkedLabel(Object subjectType);
+
+  /// No description provided for @communitySubjectSelectTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Link a subject'**
+  String get communitySubjectSelectTitle;
+
+  /// No description provided for @communitySubjectSelectPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what this post references'**
+  String get communitySubjectSelectPrompt;
+
+  /// No description provided for @communitySubjectRemoveTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove subject'**
+  String get communitySubjectRemoveTooltip;
+
+  /// No description provided for @communitySubjectNoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'No subject'**
+  String get communitySubjectNoneLabel;
+
+  /// No description provided for @communitySubjectPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select subject'**
+  String get communitySubjectPickerTitle;
+
+  /// No description provided for @communitySubjectPickerSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name'**
+  String get communitySubjectPickerSearchHint;
+
+  /// No description provided for @communitySubjectPickerSearchPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Start typing to search institutions'**
+  String get communitySubjectPickerSearchPrompt;
+
+  /// No description provided for @communitySubjectPickerLoadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load subjects.'**
+  String get communitySubjectPickerLoadFailed;
+
+  /// No description provided for @communitySubjectPickerEmptyArtwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No artworks found.'**
+  String get communitySubjectPickerEmptyArtwork;
+
+  /// No description provided for @communitySubjectPickerEmptyExhibition.
+  ///
+  /// In en, this message translates to:
+  /// **'No exhibitions found.'**
+  String get communitySubjectPickerEmptyExhibition;
+
+  /// No description provided for @communitySubjectPickerEmptyCollection.
+  ///
+  /// In en, this message translates to:
+  /// **'No collections found.'**
+  String get communitySubjectPickerEmptyCollection;
+
+  /// No description provided for @communitySubjectPickerEmptyInstitution.
+  ///
+  /// In en, this message translates to:
+  /// **'No institutions found.'**
+  String get communitySubjectPickerEmptyInstitution;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

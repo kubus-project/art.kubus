@@ -997,8 +997,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                                   content: next,
                                                 );
                                                 if (!mounted) return;
-                                                if (!dialogContext.mounted)
+                                                if (!dialogContext.mounted) {
                                                   return;
+                                                }
                                                 Navigator.of(dialogContext)
                                                     .pop();
                                                 messenger.showSnackBar(

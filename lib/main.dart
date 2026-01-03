@@ -28,6 +28,7 @@ import 'providers/cache_provider.dart';
 import 'providers/saved_items_provider.dart';
 import 'providers/community_hub_provider.dart';
 import 'providers/community_comments_provider.dart';
+import 'providers/community_subject_provider.dart';
 import 'providers/presence_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/events_provider.dart';
@@ -231,6 +232,7 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(create: (context) => SavedItemsProvider()),
+              ChangeNotifierProvider(create: (context) => CommunitySubjectProvider()),
               ChangeNotifierProxyProvider<AppRefreshProvider, ChatProvider>(
                 create: (context) => ChatProvider(),
                 update: (context, appRefreshProvider, chatProvider) {
@@ -268,7 +270,14 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => NavigationProvider()),
               ChangeNotifierProvider(create: (context) => TaskProvider()),
               ChangeNotifierProvider(create: (context) => CacheProvider()),
-              ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
+              ChangeNotifierProxyProvider<CommunitySubjectProvider, CommunityHubProvider>(
+                create: (context) => CommunityHubProvider(),
+                update: (context, subjectProvider, hubProvider) {
+                  final provider = hubProvider ?? CommunityHubProvider();
+                  provider.bindSubjectProvider(subjectProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(create: (context) => CommunityCommentsProvider()),
               ChangeNotifierProvider(create: (context) => DeepLinkProvider()),
               ChangeNotifierProvider(create: (context) => EventsProvider()),

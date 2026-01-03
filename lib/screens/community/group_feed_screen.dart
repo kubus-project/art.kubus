@@ -10,15 +10,27 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
 import '../../models/community_group.dart';
+import '../../models/community_subject.dart';
+import '../../providers/community_subject_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/community_hub_provider.dart';
+import '../../providers/saved_items_provider.dart';
+import '../../providers/themeprovider.dart';
+import '../../providers/wallet_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../utils/app_animations.dart';
+import '../../utils/community_subject_navigation.dart';
 import '../../utils/media_url_resolver.dart';
+import '../../utils/wallet_utils.dart';
 import '../../widgets/app_loading.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/community/community_post_card.dart';
+import '../../widgets/community/community_post_options_sheet.dart';
+import '../../widgets/community/community_subject_picker.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/inline_loading.dart';
 import 'post_detail_screen.dart';
+import 'user_profile_screen.dart';
 
 class GroupFeedScreen extends StatefulWidget {
   const GroupFeedScreen({super.key, required this.group});
@@ -193,6 +205,7 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     final profileProvider = context.watch<ProfileProvider>();
     final isSignedIn = profileProvider.isSignedIn;
     final isMember = summary.isMember || summary.isOwner;
+    final draft = hub.draft;
 
     if (!isSignedIn) {
       return Container(
@@ -302,6 +315,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
             ),
           ],
           const SizedBox(height: 12),
+          _buildComposerSubjectSelector(draft, hub),
+          const SizedBox(height: 12),
           Row(
             children: [
               IconButton(
@@ -385,6 +400,8 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         _selectedImage = null;
         _selectedImageBytes = null;
       });
+      hub.setDraftSubject();
+      hub.setDraftArtwork(null);
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.communityComposerPostCreatedToast),
@@ -484,116 +501,870 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
     );
   }
 
-  Widget _buildGroupPostCard(CommunityPost post) {
+  Widget _buildComposerSubjectSelector(CommunityPostDraft draft, CommunityHubProvider hub) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
-    final imageUrl = post.imageUrl ??
-        (post.mediaUrls.isNotEmpty ? post.mediaUrls.first : null);
+    final subjectProvider = context.read<CommunitySubjectProvider>();
+    final animationTheme = context.animationTheme;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 18),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            leading: AvatarWidget(
-              wallet: post.authorWallet ?? post.authorId,
-              avatarUrl: post.authorAvatar,
-              radius: 20,
-              allowFabricatedFallback: true,
+    CommunitySubjectPreview? preview;
+    final type = (draft.subjectType ?? '').trim();
+    final id = (draft.subjectId ?? '').trim();
+    if (type.isNotEmpty && id.isNotEmpty) {
+      preview = subjectProvider.previewFor(
+        CommunitySubjectRef(type: type, id: id),
+      );
+    }
+    if (preview == null && draft.artwork != null) {
+      preview = CommunitySubjectPreview(
+        ref: CommunitySubjectRef(type: 'artwork', id: draft.artwork!.id),
+        title: draft.artwork!.title,
+        imageUrl: MediaUrlResolver.resolve(draft.artwork!.imageUrl) ?? draft.artwork!.imageUrl,
+      );
+    }
+
+    final previewValue = preview;
+    final bool hasSubject = previewValue != null;
+    final String label;
+    final String title;
+    final IconData subjectIcon;
+    final String? imageUrl;
+    if (previewValue == null) {
+      label = l10n.communitySubjectSelectPrompt;
+      title = l10n.communitySubjectSelectTitle;
+      subjectIcon = Icons.link;
+      imageUrl = null;
+    } else {
+      label = l10n.communitySubjectLinkedLabel(
+        _subjectTypeLabel(l10n, previewValue.ref.normalizedType),
+      );
+      title = previewValue.title;
+      subjectIcon = _subjectTypeIcon(previewValue.ref.normalizedType);
+      imageUrl = previewValue.imageUrl;
+    }
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () async {
+        final selection =
+            await CommunitySubjectPicker.pick(context, initialType: draft.subjectType);
+        if (selection == null) return;
+        if (selection.cleared) {
+          hub.setDraftSubject();
+          hub.setDraftArtwork(null);
+          return;
+        }
+        final selected = selection.preview;
+        if (selected == null) return;
+        subjectProvider.upsertPreview(selected);
+        hub.setDraftSubject(type: selected.ref.normalizedType, id: selected.ref.id);
+        if (selected.ref.normalizedType == 'artwork') {
+          hub.setDraftArtwork(
+            CommunityArtworkReference(
+              id: selected.ref.id,
+              title: selected.title,
+              imageUrl: selected.imageUrl,
             ),
-            title: Text(
-              post.authorName,
-              style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-            ),
-            subtitle: Text(
-              _getTimeAgo(post.timestamp),
-              style: GoogleFonts.inter(fontSize: 12),
-            ),
+          );
+        } else {
+          hub.setDraftArtwork(null);
+        }
+      },
+      child: AnimatedContainer(
+        duration: animationTheme.short,
+        curve: animationTheme.defaultCurve,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: hasSubject
+              ? scheme.primaryContainer.withValues(alpha: 0.25)
+              : scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: hasSubject
+                ? scheme.primary.withValues(alpha: 0.35)
+                : scheme.outline.withValues(alpha: 0.3),
           ),
-          if (imageUrl != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Image.network(
-                imageUrl,
-                height: 220,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return Container(
-                    height: 220,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          scheme.secondary.withValues(alpha: 0.3),
-                          scheme.secondary.withValues(alpha: 0.1),
-                        ],
-                      ),
-                    ),
-                    child: const Center(
-                      child: InlineLoading(expand: false, shape: BoxShape.circle),
-                    ),
-                  );
-                },
-                errorBuilder: (_, __, ___) => Container(
-                  height: 220,
-                  color: scheme.onSurface.withValues(alpha: 0.1),
-                  child: Icon(Icons.broken_image_outlined,
-                      color: scheme.onSurface.withValues(alpha: 0.5)),
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  post.content,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    height: 1.4,
+        ),
+        child: Row(
+          children: [
+            if (previewValue != null && imageUrl != null && imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  width: 44,
+                  height: 44,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Icon(
+                    subjectIcon,
+                    color: scheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    TextButton.icon(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PostDetailScreen(post: post),
-                        ),
-                      ),
-                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: Text(l10n.commonComments),
+              )
+            else
+              Icon(
+                subjectIcon,
+                color: scheme.onSurface,
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(width: 8),
-                    TextButton.icon(
-                      onPressed: () {
-                        ShareService().showShareSheet(
-                          context,
-                          target: ShareTarget.post(postId: post.id, title: post.content),
-                          sourceScreen: 'group_feed',
-                        );
-                      },
-                      icon: const Icon(Icons.share_outlined, size: 18),
-                      label: Text(l10n.commonShare),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: scheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: scheme.onSurface.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _subjectTypeLabel(AppLocalizations l10n, String type) {
+    switch (type.toLowerCase()) {
+      case 'artwork':
+        return l10n.commonArtwork;
+      case 'exhibition':
+        return l10n.commonExhibition;
+      case 'collection':
+        return l10n.commonCollection;
+      case 'institution':
+        return l10n.commonInstitution;
+      default:
+        return l10n.commonDetails;
+    }
+  }
+
+  IconData _subjectTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'artwork':
+        return Icons.view_in_ar;
+      case 'exhibition':
+        return Icons.event_outlined;
+      case 'collection':
+        return Icons.collections_bookmark_outlined;
+      case 'institution':
+        return Icons.apartment_outlined;
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  Widget _buildGroupPostCard(CommunityPost post) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return CommunityPostCard(
+      post: post,
+      accentColor: themeProvider.accentColor,
+      onOpenPostDetail: _openPostDetail,
+      onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+      onToggleLike: () => _toggleLike(post),
+      onOpenComments: () => _openPostDetail(post),
+      onRepost: () {
+        final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+        final currentWallet = walletProvider.currentWalletAddress;
+        if (post.postType == 'repost' && post.authorWallet == currentWallet) {
+          _showRepostOptions(post);
+        } else {
+          _showRepostModal(post);
+        }
+      },
+      onShare: () => _sharePost(post),
+      onToggleBookmark: () => _toggleBookmark(post),
+      onMoreOptions: () => _showPostOptionsForPost(post),
+      onShowLikes: () => _showPostLikes(post.id),
+      onShowReposts: () => _viewRepostsList(post),
+      onOpenSubject: (preview) => CommunitySubjectNavigation.open(
+        context,
+        subject: preview.ref,
+        titleOverride: preview.title,
+      ),
+    );
+  }
+
+  void _openPostDetail(CommunityPost post, {PostDetailInitialAction? initialAction}) {
+    final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    final groupId = post.groupId ?? _group.id;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PostDetailScreen(
+          post: post,
+          initialAction: initialAction,
+          onClose: () {
+            hub.removeGroupPost(groupId, post.id);
+            Navigator.of(context).maybePop();
+          },
+        ),
+      ),
+    );
+  }
+
+  void _viewUserProfile(String userId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => UserProfileScreen(userId: userId),
+      ),
+    );
+  }
+
+  String? _currentWalletAddress() {
+    try {
+      return Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void _showPostOptionsForPost(CommunityPost post) {
+    if (!mounted) return;
+    final currentWallet = _currentWalletAddress();
+    final authorWallet = post.authorWallet ?? post.authorId;
+    final isOwner =
+        currentWallet != null && WalletUtils.equals(authorWallet, currentWallet);
+
+    showCommunityPostOptionsSheet(
+      context: context,
+      post: post,
+      isOwner: isOwner,
+      onReport: () => _openPostDetail(post, initialAction: PostDetailInitialAction.report),
+      onEdit: () => _openPostDetail(post, initialAction: PostDetailInitialAction.edit),
+      onDelete: () => _openPostDetail(post, initialAction: PostDetailInitialAction.delete),
+    );
+  }
+
+  Future<void> _toggleLike(CommunityPost post) async {
+    final wasLiked = post.isLiked;
+    final l10n = AppLocalizations.of(context)!;
+    final walletAddress =
+        Provider.of<WalletProvider>(context, listen: false).currentWalletAddress;
+
+    try {
+      await CommunityService.togglePostLike(
+        post,
+        currentUserWallet: walletAddress,
+      );
+
+      if (!mounted) return;
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            !wasLiked ? l10n.postDetailPostLikedToast : l10n.postDetailLikeRemovedToast,
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GroupFeedScreen: togglePostLike failed: $e');
+      }
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.communityToggleLikeFailedToast),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _toggleBookmark(CommunityPost post) async {
+    final l10n = AppLocalizations.of(context)!;
+    final savedItemsProvider =
+        Provider.of<SavedItemsProvider>(context, listen: false);
+    try {
+      await CommunityService.toggleBookmark(post);
+      await savedItemsProvider.setPostSaved(post.id, post.isBookmarked);
+      if (!mounted) return;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            post.isBookmarked
+                ? l10n.communityBookmarkAddedToast
+                : l10n.communityBookmarkRemovedToast,
+          ),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GroupFeedScreen: bookmark toggle failed: $e');
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.communityBookmarkUpdateFailedToast),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
+
+  void _sharePost(CommunityPost post) {
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.post(postId: post.id, title: post.content),
+      sourceScreen: 'group_feed',
+    );
+  }
+
+  void _showPostLikes(String postId) {
+    final l10n = AppLocalizations.of(context)!;
+    _showLikesDialog(
+      title: l10n.communityPostLikesTitle,
+      loader: () => BackendApiService().getPostLikes(postId),
+    );
+  }
+
+  void _showLikesDialog({
+    required String title,
+    required Future<List<CommunityLikeUser>> Function() loader,
+  }) {
+    if (!mounted) return;
+
+    final theme = Theme.of(context);
+    final future = loader();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      color: theme.colorScheme.onSurface,
+                      onPressed: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
                 ),
-              ],
+              ),
+              Expanded(
+                child: FutureBuilder<List<CommunityLikeUser>>(
+                  future: future,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return Center(
+                        child: SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: InlineLoading(
+                            expand: true,
+                            shape: BoxShape.circle,
+                            tileSize: 4.0,
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: theme.colorScheme.error,
+                                size: 36,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Failed to load likes',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${snapshot.error}',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color:
+                                      theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    final likes = snapshot.data ?? <CommunityLikeUser>[];
+                    if (likes.isEmpty) {
+                      return const Center(
+                        child: EmptyStateCard(
+                          icon: Icons.favorite_border,
+                          title: 'No likes yet',
+                          description: 'Be the first to like this post',
+                        ),
+                      );
+                    }
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: likes.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final user = likes[index];
+                        final username = (user.username ?? user.walletAddress ?? '').trim();
+                        return ListTile(
+                          leading: AvatarWidget(
+                            wallet: user.walletAddress ?? user.userId,
+                            avatarUrl: user.avatarUrl,
+                            radius: 20,
+                            allowFabricatedFallback: true,
+                          ),
+                          title: Text(
+                            user.displayName,
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: username.isNotEmpty
+                              ? Text(
+                                  '@$username',
+                                  style: GoogleFonts.inter(fontSize: 12),
+                                )
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _viewRepostsList(CommunityPost post) async {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l10n.communityRepostedByTitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(sheetContext),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: FutureBuilder<List<Map<String, dynamic>>>(
+                future: BackendApiService().getPostReposts(postId: post.id),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text(
+                        l10n.communityRepostsLoadFailedMessage,
+                        style: GoogleFonts.inter(),
+                      ),
+                    );
+                  }
+                  final reposts = snapshot.data ?? [];
+                  if (reposts.isEmpty) {
+                    return Center(
+                      child: EmptyStateCard(
+                        icon: Icons.repeat,
+                        title: l10n.communityNoRepostsTitle,
+                        description: l10n.communityNoRepostsDescription,
+                      ),
+                    );
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    itemCount: reposts.length,
+                    itemBuilder: (ctx, idx) {
+                      final repost = reposts[idx];
+                      final user = repost['user'] as Map<String, dynamic>?;
+                      final username = user?['username'] ??
+                          user?['walletAddress'] ??
+                          l10n.commonUnknown;
+                      final displayName = user?['displayName'] ?? username;
+                      final avatar = user?['avatar'];
+                      final comment = repost['repostComment'] as String?;
+                      final createdAt =
+                          DateTime.tryParse(repost['createdAt'] ?? '');
+
+                      return ListTile(
+                        leading: AvatarWidget(
+                          wallet: username,
+                          avatarUrl: avatar,
+                          radius: 20,
+                        ),
+                        title: Text(
+                          displayName,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('@$username',
+                                style: GoogleFonts.inter(fontSize: 12)),
+                            if (comment != null && comment.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                comment,
+                                style: GoogleFonts.inter(fontSize: 12),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ],
+                        ),
+                        trailing: createdAt != null
+                            ? Text(
+                                _getTimeAgo(createdAt),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              )
+                            : null,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRepostModal(CommunityPost post) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final repostContentController = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      l10n.postDetailRepostTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(sheetContext),
+                          child: Text(l10n.commonCancel,
+                              style: GoogleFonts.inter()),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () async {
+                            final content = repostContentController.text.trim();
+                            Navigator.pop(sheetContext);
+                            final messenger = ScaffoldMessenger.of(context);
+
+                            try {
+                              await BackendApiService().createRepost(
+                                originalPostId: post.id,
+                                content: content.isNotEmpty ? content : null,
+                              );
+                              BackendApiService().trackAnalyticsEvent(
+                                eventType: 'repost_created',
+                                postId: post.id,
+                                metadata: {'has_comment': content.isNotEmpty},
+                              );
+
+                              if (!mounted) return;
+                              setState(() {
+                                post.shareCount =
+                                    (post.shareCount + 1).clamp(0, 1 << 30);
+                              });
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    content.isEmpty
+                                        ? l10n.postDetailRepostSuccessToast
+                                        : l10n.postDetailRepostWithCommentSuccessToast,
+                                  ),
+                                ),
+                              );
+                            } catch (e) {
+                              if (kDebugMode) {
+                                debugPrint('GroupFeedScreen: repost failed: $e');
+                              }
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content:
+                                      Text(l10n.postDetailRepostFailedToast),
+                                ),
+                              );
+                            }
+                          },
+                          child: Text(
+                            l10n.postDetailRepostButton,
+                            style: GoogleFonts.inter(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: TextField(
+                  controller: repostContentController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: l10n.postDetailRepostThoughtsHint,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: CommunityPostCard(
+                  post: post,
+                  accentColor: themeProvider.accentColor,
+                  onOpenPostDetail: _openPostDetail,
+                  onOpenAuthorProfile: () => _viewUserProfile(post.authorId),
+                  onToggleLike: () => _toggleLike(post),
+                  onOpenComments: () => _openPostDetail(post),
+                  onRepost: () {},
+                  onShare: () {},
+                  onToggleBookmark: () => _toggleBookmark(post),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRepostOptions(CommunityPost post) {
+    if (!mounted) return;
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.outline,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+              title: Text(
+                l10n.communityUnrepostAction,
+                style: GoogleFonts.inter(color: theme.colorScheme.error),
+              ),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _unrepostPost(post);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _unrepostPost(CommunityPost post) async {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.communityUnrepostTitle, style: GoogleFonts.inter()),
+        content: Text(
+          l10n.communityUnrepostConfirmBody,
+          style: GoogleFonts.inter(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(l10n.commonCancel, style: GoogleFonts.inter()),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(
+              l10n.communityUnrepostAction,
+              style: GoogleFonts.inter(),
             ),
           ),
         ],
       ),
     );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await BackendApiService().deleteRepost(post.id);
+      BackendApiService().trackAnalyticsEvent(
+        eventType: 'repost_deleted',
+        postId: post.originalPostId ?? post.id,
+        metadata: {'repost_id': post.id},
+      );
+
+      if (!mounted) return;
+      final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+      final groupId = post.groupId ?? _group.id;
+      hub.removeGroupPost(groupId, post.id);
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.communityRepostRemovedToast)),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('GroupFeedScreen: unrepost failed: $e');
+      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.communityUnrepostFailedToast)),
+      );
+    }
   }
 
   String _getTimeAgo(DateTime timestamp) {

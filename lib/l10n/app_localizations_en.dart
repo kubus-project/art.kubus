@@ -6437,4 +6437,57 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get manageMarkersPickArAssetPlaceholder => 'Select an AR asset';
+
+  @override
+  String get commonExhibition => 'Exhibition';
+
+  @override
+  String get commonCollection => 'Collection';
+
+  @override
+  String get commonInstitution => 'Institution';
+
+  @override
+  String get commonDetails => 'Details';
+
+  @override
+  String communitySubjectLinkedLabel(Object subjectType) {
+    return 'Linked $subjectType';
+  }
+
+  @override
+  String get communitySubjectSelectTitle => 'Link a subject';
+
+  @override
+  String get communitySubjectSelectPrompt => 'Choose what this post references';
+
+  @override
+  String get communitySubjectRemoveTooltip => 'Remove subject';
+
+  @override
+  String get communitySubjectNoneLabel => 'No subject';
+
+  @override
+  String get communitySubjectPickerTitle => 'Select subject';
+
+  @override
+  String get communitySubjectPickerSearchHint => 'Search by name';
+
+  @override
+  String get communitySubjectPickerSearchPrompt => 'Start typing to search institutions';
+
+  @override
+  String get communitySubjectPickerLoadFailed => 'Unable to load subjects.';
+
+  @override
+  String get communitySubjectPickerEmptyArtwork => 'No artworks found.';
+
+  @override
+  String get communitySubjectPickerEmptyExhibition => 'No exhibitions found.';
+
+  @override
+  String get communitySubjectPickerEmptyCollection => 'No collections found.';
+
+  @override
+  String get communitySubjectPickerEmptyInstitution => 'No institutions found.';
 }

@@ -6461,4 +6461,58 @@ class AppLocalizationsSl extends AppLocalizations {
 
   @override
   String get manageMarkersPickArAssetPlaceholder => 'Izberi AR sredstvo';
+
+  @override
+  String get commonExhibition => 'Razstava';
+
+  @override
+  String get commonCollection => 'Zbirka';
+
+  @override
+  String get commonInstitution => 'Institucija';
+
+  @override
+  String get commonDetails => 'Podrobnosti';
+
+  @override
+  String communitySubjectLinkedLabel(Object subjectType) {
+    return 'Povezano: $subjectType';
+  }
+
+  @override
+  String get communitySubjectSelectTitle => 'Poveži predmet';
+
+  @override
+  String get communitySubjectSelectPrompt => 'Izberi, na kaj se objava nanaša';
+
+  @override
+  String get communitySubjectRemoveTooltip => 'Odstrani predmet';
+
+  @override
+  String get communitySubjectNoneLabel => 'Brez predmeta';
+
+  @override
+  String get communitySubjectPickerTitle => 'Izberi predmet';
+
+  @override
+  String get communitySubjectPickerSearchHint => 'Išči po imenu';
+
+  @override
+  String get communitySubjectPickerSearchPrompt =>
+      'Začni tipkati za iskanje institucij';
+
+  @override
+  String get communitySubjectPickerLoadFailed => 'Ni mogoče naložiti predmetov.';
+
+  @override
+  String get communitySubjectPickerEmptyArtwork => 'Ni najdenih umetnin.';
+
+  @override
+  String get communitySubjectPickerEmptyExhibition => 'Ni najdenih razstav.';
+
+  @override
+  String get communitySubjectPickerEmptyCollection => 'Ni najdenih zbirk.';
+
+  @override
+  String get communitySubjectPickerEmptyInstitution => 'Ni najdenih institucij.';
 }
