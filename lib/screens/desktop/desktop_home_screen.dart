@@ -33,6 +33,7 @@ import '../../widgets/artwork_creator_byline.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
+import '../../utils/artwork_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/kubus_color_roles.dart';
 import 'components/desktop_widgets.dart';
@@ -41,7 +42,6 @@ import 'web3/desktop_wallet_screen.dart';
 import '../onboarding/web3/web3_onboarding.dart' as web3;
 import '../onboarding/web3/onboarding_data.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
-import 'art/desktop_artwork_detail_screen.dart';
 import 'community/desktop_user_profile_screen.dart';
 import 'desktop_settings_screen.dart';
 import 'desktop_shell.dart';
@@ -1358,21 +1358,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       margin: EdgeInsets.only(right: index < 5 ? DetailSpacing.lg : 0),
       padding: EdgeInsets.zero,
       onTap: () {
-        final shellScope = DesktopShellScope.of(context);
-        if (shellScope != null) {
-          shellScope.pushScreen(
-            DesktopSubScreen(
-              title: artwork.title,
-              child: DesktopArtworkDetailScreen(artworkId: artwork.id),
-            ),
-          );
-        } else {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => DesktopArtworkDetailScreen(artworkId: artwork.id, showAppBar: true),
-            ),
-          );
-        }
+        openArtwork(context, artwork.id, source: 'desktop_home');
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1765,22 +1751,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return DesktopCard(
       onTap: () {
         if (entry.artworkId != null && entry.artworkId!.isNotEmpty) {
-          final shellScope = DesktopShellScope.of(context);
-          if (shellScope != null) {
-            shellScope.pushScreen(
-              DesktopSubScreen(
-                title: entry.title,
-                child: DesktopArtworkDetailScreen(artworkId: entry.artworkId!),
-              ),
-            );
-          } else {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) =>
-                    DesktopArtworkDetailScreen(artworkId: entry.artworkId!, showAppBar: true),
-              ),
-            );
-          }
+          openArtwork(context, entry.artworkId!, source: 'desktop_home_trending');
         }
       },
       padding: const EdgeInsets.all(DetailSpacing.md),
@@ -2985,21 +2956,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     }
 
     if (suggestion.type == 'artwork' && suggestion.id != null) {
-      final shellScope = DesktopShellScope.of(context);
-      if (shellScope != null) {
-        shellScope.pushScreen(
-          DesktopSubScreen(
-            title: suggestion.label,
-            child: DesktopArtworkDetailScreen(artworkId: suggestion.id!),
-          ),
-        );
-      } else {
-        await Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => DesktopArtworkDetailScreen(artworkId: suggestion.id!, showAppBar: true),
-          ),
-        );
-      }
+      await openArtwork(context, suggestion.id!, source: 'desktop_home_search');
       return;
     }
 

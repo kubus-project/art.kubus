@@ -1,12 +1,5 @@
 import 'package:latlong2/latlong.dart';
 
-enum ArtworkRarity {
-  common,
-  rare,
-  epic,
-  legendary,
-}
-
 enum ArtworkStatus {
   undiscovered,
   discovered,
@@ -21,7 +14,6 @@ class Artwork {
   final String description;
   final String? imageUrl;
   final LatLng position;
-  final ArtworkRarity rarity;
   final ArtworkStatus status;
   final bool isPublic;
   final bool isActive;
@@ -67,7 +59,6 @@ class Artwork {
     required this.description,
     this.imageUrl,
     required this.position,
-    required this.rarity,
     this.status = ArtworkStatus.undiscovered,
     this.isPublic = true,
     this.isActive = true,
@@ -124,22 +115,10 @@ class Artwork {
   /// Check if artwork is favorite
   bool get isFavorite => status == ArtworkStatus.favorite;
 
-  /// Get rarity multiplier for rewards
-  static double getRarityMultiplier(ArtworkRarity rarity) {
-    switch (rarity) {
-      case ArtworkRarity.common:
-        return 1.0;
-      case ArtworkRarity.rare:
-        return 1.5;
-      case ArtworkRarity.epic:
-        return 2.0;
-      case ArtworkRarity.legendary:
-        return 3.0;
-    }
-  }
-
-  /// Calculate actual rewards with rarity multiplier
-  int get actualRewards => (rewards * getRarityMultiplier(rarity)).round();
+  /// Backward-compatible alias used by legacy UI/widgets.
+  ///
+  /// Prefer reading `rewards` directly.
+  int get actualRewards => rewards;
 
   /// Convert to Map for storage/API
   Map<String, dynamic> toMap() {
@@ -152,7 +131,6 @@ class Artwork {
       'imageUrl': imageUrl,
       'latitude': position.latitude,
       'longitude': position.longitude,
-      'rarity': rarity.name,
       'status': status.name,
       'isPublic': isPublic,
       'isActive': isActive,
@@ -198,10 +176,6 @@ class Artwork {
       position: LatLng(
         map['latitude']?.toDouble() ?? 0.0,
         map['longitude']?.toDouble() ?? 0.0,
-      ),
-      rarity: ArtworkRarity.values.firstWhere(
-        (e) => e.name == map['rarity'],
-        orElse: () => ArtworkRarity.common,
       ),
       status: ArtworkStatus.values.firstWhere(
         (e) => e.name == map['status'],
@@ -252,7 +226,6 @@ class Artwork {
     String? description,
     String? imageUrl,
     LatLng? position,
-    ArtworkRarity? rarity,
     ArtworkStatus? status,
     bool? isPublic,
     bool? isActive,
@@ -292,7 +265,6 @@ class Artwork {
       description: description ?? this.description,
       imageUrl: imageUrl ?? this.imageUrl,
       position: position ?? this.position,
-      rarity: rarity ?? this.rarity,
       status: status ?? this.status,
       isPublic: isPublic ?? this.isPublic,
       isActive: isActive ?? this.isActive,
@@ -337,6 +309,6 @@ class Artwork {
 
   @override
   String toString() {
-    return 'Artwork(id: $id, title: $title, artist: $artist, rarity: $rarity)';
+    return 'Artwork(id: $id, title: $title, artist: $artist)';
   }
 }

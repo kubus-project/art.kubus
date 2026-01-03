@@ -153,17 +153,15 @@ Future<void> showArtMarkerInfoDialog({
                   marker.category.isNotEmpty ? marker.category : marker.type.name,
                   baseColor,
                 ),
-                if (artwork != null)
+                if (artwork != null && artwork.rewards > 0)
                   _chip(
                     scheme,
-                    Icons.military_tech_outlined,
-                    artwork.rarity.name,
+                    Icons.card_giftcard,
+                    '+${artwork.rewards}',
                     baseColor,
                   ),
-                if (artwork != null && artwork.rewards > 0)
-                  _chip(scheme, Icons.card_giftcard, '+${artwork.rewards}', baseColor),
-                if (poapCount > 0 || badgeCount > 0)
-                  _chip(
+                  if (poapCount > 0 || badgeCount > 0)
+                    _chip(
                     scheme,
                     Icons.emoji_events_outlined,
                     '$poapCount POAP • $badgeCount badges',

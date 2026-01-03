@@ -4,12 +4,12 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../models/recent_activity.dart';
 import '../screens/community/post_detail_screen.dart';
-import '../screens/art/art_detail_screen.dart';
 import '../screens/community/user_profile_screen.dart';
 import '../screens/activity/saved_items_screen.dart';
 import '../screens/web3/wallet/wallet_home.dart';
 import '../screens/web3/achievements/achievements_page.dart';
 import '../screens/web3/marketplace/marketplace.dart';
+import 'artwork_navigation.dart';
 
 class ActivityNavigation {
   ActivityNavigation._();
@@ -283,9 +283,7 @@ class ActivityNavigation {
   }
 
   static Future<void> _openArtwork(NavigatorState navigator, String artworkId) async {
-    await navigator.push(
-      MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: artworkId)),
-    );
+    await openArtwork(navigator.context, artworkId, source: 'activity');
   }
 
   static Future<void> _openUserProfile(NavigatorState navigator, String userId) async {

@@ -32,13 +32,13 @@ import '../services/achievement_service.dart';
 import '../models/art_marker.dart';
 import '../widgets/art_marker_cube.dart';
 import '../widgets/artwork_creator_byline.dart';
-import 'art/art_detail_screen.dart';
+import '../utils/artwork_navigation.dart';
 import 'art/ar_screen.dart';
 import 'community/user_profile_screen.dart';
 import '../utils/grid_utils.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../utils/category_accent_color.dart';
-import '../utils/rarity_ui.dart';
+
 import '../utils/app_color_utils.dart';
 import '../utils/map_marker_helper.dart';
 import '../utils/map_marker_subject_loader.dart';
@@ -1430,7 +1430,7 @@ class _MapScreenState extends State<MapScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: RarityUi.artworkColor(context, artwork.rarity),
+                color: Theme.of(context).colorScheme.primary,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 3),
               ),
@@ -1490,12 +1490,7 @@ class _MapScreenState extends State<MapScreen>
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-                ),
-              );
+              openArtwork(context, artwork.id, source: 'map_discovery_dialog');
             },
             child: Text(l10n.commonViewDetails, style: GoogleFonts.outfit()),
           ),
@@ -2356,11 +2351,7 @@ class _MapScreenState extends State<MapScreen>
     }
 
     final artworkToOpen = resolvedArtwork;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ArtDetailScreen(artworkId: artworkToOpen.id),
-      ),
-    );
+    await openArtwork(context, artworkToOpen.id, source: 'map_marker');
   }
 
   Future<void> _showMarkerInfoFallback(ArtMarker marker) async {
@@ -2726,11 +2717,7 @@ class _MapScreenState extends State<MapScreen>
 
     if (!mounted) return;
     if (suggestion.type == 'artwork' && suggestion.id != null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ArtDetailScreen(artworkId: suggestion.id!),
-        ),
-      );
+      await openArtwork(context, suggestion.id!, source: 'map_search');
     } else if (suggestion.type == 'profile' && suggestion.id != null) {
       await Navigator.of(context).push(
         MaterialPageRoute(
@@ -3315,19 +3302,6 @@ class _MapScreenState extends State<MapScreen>
       case _ArtworkSort.newest:
         sorted.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         break;
-      case _ArtworkSort.rarity:
-        const rarityRank = {
-          ArtworkRarity.legendary: 3,
-          ArtworkRarity.epic: 2,
-          ArtworkRarity.rare: 1,
-          ArtworkRarity.common: 0,
-        };
-        sorted.sort((a, b) {
-          final aRank = rarityRank[a.rarity] ?? 0;
-          final bRank = rarityRank[b.rarity] ?? 0;
-          return bRank.compareTo(aRank);
-        });
-        break;
       case _ArtworkSort.rewards:
         sorted.sort((a, b) => b.rewards.compareTo(a.rewards));
         break;
@@ -3339,11 +3313,7 @@ class _MapScreenState extends State<MapScreen>
   }
 
   Future<void> _openArtwork(Artwork artwork) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ArtDetailScreen(artworkId: artwork.id),
-      ),
-    );
+    await openArtwork(context, artwork.id, source: 'map');
   }
 
   String _markerTypeLabel(AppLocalizations l10n, ArtMarkerType type) {
@@ -3369,7 +3339,6 @@ class _MapScreenState extends State<MapScreen>
 enum _ArtworkSort {
   nearest,
   newest,
-  rarity,
   rewards,
   popular;
 
@@ -3379,8 +3348,6 @@ enum _ArtworkSort {
         return l10n.mapSortNearest;
       case _ArtworkSort.newest:
         return l10n.mapSortNewest;
-      case _ArtworkSort.rarity:
-        return l10n.mapSortRarity;
       case _ArtworkSort.rewards:
         return l10n.mapSortHighestRewards;
       case _ArtworkSort.popular:
@@ -3498,15 +3465,6 @@ class _ArtworkListTile extends StatelessWidget {
                 spacing: 8,
                 runSpacing: 6,
                 children: [
-                  _InfoChip(
-                    icon: Icons.auto_awesome,
-                    label: artwork.rarity.name.toUpperCase(),
-                    backgroundColor:
-                        RarityUi.artworkColor(context, artwork.rarity)
-                            .withValues(alpha: 0.18),
-                    foregroundColor:
-                        RarityUi.artworkColor(context, artwork.rarity),
-                  ),
                   if (artwork.arEnabled)
                     _InfoChip(
                       icon: Icons.view_in_ar,

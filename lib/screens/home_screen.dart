@@ -43,7 +43,7 @@ import '../utils/app_color_utils.dart';
 import '../utils/kubus_color_roles.dart';
 import '../utils/artwork_media_resolver.dart';
 import '../widgets/staggered_fade_slide.dart';
-import 'art/art_detail_screen.dart';
+import '../utils/artwork_navigation.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -1957,13 +1957,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     Navigator.pushReplacementNamed(context, '/main');
   }
 
-  void _showArtworkDetail(Artwork artwork) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-      ),
-    );
-  }
+    void _showArtworkDetail(Artwork artwork) {
+      openArtwork(context, artwork.id, source: 'home');
+    }
 
   void _showStatsDialog(String statType, IconData icon) {
     final l10n = AppLocalizations.of(context)!;

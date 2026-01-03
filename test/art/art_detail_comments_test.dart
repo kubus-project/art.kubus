@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:art_kubus/config/config.dart';
 import 'package:art_kubus/models/artwork.dart';
 import 'package:art_kubus/models/artwork_comment.dart';
 import 'package:art_kubus/providers/artwork_provider.dart';
@@ -54,6 +55,10 @@ class _FakeArtworkApi implements ArtworkBackendApi {
   Future<Artwork> getArtwork(String artworkId) => throw UnimplementedError();
 
   @override
+  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) =>
+      throw UnimplementedError();
+
+  @override
   Future<Artwork?> publishArtwork(String artworkId) => throw UnimplementedError();
 
   @override
@@ -89,7 +94,7 @@ class _FakeProfileApi implements ProfileBackendApi {
   Map<String, dynamic>? lastPayload;
 
   @override
-  String get baseUrl => 'http://localhost:3000';
+  String get baseUrl => AppConfig.baseApiUrl;
 
   @override
   Future<Map<String, dynamic>> saveProfile(Map<String, dynamic> profileData) async {
@@ -166,7 +171,6 @@ void main() {
         artist: 'Artist',
         description: 'Desc',
         position: const LatLng(0, 0),
-        rarity: ArtworkRarity.common,
         rewards: 0,
         createdAt: DateTime.now(),
       ),

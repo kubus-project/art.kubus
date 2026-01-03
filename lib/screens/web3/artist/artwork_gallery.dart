@@ -6,6 +6,8 @@ import '../../../models/artwork.dart' as art_model;
 import '../../../providers/artwork_provider.dart';
 import '../../../providers/themeprovider.dart';
 import '../../../utils/artwork_media_resolver.dart';
+import '../../../utils/artwork_navigation.dart';
+import '../../../utils/artwork_edit_navigation.dart';
 
 class ArtworkGallery extends StatefulWidget {
   final VoidCallback? onCreateRequested;
@@ -696,145 +698,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
   }
 
   void _showArtworkDetails(art_model.Artwork artwork) {
-    final l10n = AppLocalizations.of(context)!;
-    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.8,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: coverUrl != null && coverUrl.isNotEmpty
-                    ? Image.network(
-                        coverUrl,
-                        height: 200,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        height: 200,
-                        width: double.infinity,
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                        child: Icon(
-                          Icons.image,
-                          color: Theme.of(context).colorScheme.onPrimary,
-                        ),
-                      ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                artwork.title,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                artwork.description,
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.7),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildDetailItem(
-                    l10n.season0PointsLabel,
-                    '${artwork.actualRewards} KUB8',
-                  ),
-                  _buildDetailItem(
-                    l10n.artistGalleryStatViewsLabel,
-                    artwork.viewsCount.toString(),
-                  ),
-                  _buildDetailItem(
-                    l10n.artistGalleryStatLikesLabel,
-                    artwork.likesCount.toString(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .onPrimary
-                            .withValues(alpha: 0.1),
-                      ),
-                      child: Text(
-                        l10n.commonClose,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        widget.onCreateRequested?.call();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            Provider.of<ThemeProvider>(context).accentColor,
-                      ),
-                      child: Text(
-                        l10n.artistGalleryGoToCreateButton,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailItem(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            color:
-                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
-    );
+    openArtwork(context, artwork.id, source: 'artist_gallery');
   }
 
   Future<void> _handleArtworkAction(
@@ -873,9 +737,7 @@ class _ArtworkGalleryState extends State<ArtworkGallery>
         );
         break;
       case 'edit':
-        messenger.showSnackBar(
-          SnackBar(content: Text(l10n.artistGalleryEditingToast(title))),
-        );
+        await openArtworkEditor(context, artwork.id, source: 'artist_gallery_menu');
         break;
       case 'share':
         messenger.showSnackBar(

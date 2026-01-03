@@ -14,12 +14,12 @@ import '../../providers/wallet_provider.dart';
 import '../../services/share/share_service.dart';
 import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import '../../config/config.dart';
-import 'art_detail_screen.dart';
 
 class CollectionDetailScreen extends StatefulWidget {
   final String collectionId;
@@ -303,10 +303,7 @@ class _ArtworkRow extends StatelessWidget {
         onTap: id.isEmpty
             ? null
             : () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => ArtDetailScreen(artworkId: id)),
-                );
+                openArtwork(context, id, source: 'collection_detail');
               },
         padding: const EdgeInsets.all(DetailSpacing.md),
         borderRadius: DetailRadius.sm,

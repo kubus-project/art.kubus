@@ -8,7 +8,7 @@ import '../../models/artwork.dart';
 import '../../community/community_interactions.dart';
 import '../../services/backend_api_service.dart';
 import '../../utils/app_color_utils.dart';
-import '../../widgets/artwork_creator_byline.dart';
+import '../../utils/artwork_navigation.dart';
 
 enum SavedItemsCategory { artworks, posts, all }
 
@@ -494,8 +494,7 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
       ),
       child: InkWell(
         onTap: () {
-          // Show artwork details in a dialog
-          _showArtworkDetails(artwork);
+          openArtwork(context, artwork.id, source: 'saved_items');
         },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
@@ -967,138 +966,6 @@ class _SavedItemsScreenState extends State<SavedItemsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  void _showArtworkDetails(Artwork artwork) {
-    final scheme = Theme.of(context).colorScheme;
-    
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Image
-              if (artwork.imageUrl != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: Image.network(
-                    artwork.imageUrl!,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      height: 200,
-                      color: scheme.tertiary.withValues(alpha: 0.1),
-                      child: Icon(
-                        Icons.palette,
-                        size: 64,
-                        color: scheme.tertiary,
-                      ),
-                    ),
-                  ),
-                ),
-              
-              Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      artwork.title,
-                      style: GoogleFonts.inter(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: scheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    ArtworkCreatorByline(
-                      artwork: artwork,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        color: scheme.tertiary,
-                      ),
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      artwork.description,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: scheme.onSurface.withValues(alpha: 0.8),
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildDetailStat(Icons.favorite, '${artwork.likesCount}'),
-                        _buildDetailStat(Icons.visibility, '${artwork.viewsCount}'),
-                        _buildDetailStat(Icons.comment, '${artwork.commentsCount}'),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: scheme.primary,
-                          foregroundColor: scheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          'Close',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailStat(IconData icon, String value) {
-    final scheme = Theme.of(context).colorScheme;
-    
-    return Column(
-      children: [
-        Icon(
-          icon,
-          color: scheme.tertiary,
-          size: 24,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: scheme.onSurface,
-          ),
-        ),
-      ],
     );
   }
 

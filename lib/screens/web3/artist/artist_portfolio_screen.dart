@@ -8,6 +8,7 @@ import '../../../models/portfolio_entry.dart';
 import '../../../providers/portfolio_provider.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/media_url_resolver.dart';
+import '../../../utils/artwork_edit_navigation.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../events/exhibition_detail_screen.dart';
 
@@ -445,7 +446,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
 
     switch (action) {
       case 'edit':
-        await _showEditArtworkSheet(context, provider, artwork);
+        await openArtworkEditor(context, artwork.id, source: 'artist_portfolio');
         return;
       case 'publish':
         await provider.publishArtwork(artwork.id);
@@ -510,7 +511,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
                 title: Text(l10n.commonEdit),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
-                  _showEditArtworkSheet(context, provider, artwork);
+                  openArtworkEditor(context, artwork.id, source: 'artist_portfolio_sheet');
                 },
               ),
               ListTile(
@@ -543,129 +544,7 @@ class _ArtistPortfolioScreenState extends State<ArtistPortfolioScreen> {
     );
   }
 
-  Future<void> _showEditArtworkSheet(
-    BuildContext context,
-    PortfolioProvider provider,
-    Artwork artwork,
-  ) async {
-    final l10n = AppLocalizations.of(context)!;
-    final messenger = ScaffoldMessenger.of(context);
-    final titleController = TextEditingController(text: artwork.title);
-    final descriptionController = TextEditingController(text: artwork.description);
-    final priceController = TextEditingController(text: artwork.price?.toString() ?? '');
-    bool isForSale = artwork.isForSale;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        final insets = MediaQuery.of(sheetContext).viewInsets.bottom;
-        final scheme = Theme.of(sheetContext).colorScheme;
-
-        return Padding(
-          padding: EdgeInsets.only(bottom: insets),
-          child: StatefulBuilder(
-            builder: (context, setLocalState) {
-              return SafeArea(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.commonEdit,
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: titleController,
-                        decoration: InputDecoration(labelText: l10n.commonTitle),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        controller: descriptionController,
-                        maxLines: 4,
-                        decoration: InputDecoration(labelText: l10n.commonDescription),
-                      ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: priceController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: InputDecoration(labelText: l10n.commonPrice),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: SwitchListTile.adaptive(
-                              contentPadding: EdgeInsets.zero,
-                              title: Text(l10n.commonForSale),
-                              value: isForSale,
-                              onChanged: (value) => setLocalState(() => isForSale = value),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.of(sheetContext).pop(),
-                              child: Text(l10n.commonCancel),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final updates = <String, dynamic>{
-                                  'title': titleController.text.trim(),
-                                  'description': descriptionController.text.trim(),
-                                  'isForSale': isForSale,
-                                };
-                                final priceRaw = priceController.text.trim();
-                                final parsedPrice = double.tryParse(priceRaw);
-                                if (priceRaw.isNotEmpty) {
-                                  updates['price'] = parsedPrice;
-                                }
-
-                                try {
-                                  await provider.updateArtwork(artwork.id, updates);
-                                  if (!context.mounted) return;
-                                  Navigator.of(sheetContext).pop();
-                                  messenger.showSnackBar(SnackBar(content: Text(l10n.commonSavedToast)));
-                                } catch (_) {
-                                  if (!context.mounted) return;
-                                  messenger.showSnackBar(SnackBar(content: Text(l10n.commonActionFailedToast)));
-                                }
-                              },
-                              child: Text(l10n.commonSave),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-
-    titleController.dispose();
-    descriptionController.dispose();
-    priceController.dispose();
-  }
 }
 
 class _CoverThumb extends StatelessWidget {

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -754,19 +756,37 @@ class _DesktopArtworkDetailScreenState
           duration: const Duration(seconds: 2),
         ),
       );
-    } on BackendApiRequestException catch (e) {
-      if (!mounted) return;
-      final authRequired = e.statusCode == 401 || e.statusCode == 403;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            authRequired
-                ? l10n.communityCommentAuthRequiredToast
-                : '${l10n.commonSomethingWentWrong} (${e.statusCode})',
-            style: GoogleFonts.inter(),
-          ),
-          action: authRequired
-              ? SnackBarAction(
+      } on BackendApiRequestException catch (e) {
+        if (!mounted) return;
+        final authRequired = e.statusCode == 401 || e.statusCode == 403;
+        String? backendMessage;
+        if (!authRequired) {
+          try {
+            final raw = (e.body ?? '').trim();
+            if (raw.isNotEmpty) {
+              final decoded = jsonDecode(raw);
+              if (decoded is Map<String, dynamic>) {
+                final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+                if (msg.isNotEmpty) {
+                  backendMessage = msg.length > 140 ? '${msg.substring(0, 140)}…' : msg;
+                }
+              }
+            }
+          } catch (_) {
+            // Ignore body parse failures and fall back to a generic message.
+          }
+        }
+        backendMessage = backendMessage?.replaceAll('â€¦', '…');
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              authRequired
+                  ? l10n.communityCommentAuthRequiredToast
+                  : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})'),
+              style: GoogleFonts.inter(),
+            ),
+            action: authRequired
+                ? SnackBarAction(
                   label: l10n.commonSignIn,
                   onPressed: () {
                     navigator.pushNamed(

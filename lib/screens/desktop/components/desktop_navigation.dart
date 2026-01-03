@@ -30,6 +30,14 @@ class DesktopNavItem {
 
 /// Sleek right-side navigation bar inspired by Twitter/X
 class DesktopNavigation extends StatefulWidget {
+  /// Width guidance for the surrounding desktop shell.
+  ///
+  /// NOTE: The actual width is enforced by `DesktopShell` (animated), but these
+  /// constants are used there so changing them keeps everything in sync.
+  static const double collapsedWidth = 72.0;
+  static const double expandedWidthLarge = 220.0;
+  static const double expandedWidthMedium = 180.0;
+
   final List<DesktopNavItem> items;
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
@@ -61,7 +69,7 @@ class DesktopNavigation extends StatefulWidget {
   State<DesktopNavigation> createState() => _DesktopNavigationState();
 }
 
-class _DesktopNavigationState extends State<DesktopNavigation> 
+class _DesktopNavigationState extends State<DesktopNavigation>
     with SingleTickerProviderStateMixin {
   int? _hoveredIndex;
 
@@ -70,17 +78,23 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final animationTheme = context.animationTheme;
 
+    // When collapsed and thinner, fixed paddings used for the wider rail can
+    // cause overflow. These values keep icon-only layouts comfortable.
+    final navListHorizontalPadding = widget.isExpanded ? 12.0 : 6.0;
+    final bottomHorizontalPadding = widget.isExpanded ? 12.0 : 8.0;
+
     return Column(
       children: [
         // App logo and branding header
         _buildHeader(themeProvider),
-        
+
         const SizedBox(height: 8),
-        
+
         // Navigation items
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: EdgeInsets.symmetric(
+                horizontal: navListHorizontalPadding, vertical: 8),
             itemCount: widget.items.length,
             itemBuilder: (context, index) => _buildNavItem(
               widget.items[index],
@@ -90,9 +104,13 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             ),
           ),
         ),
-        
+
         // Bottom actions (notifications, settings, profile)
-        _buildBottomActions(themeProvider, animationTheme),
+        _buildBottomActions(
+          themeProvider,
+          animationTheme,
+          horizontalPadding: bottomHorizontalPadding,
+        ),
       ],
     );
   }
@@ -101,34 +119,37 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     // When collapsed, use a column layout to prevent overflow
     if (!widget.isExpanded) {
       return Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const AppLogo(width: 32, height: 32),
-            const SizedBox(height: 8),
+            const AppLogo(width: 28, height: 28),
+            const SizedBox(height: 4),
             IconButton(
               onPressed: widget.onToggleExpand,
               icon: Icon(
                 Icons.chevron_left,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
                 size: 20,
               ),
               tooltip: 'Expand navigation',
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
               padding: EdgeInsets.zero,
             ),
           ],
         ),
       );
     }
-    
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
         children: [
-          const AppLogo(width: 36, height: 36),
-          const SizedBox(width: 12),
+          const AppLogo(width: 32, height: 32),
+          const SizedBox(width: 10),
           Expanded(
             child: AnimatedOpacity(
               opacity: widget.expandAnimation.value,
@@ -139,7 +160,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   Text(
                     'art.kubus',
                     style: GoogleFonts.inter(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.onSurface,
                     ),
@@ -147,8 +168,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   Text(
                     'Art Platform',
                     style: GoogleFonts.inter(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      fontSize: 12,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -159,11 +183,14 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             onPressed: widget.onToggleExpand,
             icon: Icon(
               Icons.chevron_right,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.6),
               size: 20,
             ),
             tooltip: 'Collapse navigation',
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
             padding: EdgeInsets.zero,
           ),
         ],
@@ -172,16 +199,17 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   }
 
   Widget _buildNavItem(
-    DesktopNavItem item, 
-    int index, 
+    DesktopNavItem item,
+    int index,
     ThemeProvider themeProvider,
     AppAnimationTheme animationTheme,
   ) {
     final isSelected = widget.selectedIndex == index;
     final isHovered = _hoveredIndex == index;
+    final collapsedItemHorizontalPadding = 6.0;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 1),
       child: MouseRegion(
         onEnter: (_) => setState(() => _hoveredIndex = index),
         onExit: (_) => setState(() => _hoveredIndex = null),
@@ -192,23 +220,27 @@ class _DesktopNavigationState extends State<DesktopNavigation>
             color: isSelected
                 ? themeProvider.accentColor.withValues(alpha: 0.12)
                 : isHovered
-                    ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05)
+                    ? Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.05)
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: () => widget.onItemSelected(index),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: widget.isExpanded ? 16 : 12,
-                  vertical: 14,
+                  horizontal:
+                      widget.isExpanded ? 12 : collapsedItemHorizontalPadding,
+                  vertical: 9,
                 ),
                 child: Row(
-                  mainAxisAlignment: widget.isExpanded 
-                      ? MainAxisAlignment.start 
+                  mainAxisAlignment: widget.isExpanded
+                      ? MainAxisAlignment.start
                       : MainAxisAlignment.center,
                   children: [
                     AnimatedSwitcher(
@@ -218,12 +250,15 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                         key: ValueKey('${item.route}_$isSelected'),
                         color: isSelected
                             ? themeProvider.accentColor
-                            : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
                         size: 24,
                       ),
                     ),
                     if (widget.isExpanded) ...[
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: AnimatedOpacity(
                           opacity: widget.expandAnimation.value,
@@ -231,8 +266,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           child: Text(
                             item.label,
                             style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                              fontSize: 14,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
                               color: isSelected
                                   ? themeProvider.accentColor
                                   : Theme.of(context).colorScheme.onSurface,
@@ -264,7 +301,7 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       child: Text(
         count > 99 ? '99+' : count.toString(),
         style: GoogleFonts.inter(
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
@@ -273,11 +310,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
   }
 
   Widget _buildBottomActions(
-    ThemeProvider themeProvider,
-    AppAnimationTheme animationTheme,
-  ) {
+      ThemeProvider themeProvider, AppAnimationTheme animationTheme,
+      {required double horizontalPadding}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding:
+          EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 10),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
@@ -287,54 +324,19 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       ),
       child: Column(
         children: [
-          // Collaboration invites button (with badge)
-          if (AppConfig.isFeatureEnabled('collabInvites') && widget.onCollabInvitesTap != null)
-            Consumer<CollabProvider>(
-              builder: (context, collabProvider, _) {
-                final pendingCount = collabProvider.pendingInviteCount;
-                return _buildActionButton(
-                  icon: Icons.group_add_outlined,
-                  label: 'Invites',
-                  onTap: widget.onCollabInvitesTap!,
-                  themeProvider: themeProvider,
-                  animationTheme: animationTheme,
-                  showBadge: pendingCount > 0,
-                  badgeCount: pendingCount,
-                );
-              },
-            ),
-          
-          if (AppConfig.isFeatureEnabled('collabInvites') && widget.onCollabInvitesTap != null)
-            const SizedBox(height: 8),
-          
-          // Notifications button
-          _buildActionButton(
-            icon: Icons.notifications_outlined,
-            label: 'Notifications',
-            onTap: widget.onNotificationsTap,
-            themeProvider: themeProvider,
-            animationTheme: animationTheme,
-            showBadge: true,
-          ),
-          
-          const SizedBox(height: 8),
-          
-          // Settings button
-          _buildActionButton(
-            icon: Icons.settings_outlined,
-            label: 'Settings',
-            onTap: widget.onSettingsTap,
-            themeProvider: themeProvider,
-            animationTheme: animationTheme,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Wallet balance section
+          // Wallet section
           _buildWalletBalanceSection(themeProvider, animationTheme),
-          
-          const SizedBox(height: 12),
-          
+
+          const SizedBox(height: 6),
+
+          // Action buttons row
+          if (widget.isExpanded)
+            _buildActionButtonsRow(themeProvider, animationTheme)
+          else
+            _buildActionButtonsColumn(themeProvider, animationTheme),
+
+          const SizedBox(height: 6),
+
           // Profile section
           _buildProfileSection(themeProvider),
         ],
@@ -342,12 +344,106 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     );
   }
 
-  Widget _buildActionButton({
+  Widget _buildActionButtonsRow(
+    ThemeProvider themeProvider,
+    AppAnimationTheme animationTheme,
+  ) {
+    return AnimatedOpacity(
+      opacity: widget.expandAnimation.value,
+      duration: const Duration(milliseconds: 150),
+      child: Row(
+        children: [
+          // Collab invites (if enabled)
+          if (AppConfig.isFeatureEnabled('collabInvites') &&
+              widget.onCollabInvitesTap != null)
+            Expanded(
+              child: Consumer<CollabProvider>(
+                builder: (context, collabProvider, _) {
+                  final pendingCount = collabProvider.pendingInviteCount;
+                  return _buildIconOnlyActionButton(
+                    icon: Icons.group_add_outlined,
+                    onTap: widget.onCollabInvitesTap!,
+                    themeProvider: themeProvider,
+                    showBadge: pendingCount > 0,
+                    badgeCount: pendingCount,
+                  );
+                },
+              ),
+            ),
+
+          // Notifications
+          Expanded(
+            child: _buildIconOnlyActionButton(
+              icon: Icons.notifications_outlined,
+              onTap: widget.onNotificationsTap,
+              themeProvider: themeProvider,
+              showBadge: true,
+            ),
+          ),
+
+          // Settings
+          Expanded(
+            child: _buildIconOnlyActionButton(
+              icon: Icons.settings_outlined,
+              onTap: widget.onSettingsTap,
+              themeProvider: themeProvider,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtonsColumn(
+    ThemeProvider themeProvider,
+    AppAnimationTheme animationTheme,
+  ) {
+    return Column(
+      children: [
+        // Collab invites (if enabled)
+        if (AppConfig.isFeatureEnabled('collabInvites') &&
+            widget.onCollabInvitesTap != null)
+          Consumer<CollabProvider>(
+            builder: (context, collabProvider, _) {
+              final pendingCount = collabProvider.pendingInviteCount;
+              return _buildCollapsedActionButton(
+                icon: Icons.group_add_outlined,
+                onTap: widget.onCollabInvitesTap!,
+                themeProvider: themeProvider,
+                showBadge: pendingCount > 0,
+                badgeCount: pendingCount,
+              );
+            },
+          ),
+
+        if (AppConfig.isFeatureEnabled('collabInvites') &&
+            widget.onCollabInvitesTap != null)
+          const SizedBox(height: 2),
+
+        // Notifications
+        _buildCollapsedActionButton(
+          icon: Icons.notifications_outlined,
+          onTap: widget.onNotificationsTap,
+          themeProvider: themeProvider,
+          showBadge: true,
+        ),
+
+        const SizedBox(height: 2),
+
+        // Settings
+        _buildCollapsedActionButton(
+          icon: Icons.settings_outlined,
+          onTap: widget.onSettingsTap,
+          themeProvider: themeProvider,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIconOnlyActionButton({
     required IconData icon,
-    required String label,
     required VoidCallback onTap,
     required ThemeProvider themeProvider,
-    required AppAnimationTheme animationTheme,
     bool showBadge = false,
     int badgeCount = 0,
   }) {
@@ -355,95 +451,161 @@ class _DesktopNavigationState extends State<DesktopNavigation>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: widget.isExpanded ? 16 : 12,
-            vertical: 12,
-          ),
-          child: Row(
-            mainAxisAlignment: widget.isExpanded 
-                ? MainAxisAlignment.start 
-                : MainAxisAlignment.center,
-            children: [
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Icon(
-                    icon,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    size: 24,
-                  ),
-                  // Generic badge with count (for collab invites, etc.)
-                  if (showBadge && badgeCount > 0)
-                    Positioned(
-                      right: -6,
-                      top: -6,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                        constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.error,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.surface,
-                            width: 1.5,
-                          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
+          child: Center(
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  icon,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
+                  size: 24,
+                ),
+                // Generic badge with count (for collab invites, etc.)
+                if (showBadge && badgeCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      constraints:
+                          const BoxConstraints(minWidth: 14, minHeight: 14),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.error,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.surface,
+                          width: 1,
                         ),
-                        child: Center(
-                          child: Text(
-                            badgeCount > 99 ? '99+' : badgeCount.toString(),
-                            style: GoogleFonts.inter(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).colorScheme.onError,
-                            ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          badgeCount > 99 ? '99+' : badgeCount.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: Theme.of(context).colorScheme.onError,
                           ),
                         ),
                       ),
                     ),
-                  // Notification badge (uses NotificationProvider)
-                  if (showBadge && badgeCount == 0)
-                    Consumer<NotificationProvider>(
-                      builder: (context, np, _) {
-                        if (np.unreadCount == 0) return const SizedBox.shrink();
-                        return Positioned(
-                          right: -2,
-                          top: -2,
-                          child: Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: themeProvider.accentColor,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.surface,
-                                width: 1.5,
-                              ),
+                  ),
+                // Notification badge (uses NotificationProvider)
+                if (showBadge && badgeCount == 0)
+                  Consumer<NotificationProvider>(
+                    builder: (context, np, _) {
+                      if (np.unreadCount == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: -2,
+                        top: -2,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: themeProvider.accentColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.surface,
+                              width: 1,
                             ),
                           ),
-                        );
-                      },
-                    ),
-                ],
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsedActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required ThemeProvider themeProvider,
+    bool showBadge = false,
+    int badgeCount = 0,
+  }) {
+    final collapsedButtonPadding = 7.0;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: EdgeInsets.all(collapsedButtonPadding),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                icon,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
+                size: 24,
               ),
-              if (widget.isExpanded) ...[
-                const SizedBox(width: 16),
-                Expanded(
-                  child: AnimatedOpacity(
-                    opacity: widget.expandAnimation.value,
-                    duration: const Duration(milliseconds: 150),
-                    child: Text(
-                      label,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface,
+              // Generic badge with count (for collab invites, etc.)
+              if (showBadge && badgeCount > 0)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    constraints:
+                        const BoxConstraints(minWidth: 14, minHeight: 14),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.error,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.surface,
+                        width: 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        badgeCount > 99 ? '99+' : badgeCount.toString(),
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Theme.of(context).colorScheme.onError,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ],
+              // Notification badge (uses NotificationProvider)
+              if (showBadge && badgeCount == 0)
+                Consumer<NotificationProvider>(
+                  builder: (context, np, _) {
+                    if (np.unreadCount == 0) return const SizedBox.shrink();
+                    return Positioned(
+                      right: -2,
+                      top: -2,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: themeProvider.accentColor,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface,
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
             ],
           ),
         ),
@@ -470,9 +632,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onWalletTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: EdgeInsets.all(widget.isExpanded ? 12 : 8),
+              padding: widget.isExpanded
+                  ? const EdgeInsets.all(9)
+                  : const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
@@ -482,11 +646,11 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
                     color: themeProvider.accentColor.withValues(alpha: 0.3),
-                    blurRadius: 8,
+                    blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -495,66 +659,71 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                   ? (showFullWallet
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(
                               children: [
                                 Icon(
                                   Icons.account_balance_wallet,
                                   color: Colors.white,
-                                  size: 18,
+                                  size: 16,
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 5),
                                 Text(
                                   'My Wallet',
                                   style: GoogleFonts.inter(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withValues(alpha: 0.9),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 5),
                             AnimatedOpacity(
                               opacity: widget.expandAnimation.value,
                               duration: const Duration(milliseconds: 150),
                               child: Column(
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         'KUB8',
                                         style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color: Colors.white.withValues(alpha: 0.7),
+                                          fontSize: 10,
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7),
                                         ),
                                       ),
                                       Text(
                                         kub8Balance.toStringAsFixed(2),
                                         style: GoogleFonts.inter(
-                                          fontSize: 13,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 4),
+                                  const SizedBox(height: 2),
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Text(
                                         'SOL',
                                         style: GoogleFonts.inter(
-                                          fontSize: 11,
-                                          color: Colors.white.withValues(alpha: 0.7),
+                                          fontSize: 10,
+                                          color: Colors.white
+                                              .withValues(alpha: 0.7),
                                         ),
                                       ),
                                       Text(
                                         solBalance.toStringAsFixed(3),
                                         style: GoogleFonts.inter(
-                                          fontSize: 13,
+                                          fontSize: 11,
                                           fontWeight: FontWeight.bold,
                                           color: Colors.white,
                                         ),
@@ -570,14 +739,14 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                           child: Icon(
                             Icons.account_balance_wallet,
                             color: Colors.white,
-                            size: 24,
+                            size: 22,
                           ),
                         ))
                   : Center(
                       child: Icon(
                         Icons.account_balance_wallet,
                         color: Colors.white,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
             ),
@@ -591,38 +760,43 @@ class _DesktopNavigationState extends State<DesktopNavigation>
     return Consumer<ProfileProvider>(
       builder: (context, profileProvider, _) {
         final user = profileProvider.currentUser;
-        
+
         return Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onProfileTap,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: EdgeInsets.all(widget.isExpanded ? 12 : 8),
+              padding: EdgeInsets.all(widget.isExpanded ? 10 : 8),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
               ),
-                child: Row(
-                mainAxisAlignment: widget.isExpanded 
-                    ? MainAxisAlignment.start 
+              child: Row(
+                mainAxisAlignment: widget.isExpanded
+                    ? MainAxisAlignment.start
                     : MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   AvatarWidget(
                     wallet: user?.walletAddress ?? '',
                     avatarUrl: user?.avatar,
-                    radius: widget.isExpanded ? 20 : 18,
+                    radius: widget.isExpanded ? 17 : 16,
                     allowFabricatedFallback: true,
                     enableProfileNavigation: false,
                   ),
                   if (widget.isExpanded) ...[
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: AnimatedOpacity(
                         opacity: widget.expandAnimation.value,
                         duration: const Duration(milliseconds: 150),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               user?.displayName ?? 'Art Enthusiast',
@@ -632,15 +806,20 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
                               overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
                             if (user?.username != null)
                               Text(
                                 '@${user!.username}',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.6),
                                 ),
                                 overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                           ],
                         ),
@@ -648,7 +827,10 @@ class _DesktopNavigationState extends State<DesktopNavigation>
                     ),
                     Icon(
                       Icons.more_horiz,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                       size: 20,
                     ),
                   ],

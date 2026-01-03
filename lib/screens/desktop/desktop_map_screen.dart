@@ -39,6 +39,7 @@ import '../../widgets/app_logo.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/app_color_utils.dart';
 import '../../utils/artwork_media_resolver.dart';
+import '../../utils/artwork_navigation.dart';
 import '../../utils/media_url_resolver.dart';
 import 'components/desktop_widgets.dart';
 import 'desktop_shell.dart';
@@ -856,22 +857,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () {
-                          final shellScope = DesktopShellScope.of(context);
-                          if (shellScope != null) {
-                            shellScope.pushScreen(
-                              DesktopSubScreen(
-                                title: artwork.title,
-                                child: DesktopArtworkDetailScreen(artworkId: artwork.id),
-                              ),
-                            );
-                          } else {
-                            unawaited(Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    DesktopArtworkDetailScreen(artworkId: artwork.id, showAppBar: true),
-                              ),
-                            ));
-                          }
+                          unawaited(openArtwork(context, artwork.id, source: 'desktop_map'));
                         },
                         icon: const Icon(Icons.favorite_border, size: 20),
                         style: IconButton.styleFrom(
@@ -1979,11 +1965,7 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
               ),
             );
           } else {
-            unawaited(Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => DesktopArtworkDetailScreen(artworkId: hydrated.id, showAppBar: true),
-              ),
-            ));
+            unawaited(openArtwork(context, hydrated.id, source: 'desktop_map_select'));
           }
         }
       }
@@ -2046,7 +2028,6 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
         map['cover_url'];
     map['latitude'] ??= marker.position.latitude;
     map['longitude'] ??= marker.position.longitude;
-    map['rarity'] ??= ArtworkRarity.common.name;
     map['status'] ??= ArtworkStatus.undiscovered.name;
     map['rewards'] ??= 0;
     map['model3DCID'] ??= map['modelCID'] ?? map['model_cid'];

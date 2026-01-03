@@ -14,7 +14,6 @@ import '../../../models/artwork.dart';
 import '../../../models/stats/stats_models.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/kubus_color_roles.dart';
-import '../../../utils/rarity_ui.dart';
 
 class ArtistAnalytics extends StatefulWidget {
   const ArtistAnalytics({super.key});
@@ -1229,7 +1228,6 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
             ...topArtworks.asMap().entries.map((entry) {
               final index = entry.key;
               final artworkData = entry.value;
-              final artwork = artworkData['artwork'] as Artwork;
               
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -1245,7 +1243,7 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: RarityUi.artworkColor(context, artwork.rarity),
+                        color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(

@@ -111,11 +111,6 @@ class ArtworkProvider extends ChangeNotifier {
     return _artworks.where((artwork) => artwork.isDiscovered || artwork.isFavorite).toList();
   }
 
-  /// Get artworks by rarity
-  List<Artwork> getArtworksByRarity(ArtworkRarity rarity) {
-    return _artworks.where((artwork) => artwork.rarity == rarity).toList();
-  }
-
   /// Get artworks by category
   List<Artwork> getArtworksByCategory(String category) {
     return _artworks.where((artwork) => artwork.category == category).toList();
@@ -138,7 +133,6 @@ class ArtworkProvider extends ChangeNotifier {
     required String description,
     required LatLng position,
     required String artistName,
-    required ArtworkRarity rarity,
     required int rewards,
     required Uint8List coverImageBytes,
     required String coverImageFilename,
@@ -183,18 +177,17 @@ class ArtworkProvider extends ChangeNotifier {
         modelUrl = uploadResult['url'];
       }
 
-      final artwork = Artwork(
-        id: 'artwork_${DateTime.now().millisecondsSinceEpoch}',
-        title: title,
-        artist: artistName,
-        description: description,
-        imageUrl: coverUrl,
-        position: position,
-        rarity: rarity,
-        status: ArtworkStatus.undiscovered,
-        arEnabled: arEnabled && (modelCid != null || modelUrl != null),
-        rewards: rewards,
-        createdAt: DateTime.now(),
+        final artwork = Artwork(
+          id: 'artwork_${DateTime.now().millisecondsSinceEpoch}',
+          title: title,
+          artist: artistName,
+          description: description,
+          imageUrl: coverUrl,
+          position: position,
+          status: ArtworkStatus.undiscovered,
+          arEnabled: arEnabled && (modelCid != null || modelUrl != null),
+          rewards: rewards,
+          createdAt: DateTime.now(),
         arScale: arEnabled ? modelScale : null,
         model3DCID: modelCid,
         model3DURL: modelUrl,
@@ -252,6 +245,26 @@ class ArtworkProvider extends ChangeNotifier {
       return updated;
     } catch (e) {
       _setError('Failed to unpublish artwork: $e');
+      return null;
+    } finally {
+      _setLoading(operation, false);
+    }
+  }
+
+  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) async {
+    final id = artworkId.trim();
+    if (id.isEmpty) return null;
+    final operation = 'update_artwork_$id';
+    if (isLoading(operation)) return null;
+    _setLoading(operation, true);
+    try {
+      final updated = await _backendApi.updateArtwork(id, updates);
+      if (updated != null) {
+        addOrUpdateArtwork(updated);
+      }
+      return updated;
+    } catch (e) {
+      _setError('Failed to update artwork: $e');
       return null;
     } finally {
       _setLoading(operation, false);

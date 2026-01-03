@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -71,6 +72,7 @@ abstract class ArtworkBackendApi {
   });
 
   Future<Artwork> getArtwork(String artworkId);
+  Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates);
   Future<Artwork?> publishArtwork(String artworkId);
   Future<Artwork?> unpublishArtwork(String artworkId);
   Future<int?> likeArtwork(String artworkId);
@@ -128,7 +130,16 @@ abstract class ProfileBackendApi {
   Future<Map<String, dynamic>?> getDAOReview({required String idOrWallet});
 }
 
-class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
+/// Minimal contract for marker endpoints used by providers.
+abstract class MarkerBackendApi {
+  String? getAuthToken();
+  Future<List<ArtMarker>> getMyArtMarkers();
+  Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload);
+  Future<ArtMarker?> updateArtMarkerRecord(String markerId, Map<String, dynamic> updates);
+  Future<bool> deleteArtMarkerRecord(String markerId);
+}
+
+class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
   BackendApiService._internal();
@@ -139,6 +150,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   @override
   final String baseUrl = AppConfig.baseApiUrl;
   String? _authToken;
+  String? _authWalletCanonical;
+  String? _preferredWalletCanonical;
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   Future<void>? _authInitFuture;
   final Map<String, DateTime> _rateLimitResets = {};
@@ -154,6 +167,64 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
   void bindAuthCoordinator(AuthSessionCoordinator coordinator) {
     _authCoordinator = coordinator;
+  }
+
+  /// Hint the API layer about the currently active wallet.
+  ///
+  /// This is important on web/desktop where tokens can be persisted across
+  /// sessions and the connected wallet may change; marker CRUD endpoints are
+  /// ownership-gated and will return 403 when the token belongs to a different
+  /// wallet.
+  void setPreferredWalletAddress(String? walletAddress) {
+    final canonical = WalletUtils.canonical(walletAddress);
+    _preferredWalletCanonical = canonical.isEmpty ? null : canonical;
+
+    // Best-effort persistence so cold-start auth can re-issue correctly.
+    final raw = (walletAddress ?? '').trim();
+    if (raw.isEmpty) return;
+    unawaited(() async {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(PreferenceKeys.walletAddress, raw);
+      } catch (_) {
+        // Ignore persistence failures.
+      }
+    }());
+  }
+
+  Map<String, dynamic>? _tryDecodeJwtPayload(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length < 2) return null;
+      final payload = base64Url.normalize(parts[1]);
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final parsed = jsonDecode(decoded);
+      if (parsed is Map<String, dynamic>) return parsed;
+    } catch (_) {}
+    return null;
+  }
+
+  String? _tryExtractWalletFromToken(String? token) {
+    final t = (token ?? '').trim();
+    if (t.isEmpty) return null;
+    final payload = _tryDecodeJwtPayload(t);
+    if (payload == null) return null;
+
+    // Try common claim keys across backend variants.
+    final candidates = <Object?>[
+      payload['walletAddress'],
+      payload['wallet_address'],
+      payload['wallet'],
+      payload['user_id'],
+      payload['id'],
+      payload['sub'],
+    ];
+    for (final c in candidates) {
+      final s = (c ?? '').toString();
+      final canonical = WalletUtils.canonical(s);
+      if (canonical.isNotEmpty) return canonical;
+    }
+    return null;
   }
 
   @visibleForTesting
@@ -307,6 +378,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       final prefs = await SharedPreferences.getInstance();
       final storedWallet = prefs.getString('wallet_address') ?? prefs.getString('wallet') ?? prefs.getString('walletAddress') ?? prefs.getString('user_id');
       if (storedWallet != null && storedWallet.isNotEmpty) {
+        _preferredWalletCanonical = WalletUtils.canonical(storedWallet);
         // Attempt to obtain a real JWT for the wallet.
         // This is idempotent server-side (returns token for existing users too).
         try {
@@ -329,6 +401,35 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   }
 
   Future<void> _ensureAuthBeforeRequest({String? walletAddress}) async {
+    // Determine which wallet we should be authenticated as.
+    final desiredCanonical = WalletUtils.canonical(
+      walletAddress ?? _preferredWalletCanonical,
+    );
+
+    // If we already have a token but it's for a different wallet, re-issue.
+    if ((_authToken ?? '').isNotEmpty && desiredCanonical.isNotEmpty) {
+      _authWalletCanonical ??= _tryExtractWalletFromToken(_authToken);
+      final currentCanonical = _authWalletCanonical ?? '';
+      if (currentCanonical.isNotEmpty && currentCanonical != desiredCanonical) {
+        _debugLogThrottled(
+          'auth_wallet_mismatch',
+          'BackendApiService: auth token wallet mismatch, re-issuing token',
+          throttle: const Duration(seconds: 15),
+        );
+        // Clear existing token before requesting a token for the desired wallet.
+        await clearAuth();
+        try {
+          await registerWallet(
+            walletAddress: walletAddress ?? desiredCanonical,
+            username: 'user_${(walletAddress ?? desiredCanonical).substring(0, (walletAddress ?? desiredCanonical).length >= 8 ? 8 : (walletAddress ?? desiredCanonical).length)}',
+          );
+          await loadAuthToken();
+        } catch (e) {
+          AppConfig.debugPrint('BackendApiService: token re-issue failed: $e');
+        }
+      }
+    }
+
     if ((_authToken ?? '').isNotEmpty) return;
     await _ensureAuthWithStoredWallet();
     if ((_authToken ?? '').isNotEmpty) return;
@@ -344,6 +445,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Set authentication token for API requests
   Future<void> setAuthToken(String token) async {
     _authToken = token;
+    _authWalletCanonical = _tryExtractWalletFromToken(token);
     AppConfig.debugPrint('BackendApiService: Auth token set (in-memory)');
     // Persist token to secure storage and shared preferences (web fallback)
     try {
@@ -390,6 +492,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
       }
       if (token != null && token.isNotEmpty) {
         _authToken = token;
+        _authWalletCanonical = _tryExtractWalletFromToken(token);
         AppConfig.debugPrint('BackendApiService: Auth token loaded (in-memory)');
         // Attempt to decode exp field for debug information
         try {
@@ -419,6 +522,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   /// Clear authentication
   Future<void> clearAuth() async {
     _authToken = null;
+    _authWalletCanonical = null;
     _authCoordinator?.reset();
     try {
       await _secureStorage
@@ -887,6 +991,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     String? username,
   }) async {
     try {
+      // Keep preferred wallet in sync with successful auth issuance.
+      setPreferredWalletAddress(walletAddress);
       final body = {
         'walletAddress': walletAddress,
         if (username != null) 'username': username,
@@ -1097,6 +1203,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
   // ==================== Chat / Messaging Helpers (wrappers used by providers) ====================
 
   /// Return current in-memory auth token (may be null)
+  @override
   String? getAuthToken() => _authToken;
 
   /// Get current authenticated profile
@@ -1944,6 +2051,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
   /// Get markers owned by the authenticated user (includes drafts/private)
   /// GET /api/art-markers/mine
+  @override
   Future<List<ArtMarker>> getMyArtMarkers() async {
     try {
       await _ensureAuthBeforeRequest();
@@ -1973,6 +2081,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
   /// Create a marker record (server assigns ownership).
   /// POST /api/art-markers
+  @override
   Future<ArtMarker?> createArtMarkerRecord(Map<String, dynamic> payload) async {
     try {
       await _ensureAuthBeforeRequest();
@@ -2004,6 +2113,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
   /// Update a marker record.
   /// PUT /api/art-markers/:id
+  @override
   Future<ArtMarker?> updateArtMarkerRecord(String markerId, Map<String, dynamic> updates) async {
     try {
       await _ensureAuthBeforeRequest();
@@ -2035,6 +2145,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
   /// Delete a marker record.
   /// DELETE /api/art-markers/:id
+  @override
   Future<bool> deleteArtMarkerRecord(String markerId) async {
     try {
       await _ensureAuthBeforeRequest();
@@ -2044,8 +2155,16 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         headers: _getHeaders(),
         timeout: const Duration(seconds: 15),
       );
-      if (response.statusCode == 200) return true;
-      throw Exception('Failed to delete marker: ${response.statusCode} ${response.body}');
+      // Treat deletes as idempotent: if the marker is already gone (404/410),
+      // we still want to evict it locally to avoid UI "resurrection".
+      if (response.statusCode == 200 || response.statusCode == 204) return true;
+      if (response.statusCode == 404 || response.statusCode == 410) return true;
+
+      throw BackendApiRequestException(
+        statusCode: response.statusCode,
+        path: uri.path,
+        body: response.body,
+      );
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.deleteArtMarkerRecord failed: $e');
       rethrow;
@@ -2186,6 +2305,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
 
   /// Update an artwork
   /// PUT /api/artworks/:id
+  @override
   Future<Artwork?> updateArtwork(String artworkId, Map<String, dynamic> updates) async {
     try {
       await _ensureAuthWithStoredWallet();
@@ -6414,10 +6534,6 @@ Artwork _artworkFromBackendJson(Map<String, dynamic> json) {
     description: stringVal(json['description'] ?? json['summary'] ?? '', ''),
     imageUrl: normalizedImageUrl,
     position: LatLng(lat, lng),
-    rarity: ArtworkRarity.values.firstWhere(
-      (e) => e.name == json['rarity'],
-      orElse: () => ArtworkRarity.common,
-    ),
     rewards: json['rewards'] as int? ?? intVal(json['reward']) ?? 10,
     category: stringVal(json['category'] ?? json['collection'], 'General'),
     model3DURL: modelUrl,
