@@ -71,10 +71,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     if (!_animationsInitialized) {
       final animationTheme = context.animationTheme;
-      
+
       _animationController.duration = animationTheme.long;
 
       _fadeAnimation = Tween<double>(
@@ -113,12 +113,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       builder: (context, artworkProvider, profileProvider, child) {
         final artwork = artworkProvider.getArtworkById(widget.artworkId);
         final isSignedIn = profileProvider.isSignedIn;
-        
+
         if (_artworkLoading) {
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              title: Text(l10n.artDetailLoadingTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              title: Text(l10n.artDetailLoadingTitle,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
             ),
@@ -130,7 +131,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              title: Text(l10n.artDetailTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              title: Text(l10n.artDetailTitle,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
             ),
@@ -150,7 +152,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       _artworkError!,
                       style: GoogleFonts.inter(
                         fontSize: 15,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.8),
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -158,7 +163,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     FilledButton.icon(
                       onPressed: _loadArtworkDetails,
                       icon: const Icon(Icons.refresh, size: 18),
-                      label: Text(l10n.commonRetry, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                      label: Text(l10n.commonRetry,
+                          style:
+                              GoogleFonts.inter(fontWeight: FontWeight.w600)),
                     ),
                   ],
                 ),
@@ -166,12 +173,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           );
         }
-        
+
         if (artwork == null) {
           return Scaffold(
             backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              title: Text(l10n.artworkNotFound, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              title: Text(l10n.artworkNotFound,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               backgroundColor: Theme.of(context).colorScheme.surface,
               elevation: 0,
             ),
@@ -184,7 +192,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     Icon(
                       Icons.image_not_supported_outlined,
                       size: 56,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.3),
                     ),
                     const SizedBox(height: DetailSpacing.lg),
                     Text(
@@ -192,7 +203,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -229,7 +243,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                             const SizedBox(height: DetailSpacing.xl),
                             _buildActionButtons(artwork),
                             const SizedBox(height: DetailSpacing.xl),
-                            if (AppConfig.isFeatureEnabled('collabInvites')) ...[
+                            if (AppConfig.isFeatureEnabled(
+                                'collabInvites')) ...[
                               CollaborationPanel(
                                 entityType: 'artworks',
                                 entityId: artwork.id,
@@ -244,10 +259,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     ],
                   ),
                 ),
-            );
-          },
+              );
+            },
           ),
-          floatingActionButton: (_showComments && isSignedIn) ? _buildCommentFAB(artwork) : null,
+          floatingActionButton:
+              (_showComments && isSignedIn) ? _buildCommentFAB(artwork) : null,
         );
       },
     );
@@ -313,14 +329,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           onPressed: () {
             ShareService().showShareSheet(
               context,
-              target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
+              target: ShareTarget.artwork(
+                  artworkId: artwork.id, title: artwork.title),
               sourceScreen: 'art_detail',
             );
           },
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+              color:
+                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.share_outlined),
@@ -333,12 +351,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .surface
+                      .withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   artwork.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: artwork.isFavorite ? Theme.of(context).colorScheme.error : null,
+                  color: artwork.isFavorite
+                      ? Theme.of(context).colorScheme.error
+                      : null,
                 ),
               ),
             );
@@ -352,8 +375,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.3),
-                RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.1),
+                RarityUi.artworkColor(context, artwork.rarity)
+                    .withValues(alpha: 0.3),
+                RarityUi.artworkColor(context, artwork.rarity)
+                    .withValues(alpha: 0.1),
               ],
             ),
           ),
@@ -366,7 +391,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: RarityUi.artworkColor(context, artwork.rarity).withValues(alpha: 0.3),
+                    color: RarityUi.artworkColor(context, artwork.rarity)
+                        .withValues(alpha: 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -398,11 +424,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
         color: Theme.of(context).colorScheme.surfaceContainer,
       ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
             _buildPreviewCoverImage(coverUrl, rarityColor),
             Positioned.fill(
               child: DecoratedBox(
@@ -423,7 +449,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               top: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: rarityColor,
                   borderRadius: BorderRadius.circular(20),
@@ -444,7 +471,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 top: 16,
                 left: 16,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.green,
                     borderRadius: BorderRadius.circular(20),
@@ -472,7 +500,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 bottom: 16,
                 left: 16,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(20),
@@ -480,7 +509,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.view_in_ar, size: 16, color: Colors.white),
+                      const Icon(Icons.view_in_ar,
+                          size: 16, color: Colors.white),
                       const SizedBox(width: 4),
                       Text(
                         'AR ENABLED',
@@ -552,7 +582,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         Text(
           artwork.title,
           style: GoogleFonts.inter(
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: FontWeight.w700,
             height: 1.2,
           ),
@@ -560,10 +590,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
           artwork: artwork,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-          ),
+          style: DetailTypography.caption(context),
         ),
         const SizedBox(height: DetailSpacing.lg),
         Wrap(
@@ -572,8 +599,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           children: [
             _buildInfoChip(Icons.category_outlined, artwork.category),
             if (artwork.averageRating != null)
-              _buildInfoChip(Icons.star_rounded, '${artwork.averageRating?.toStringAsFixed(1)} (${artwork.ratingsCount})'),
-            _buildInfoChip(Icons.schedule_outlined, artwork.createdAt.toString().split(' ')[0]),
+              _buildInfoChip(Icons.star_rounded,
+                  '${artwork.averageRating?.toStringAsFixed(1)} (${artwork.ratingsCount})'),
+            _buildInfoChip(Icons.schedule_outlined,
+                artwork.createdAt.toString().split(' ')[0]),
           ],
         ),
         const SizedBox(height: DetailSpacing.lg),
@@ -590,27 +619,21 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   Widget _buildInfoChip(IconData icon, String label) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DetailSpacing.md, vertical: DetailSpacing.sm),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(DetailRadius.xl),
         border: Border.all(
-          color: scheme.outline.withValues(alpha: 0.1),
+          color: scheme.outlineVariant.withValues(alpha: 0.3),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 15, color: scheme.onSurface.withValues(alpha: 0.7)),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: scheme.onSurface.withValues(alpha: 0.8),
-            ),
-          ),
+          Icon(icon, size: 14, color: scheme.onSurface.withValues(alpha: 0.65)),
+          const SizedBox(width: DetailSpacing.xs),
+          Text(label, style: DetailTypography.label(context)),
         ],
       ),
     );
@@ -619,18 +642,18 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   Widget _buildTag(String tag) {
     final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DetailSpacing.sm + 2, vertical: DetailSpacing.xs + 1),
       decoration: BoxDecoration(
         color: scheme.primary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(DetailRadius.lg),
         border: Border.all(
           color: scheme.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Text(
         '#$tag',
-        style: GoogleFonts.inter(
-          fontSize: 12,
+        style: DetailTypography.label(context).copyWith(
           color: scheme.primary,
           fontWeight: FontWeight.w600,
         ),
@@ -639,51 +662,35 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildDescription(Artwork artwork) {
-    final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.commonDescription,
-          style: GoogleFonts.inter(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
-          ),
-        ),
+        Text(l10n.commonDescription,
+            style: DetailTypography.sectionTitle(context)),
         const SizedBox(height: DetailSpacing.md),
-        Text(
-          artwork.description,
-          style: GoogleFonts.inter(
-            fontSize: 15,
-            height: 1.6,
-            color: scheme.onSurface.withValues(alpha: 0.8),
-          ),
-        ),
+        Text(artwork.description, style: DetailTypography.body(context)),
       ],
     );
   }
 
   Widget _buildSocialStats(Artwork artwork) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: DetailSpacing.lg, horizontal: DetailSpacing.md),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.08)),
-      ),
+    return DetailCard(
+      padding: const EdgeInsets.symmetric(
+          vertical: DetailSpacing.lg, horizontal: DetailSpacing.md),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildStatItem(Icons.favorite_rounded, artwork.likesCount, 'Likes'),
           _buildStatDivider(),
-          _buildStatItem(Icons.chat_bubble_outline_rounded, artwork.commentsCount, 'Comments'),
+          _buildStatItem(Icons.chat_bubble_outline_rounded,
+              artwork.commentsCount, 'Comments'),
           _buildStatDivider(),
-          _buildStatItem(Icons.visibility_outlined, artwork.viewsCount, 'Views'),
+          _buildStatItem(
+              Icons.visibility_outlined, artwork.viewsCount, 'Views'),
           _buildStatDivider(),
-          _buildStatItem(Icons.explore_outlined, artwork.discoveryCount, 'Discoveries'),
+          _buildStatItem(
+              Icons.explore_outlined, artwork.discoveryCount, 'Discoveries'),
         ],
       ),
     );
@@ -693,7 +700,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     return Container(
       height: 32,
       width: 1,
-      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
+      color:
+          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.3),
     );
   }
 
@@ -702,25 +710,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 22, color: scheme.primary.withValues(alpha: 0.8)),
-        const SizedBox(height: 6),
+        Icon(icon, size: 20, color: scheme.primary.withValues(alpha: 0.8)),
+        const SizedBox(height: DetailSpacing.xs),
         Text(
           count.toString(),
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
-          ),
+          style: DetailTypography.cardTitle(context),
         ),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: scheme.onSurface.withValues(alpha: 0.55),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        Text(label, style: DetailTypography.label(context)),
       ],
     );
   }
@@ -736,9 +733,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               child: Consumer<ArtworkProvider>(
                 builder: (context, provider, child) {
                   final isLiked = artwork.isLikedByCurrentUser;
-                  return _ActionButton(
-                    icon: isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                    label: isLiked ? l10n.artworkDetailLiked : l10n.artworkDetailLike,
+                  return DetailActionButton(
+                    icon: isLiked
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    label: isLiked
+                        ? l10n.artworkDetailLiked
+                        : l10n.artworkDetailLike,
                     isActive: isLiked,
                     activeColor: scheme.error,
                     onPressed: () => provider.toggleLike(artwork.id),
@@ -748,9 +749,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
             const SizedBox(width: DetailSpacing.md),
             Expanded(
-              child: _ActionButton(
-                icon: _showComments ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
-                label: _showComments ? l10n.artworkDetailHideComments : l10n.commonComments,
+              child: DetailActionButton(
+                icon: _showComments
+                    ? Icons.chat_bubble_rounded
+                    : Icons.chat_bubble_outline_rounded,
+                label: _showComments
+                    ? l10n.artworkDetailHideComments
+                    : l10n.commonComments,
                 isActive: _showComments,
                 activeColor: scheme.primary,
                 onPressed: () {
@@ -758,7 +763,9 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     _showComments = !_showComments;
                   });
                   if (_showComments) {
-                    context.read<ArtworkProvider>().loadComments(widget.artworkId);
+                    context
+                        .read<ArtworkProvider>()
+                        .loadComments(widget.artworkId);
                   }
                 },
               ),
@@ -770,7 +777,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           children: [
             if (artwork.arEnabled)
               Expanded(
-                child: _ActionButton(
+                child: DetailActionButton(
                   icon: Icons.view_in_ar_rounded,
                   label: l10n.commonViewInAr,
                   backgroundColor: scheme.primary,
@@ -780,7 +787,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               ),
             if (artwork.arEnabled) const SizedBox(width: DetailSpacing.md),
             Expanded(
-              child: _ActionButton(
+              child: DetailActionButton(
                 icon: Icons.navigation_rounded,
                 label: l10n.commonNavigate,
                 backgroundColor: Colors.blue,
@@ -793,7 +800,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         const SizedBox(height: DetailSpacing.md),
         SizedBox(
           width: double.infinity,
-          child: _ActionButton(
+          child: DetailActionButton(
             icon: Icons.diamond_rounded,
             label: l10n.artworkDetailMintNft,
             backgroundColor: const Color(0xFFFFD93D),
@@ -819,69 +826,49 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       children: [
         Text(
           '${l10n.commonComments} (${artwork.commentsCount})',
-          style: GoogleFonts.outfit(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          style: DetailTypography.sectionTitle(context),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         if (error != null)
-          Container(
-            padding: const EdgeInsets.all(12),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.errorContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          DetailCard(
+            padding: const EdgeInsets.all(DetailSpacing.md),
             child: Row(
               children: [
-                Icon(Icons.warning, color: Theme.of(context).colorScheme.onErrorContainer),
-                const SizedBox(width: 8),
+                Icon(Icons.warning, color: Theme.of(context).colorScheme.error),
+                const SizedBox(width: DetailSpacing.sm),
                 Expanded(
-                  child: Text(
-                    error,
-                    style: GoogleFonts.outfit(
-                      color: Theme.of(context).colorScheme.onErrorContainer,
-                    ),
-                  ),
+                  child: Text(error, style: DetailTypography.body(context)),
                 ),
                 TextButton(
-                  onPressed: () => provider.loadComments(artwork.id, force: true),
-                  child: Text(l10n.commonRetry),
+                  onPressed: () =>
+                      provider.loadComments(artwork.id, force: true),
+                  child: Text(l10n.commonRetry,
+                      style: DetailTypography.button(context)),
                 ),
               ],
             ),
           ),
         if (isLoading)
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
+            padding: EdgeInsets.symmetric(vertical: DetailSpacing.lg),
             child: Center(child: InlineLoading()),
           )
         else if (comments.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          DetailCard(
+            padding: const EdgeInsets.all(DetailSpacing.xl),
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     l10n.postDetailNoCommentsTitle,
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                    ),
+                    style: DetailTypography.cardTitle(context),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: DetailSpacing.xs),
                   Text(
                     l10n.postDetailNoCommentsDescription,
-                    style: GoogleFonts.outfit(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
+                    style: DetailTypography.caption(context),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -890,7 +877,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           )
         else
           ...comments.map((comment) => _buildCommentItem(comment, provider)),
-        const SizedBox(height: 12),
+        const SizedBox(height: DetailSpacing.md),
         if (!isSignedIn)
           SizedBox(
             width: double.infinity,
@@ -906,10 +893,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 );
               },
               icon: const Icon(Icons.login),
-              label: Text(
-                l10n.commonSignIn,
-                style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-              ),
+              label: Text(l10n.commonSignIn,
+                  style: DetailTypography.button(context)),
             ),
           ),
       ],
@@ -921,265 +906,266 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final scheme = Theme.of(context).colorScheme;
     final currentUser = context.read<ProfileProvider>().currentUser;
     final canModify = currentUser != null &&
-        (currentUser.id == comment.userId || currentUser.walletAddress == comment.userId);
+        (currentUser.id == comment.userId ||
+            currentUser.walletAddress == comment.userId);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              AvatarWidget(
-                avatarUrl: comment.userAvatarUrl,
-                wallet: comment.userId,
-                radius: 16,
-                enableProfileNavigation: true,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      comment.userName,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          comment.timeAgo,
-                          style: GoogleFonts.outfit(
-                            fontSize: 12,
-                            color: scheme.onSurface.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        if (comment.isEdited) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.commonEditedTag,
-                            style: GoogleFonts.outfit(
-                              fontSize: 12,
-                              color: scheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DetailSpacing.md),
+      child: DetailCard(
+        padding: const EdgeInsets.all(DetailSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AvatarWidget(
+                  avatarUrl: comment.userAvatarUrl,
+                  wallet: comment.userId,
+                  radius: 16,
+                  enableProfileNavigation: true,
                 ),
-              ),
-              if (canModify)
-                PopupMenuButton<String>(
-                  tooltip: l10n.commonMore,
-                  onSelected: (value) async {
-                    if (value == 'edit') {
-                      final navigator = Navigator.of(context);
-                      final messenger = ScaffoldMessenger.of(context);
-                      final controller = TextEditingController(text: comment.content);
-                      bool saving = false;
+                const SizedBox(width: DetailSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(comment.userName,
+                          style: DetailTypography.cardTitle(context)),
+                      Row(
+                        children: [
+                          Text(comment.timeAgo,
+                              style: DetailTypography.label(context)),
+                          if (comment.isEdited) ...[
+                            const SizedBox(width: DetailSpacing.sm),
+                            Text(l10n.commonEditedTag,
+                                style: DetailTypography.label(context)),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (canModify)
+                  PopupMenuButton<String>(
+                    tooltip: l10n.commonMore,
+                    onSelected: (value) async {
+                      if (value == 'edit') {
+                        final navigator = Navigator.of(context);
+                        final messenger = ScaffoldMessenger.of(context);
+                        final controller =
+                            TextEditingController(text: comment.content);
+                        bool saving = false;
 
-                      await showDialog<void>(
-                        context: context,
-                        barrierDismissible: !saving,
-                        builder: (dialogContext) {
-                          return StatefulBuilder(
-                            builder: (context, setDialogState) {
-                              return AlertDialog(
-                                title: Text(l10n.commentEditTitle),
-                                content: TextField(
-                                  controller: controller,
-                                  maxLines: null,
-                                  autofocus: true,
-                                  decoration: InputDecoration(
-                                    hintText: l10n.postDetailWriteCommentHint,
+                        await showDialog<void>(
+                          context: context,
+                          barrierDismissible: !saving,
+                          builder: (dialogContext) {
+                            return StatefulBuilder(
+                              builder: (context, setDialogState) {
+                                return AlertDialog(
+                                  title: Text(l10n.commentEditTitle),
+                                  content: TextField(
+                                    controller: controller,
+                                    maxLines: null,
+                                    autofocus: true,
+                                    decoration: InputDecoration(
+                                      hintText: l10n.postDetailWriteCommentHint,
+                                    ),
                                   ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed: saving
-                                        ? null
-                                        : () => Navigator.of(dialogContext).pop(),
-                                    child: Text(l10n.commonCancel),
-                                  ),
-                                  FilledButton(
-                                    onPressed: saving
-                                        ? null
-                                        : () async {
-                                            final next = controller.text.trim();
-                                            if (next.isEmpty) return;
-                                            setDialogState(() => saving = true);
-                                            try {
-                                              await provider.editArtworkComment(
-                                                artworkId: widget.artworkId,
-                                                commentId: comment.id,
-                                                content: next,
-                                              );
-                                              if (!mounted) return;
-                                              if (!dialogContext.mounted) return;
-                                              Navigator.of(dialogContext).pop();
-                                              messenger.showSnackBar(
-                                                SnackBar(content: Text(l10n.commentUpdatedToast)),
-                                              );
-                                            } catch (_) {
-                                              if (!mounted) return;
-                                              messenger.showSnackBar(
-                                                SnackBar(
-                                                  content: Text(l10n.commentEditFailedToast),
-                                                  backgroundColor: scheme.errorContainer,
-                                                ),
-                                              );
-                                            } finally {
-                                              if (dialogContext.mounted) {
-                                                setDialogState(() => saving = false);
+                                  actions: [
+                                    TextButton(
+                                      onPressed: saving
+                                          ? null
+                                          : () =>
+                                              Navigator.of(dialogContext).pop(),
+                                      child: Text(l10n.commonCancel),
+                                    ),
+                                    FilledButton(
+                                      onPressed: saving
+                                          ? null
+                                          : () async {
+                                              final next =
+                                                  controller.text.trim();
+                                              if (next.isEmpty) return;
+                                              setDialogState(
+                                                  () => saving = true);
+                                              try {
+                                                await provider
+                                                    .editArtworkComment(
+                                                  artworkId: widget.artworkId,
+                                                  commentId: comment.id,
+                                                  content: next,
+                                                );
+                                                if (!mounted) return;
+                                                if (!dialogContext.mounted)
+                                                  return;
+                                                Navigator.of(dialogContext)
+                                                    .pop();
+                                                messenger.showSnackBar(
+                                                  SnackBar(
+                                                      content: Text(l10n
+                                                          .commentUpdatedToast)),
+                                                );
+                                              } catch (_) {
+                                                if (!mounted) return;
+                                                messenger.showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(l10n
+                                                        .commentEditFailedToast),
+                                                    backgroundColor:
+                                                        scheme.errorContainer,
+                                                  ),
+                                                );
+                                              } finally {
+                                                if (dialogContext.mounted) {
+                                                  setDialogState(
+                                                      () => saving = false);
+                                                }
                                               }
-                                            }
-                                          },
-                                    child: Text(l10n.commonSave),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                      );
+                                            },
+                                      child: Text(l10n.commonSave),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          },
+                        );
 
-                      controller.dispose();
-                      if (!mounted) return;
-                      navigator; // keep reference (no-op)
-                    } else if (value == 'delete') {
-                      final messenger = ScaffoldMessenger.of(context);
-                      final confirmed = await showDialog<bool>(
+                        controller.dispose();
+                        if (!mounted) return;
+                        navigator; // keep reference (no-op)
+                      } else if (value == 'delete') {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final confirmed = await showDialog<bool>(
+                          context: context,
+                          builder: (dialogContext) {
+                            return AlertDialog(
+                              title: Text(l10n.commentDeleteConfirmTitle),
+                              content: Text(l10n.commentDeleteConfirmMessage),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(false),
+                                  child: Text(l10n.commonCancel),
+                                ),
+                                FilledButton(
+                                  onPressed: () =>
+                                      Navigator.of(dialogContext).pop(true),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: scheme.error,
+                                    foregroundColor: scheme.onError,
+                                  ),
+                                  child: Text(l10n.commonDelete),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+
+                        if (confirmed != true) return;
+                        try {
+                          await provider.deleteArtworkComment(
+                            artworkId: widget.artworkId,
+                            commentId: comment.id,
+                          );
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(l10n.commentDeletedToast)),
+                          );
+                        } catch (_) {
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.commentDeleteFailedToast),
+                              backgroundColor: scheme.errorContainer,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'edit',
+                        child: Text(l10n.commonEdit),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(l10n.commonDelete),
+                      ),
+                    ],
+                  ),
+                IconButton(
+                  onPressed: () =>
+                      provider.toggleCommentLike(widget.artworkId, comment.id),
+                  icon: Icon(
+                    comment.isLikedByCurrentUser
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    size: 16,
+                    color: comment.isLikedByCurrentUser ? Colors.red : null,
+                  ),
+                ),
+                if (comment.likesCount > 0)
+                  Text(
+                    comment.likesCount.toString(),
+                    style: DetailTypography.label(context),
+                  ),
+              ],
+            ),
+            const SizedBox(height: DetailSpacing.sm),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: (comment.isEdited && comment.originalContent != null)
+                  ? () {
+                      showDialog<void>(
                         context: context,
                         builder: (dialogContext) {
                           return AlertDialog(
-                            title: Text(l10n.commentDeleteConfirmTitle),
-                            content: Text(l10n.commentDeleteConfirmMessage),
+                            title: Text(l10n.commentHistoryTitle),
+                            content: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    l10n.commentHistoryCurrentLabel,
+                                    style: DetailTypography.cardTitle(context),
+                                  ),
+                                  const SizedBox(height: DetailSpacing.sm),
+                                  SelectableText(
+                                    comment.content,
+                                    style: DetailTypography.body(context),
+                                  ),
+                                  const SizedBox(height: DetailSpacing.lg),
+                                  Text(
+                                    l10n.commentHistoryOriginalLabel,
+                                    style: DetailTypography.cardTitle(context),
+                                  ),
+                                  const SizedBox(height: DetailSpacing.sm),
+                                  SelectableText(
+                                    comment.originalContent ?? '',
+                                    style: DetailTypography.body(context),
+                                  ),
+                                ],
+                              ),
+                            ),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(false),
-                                child: Text(l10n.commonCancel),
-                              ),
-                              FilledButton(
-                                onPressed: () => Navigator.of(dialogContext).pop(true),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: scheme.error,
-                                  foregroundColor: scheme.onError,
-                                ),
-                                child: Text(l10n.commonDelete),
+                                onPressed: () =>
+                                    Navigator.of(dialogContext).pop(),
+                                child: Text(l10n.commonClose),
                               ),
                             ],
                           );
                         },
                       );
-
-                      if (confirmed != true) return;
-                      try {
-                        await provider.deleteArtworkComment(
-                          artworkId: widget.artworkId,
-                          commentId: comment.id,
-                        );
-                        if (!mounted) return;
-                        messenger.showSnackBar(
-                          SnackBar(content: Text(l10n.commentDeletedToast)),
-                        );
-                      } catch (_) {
-                        if (!mounted) return;
-                        messenger.showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.commentDeleteFailedToast),
-                            backgroundColor: scheme.errorContainer,
-                          ),
-                        );
-                      }
                     }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'edit',
-                      child: Text(l10n.commonEdit),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: Text(l10n.commonDelete),
-                    ),
-                  ],
-                ),
-              IconButton(
-                onPressed: () => provider.toggleCommentLike(widget.artworkId, comment.id),
-                icon: Icon(
-                  comment.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
-                  size: 16,
-                  color: comment.isLikedByCurrentUser ? Colors.red : null,
-                ),
-              ),
-              if (comment.likesCount > 0)
-                Text(
-                  comment.likesCount.toString(),
-                  style: GoogleFonts.outfit(fontSize: 12),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: (comment.isEdited && comment.originalContent != null)
-                ? () {
-                    showDialog<void>(
-                      context: context,
-                      builder: (dialogContext) {
-                        return AlertDialog(
-                          title: Text(l10n.commentHistoryTitle),
-                          content: SingleChildScrollView(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  l10n.commentHistoryCurrentLabel,
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 8),
-                                SelectableText(
-                                  comment.content,
-                                  style: GoogleFonts.outfit(fontSize: 14),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  l10n.commentHistoryOriginalLabel,
-                                  style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 8),
-                                SelectableText(
-                                  comment.originalContent ?? '',
-                                  style: GoogleFonts.outfit(fontSize: 14),
-                                ),
-                              ],
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(dialogContext).pop(),
-                              child: Text(l10n.commonClose),
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  }
-                : null,
-            child: Text(
-              comment.content,
-              style: GoogleFonts.outfit(fontSize: 14),
+                  : null,
+              child:
+                  Text(comment.content, style: DetailTypography.body(context)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1226,7 +1212,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -1264,7 +1253,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         },
                         child: Text(
                           l10n.commonCancel,
-                          style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                          style:
+                              GoogleFonts.outfit(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
@@ -1275,7 +1265,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                           return ElevatedButton(
                             onPressed: () => _submitComment(artwork, provider),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).colorScheme.primary,
+                              backgroundColor:
+                                  Theme.of(context).colorScheme.primary,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
@@ -1283,11 +1274,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
-                                    child: InlineLoading(shape: BoxShape.circle, tileSize: 4.0, color: Colors.white),
+                                    child: InlineLoading(
+                                        shape: BoxShape.circle,
+                                        tileSize: 4.0,
+                                        color: Colors.white),
                                   )
                                 : Text(
                                     l10n.artworkCommentPostButton,
-                                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+                                    style: GoogleFonts.outfit(
+                                        fontWeight: FontWeight.w600),
                                   ),
                           );
                         },
@@ -1310,11 +1305,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     if (!profileProvider.isSignedIn) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.communityCommentAuthRequiredToast, style: GoogleFonts.outfit()),
+          content: Text(l10n.communityCommentAuthRequiredToast,
+              style: GoogleFonts.outfit()),
           action: SnackBarAction(
             label: l10n.commonSignIn,
             onPressed: () {
@@ -1334,11 +1331,15 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     }
 
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final walletAddress = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
-    final displayName = profileProvider.currentUser?.displayName
-        ?? profileProvider.currentUser?.username
-        ?? (walletAddress != null && walletAddress.length >= 8 ? 'User ${walletAddress.substring(0, 8)}...' : 'User');
-    final optimisticId = walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
+    final walletAddress = profileProvider.currentUser?.walletAddress ??
+        walletProvider.currentWalletAddress;
+    final displayName = profileProvider.currentUser?.displayName ??
+        profileProvider.currentUser?.username ??
+        (walletAddress != null && walletAddress.length >= 8
+            ? 'User ${walletAddress.substring(0, 8)}...'
+            : 'User');
+    final optimisticId =
+        walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
 
     try {
       await provider.addComment(
@@ -1354,7 +1355,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.artworkCommentAddedToast, style: GoogleFonts.outfit()),
+          content:
+              Text(l10n.artworkCommentAddedToast, style: GoogleFonts.outfit()),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -1369,9 +1371,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           if (raw.isNotEmpty) {
             final decoded = jsonDecode(raw);
             if (decoded is Map<String, dynamic>) {
-              final msg = (decoded['error'] ?? decoded['message'] ?? '').toString().trim();
+              final msg = (decoded['error'] ?? decoded['message'] ?? '')
+                  .toString()
+                  .trim();
               if (msg.isNotEmpty) {
-                backendMessage = msg.length > 140 ? '${msg.substring(0, 140)}…' : msg;
+                backendMessage =
+                    msg.length > 140 ? '${msg.substring(0, 140)}…' : msg;
               }
             }
           }
@@ -1384,7 +1389,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
       final fallbackMessage = authRequired
           ? l10n.communityCommentAuthRequiredToast
-          : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})');
+          : (backendMessage ??
+              '${l10n.commonSomethingWentWrong} (${e.statusCode})');
       messenger.showSnackBar(
         SnackBar(
           content: Text(
@@ -1460,7 +1466,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 height: 4,
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -1548,7 +1557,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: Border.all(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
           ),
           borderRadius: BorderRadius.circular(12),
         ),
@@ -1571,7 +1581,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.4),
             ),
           ],
         ),
@@ -1581,14 +1594,16 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
   Future<void> _openInGoogleMaps(double lat, double lng, String title) async {
     Navigator.pop(context);
-    final googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    final googleMapsUrl =
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
     final googleMapsAppUrl = 'comgooglemaps://?q=$lat,$lng';
-    
+
     try {
       if (await canLaunchUrl(Uri.parse(googleMapsAppUrl))) {
         await launchUrl(Uri.parse(googleMapsAppUrl));
       } else if (await canLaunchUrl(Uri.parse(googleMapsUrl))) {
-        await launchUrl(Uri.parse(googleMapsUrl), mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(googleMapsUrl),
+            mode: LaunchMode.externalApplication);
       } else {
         _showErrorDialog('Could not open Google Maps');
       }
@@ -1601,12 +1616,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     Navigator.pop(context);
     final appleMapsUrl = 'https://maps.apple.com/?q=$lat,$lng';
     final appleMapsAppUrl = 'maps://?q=$lat,$lng';
-    
+
     try {
       if (await canLaunchUrl(Uri.parse(appleMapsAppUrl))) {
         await launchUrl(Uri.parse(appleMapsAppUrl));
       } else if (await canLaunchUrl(Uri.parse(appleMapsUrl))) {
-        await launchUrl(Uri.parse(appleMapsUrl), mode: LaunchMode.externalApplication);
+        await launchUrl(Uri.parse(appleMapsUrl),
+            mode: LaunchMode.externalApplication);
       } else {
         _showErrorDialog('Could not open Apple Maps');
       }
@@ -1618,15 +1634,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   Future<void> _openInDefaultMaps(double lat, double lng, String title) async {
     Navigator.pop(context);
     final defaultMapsUrl = 'geo:$lat,$lng?q=$lat,$lng($title)';
-    
+
     try {
       if (await canLaunchUrl(Uri.parse(defaultMapsUrl))) {
         await launchUrl(Uri.parse(defaultMapsUrl));
       } else {
         // Fallback to web maps
-        final webMapsUrl = 'https://www.openstreetmap.org/?mlat=$lat&mlon=$lng&zoom=15';
+        final webMapsUrl =
+            'https://www.openstreetmap.org/?mlat=$lat&mlon=$lng&zoom=15';
         if (await canLaunchUrl(Uri.parse(webMapsUrl))) {
-          await launchUrl(Uri.parse(webMapsUrl), mode: LaunchMode.externalApplication);
+          await launchUrl(Uri.parse(webMapsUrl),
+              mode: LaunchMode.externalApplication);
         } else {
           _showErrorDialog('Could not open maps application');
         }
@@ -1640,7 +1658,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     Navigator.pop(context);
     final coordinates = '$lat, $lng';
     await Clipboard.setData(ClipboardData(text: coordinates));
-    
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1693,12 +1711,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id');
     final walletAddress = prefs.getString('wallet_address');
-    
+
     if (userId == null || walletAddress == null) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Please connect your wallet first', style: GoogleFonts.outfit()),
+            content: Text('Please connect your wallet first',
+                style: GoogleFonts.outfit()),
             backgroundColor: Colors.red,
           ),
         );
@@ -1712,7 +1731,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final supplyController = TextEditingController(text: '100');
     final priceController = TextEditingController(text: '50.0');
     final royaltyController = TextEditingController(text: '10');
-    
+
     CollectibleType selectedType = CollectibleType.nft;
     CollectibleRarity selectedRarity = _convertArtworkRarity(artwork.rarity);
 
@@ -1781,7 +1800,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     border: const OutlineInputBorder(),
                   ),
                   style: GoogleFonts.outfit(),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 TextField(
@@ -1794,7 +1814,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     helperStyle: GoogleFonts.outfit(fontSize: 12),
                   ),
                   style: GoogleFonts.outfit(),
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<CollectibleType>(
@@ -1893,12 +1914,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   description: descController.text,
                   totalSupply: int.tryParse(supplyController.text) ?? 100,
                   mintPrice: double.tryParse(priceController.text) ?? 0.1,
-                  royaltyPercentage: double.tryParse(royaltyController.text) ?? 10.0,
+                  royaltyPercentage:
+                      double.tryParse(royaltyController.text) ?? 10.0,
                   type: selectedType,
                   rarity: selectedRarity,
                 );
               },
-              child: Text('Mint NFT', style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
+              child: Text('Mint NFT',
+                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -1919,7 +1942,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final prefs = await SharedPreferences.getInstance();
     final walletAddress = prefs.getString('wallet_address') ?? '';
     if (!mounted) return;
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1928,7 +1951,13 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SizedBox(width: 56, height: 56, child: InlineLoading(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary, tileSize: 8.0)),
+            SizedBox(
+                width: 56,
+                height: 56,
+                child: InlineLoading(
+                    shape: BoxShape.circle,
+                    color: Theme.of(context).colorScheme.primary,
+                    tileSize: 8.0)),
             const SizedBox(height: 16),
             Text(
               'Minting NFT...',
@@ -1943,7 +1972,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               'This may take a few moments',
               style: GoogleFonts.outfit(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -1970,7 +2002,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
       if (mounted) {
         Navigator.pop(context); // Close progress dialog
-        
+
         if (result.success) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -2031,77 +2063,5 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       case ArtworkRarity.legendary:
         return CollectibleRarity.legendary;
     }
-  }
-
-}
-
-/// A reusable action button for detail screens
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback? onPressed;
-  final bool isActive;
-  final Color? activeColor;
-  final Color? backgroundColor;
-  final Color? foregroundColor;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    this.onPressed,
-    this.isActive = false,
-    this.activeColor,
-    this.backgroundColor,
-    this.foregroundColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final effectiveActiveColor = activeColor ?? scheme.primary;
-    
-    final bgColor = backgroundColor ?? 
-        (isActive ? effectiveActiveColor.withValues(alpha: 0.1) : scheme.surfaceContainerHighest);
-    final fgColor = foregroundColor ?? 
-        (isActive ? effectiveActiveColor : scheme.onSurface);
-
-    return Material(
-      color: bgColor,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isActive 
-                  ? effectiveActiveColor.withValues(alpha: 0.25)
-                  : scheme.outline.withValues(alpha: 0.1),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 20, color: fgColor),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: fgColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

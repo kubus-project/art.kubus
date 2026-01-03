@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
+import 'config/config.dart';
 import 'providers/connection_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/profile_provider.dart';
@@ -140,10 +141,20 @@ class _AppLauncherState extends State<AppLauncher> {
   @override
   void initState() {
     super.initState();
-    _init();
+    _bootstrap();
   }
 
-  Future<void> _init() async {
+  void _bootstrap() {
+    // Never block the entire app on push notification initialization. On web this
+    // can be delayed by service worker/permission constraints; on mobile it may
+    // involve platform channels. The app should always reach AppInitializer.
+    if (mounted) {
+      setState(() => _initialized = true);
+    }
+    unawaited(_initPushNotifications());
+  }
+
+  Future<void> _initPushNotifications() async {
     const initTimeout = Duration(seconds: 6);
     try {
       // Initialize push notification service and (optionally) request permission
@@ -155,21 +166,13 @@ class _AppLauncherState extends State<AppLauncher> {
       if (!kIsWeb) {
         await service.requestPermission().timeout(initTimeout);
       }
-      if (kDebugMode) {
-        debugPrint('AppLauncher: PushNotificationService initialized.');
-      }
+      AppConfig.debugPrint('AppLauncher: PushNotificationService initialized.');
     } on TimeoutException catch (e) {
-      if (kDebugMode) {
-        debugPrint(
-          'AppLauncher: PushNotificationService init timed out after ${initTimeout.inSeconds}s: $e',
-        );
-      }
+      AppConfig.debugPrint(
+        'AppLauncher: PushNotificationService init timed out after ${initTimeout.inSeconds}s: $e',
+      );
     } catch (e, st) {
-      if (kDebugMode) {
-        debugPrint('AppLauncher: PushNotificationService init failed: $e\n$st');
-      }
-    } finally {
-      if (mounted) setState(() => _initialized = true);
+      AppConfig.debugPrint('AppLauncher: PushNotificationService init failed: $e\n$st');
     }
   }
 

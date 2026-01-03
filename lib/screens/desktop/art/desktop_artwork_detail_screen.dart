@@ -29,10 +29,12 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<DesktopArtworkDetailScreen> createState() => _DesktopArtworkDetailScreenState();
+  State<DesktopArtworkDetailScreen> createState() =>
+      _DesktopArtworkDetailScreenState();
 }
 
-class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen> {
+class _DesktopArtworkDetailScreenState
+    extends State<DesktopArtworkDetailScreen> {
   late final TextEditingController _commentController;
   late final ScrollController _commentsScrollController;
   bool _artworkLoading = true;
@@ -112,7 +114,9 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           return Scaffold(
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
-                ? AppBar(title: Text(l10n.artDetailLoadingTitle, style: GoogleFonts.inter()))
+                ? AppBar(
+                    title: Text(l10n.artDetailLoadingTitle,
+                        style: GoogleFonts.inter()))
                 : null,
             body: const Center(child: InlineLoading()),
           );
@@ -122,7 +126,9 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           return Scaffold(
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
-                ? AppBar(title: Text(l10n.artDetailTitle, style: GoogleFonts.inter()))
+                ? AppBar(
+                    title:
+                        Text(l10n.artDetailTitle, style: GoogleFonts.inter()))
                 : null,
             body: Center(
               child: Column(
@@ -148,9 +154,12 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           return Scaffold(
             backgroundColor: scheme.surface,
             appBar: widget.showAppBar
-                ? AppBar(title: Text(l10n.artworkNotFound, style: GoogleFonts.inter()))
+                ? AppBar(
+                    title:
+                        Text(l10n.artworkNotFound, style: GoogleFonts.inter()))
                 : null,
-            body: Center(child: Text(l10n.artworkNotFound, style: GoogleFonts.inter())),
+            body: Center(
+                child: Text(l10n.artworkNotFound, style: GoogleFonts.inter())),
           );
         }
 
@@ -163,7 +172,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           backgroundColor: scheme.surface,
           appBar: widget.showAppBar
               ? AppBar(
-                  title: Text(artwork.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  title: Text(artwork.title,
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 )
               : null,
           body: Padding(
@@ -171,10 +181,12 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final showTwoColumns = constraints.maxWidth >= 900;
-                final sideWidth = (constraints.maxWidth >= 1200) ? 460.0 : 400.0;
+                final sideWidth =
+                    (constraints.maxWidth >= 1200) ? 460.0 : 400.0;
 
                 if (!showTwoColumns) {
-                  final commentsHeight = (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
+                  final commentsHeight =
+                      (constraints.maxHeight * 0.55).clamp(360.0, 560.0);
                   return Column(
                     children: [
                       Expanded(
@@ -188,7 +200,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                       const SizedBox(height: DetailSpacing.lg),
                       SizedBox(
                         height: commentsHeight,
-                        child: _buildCommentsPanel(artwork, artworkProvider, isSignedIn),
+                        child: _buildCommentsPanel(
+                            artwork, artworkProvider, isSignedIn),
                       ),
                     ],
                   );
@@ -260,14 +273,16 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
         child: coverUrl == null
             ? Container(
                 color: scheme.surfaceContainerHighest,
-                child: Icon(Icons.image_not_supported, color: scheme.onSurfaceVariant),
+                child: Icon(Icons.image_not_supported,
+                    color: scheme.onSurfaceVariant),
               )
             : Image.network(
                 coverUrl,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   color: scheme.surfaceContainerHighest,
-                  child: Icon(Icons.broken_image, color: scheme.onSurfaceVariant),
+                  child:
+                      Icon(Icons.broken_image, color: scheme.onSurfaceVariant),
                 ),
               ),
       ),
@@ -275,7 +290,6 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
   }
 
   Widget _buildHeader(Artwork artwork) {
-    final scheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -284,16 +298,13 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: scheme.onSurface,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
           artwork: artwork,
-          style: GoogleFonts.inter(
-            fontSize: 14,
-            color: scheme.onSurface.withValues(alpha: 0.7),
-          ),
+          style: DetailTypography.caption(context),
           maxLines: 2,
         ),
       ],
@@ -301,20 +312,13 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
   }
 
   Widget _buildDescription(Artwork artwork) {
-    final scheme = Theme.of(context).colorScheme;
     final text = (artwork.description).trim();
     if (text.isEmpty) return const SizedBox.shrink();
-    return Text(
-      text,
-      style: GoogleFonts.inter(
-        fontSize: 14,
-        height: 1.5,
-        color: scheme.onSurface.withValues(alpha: 0.85),
-      ),
-    );
+    return Text(text, style: DetailTypography.body(context));
   }
 
-  Widget _buildActionsRow(Artwork artwork, ArtworkProvider artworkProvider, bool isSignedIn) {
+  Widget _buildActionsRow(
+      Artwork artwork, ArtworkProvider artworkProvider, bool isSignedIn) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final messenger = ScaffoldMessenger.of(context);
@@ -323,7 +327,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     Future<void> requireSignInToast() async {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.communityCommentAuthRequiredToast, style: GoogleFonts.inter()),
+          content: Text(l10n.communityCommentAuthRequiredToast,
+              style: GoogleFonts.inter()),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -334,17 +339,26 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
       runSpacing: 12,
       children: [
         _actionButton(
-          icon: artwork.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
+          icon: artwork.isLikedByCurrentUser
+              ? Icons.favorite
+              : Icons.favorite_border,
           label: '${artwork.likesCount}',
-          onPressed: canInteract ? () => artworkProvider.toggleLike(artwork.id) : requireSignInToast,
-          foreground: artwork.isLikedByCurrentUser ? scheme.error : scheme.onSurface,
+          onPressed: canInteract
+              ? () => artworkProvider.toggleLike(artwork.id)
+              : requireSignInToast,
+          foreground:
+              artwork.isLikedByCurrentUser ? scheme.error : scheme.onSurface,
           background: scheme.surfaceContainerHighest,
           tooltip: l10n.commonLikes,
         ),
         _actionButton(
-          icon: artwork.isFavoriteByCurrentUser ? Icons.bookmark : Icons.bookmark_border,
+          icon: artwork.isFavoriteByCurrentUser
+              ? Icons.bookmark
+              : Icons.bookmark_border,
           label: l10n.commonSave,
-          onPressed: canInteract ? () => artworkProvider.toggleFavorite(artwork.id) : requireSignInToast,
+          onPressed: canInteract
+              ? () => artworkProvider.toggleFavorite(artwork.id)
+              : requireSignInToast,
           foreground: scheme.onSurface,
           background: scheme.surfaceContainerHighest,
           tooltip: l10n.commonSave,
@@ -371,7 +385,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           onPressed: () {
             ShareService().showShareSheet(
               context,
-              target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
+              target: ShareTarget.artwork(
+                  artworkId: artwork.id, title: artwork.title),
               sourceScreen: 'desktop_art_detail',
             );
           },
@@ -395,27 +410,25 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
       message: tooltip,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DetailRadius.md),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(
+              horizontal: DetailSpacing.md, vertical: DetailSpacing.sm + 2),
           decoration: BoxDecoration(
             color: background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15)),
+            borderRadius: BorderRadius.circular(DetailRadius.md),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(icon, size: 18, color: foreground),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
+              const SizedBox(width: DetailSpacing.sm),
+              Text(label, style: DetailTypography.button(context)),
             ],
           ),
         ),
@@ -423,7 +436,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     );
   }
 
-  Widget _buildCommentsPanel(Artwork artwork, ArtworkProvider provider, bool isSignedIn) {
+  Widget _buildCommentsPanel(
+      Artwork artwork, ArtworkProvider provider, bool isSignedIn) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
@@ -431,44 +445,49 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     final isLoading = provider.isLoading('load_comments_${artwork.id}');
     final loadError = provider.commentLoadError(artwork.id);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.15)),
-      ),
+    return DetailCard(
+      padding: EdgeInsets.zero,
+      borderRadius: DetailRadius.lg,
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
+            padding: const EdgeInsets.fromLTRB(
+                DetailSpacing.lg, 14, DetailSpacing.lg, DetailSpacing.md),
             child: Row(
               children: [
                 Text(
                   '${l10n.commonComments} (${artwork.commentsCount})',
-                  style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                  style: DetailTypography.sectionTitle(context),
                 ),
                 const Spacer(),
                 IconButton(
                   tooltip: l10n.commonRefresh,
-                  onPressed: () => provider.loadComments(artwork.id, force: true),
+                  onPressed: () =>
+                      provider.loadComments(artwork.id, force: true),
                   icon: const Icon(Icons.refresh),
                 ),
               ],
             ),
           ),
-          Divider(height: 1, color: scheme.outline.withValues(alpha: 0.15)),
+          Divider(
+              height: 1, color: scheme.outlineVariant.withValues(alpha: 0.3)),
           Expanded(
             child: isLoading
                 ? const Center(child: InlineLoading())
                 : (loadError != null)
-                    ? _buildCommentsError(loadError, onRetry: () => provider.loadComments(artwork.id, force: true))
+                    ? _buildCommentsError(loadError,
+                        onRetry: () =>
+                            provider.loadComments(artwork.id, force: true))
                     : (comments.isEmpty)
                         ? _buildCommentsEmpty()
                         : ListView.separated(
                             controller: _commentsScrollController,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: DetailSpacing.lg,
+                                vertical: DetailSpacing.md),
                             itemCount: comments.length,
-                            separatorBuilder: (_, __) => const SizedBox(height: 12),
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(height: DetailSpacing.md),
                             itemBuilder: (context, index) => _buildCommentTile(
                               artworkId: artwork.id,
                               comment: comments[index],
@@ -476,7 +495,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                             ),
                           ),
           ),
-          Divider(height: 1, color: scheme.outline.withValues(alpha: 0.15)),
+          Divider(
+              height: 1, color: scheme.outlineVariant.withValues(alpha: 0.3)),
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
             child: _buildCommentComposer(artwork, provider, isSignedIn),
@@ -504,7 +524,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           const SizedBox(height: 6),
           Text(
             l10n.postDetailNoCommentsDescription,
-            style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.65)),
+            style: GoogleFonts.inter(
+                color: scheme.onSurface.withValues(alpha: 0.65)),
             textAlign: TextAlign.center,
           ),
         ],
@@ -523,7 +544,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
           children: [
             Text(
               message,
-              style: GoogleFonts.inter(color: scheme.onSurface.withValues(alpha: 0.8)),
+              style: GoogleFonts.inter(
+                  color: scheme.onSurface.withValues(alpha: 0.8)),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
@@ -569,7 +591,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                     Expanded(
                       child: Text(
                         comment.userName,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700, fontSize: 13),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -592,11 +615,16 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                 Row(
                   children: [
                     IconButton(
-                      onPressed: () => provider.toggleCommentLike(artworkId, comment.id),
+                      onPressed: () =>
+                          provider.toggleCommentLike(artworkId, comment.id),
                       icon: Icon(
-                        comment.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
+                        comment.isLikedByCurrentUser
+                            ? Icons.favorite
+                            : Icons.favorite_border,
                         size: 16,
-                        color: comment.isLikedByCurrentUser ? scheme.error : scheme.onSurface.withValues(alpha: 0.8),
+                        color: comment.isLikedByCurrentUser
+                            ? scheme.error
+                            : scheme.onSurface.withValues(alpha: 0.8),
                       ),
                       tooltip: AppLocalizations.of(context)!.commonLikes,
                       visualDensity: VisualDensity.compact,
@@ -619,7 +647,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     );
   }
 
-  Widget _buildCommentComposer(Artwork artwork, ArtworkProvider provider, bool isSignedIn) {
+  Widget _buildCommentComposer(
+      Artwork artwork, ArtworkProvider provider, bool isSignedIn) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
 
@@ -635,16 +664,20 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
               hintText: l10n.artworkCommentAddHint,
               filled: true,
               fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
         ),
         const SizedBox(width: 10),
         ElevatedButton(
-          onPressed: isSubmitting ? null : () => _submitComment(artwork, provider, isSignedIn),
+          onPressed: isSubmitting
+              ? null
+              : () => _submitComment(artwork, provider, isSignedIn),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: isSubmitting
               ? const SizedBox(
@@ -658,7 +691,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     );
   }
 
-  Future<void> _submitComment(Artwork artwork, ArtworkProvider provider, bool isSignedIn) async {
+  Future<void> _submitComment(
+      Artwork artwork, ArtworkProvider provider, bool isSignedIn) async {
     final content = _commentController.text.trim();
     if (content.isEmpty) return;
 
@@ -669,7 +703,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     if (!isSignedIn) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.communityCommentAuthRequiredToast, style: GoogleFonts.inter()),
+          content: Text(l10n.communityCommentAuthRequiredToast,
+              style: GoogleFonts.inter()),
           action: SnackBarAction(
             label: l10n.commonSignIn,
             onPressed: () {
@@ -687,13 +722,18 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
       return;
     }
 
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final walletAddress = profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
+    final walletAddress = profileProvider.currentUser?.walletAddress ??
+        walletProvider.currentWalletAddress;
     final displayName = profileProvider.currentUser?.displayName ??
         profileProvider.currentUser?.username ??
-        ((walletAddress != null && walletAddress.length >= 8) ? 'User ${walletAddress.substring(0, 8)}...' : 'User');
-    final optimisticId = walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
+        ((walletAddress != null && walletAddress.length >= 8)
+            ? 'User ${walletAddress.substring(0, 8)}...'
+            : 'User');
+    final optimisticId =
+        walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
 
     try {
       await provider.addComment(artwork.id, content, optimisticId, displayName);
@@ -708,7 +748,8 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
       }
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.artworkCommentAddedToast, style: GoogleFonts.inter()),
+          content:
+              Text(l10n.artworkCommentAddedToast, style: GoogleFonts.inter()),
           backgroundColor: Theme.of(context).colorScheme.primary,
           duration: const Duration(seconds: 2),
         ),
@@ -743,7 +784,9 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     } catch (_) {
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text(l10n.commonSomethingWentWrong, style: GoogleFonts.inter())),
+        SnackBar(
+            content: Text(l10n.commonSomethingWentWrong,
+                style: GoogleFonts.inter())),
       );
     }
   }

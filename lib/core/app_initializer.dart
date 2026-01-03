@@ -36,13 +36,36 @@ class AppInitializer extends StatefulWidget {
 
 class _AppInitializerState extends State<AppInitializer> {
   String? initializationError;
+  Completer<void>? _initCompleter;
+  Timer? _startupWatchdog;
+  bool _didNavigate = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeApp();
+      unawaited(_initializeApp());
     });
+
+    // Safety net: never stay on AppLoading forever (e.g. due to a plugin hang on web/desktop).
+    _startupWatchdog?.cancel();
+    _startupWatchdog = Timer(const Duration(seconds: 20), () {
+      if (!mounted || _didNavigate) return;
+      final navigator = appNavigatorKey.currentState;
+      if (navigator == null) return;
+      final isDesktop = DesktopBreakpoints.isDesktop(navigator.context);
+      _didNavigate = true;
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen()),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _startupWatchdog?.cancel();
+    _startupWatchdog = null;
+    super.dispose();
   }
 
   Future<T?> _safeStep<T>(
@@ -59,7 +82,27 @@ class _AppInitializerState extends State<AppInitializer> {
   }
 
   Future<void> _initializeApp() async {
-    final navigator = Navigator.of(context);
+    final existing = _initCompleter;
+    if (existing != null) return existing.future;
+    final completer = Completer<void>();
+    _initCompleter = completer;
+
+    NavigatorState? navigator = appNavigatorKey.currentState;
+    try {
+      navigator ??= Navigator.of(context);
+    } catch (e) {
+      AppConfig.debugPrint('AppInitializer: navigator unavailable: $e');
+    }
+    if (navigator == null) {
+      // If the navigator isn't ready yet (rare on web refresh), retry next frame.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(_initializeApp());
+      });
+      if (!completer.isCompleted) completer.complete();
+      _initCompleter = null;
+      return completer.future;
+    }
 
     try {
       // Load JWT token for backend authentication (do not block indefinitely on startup).
@@ -196,8 +239,11 @@ class _AppInitializerState extends State<AppInitializer> {
       }
     })();
     if (pendingDeepLink != null) {
-      await warmupFuture;
+      try {
+        await warmupFuture.timeout(const Duration(seconds: 15));
+      } catch (_) {}
       if (!mounted) return;
+      _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(builder: (context) => const MainApp()),
       );
@@ -217,13 +263,15 @@ class _AppInitializerState extends State<AppInitializer> {
       // Ensure welcome/first-launch flags are consistent for returning users.
       await OnboardingStateService.markWelcomeSeen(prefs: prefs);
       
-      await warmupFuture;
+      unawaited(warmupFuture);
       if (!mounted) return;
       if (shouldShowSignIn) {
+        _didNavigate = true;
         navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
       } else {
+        _didNavigate = true;
         navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const MainApp()),
         );
@@ -236,6 +284,7 @@ class _AppInitializerState extends State<AppInitializer> {
           debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
         }
         unawaited(warmupFuture);
+        _didNavigate = true;
         navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
         );
@@ -244,6 +293,7 @@ class _AppInitializerState extends State<AppInitializer> {
           debugPrint('AppInitializer: route -> OnboardingScreen');
         }
         unawaited(warmupFuture);
+        _didNavigate = true;
         navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const OnboardingScreen()),
         );
@@ -253,8 +303,9 @@ class _AppInitializerState extends State<AppInitializer> {
       if (kDebugMode) {
         debugPrint('AppInitializer: route -> MainApp');
       }
-      await warmupFuture;
+      unawaited(warmupFuture);
       if (!mounted) return;
+      _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(builder: (context) => shouldShowSignIn ? const SignInScreen() : const MainApp()),
       );
@@ -264,10 +315,18 @@ class _AppInitializerState extends State<AppInitializer> {
       AppConfig.debugPrint('AppInitializer: init stack: $st');
       if (!mounted) return;
       final isDesktop = DesktopBreakpoints.isDesktop(context);
+      _didNavigate = true;
       navigator.pushReplacement(
         MaterialPageRoute(builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen()),
       );
+    } finally {
+      _startupWatchdog?.cancel();
+      _startupWatchdog = null;
+      if (!completer.isCompleted) completer.complete();
+      _initCompleter = null;
     }
+
+    return completer.future;
   }
 
   @override

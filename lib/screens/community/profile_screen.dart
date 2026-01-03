@@ -64,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   List<Map<String, dynamic>> _artistEvents = [];
   bool _profilePrefsListenerAttached = false;
   String? _failedCoverImageUrl;
-  
+
   // Privacy settings state
   bool _showActivityStatus = true;
 
@@ -75,7 +75,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -83,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       parent: _animationController,
       curve: Curves.easeInOut,
     ));
-    
+
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -91,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       parent: _animationController,
       curve: Curves.easeOutBack,
     ));
-    
+
     _animationController.forward();
     _loadPrivacySettings();
     final artworkProvider = context.read<ArtworkProvider>();
@@ -105,7 +105,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     if (!_profilePrefsListenerAttached) {
       profileProvider.addListener(_handleProfilePreferencesChanged);
       _profilePrefsListenerAttached = true;
@@ -139,19 +140,18 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
-  
   bool _hasArtistRole(ProfileProvider profileProvider, DAOReview? review) {
     if (profileProvider.currentUser?.isArtist ?? false) return true;
     if (review == null) return false;
     return review.isArtistApplication && review.isApproved;
   }
-  
+
   bool _hasInstitutionRole(ProfileProvider profileProvider, DAOReview? review) {
     if (profileProvider.currentUser?.isInstitution ?? false) return true;
     if (review == null) return false;
     return review.isInstitutionApplication && review.isApproved;
   }
-  
+
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
@@ -159,14 +159,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     final daoProvider = Provider.of<DAOProvider>(context);
     final walletAddress = profileProvider.currentUser?.walletAddress ?? '';
     final DAOReview? daoReview = walletAddress.isNotEmpty
-      ? daoProvider.findReviewForWallet(walletAddress)
-      : null;
+        ? daoProvider.findReviewForWallet(walletAddress)
+        : null;
     final isArtist = _hasArtistRole(profileProvider, daoReview);
     final isInstitution = _hasInstitutionRole(profileProvider, daoReview);
-    
+
     return Scaffold(
-      backgroundColor: themeProvider.isDarkMode 
-          ? Theme.of(context).scaffoldBackgroundColor 
+      backgroundColor: themeProvider.isDarkMode
+          ? Theme.of(context).scaffoldBackgroundColor
           : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: AnimatedBuilder(
@@ -182,28 +182,36 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      _buildProfileHeader(isArtist: isArtist, isInstitution: isInstitution),
-                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
+                      _buildProfileHeader(
+                          isArtist: isArtist, isInstitution: isInstitution),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
                       _buildStatsSection(),
-                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xxl)),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xxl)),
                       if (isArtist) ...[
                         SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
-                        const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
+                        const SliverToBoxAdapter(
+                            child: SizedBox(height: DetailSpacing.xl)),
                       ],
                       SliverToBoxAdapter(
                         child: isInstitution
                             ? _buildInstitutionHighlightsSection()
                             : _buildAchievementsSection(),
                       ),
-                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildPerformanceStats()),
-                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildPostsSection()),
                       if (isArtist) ...[
-                        const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
+                        const SliverToBoxAdapter(
+                            child: SizedBox(height: DetailSpacing.xl)),
                         SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
                       ],
-                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xxl)),
+                      const SliverToBoxAdapter(
+                          child: SizedBox(height: DetailSpacing.xxl)),
                     ],
                   ),
                 ),
@@ -215,25 +223,30 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildProfileHeader({required bool isArtist, required bool isInstitution}) {
+  Widget _buildProfileHeader(
+      {required bool isArtist, required bool isInstitution}) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final web3Provider = Provider.of<Web3Provider>(context);
     final profileProvider = Provider.of<ProfileProvider>(context);
-    
+
     return SliverToBoxAdapter(
       child: LayoutBuilder(
         builder: (context, constraints) {
           bool isSmallScreen = constraints.maxWidth < 375;
           bool isVerySmallScreen = constraints.maxWidth < 320;
-          
-          final coverImageUrl = _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
-          final coverUrlIsKnownBad = coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
-          final hasCoverImage = coverImageUrl != null && coverImageUrl.isNotEmpty && !coverUrlIsKnownBad;
+
+          final coverImageUrl =
+              _normalizeMediaUrl(profileProvider.currentUser?.coverImage);
+          final coverUrlIsKnownBad =
+              coverImageUrl != null && coverImageUrl == _failedCoverImageUrl;
+          final hasCoverImage = coverImageUrl != null &&
+              coverImageUrl.isNotEmpty &&
+              !coverUrlIsKnownBad;
           final coverHeight = hasCoverImage ? 160.0 : 100.0;
           final dpr = MediaQuery.of(context).devicePixelRatio;
           final cacheWidth = (constraints.maxWidth * dpr).round();
           final cacheHeight = (coverHeight * dpr).round();
-          
+
           return Column(
             children: [
               // Cover Image Section
@@ -256,8 +269,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                     colors: [
-                                      themeProvider.accentColor.withValues(alpha: 0.3),
-                                      themeProvider.accentColor.withValues(alpha: 0.1),
+                                      themeProvider.accentColor
+                                          .withValues(alpha: 0.3),
+                                      themeProvider.accentColor
+                                          .withValues(alpha: 0.1),
                                     ],
                                   )
                                 : null,
@@ -274,9 +289,11 @@ class _ProfileScreenState extends State<ProfileScreen>
                             filterQuality: FilterQuality.medium,
                             errorBuilder: (context, error, stackTrace) {
                               if (_failedCoverImageUrl != coverImageUrl) {
-                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
                                   if (!mounted) return;
-                                  setState(() => _failedCoverImageUrl = coverImageUrl);
+                                  setState(() =>
+                                      _failedCoverImageUrl = coverImageUrl);
                                 });
                               }
                               return const SizedBox.expand();
@@ -324,17 +341,24 @@ class _ProfileScreenState extends State<ProfileScreen>
                                   child: Text(
                                     'Profile',
                                     style: GoogleFonts.inter(
-                                      fontSize: isVerySmallScreen ? 24 : isSmallScreen ? 26 : 28,
+                                      fontSize: isVerySmallScreen
+                                          ? 24
+                                          : isSmallScreen
+                                              ? 26
+                                              : 28,
                                       fontWeight: FontWeight.bold,
                                       color: hasCoverImage
                                           ? Colors.white
-                                          : Theme.of(context).colorScheme.onSurface,
+                                          : Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
                                       shadows: hasCoverImage
                                           ? [
                                               Shadow(
                                                 offset: const Offset(0, 1),
                                                 blurRadius: 3,
-                                                color: Colors.black.withValues(alpha: 0.5),
+                                                color: Colors.black
+                                                    .withValues(alpha: 0.5),
                                               ),
                                             ]
                                           : null,
@@ -350,7 +374,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         Icons.share_outlined,
                                         color: hasCoverImage
                                             ? Colors.white
-                                            : Theme.of(context).colorScheme.onSurface,
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () => _shareProfile(),
@@ -362,13 +388,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         Icons.inbox_outlined,
                                         color: hasCoverImage
                                             ? Colors.white
-                                            : Theme.of(context).colorScheme.onSurface,
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (_) => const InvitesInboxScreen()),
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  const InvitesInboxScreen()),
                                         );
                                       },
                                       tooltip: 'Invites',
@@ -379,13 +409,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                                         Icons.settings_outlined,
                                         color: hasCoverImage
                                             ? Colors.white
-                                            : Theme.of(context).colorScheme.onSurface,
+                                            : Theme.of(context)
+                                                .colorScheme
+                                                .onSurface,
                                         size: isSmallScreen ? 22 : 24,
                                       ),
                                       onPressed: () {
                                         Navigator.push(
                                           context,
-                                          MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                                          MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const SettingsScreen()),
                                         );
                                       },
                                       tooltip: 'Settings',
@@ -401,245 +435,306 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                   // Avatar positioned at bottom of cover, overlapping
                   Positioned(
-                    bottom: -(isVerySmallScreen ? 40.0 : isSmallScreen ? 45.0 : 50.0),
+                    bottom: -(isVerySmallScreen
+                        ? 40.0
+                        : isSmallScreen
+                            ? 45.0
+                            : 50.0),
                     left: 0,
                     right: 0,
                     child: Center(
-                        child: AvatarWidget(
-                          wallet: profileProvider.currentUser?.walletAddress ?? '',
-                          avatarUrl: profileProvider.currentUser?.avatar,
-                          radius: isVerySmallScreen ? 40 : isSmallScreen ? 45 : 50,
-                          enableProfileNavigation: false,
-                          showStatusIndicator: _showActivityStatus,
-                        ),
+                      child: AvatarWidget(
+                        wallet:
+                            profileProvider.currentUser?.walletAddress ?? '',
+                        avatarUrl: profileProvider.currentUser?.avatar,
+                        radius: isVerySmallScreen
+                            ? 40
+                            : isSmallScreen
+                                ? 45
+                                : 50,
+                        enableProfileNavigation: false,
+                        showStatusIndicator: _showActivityStatus,
+                      ),
                     ),
                   ),
                 ],
               ),
               // Spacing for avatar overflow
-              SizedBox(height: isVerySmallScreen ? 48 : isSmallScreen ? 53 : 58),
+              SizedBox(
+                  height: isVerySmallScreen
+                      ? 48
+                      : isSmallScreen
+                          ? 53
+                          : 58),
               // Rest of profile content
               Container(
-                padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
+                padding:
+                    EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
                 child: Column(
                   children: [
-                Align(
-                  alignment: Alignment.center,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username ?? 'Art Enthusiast',
-                          style: GoogleFonts.inter(
-                            fontSize: isVerySmallScreen ? 20 : isSmallScreen ? 22 : 24,
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
+                    Align(
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              profileProvider.currentUser?.displayName ??
+                                  profileProvider.currentUser?.username ??
+                                  'Art Enthusiast',
+                              style: GoogleFonts.inter(
+                                fontSize: isVerySmallScreen
+                                    ? 20
+                                    : isSmallScreen
+                                        ? 22
+                                        : 24,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                          if (isArtist) ...[
+                            SizedBox(width: isSmallScreen ? 6 : 8),
+                            const ArtistBadge(),
+                          ],
+                          if (isInstitution) ...[
+                            SizedBox(width: isSmallScreen ? 6 : 8),
+                            const InstitutionBadge(),
+                          ],
+                        ],
                       ),
-                      if (isArtist) ...[
-                        SizedBox(width: isSmallScreen ? 6 : 8),
-                        const ArtistBadge(),
-                      ],
-                      if (isInstitution) ...[
-                        SizedBox(width: isSmallScreen ? 6 : 8),
-                        const InstitutionBadge(),
-                      ],
+                    ),
+                    if (profileProvider.currentUser?.username != null &&
+                        profileProvider.currentUser?.displayName != null) ...[
+                      SizedBox(height: isSmallScreen ? 4 : 6),
+                      Text(
+                        '@${profileProvider.currentUser!.username}',
+                        style: GoogleFonts.inter(
+                          fontSize: isVerySmallScreen
+                              ? 14
+                              : isSmallScreen
+                                  ? 15
+                                  : 16,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ],
-                  ),
-                ),
-                if (profileProvider.currentUser?.username != null && profileProvider.currentUser?.displayName != null) ...[  
-                  SizedBox(height: isSmallScreen ? 4 : 6),
-                  Text(
-                    '@${profileProvider.currentUser!.username}',
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 6),
-                UserActivityStatusLine(
-                  walletAddress: profileProvider.currentUser?.walletAddress ?? '',
-                  textAlign: TextAlign.center,
-                  textStyle: GoogleFonts.inter(
-                    fontSize: isVerySmallScreen ? 12 : isSmallScreen ? 13 : 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 6 : 8),
-                if (web3Provider.isConnected) ...[
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 12 : 16, 
-                      vertical: isSmallScreen ? 6 : 8
-                    ),
-                    decoration: BoxDecoration(
-                      color: themeProvider.accentColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: themeProvider.accentColor.withValues(alpha: 0.3),
+                    const SizedBox(height: 6),
+                    UserActivityStatusLine(
+                      walletAddress:
+                          profileProvider.currentUser?.walletAddress ?? '',
+                      textAlign: TextAlign.center,
+                      textStyle: GoogleFonts.inter(
+                        fontSize: isVerySmallScreen
+                            ? 12
+                            : isSmallScreen
+                                ? 13
+                                : 14,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                       ),
                     ),
-                    child: Text(
-                      web3Provider.formatAddress(web3Provider.walletAddress),
-                      style: GoogleFonts.robotoMono(
-                        fontSize: isSmallScreen ? 12 : 14,
-                        fontWeight: FontWeight.w600,
-                        color: themeProvider.accentColor,
+                    SizedBox(height: isSmallScreen ? 6 : 8),
+                    if (web3Provider.isConnected) ...[
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 12 : 16,
+                            vertical: isSmallScreen ? 6 : 8),
+                        decoration: BoxDecoration(
+                          color:
+                              themeProvider.accentColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: themeProvider.accentColor
+                                .withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Text(
+                          web3Provider
+                              .formatAddress(web3Provider.walletAddress),
+                          style: GoogleFonts.robotoMono(
+                            fontSize: isSmallScreen ? 12 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: themeProvider.accentColor,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                ] else ...[
-                  Text(
-                    'Connect wallet to see profile',
-                    style: GoogleFonts.inter(
-                      fontSize: isSmallScreen ? 14 : 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                if (profileProvider.currentUser?.bio != null && profileProvider.currentUser!.bio.isNotEmpty)
-                  Text(
-                    profileProvider.currentUser!.bio,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: isVerySmallScreen ? 14 : isSmallScreen ? 15 : 16,
-                      height: 1.5,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
-                    ),
-                    maxLines: isSmallScreen ? 3 : 4,
-                    overflow: TextOverflow.ellipsis,
-                  )
-                else
-                  Center(
-                    child: EmptyStateCard(
-                      icon: Icons.person_outline,
-                      title: 'No bio yet',
-                      description: 'Tap "Edit Profile" to add a short bio about yourself.',
-                      showAction: true,
-                      actionLabel:
-                          AppLocalizations.of(context)!.settingsEditProfileTileTitle,
-                      onAction: _editProfile,
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                ProfileArtistInfoFields(
-                  fieldOfWork:
-                      profileProvider.currentUser?.artistInfo?.specialty ?? const <String>[],
-                  yearsActive: profileProvider.currentUser?.artistInfo?.yearsActive ?? 0,
-                ),
-                SizedBox(height: isSmallScreen ? 20 : 24),
-                isSmallScreen 
-                  ? Column(
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _editProfile();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeProvider.accentColor,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(vertical: isVerySmallScreen ? 14 : 16),
-                              elevation: 2,
-                              shadowColor: themeProvider.accentColor.withValues(alpha: 0.3),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.settingsEditProfileTileTitle,
-                              style: GoogleFonts.inter(
-                                fontSize: isVerySmallScreen ? 14 : 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                    ] else ...[
+                      Text(
+                        'Connect wallet to see profile',
+                        style: GoogleFonts.inter(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
-                        const SizedBox(height: 12),
-                        Container(
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: themeProvider.accentColor,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: TextButton(
-                            onPressed: () {
-                              _showMoreOptions();
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: isVerySmallScreen ? 14 : 16),
-                            ),
-                            child: Text(
-                              'More Options',
-                              style: GoogleFonts.inter(
-                                fontSize: isVerySmallScreen ? 14 : 16,
-                                fontWeight: FontWeight.w600,
-                                color: themeProvider.accentColor,
-                              ),
-                            ),
-                          ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    if (profileProvider.currentUser?.bio != null &&
+                        profileProvider.currentUser!.bio.isNotEmpty)
+                      Text(
+                        profileProvider.currentUser!.bio,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: isVerySmallScreen
+                              ? 14
+                              : isSmallScreen
+                                  ? 15
+                                  : 16,
+                          height: 1.5,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.8),
                         ),
-                      ],
-                    )
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _editProfile();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeProvider.accentColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              elevation: 2,
-                              shadowColor: themeProvider.accentColor.withValues(alpha: 0.3),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              AppLocalizations.of(context)!.settingsEditProfileTileTitle,
-                              style: GoogleFonts.inter(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                        maxLines: isSmallScreen ? 3 : 4,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    else
+                      Center(
+                        child: EmptyStateCard(
+                          icon: Icons.person_outline,
+                          title: 'No bio yet',
+                          description:
+                              'Tap "Edit Profile" to add a short bio about yourself.',
+                          showAction: true,
+                          actionLabel: AppLocalizations.of(context)!
+                              .settingsEditProfileTileTitle,
+                          onAction: _editProfile,
                         ),
-                        const SizedBox(width: 16),
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: themeProvider.accentColor,
-                              width: 1.5,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: IconButton(
-                            onPressed: () {
-                              _showMoreOptions();
-                            },
-                            icon: Icon(
-                              Icons.more_horiz,
-                              color: themeProvider.accentColor,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
+                    const SizedBox(height: 12),
+                    ProfileArtistInfoFields(
+                      fieldOfWork:
+                          profileProvider.currentUser?.artistInfo?.specialty ??
+                              const <String>[],
+                      yearsActive: profileProvider
+                              .currentUser?.artistInfo?.yearsActive ??
+                          0,
                     ),
+                    SizedBox(height: isSmallScreen ? 20 : 24),
+                    isSmallScreen
+                        ? Column(
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    _editProfile();
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: themeProvider.accentColor,
+                                    foregroundColor: Colors.white,
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: isVerySmallScreen ? 14 : 16),
+                                    elevation: 2,
+                                    shadowColor: themeProvider.accentColor
+                                        .withValues(alpha: 0.3),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .settingsEditProfileTileTitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: isVerySmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: themeProvider.accentColor,
+                                    width: 1.5,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: TextButton(
+                                  onPressed: () {
+                                    _showMoreOptions();
+                                  },
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                        vertical: isVerySmallScreen ? 14 : 16),
+                                  ),
+                                  child: Text(
+                                    'More Options',
+                                    style: GoogleFonts.inter(
+                                      fontSize: isVerySmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: themeProvider.accentColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          )
+                        : Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    _editProfile();
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: themeProvider.accentColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 16),
+                                    elevation: 2,
+                                    shadowColor: themeProvider.accentColor
+                                        .withValues(alpha: 0.3),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    AppLocalizations.of(context)!
+                                        .settingsEditProfileTileTitle,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: themeProvider.accentColor,
+                                    width: 1.5,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: IconButton(
+                                  onPressed: () {
+                                    _showMoreOptions();
+                                  },
+                                  icon: Icon(
+                                    Icons.more_horiz,
+                                    color: themeProvider.accentColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                   ],
                 ),
               ),
@@ -657,7 +752,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           final profileProvider = Provider.of<ProfileProvider>(context);
           final isSmallScreen = constraints.maxWidth < 360;
           final walletAddress = profileProvider.currentUser?.walletAddress;
-          
+
           return Container(
             margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 16 : 24),
             padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
@@ -665,7 +760,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.5),
                 width: 1.5,
               ),
               boxShadow: [
@@ -724,7 +822,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                         profileProvider.formattedCollectionsCount,
                         Icons.collections,
                         isSmallScreen: isSmallScreen,
-                        onTap: () => ProfileScreenMethods.showCollections(context),
+                        onTap: () =>
+                            ProfileScreenMethods.showCollections(context),
                       ),
                     ),
                   ],
@@ -737,26 +836,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon, {bool isSmallScreen = false, VoidCallback? onTap}) {
+  Widget _buildStatCard(String title, String value, IconData icon,
+      {bool isSmallScreen = false, VoidCallback? onTap}) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 4,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
+      child: DetailCard(
+        padding:
+            EdgeInsets.all(isSmallScreen ? DetailSpacing.sm : DetailSpacing.md),
+        borderRadius: DetailRadius.md,
         child: Column(
           children: [
             Icon(
@@ -764,21 +851,15 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: Provider.of<ThemeProvider>(context).accentColor,
               size: isSmallScreen ? 16 : 18,
             ),
-            SizedBox(height: isSmallScreen ? 4 : 6),
-            Text(
-              value,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 10 : 12,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
+            SizedBox(
+                height: isSmallScreen ? DetailSpacing.xs : DetailSpacing.sm),
+            Text(value,
+                style: DetailTypography.cardTitle(context)
+                    .copyWith(fontSize: isSmallScreen ? 10 : 12)),
             Text(
               title,
-              style: GoogleFonts.inter(
-                fontSize: isSmallScreen ? 7 : 8,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+              style: DetailTypography.label(context)
+                  .copyWith(fontSize: isSmallScreen ? 7 : 8),
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -800,18 +881,16 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         Text(
           value,
-          style: GoogleFonts.inter(
-            fontSize: isCompact ? 16 : 18,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+          style: DetailTypography.cardTitle(context)
+              .copyWith(fontSize: isCompact ? 16 : 18),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: DetailSpacing.xs),
         Text(
           label,
           style: GoogleFonts.inter(
             fontSize: isCompact ? 12 : 13,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -830,7 +909,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _handleRefresh() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final daoProvider = Provider.of<DAOProvider>(context, listen: false);
     final wallet = await _resolveCurrentWallet();
 
@@ -861,7 +941,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   void _handleProfilePreferencesChanged() {
     if (!mounted) return;
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final nextShowStatus = profileProvider.preferences.showActivityStatus;
     if (nextShowStatus != _showActivityStatus) {
       setState(() => _showActivityStatus = nextShowStatus);
@@ -869,7 +950,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<String?> _resolveCurrentWallet() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final wallet = profileProvider.currentUser?.walletAddress;
     if (wallet != null && wallet.isNotEmpty) {
       return wallet;
@@ -957,7 +1039,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 const SizedBox(height: 12),
                 _buildEmptyStateCard(
                   title: 'No posts yet',
-                  description: 'Share your perspective with the community to see it here.',
+                  description:
+                      'Share your perspective with the community to see it here.',
                   icon: Icons.article,
                 ),
               ],
@@ -992,13 +1075,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildErrorCard({required String message, required VoidCallback onRetry}) {
+  Widget _buildErrorCard(
+      {required String message, required VoidCallback onRetry}) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
+        border: Border.all(
+            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1053,7 +1138,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06)),
+          border: Border.all(
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.06)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1085,11 +1174,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                           ),
                           if (post.authorIsArtist) ...[
                             const SizedBox(width: 6),
-                            ArtistBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                            ArtistBadge(
+                                fontSize: 8,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2)),
                           ],
                           if (post.authorIsInstitution) ...[
                             const SizedBox(width: 6),
-                            InstitutionBadge(fontSize: 8, padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2)),
+                            InstitutionBadge(
+                                fontSize: 8,
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 2)),
                           ],
                         ],
                       ),
@@ -1098,7 +1193,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                         _formatRelativeTime(post.timestamp),
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -1133,7 +1231,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   size: 18,
                   color: post.isLiked
                       ? themeProvider.accentColor
-                      : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                      : Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 6),
                 Text(
@@ -1142,21 +1243,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                     fontSize: 13,
                     color: post.isLiked
                         ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Icon(
                   Icons.comment_outlined,
                   size: 18,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
                 ),
                 const SizedBox(width: 6),
                 Text(
                   post.commentCount.toString(),
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -1168,14 +1278,16 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Future<void> _maybeLoadArtistData({bool force = false}) async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final wallet = profileProvider.currentUser?.walletAddress ?? '';
     if (wallet.isEmpty) {
       return;
     }
     DAOReview? review;
     try {
-      review = Provider.of<DAOProvider>(context, listen: false).findReviewForWallet(wallet);
+      review = Provider.of<DAOProvider>(context, listen: false)
+          .findReviewForWallet(wallet);
     } catch (_) {}
     final isArtist = _hasArtistRole(profileProvider, review);
     final isInstitution = _hasInstitutionRole(profileProvider, review);
@@ -1192,7 +1304,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     await _loadArtistData(wallet, force: force);
   }
 
-  Future<void> _loadArtistData(String walletAddress, {bool force = false}) async {
+  Future<void> _loadArtistData(String walletAddress,
+      {bool force = false}) async {
     if (!mounted) return;
     setState(() {
       _artistDataLoading = true;
@@ -1205,17 +1318,27 @@ class _ProfileScreenState extends State<ProfileScreen>
     try {
       final api = BackendApiService();
       final artworks = await api.getArtistArtworks(walletAddress, limit: 6);
-      final collections = await api.getCollections(walletAddress: walletAddress, limit: 6);
+      final collections =
+          await api.getCollections(walletAddress: walletAddress, limit: 6);
       final eventsResponse = await api.listEvents(limit: 100);
       final normalizedWallet = WalletUtils.normalize(walletAddress);
-      final filteredEvents = eventsResponse.where((event) {
-        final createdBy = WalletUtils.normalize((event['createdBy'] ?? event['created_by'] ?? '').toString());
-        final artistIdsDynamic = event['artistIds'] ?? event['artist_ids'] ?? [];
-        final artistIds = artistIdsDynamic is List
-            ? artistIdsDynamic.map((e) => WalletUtils.normalize(e.toString())).toList()
-            : <String>[];
-        return createdBy == normalizedWallet || artistIds.contains(normalizedWallet);
-      }).take(6).map((e) => Map<String, dynamic>.from(e)).toList();
+      final filteredEvents = eventsResponse
+          .where((event) {
+            final createdBy = WalletUtils.normalize(
+                (event['createdBy'] ?? event['created_by'] ?? '').toString());
+            final artistIdsDynamic =
+                event['artistIds'] ?? event['artist_ids'] ?? [];
+            final artistIds = artistIdsDynamic is List
+                ? artistIdsDynamic
+                    .map((e) => WalletUtils.normalize(e.toString()))
+                    .toList()
+                : <String>[];
+            return createdBy == normalizedWallet ||
+                artistIds.contains(normalizedWallet);
+          })
+          .take(6)
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
 
       if (!mounted) return;
       setState(() {
@@ -1284,7 +1407,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             'Keep your artworks and collections front and center.',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 20),
@@ -1325,7 +1451,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             'Promote upcoming programs and featured collections.',
             style: GoogleFonts.inter(
               fontSize: 14,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ),
           const SizedBox(height: 20),
@@ -1372,7 +1501,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08)),
+              border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.08)),
             ),
             child: const CircularProgressIndicator(strokeWidth: 2),
           )
@@ -1383,9 +1516,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             icon: (() {
               final lower = title.toLowerCase();
               if (lower.contains('artwork')) return Icons.image_outlined;
-              if (lower.contains('collection')) return Icons.collections_outlined;
+              if (lower.contains('collection'))
+                return Icons.collections_outlined;
               if (lower.contains('event')) return Icons.event;
-              if (lower.contains('post') || lower.contains('posts')) return Icons.article;
+              if (lower.contains('post') || lower.contains('posts'))
+                return Icons.article;
               return Icons.info_outline;
             })(),
           )
@@ -1404,21 +1539,26 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildArtworkCard(Map<String, dynamic> data) {
-    final imageUrl = _extractImageUrl(data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
+    final imageUrl = _extractImageUrl(
+        data, ['imageUrl', 'image', 'previewUrl', 'coverImage', 'mediaUrl']);
     final title = (data['title'] ?? data['name'] ?? 'Untitled').toString();
-    final medium = (data['category'] ?? data['medium'] ?? 'Digital art').toString();
-    final artworkId = (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
-    
+    final medium =
+        (data['category'] ?? data['medium'] ?? 'Digital art').toString();
+    final artworkId =
+        (data['id'] ?? data['artwork_id'] ?? data['artworkId'])?.toString();
+
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: artworkId != null ? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArtDetailScreen(artworkId: artworkId),
-          ),
-        );
-      } : null,
+      onTap: artworkId != null
+          ? () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ArtDetailScreen(artworkId: artworkId),
+                ),
+              );
+            }
+          : null,
       child: _buildShowcaseCard(
         imageUrl: imageUrl,
         title: title,
@@ -1441,7 +1581,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     final title = (data['name'] ?? 'New Collection').toString();
     final count = data['artworksCount'] ?? data['artworks_count'] ?? 0;
     final collectionId =
-        (data['id'] ?? data['collection_id'] ?? data['collectionId'])?.toString();
+        (data['id'] ?? data['collection_id'] ?? data['collectionId'])
+            ?.toString();
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1476,7 +1617,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     final title = (data['title'] ?? 'Event').toString();
     final date = _formatDateLabel(data['startDate'] ?? data['start_date']);
     final location = (data['location'] ?? 'TBA').toString();
-    final eventId = (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
+    final eventId =
+        (data['id'] ?? data['event_id'] ?? data['eventId'])?.toString();
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
@@ -1512,7 +1654,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
+          color:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
           width: 1.5,
         ),
         boxShadow: [
@@ -1528,7 +1671,8 @@ class _ProfileScreenState extends State<ProfileScreen>
         children: [
           if (normalizedImage != null)
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
               child: Image.network(
                 normalizedImage,
                 height: 110,
@@ -1540,8 +1684,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             Container(
               height: 110,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: const Center(child: Icon(Icons.image_not_supported)),
             ),
@@ -1567,7 +1715,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -1577,7 +1728,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -1620,7 +1774,20 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   String _monthShort(int month) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     if (month < 1 || month > 12) return '';
     return months[month - 1];
   }
@@ -1647,151 +1814,159 @@ class _ProfileScreenState extends State<ProfileScreen>
     return value.toString();
   }
 
-
   Widget _buildAchievementsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Consumer2<TaskProvider, ConfigProvider>(
         builder: (context, taskProvider, configProvider, child) {
-        final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-        final accent = themeProvider.accentColor;
-        if (!configProvider.useMockData) {
-          // Show real achievement data when mock data is disabled
-          final achievements = taskProvider.achievementProgress;
-          
-          // Get the first 6 achievements to display
-          final displayAchievements = allAchievements.take(6).toList();
-          
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Achievements',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AchievementsPage(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: accent, width: 1),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)!.commonViewAll,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: accent,
-                        ),
+          final themeProvider =
+              Provider.of<ThemeProvider>(context, listen: false);
+          final accent = themeProvider.accentColor;
+          if (!configProvider.useMockData) {
+            // Show real achievement data when mock data is disabled
+            final achievements = taskProvider.achievementProgress;
+
+            // Get the first 6 achievements to display
+            final displayAchievements = allAchievements.take(6).toList();
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Achievements',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              achievements.isEmpty
-                ? _buildEmptyStateCard(
-                    title: 'No Achievements Yet',
-                    description: 'Start exploring to unlock achievements',
-                    icon: Icons.emoji_events,
-                  )
-                : Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: displayAchievements.map((achievement) {
-                      final progress = achievements.firstWhere(
-                        (p) => p.achievementId == achievement.id,
-                        orElse: () => AchievementProgress(
-                          achievementId: achievement.id,
-                          currentProgress: 0,
-                          isCompleted: false,
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AchievementsPage(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: accent, width: 1),
                         ),
-                      );
-                      return _buildAchievementBadge(
-                        achievement.title,
-                        achievement.icon,
-                        progress.isCompleted,
-                      );
-                    }).toList(),
-                  ),
-            ],
-          );
-        } else {
-          // Show mock data when mock data is enabled
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Achievements',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AchievementsPage(),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: accent, width: 1),
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)!.commonViewAll,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: accent,
+                        child: Text(
+                          AppLocalizations.of(context)!.commonViewAll,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: accent,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _buildAchievementBadge('First AR Explorer', Icons.visibility, true),
-                  _buildAchievementBadge('Gallery Explorer', Icons.explore, true),
-                  _buildAchievementBadge('Art Curator', Icons.folder_special, true),
-                  _buildAchievementBadge('Social Butterfly', Icons.share, false),
-                  _buildAchievementBadge('AR Master', Icons.auto_awesome, false),
-                  _buildAchievementBadge('Art Influencer', Icons.trending_up, false),
-                ],
-              ),
-            ],
-          );
-        }
+                  ],
+                ),
+                const SizedBox(height: 16),
+                achievements.isEmpty
+                    ? _buildEmptyStateCard(
+                        title: 'No Achievements Yet',
+                        description: 'Start exploring to unlock achievements',
+                        icon: Icons.emoji_events,
+                      )
+                    : Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: displayAchievements.map((achievement) {
+                          final progress = achievements.firstWhere(
+                            (p) => p.achievementId == achievement.id,
+                            orElse: () => AchievementProgress(
+                              achievementId: achievement.id,
+                              currentProgress: 0,
+                              isCompleted: false,
+                            ),
+                          );
+                          return _buildAchievementBadge(
+                            achievement.title,
+                            achievement.icon,
+                            progress.isCompleted,
+                          );
+                        }).toList(),
+                      ),
+              ],
+            );
+          } else {
+            // Show mock data when mock data is enabled
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Achievements',
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AchievementsPage(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: accent, width: 1),
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context)!.commonViewAll,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: accent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: [
+                    _buildAchievementBadge(
+                        'First AR Explorer', Icons.visibility, true),
+                    _buildAchievementBadge(
+                        'Gallery Explorer', Icons.explore, true),
+                    _buildAchievementBadge(
+                        'Art Curator', Icons.folder_special, true),
+                    _buildAchievementBadge(
+                        'Social Butterfly', Icons.share, false),
+                    _buildAchievementBadge(
+                        'AR Master', Icons.auto_awesome, false),
+                    _buildAchievementBadge(
+                        'Art Influencer', Icons.trending_up, false),
+                  ],
+                ),
+              ],
+            );
+          }
         },
       ),
     );
@@ -1819,7 +1994,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             icon,
             color: unlocked
                 ? themeProvider.accentColor
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                : Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.4),
             size: 24,
           ),
           const SizedBox(height: 8),
@@ -1830,7 +2008,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               fontWeight: FontWeight.w600,
               color: unlocked
                   ? Theme.of(context).colorScheme.onSurface
-                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.4),
             ),
           ),
         ],
@@ -1842,8 +2023,10 @@ class _ProfileScreenState extends State<ProfileScreen>
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Consumer3<ProfileProvider, ArtworkProvider, StatsProvider>(
-        builder: (context, profileProvider, artworkProvider, statsProvider, child) {
-          final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+        builder:
+            (context, profileProvider, artworkProvider, statsProvider, child) {
+          final wallet =
+              (profileProvider.currentUser?.walletAddress ?? '').trim();
           final stats = profileProvider.currentUser?.stats;
           final viewHistory = artworkProvider.viewHistoryEntries;
           final viewedCount = viewHistory.length;
@@ -1888,8 +2071,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   scope: 'private',
                 );
 
-          final publicCounters = publicSnapshot?.counters ?? const <String, int>{};
-          final privateCounters = privateSnapshot?.counters ?? const <String, int>{};
+          final publicCounters =
+              publicSnapshot?.counters ?? const <String, int>{};
+          final privateCounters =
+              privateSnapshot?.counters ?? const <String, int>{};
 
           final publicLoading = wallet.isNotEmpty &&
               statsProvider.isSnapshotLoading(
@@ -1908,10 +2093,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               ) &&
               privateSnapshot == null;
 
-          final discoveriesValue =
-              privateCounters['artworksDiscovered'] ?? stats?.artworksDiscovered;
-          final createdValue = publicCounters['artworks'] ?? stats?.artworksCreated;
-          final nftsOwnedValue = publicCounters['nftsMinted'] ?? stats?.nftsOwned;
+          final discoveriesValue = privateCounters['artworksDiscovered'] ??
+              stats?.artworksDiscovered;
+          final createdValue =
+              publicCounters['artworks'] ?? stats?.artworksCreated;
+          final nftsOwnedValue =
+              publicCounters['nftsMinted'] ?? stats?.nftsOwned;
           final followersValue = publicCounters['followers'] ??
               stats?.followersCount ??
               profileProvider.followersCount;
@@ -1925,12 +2112,20 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ? '\u2014'
                   : _formatCount(discoveriesValue);
 
-          final createdLabel =
-              publicLoading ? '\u2026' : createdValue == null ? '\u2014' : _formatCount(createdValue);
-          final ownedLabel =
-              publicLoading ? '\u2026' : nftsOwnedValue == null ? '\u2014' : _formatCount(nftsOwnedValue);
-          final followersLabel = publicLoading ? '\u2026' : _formatCount(followersValue);
-          final followingLabel = publicLoading ? '\u2026' : _formatCount(followingValue);
+          final createdLabel = publicLoading
+              ? '\u2026'
+              : createdValue == null
+                  ? '\u2014'
+                  : _formatCount(createdValue);
+          final ownedLabel = publicLoading
+              ? '\u2026'
+              : nftsOwnedValue == null
+                  ? '\u2014'
+                  : _formatCount(nftsOwnedValue);
+          final followersLabel =
+              publicLoading ? '\u2026' : _formatCount(followersValue);
+          final followingLabel =
+              publicLoading ? '\u2026' : _formatCount(followingValue);
 
           final hasData = wallet.isNotEmpty || viewedCount > 0;
           if (!hasData) {
@@ -1949,7 +2144,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildEmptyStateCard(
                   icon: Icons.analytics,
                   title: 'No Stats Yet',
-                  description: 'Interact with artworks, collections, and community to see insights.',
+                  description:
+                      'Interact with artworks, collections, and community to see insights.',
                 ),
               ],
             );
@@ -1967,13 +2163,17 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              _buildPerformanceCard('Artworks viewed', _formatCount(viewedCount), Icons.visibility, null),
+              _buildPerformanceCard('Artworks viewed',
+                  _formatCount(viewedCount), Icons.visibility, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Discoveries', discoveriesLabel, Icons.location_on, null),
+              _buildPerformanceCard(
+                  'Discoveries', discoveriesLabel, Icons.location_on, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Created / Owned', '$createdLabel / $ownedLabel', Icons.auto_fix_high, null),
+              _buildPerformanceCard('Created / Owned',
+                  '$createdLabel / $ownedLabel', Icons.auto_fix_high, null),
               const SizedBox(height: 12),
-              _buildPerformanceCard('Followers / Following', '$followersLabel / $followingLabel', Icons.group, null),
+              _buildPerformanceCard('Followers / Following',
+                  '$followersLabel / $followingLabel', Icons.group, null),
             ],
           );
         },
@@ -1981,7 +2181,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildPerformanceCard(String title, String value, IconData icon, String? change) {
+  Widget _buildPerformanceCard(
+      String title, String value, IconData icon, String? change) {
     Widget cardContent = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1995,7 +2196,9 @@ class _ProfileScreenState extends State<ProfileScreen>
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+              color: Provider.of<ThemeProvider>(context)
+                  .accentColor
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
@@ -2013,7 +2216,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                   title,
                   style: GoogleFonts.inter(
                     fontSize: 14,
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
@@ -2030,7 +2236,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           if (change != null)
             Builder(
               builder: (context) {
-                final positiveColor = KubusColorRoles.of(context).positiveAction;
+                final positiveColor =
+                    KubusColorRoles.of(context).positiveAction;
                 return Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -2065,20 +2272,22 @@ class _ProfileScreenState extends State<ProfileScreen>
         child: cardContent,
       );
     }
-    
+
     return cardContent;
   }
 
   // Navigation and interaction methods
   void _shareProfile() {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
     if (wallet.isEmpty) return;
     ShareService().showShareSheet(
       context,
       target: ShareTarget.profile(
         walletAddress: wallet,
-        title: profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username,
+        title: profileProvider.currentUser?.displayName ??
+            profileProvider.currentUser?.username,
       ),
       sourceScreen: 'profile',
     );
@@ -2091,10 +2300,11 @@ class _ProfileScreenState extends State<ProfileScreen>
         builder: (context) => const ProfileEditScreen(),
       ),
     );
-    
+
     // Reload profile if changes were saved
     if (result == true && mounted) {
-      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      final profileProvider =
+          Provider.of<ProfileProvider>(context, listen: false);
       final web3Provider = Provider.of<Web3Provider>(context, listen: false);
       if (web3Provider.isConnected && web3Provider.walletAddress.isNotEmpty) {
         await profileProvider.loadProfile(web3Provider.walletAddress);
@@ -2186,11 +2396,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-
-  
-  
   Future<void> _loadPrivacySettings() async {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
     try {
       final prefsModel = profileProvider.preferences;
       setState(() {
@@ -2249,7 +2457,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       },
     );
   }
-  
+
   void _handleHelpOptionTap(String option) {
     switch (option) {
       case 'Documentation':
@@ -2277,7 +2485,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         break;
     }
   }
-  
+
   void _showContactSupportDialog() {
     showDialog(
       context: context,
@@ -2297,9 +2505,11 @@ class _ProfileScreenState extends State<ProfileScreen>
             const SizedBox(height: 16),
             _buildContactOption(Icons.email, 'Email', 'support@art-kubus.io'),
             const SizedBox(height: 12),
-            _buildContactOption(Icons.chat, 'Live Chat', 'Available Mon-Fri 9AM-5PM'),
+            _buildContactOption(
+                Icons.chat, 'Live Chat', 'Available Mon-Fri 9AM-5PM'),
             const SizedBox(height: 12),
-            _buildContactOption(Icons.public, 'Website', 'https://art.kubus.site'),
+            _buildContactOption(
+                Icons.public, 'Website', 'https://art.kubus.site'),
           ],
         ),
         actions: [
@@ -2311,11 +2521,12 @@ class _ProfileScreenState extends State<ProfileScreen>
       ),
     );
   }
-  
+
   Widget _buildContactOption(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Provider.of<ThemeProvider>(context).accentColor),
+        Icon(icon,
+            size: 20, color: Provider.of<ThemeProvider>(context).accentColor),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -2333,7 +2544,10 @@ class _ProfileScreenState extends State<ProfileScreen>
                 value,
                 style: GoogleFonts.inter(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -2342,10 +2556,10 @@ class _ProfileScreenState extends State<ProfileScreen>
       ],
     );
   }
-  
+
   void _showReportBugDialog() {
     final bugController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -2392,13 +2606,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
               );
             },
-            child: Text('Submit', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: Text('Submit',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
     );
   }
-  
+
   void _showAboutDialog() {
     showDialog(
       context: context,
@@ -2414,7 +2629,9 @@ class _ProfileScreenState extends State<ProfileScreen>
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
+                color: Provider.of<ThemeProvider>(context)
+                    .accentColor
+                    .withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
@@ -2436,7 +2653,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               'Version 1.0.0+1',
               style: GoogleFonts.inter(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
               ),
             ),
             const SizedBox(height: 16),
@@ -2446,7 +2666,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               style: GoogleFonts.inter(
                 fontSize: 14,
                 height: 1.5,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.8),
               ),
             ),
             const SizedBox(height: 16),
@@ -2454,7 +2677,10 @@ class _ProfileScreenState extends State<ProfileScreen>
               '© 2024 kubus Project',
               style: GoogleFonts.inter(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.5),
               ),
             ),
           ],
