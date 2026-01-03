@@ -32,6 +32,11 @@ class MapMarkerService {
   final Distance _distance = const Distance();
   bool _isFetching = false; // Prevent concurrent fetches
 
+  void _log(String message) {
+    if (!kDebugMode) return;
+    debugPrint(message);
+  }
+
   bool _canReuseCache(LatLng center, double radiusKm) {
     if (_cachedMarkers.isEmpty ||
         _lastFetchTime == null ||
@@ -63,24 +68,23 @@ class MapMarkerService {
 
     // Prevent concurrent fetches
     if (_isFetching) {
-      debugPrint('MapMarkerService: Already fetching, returning cached markers');
+      _log('MapMarkerService: Already fetching, returning cached markers');
       return _filterValidMarkers(_cachedMarkers);
     }
 
     if (_rateLimitUntil != null && DateTime.now().isBefore(_rateLimitUntil!)) {
-      debugPrint(
-          'MapMarkerService: using cache during rate-limit cooldown (until $_rateLimitUntil)');
+      _log('MapMarkerService: using cache during rate-limit cooldown (until $_rateLimitUntil)');
       return _filterValidMarkers(_cachedMarkers);
     }
 
     if (!forceRefresh && _canReuseCache(center, radiusKm)) {
-      debugPrint('MapMarkerService: using cached markers (${_cachedMarkers.length} items)');
+      _log('MapMarkerService: using cached markers (${_cachedMarkers.length} items)');
       return _filterValidMarkers(_cachedMarkers);
     }
 
     try {
       _isFetching = true;
-      debugPrint('MapMarkerService: Fetching markers from backend...');
+      _log('MapMarkerService: Fetching markers from backend...');
       
       final markers = await _backendApi.getNearbyArtMarkers(
         latitude: center.latitude,
@@ -96,15 +100,14 @@ class MapMarkerService {
       _lastQueryRadiusKm = radiusKm;
       _lastFetchTime = DateTime.now();
       
-      debugPrint('MapMarkerService: Successfully fetched ${markers.length} markers');
+      _log('MapMarkerService: Successfully fetched ${markers.length} markers');
     } catch (e) {
       final message = e.toString().toLowerCase();
       if (message.contains('rate limit') || message.contains('429') || message.contains('too many')) {
         _rateLimitUntil = DateTime.now().add(_rateLimitBackoff);
-        debugPrint(
-            'MapMarkerService: rate-limited, backing off until $_rateLimitUntil');
+        _log('MapMarkerService: rate-limited, backing off until $_rateLimitUntil');
       }
-      debugPrint('MapMarkerService: falling back to cached markers after error: $e');
+      _log('MapMarkerService: falling back to cached markers after error: $e');
     } finally {
       _isFetching = false;
     }
@@ -118,6 +121,32 @@ class MapMarkerService {
     _cachedMarkers.clear();
     _lastQueryCenter = null;
     _lastFetchTime = null;
+  }
+
+  void notifyMarkerDeleted(String markerId) {
+    final id = markerId.trim();
+    if (id.isEmpty) return;
+    _cachedMarkers.removeWhere((m) => m.id == id);
+    _markerDeletedController.add(id);
+  }
+
+  void notifyMarkerUpserted(ArtMarker marker) {
+    if (!_isValidPosition(marker.position)) return;
+
+    if (_lastQueryCenter != null &&
+        _distance.as(LengthUnit.Kilometer, _lastQueryCenter!, marker.position) <=
+            _lastQueryRadiusKm + 0.5) {
+      final existingIndex = _cachedMarkers.indexWhere((m) => m.id == marker.id);
+      if (existingIndex >= 0) {
+        _cachedMarkers[existingIndex] = marker;
+      } else {
+        _cachedMarkers.add(marker);
+      }
+    } else {
+      clearCache();
+    }
+
+    _markerStreamController.add(marker);
   }
 
   /// Stream for real-time marker creations broadcast by the backend via sockets.
@@ -201,7 +230,7 @@ class MapMarkerService {
         return persistedMarker;
       }
     } catch (e) {
-      debugPrint('MapMarkerService: Error creating marker - $e');
+      _log('MapMarkerService: Error creating marker - $e');
     }
     return null;
   }
@@ -249,7 +278,7 @@ class MapMarkerService {
       }
       _markerStreamController.add(marker);
     } catch (e) {
-      debugPrint('MapMarkerService: failed to handle socket marker: $e');
+      _log('MapMarkerService: failed to handle socket marker: $e');
     }
   }
 
@@ -306,7 +335,7 @@ class MapMarkerService {
       };
       return ArtMarker.fromMap(normalized);
     } catch (e) {
-      debugPrint('MapMarkerService: _markerFromSocketPayload failed: $e');
+      _log('MapMarkerService: _markerFromSocketPayload failed: $e');
       return null;
     }
   }

@@ -72,16 +72,16 @@ class DesktopBreakpoints {
   static const double medium = 900;
   static const double expanded = 1200;
   static const double large = 1600;
-  
-  static bool isCompact(BuildContext context) => 
+
+  static bool isCompact(BuildContext context) =>
       MediaQuery.of(context).size.width < compact;
-  static bool isMedium(BuildContext context) => 
-      MediaQuery.of(context).size.width >= compact && 
+  static bool isMedium(BuildContext context) =>
+      MediaQuery.of(context).size.width >= compact &&
       MediaQuery.of(context).size.width < medium;
-  static bool isExpanded(BuildContext context) => 
-      MediaQuery.of(context).size.width >= medium && 
+  static bool isExpanded(BuildContext context) =>
+      MediaQuery.of(context).size.width >= medium &&
       MediaQuery.of(context).size.width < expanded;
-  static bool isLarge(BuildContext context) => 
+  static bool isLarge(BuildContext context) =>
       MediaQuery.of(context).size.width >= expanded;
   static bool isDesktop(BuildContext context) =>
       MediaQuery.of(context).size.width >= medium;
@@ -98,7 +98,7 @@ class DesktopShell extends StatefulWidget {
   State<DesktopShell> createState() => _DesktopShellState();
 }
 
-class _DesktopShellState extends State<DesktopShell> 
+class _DesktopShellState extends State<DesktopShell>
     with TickerProviderStateMixin {
   static const String _walletRoute = '/wallet';
   static const String _web3EntryRoute = '/web3';
@@ -106,11 +106,11 @@ class _DesktopShellState extends State<DesktopShell>
   bool _isNavigationExpanded = true;
   late AnimationController _navExpandController;
   late Animation<double> _navExpandAnimation;
-  
+
   /// Stack of screens pushed via DesktopShellScope.pushScreen
   /// When empty, shows the route-based screen from _buildCurrentScreen
   final List<Widget> _screenStack = [];
-  
+
   static const List<DesktopNavItem> _signedInNavItems = [
     DesktopNavItem(
       icon: Icons.home_outlined,
@@ -187,8 +187,8 @@ class _DesktopShellState extends State<DesktopShell>
   void initState() {
     super.initState();
     _activeRoute = _signedInNavItems[
-      widget.initialIndex.clamp(0, _signedInNavItems.length - 1)
-    ].route;
+            widget.initialIndex.clamp(0, _signedInNavItems.length - 1)]
+        .route;
     _navExpandController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -243,7 +243,8 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  void _onNavItemSelected(int index, List<DesktopNavItem> navItems, bool isSignedIn) {
+  void _onNavItemSelected(
+      int index, List<DesktopNavItem> navItems, bool isSignedIn) {
     if (index < 0 || index >= navItems.length) return;
     final item = navItems[index];
 
@@ -281,7 +282,8 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  List<DesktopNavItem> _navItemsForState(bool isSignedIn, {required bool isArtist, required bool isInstitution}) {
+  List<DesktopNavItem> _navItemsForState(bool isSignedIn,
+      {required bool isArtist, required bool isInstitution}) {
     if (!isSignedIn) {
       return _guestNavItems;
     }
@@ -313,11 +315,15 @@ class _DesktopShellState extends State<DesktopShell>
     final currentUser = profileProvider.currentUser;
     final isArtist = currentUser?.isArtist ?? false;
     final isInstitution = currentUser?.isInstitution ?? false;
-    final navItems = _navItemsForState(isSignedIn, isArtist: isArtist, isInstitution: isInstitution);
+    final navItems = _navItemsForState(isSignedIn,
+        isArtist: isArtist, isInstitution: isInstitution);
     final isWalletRoute = _activeRoute == _walletRoute;
     final hasActiveRoute = navItems.any((item) => item.route == _activeRoute);
-    final effectiveRoute = hasActiveRoute || isWalletRoute ? _activeRoute : navItems.first.route;
-    if (!hasActiveRoute && !isWalletRoute && _activeRoute != navItems.first.route) {
+    final effectiveRoute =
+        hasActiveRoute || isWalletRoute ? _activeRoute : navItems.first.route;
+    if (!hasActiveRoute &&
+        !isWalletRoute &&
+        _activeRoute != navItems.first.route) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -326,12 +332,13 @@ class _DesktopShellState extends State<DesktopShell>
         }
       });
     }
-    final selectedIndex = navItems.indexWhere((item) => item.route == effectiveRoute);
+    final selectedIndex =
+        navItems.indexWhere((item) => item.route == effectiveRoute);
 
     final isLarge = DesktopBreakpoints.isLarge(context);
     final isExpanded = DesktopBreakpoints.isExpanded(context);
     final theme = Theme.of(context);
-    
+
     // Auto-collapse navigation on medium screens
     if (!isLarge && _isNavigationExpanded && !isExpanded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -357,45 +364,52 @@ class _DesktopShellState extends State<DesktopShell>
                     ? _screenStack.last
                     : _buildCurrentScreen(effectiveRoute),
               ),
-              
+
               // Right sidebar navigation (Twitter/X style)
               AnimatedBuilder(
                 animation: _navExpandAnimation,
                 builder: (context, child) {
-                final expandedWidth = isLarge ? 280.0 : 240.0;
-                final collapsedWidth = 72.0;
-                final currentWidth = collapsedWidth + 
-                    (expandedWidth - collapsedWidth) * _navExpandAnimation.value;
-                
-                return Container(
-                  width: currentWidth,
-                  decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  border: Border(
-                    left: BorderSide(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
-                      width: 1,
+                  final expandedWidth = isLarge
+                      ? DesktopNavigation.expandedWidthLarge
+                      : DesktopNavigation.expandedWidthMedium;
+                  final collapsedWidth = DesktopNavigation.collapsedWidth;
+                  final currentWidth = collapsedWidth +
+                      (expandedWidth - collapsedWidth) *
+                          _navExpandAnimation.value;
+
+                  return Container(
+                    width: currentWidth,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      border: Border(
+                        left: BorderSide(
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.2),
+                          width: 1,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                child: DesktopNavigation(
-                  items: navItems,
-                  selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-                  onItemSelected: (index) => _onNavItemSelected(index, navItems, isSignedIn),
-                  isExpanded: _isNavigationExpanded,
-                  expandAnimation: _navExpandAnimation,
-                  onToggleExpand: _toggleNavigation,
-                  onProfileTap: () => _showProfileMenu(context),
-                  onSettingsTap: () => _showSettingsScreen(context),
-                  onNotificationsTap: () => unawaited(_showNotificationsPanel(context)),
-                  onWalletTap: () => _handleWalletTap(isSignedIn),
-                  onCollabInvitesTap: isSignedIn && AppConfig.isFeatureEnabled('collabInvites')
-                      ? () => _showCollabInvites()
-                      : null,
-                ),
-              );
-              },
-            ),
+                    child: DesktopNavigation(
+                      items: navItems,
+                      selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                      onItemSelected: (index) =>
+                          _onNavItemSelected(index, navItems, isSignedIn),
+                      isExpanded: _isNavigationExpanded,
+                      expandAnimation: _navExpandAnimation,
+                      onToggleExpand: _toggleNavigation,
+                      onProfileTap: () => _showProfileMenu(context),
+                      onSettingsTap: () => _showSettingsScreen(context),
+                      onNotificationsTap: () =>
+                          unawaited(_showNotificationsPanel(context)),
+                      onWalletTap: () => _handleWalletTap(isSignedIn),
+                      onCollabInvitesTap: isSignedIn &&
+                              AppConfig.isFeatureEnabled('collabInvites')
+                          ? () => _showCollabInvites()
+                          : null,
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -404,8 +418,9 @@ class _DesktopShellState extends State<DesktopShell>
   }
 
   void _showProfileMenu(BuildContext context) {
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    
+    final profileProvider =
+        Provider.of<ProfileProvider>(context, listen: false);
+
     if (!profileProvider.isSignedIn) {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -414,7 +429,7 @@ class _DesktopShellState extends State<DesktopShell>
       );
       return;
     }
-    
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const ProfileScreen(),
@@ -546,7 +561,8 @@ class _NotificationsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final hasUnread = context.select<RecentActivityProvider, bool>((p) => p.hasUnread);
+    final hasUnread =
+        context.select<RecentActivityProvider, bool>((p) => p.hasUnread);
 
     return Column(
       children: [
@@ -556,7 +572,10 @@ class _NotificationsPanel extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                color: Theme.of(context)
+                    .colorScheme
+                    .outline
+                    .withValues(alpha: 0.2),
               ),
             ),
           ),
@@ -573,18 +592,26 @@ class _NotificationsPanel extends StatelessWidget {
               const Spacer(),
               IconButton(
                 tooltip: l10n.commonRefresh,
-                onPressed: () => unawaited(context.read<RecentActivityProvider>().refresh(force: true)),
+                onPressed: () => unawaited(context
+                    .read<RecentActivityProvider>()
+                    .refresh(force: true)),
                 icon: Icon(
                   Icons.refresh,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.8),
                 ),
               ),
               TextButton(
                 onPressed: !hasUnread
                     ? null
                     : () async {
-                        final activityProvider = context.read<RecentActivityProvider>();
-                        await context.read<NotificationProvider>().markViewed(syncServer: true);
+                        final activityProvider =
+                            context.read<RecentActivityProvider>();
+                        await context
+                            .read<NotificationProvider>()
+                            .markViewed(syncServer: true);
                         activityProvider.markAllReadLocally();
                       },
                 child: Text(
@@ -592,7 +619,10 @@ class _NotificationsPanel extends StatelessWidget {
                   style: GoogleFonts.inter(
                     color: hasUnread
                         ? themeProvider.accentColor
-                        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.4),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -607,7 +637,7 @@ class _NotificationsPanel extends StatelessWidget {
             ],
           ),
         ),
-        
+
         // Notifications list
         Expanded(
           child: Consumer<RecentActivityProvider>(
@@ -631,7 +661,8 @@ class _NotificationsPanel extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.error_outline, size: 48, color: scheme.error),
+                        Icon(Icons.error_outline,
+                            size: 48, color: scheme.error),
                         const SizedBox(height: 12),
                         Text(
                           activityProvider.error!,
@@ -643,7 +674,8 @@ class _NotificationsPanel extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         TextButton(
-                          onPressed: () => unawaited(activityProvider.refresh(force: true)),
+                          onPressed: () =>
+                              unawaited(activityProvider.refresh(force: true)),
                           child: Text(
                             l10n.commonRetry,
                             style: GoogleFonts.inter(

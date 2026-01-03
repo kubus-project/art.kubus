@@ -54,6 +54,7 @@ import 'messages_screen.dart';
 import '../../providers/saved_items_provider.dart';
 import '../../providers/navigation_provider.dart';
 import '../../utils/app_animations.dart';
+import '../../utils/artwork_navigation.dart';
 import '../../widgets/community/community_author_role_badges.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/community_subject_navigation.dart';
@@ -3677,7 +3678,7 @@ class _CommunityScreenState extends State<CommunityScreen>
     if (type == 'artworks') {
       final id = (result['id'] ?? result['artworkId'] ?? result['artwork_id'])?.toString() ?? '';
       if (id.isNotEmpty) {
-        Navigator.pushNamed(context, '/artwork', arguments: {'artworkId': id});
+        openArtwork(context, id, source: 'community_search');
       }
       return;
     }

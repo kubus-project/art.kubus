@@ -10,7 +10,7 @@ import '../../providers/profile_provider.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/user_service.dart';
 import 'user_profile_screen.dart';
-import '../art/art_detail_screen.dart';
+import '../../utils/artwork_navigation.dart';
 
 // Helper methods for ProfileScreen
 class ProfileScreenMethods {
@@ -690,13 +690,8 @@ class _ArtworksBottomSheet extends StatelessWidget {
                         final artwork = userArtworks[index];
                         return GestureDetector(
                           onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ArtDetailScreen(artworkId: artwork.id),
-                              ),
-                            );
-                          },
+                              openArtwork(context, artwork.id, source: 'profile_methods');
+                            },
                           child: Container(
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surface,

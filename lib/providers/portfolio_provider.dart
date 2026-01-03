@@ -4,6 +4,7 @@ import '../models/artwork.dart';
 import '../models/collection_record.dart';
 import '../models/exhibition.dart';
 import '../models/portfolio_entry.dart';
+import '../providers/artwork_provider.dart';
 import '../services/backend_api_service.dart';
 
 class PortfolioProvider extends ChangeNotifier {
@@ -12,6 +13,7 @@ class PortfolioProvider extends ChangeNotifier {
   PortfolioProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
 
   String _walletAddress = '';
+  ArtworkProvider? _artworkProvider;
 
   bool _loading = false;
   String? _error;
@@ -27,6 +29,11 @@ class PortfolioProvider extends ChangeNotifier {
   List<Artwork> get artworks => _artworks;
   List<CollectionRecord> get collections => _collections;
   List<Exhibition> get exhibitions => _exhibitions;
+
+  void bindArtworkProvider(ArtworkProvider? artworkProvider) {
+    if (identical(_artworkProvider, artworkProvider)) return;
+    _artworkProvider = artworkProvider;
+  }
 
   List<PortfolioEntry> get entries {
     final result = <PortfolioEntry>[
@@ -212,6 +219,7 @@ class PortfolioProvider extends ChangeNotifier {
 
     await _api.deleteArtwork(id);
     _artworks = _artworks.where((a) => a.id != id).toList(growable: false);
+    _artworkProvider?.removeArtwork(id);
     notifyListeners();
   }
 
@@ -224,6 +232,7 @@ class PortfolioProvider extends ChangeNotifier {
     } else {
       _artworks = <Artwork>[artwork, ..._artworks];
     }
+    _artworkProvider?.addOrUpdateArtwork(artwork);
     notifyListeners();
   }
 }

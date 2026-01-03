@@ -117,7 +117,7 @@ class AppConfig {
   /// API endpoints
   static const String baseApiUrl = String.fromEnvironment(
     'BACKEND_BASE_URL',
-    defaultValue: isDevelopment ? 'http://localhost:3000' : 'https://api.kubus.site',
+    defaultValue: isDevelopment ? 'https://api.kubus.site' : 'https://api.kubus.site',
   );
 
   /// Canonical app base URL used for share links (web + deep links).

@@ -4,11 +4,17 @@ import 'package:flutter/foundation.dart';
 
 import '../models/art_marker.dart';
 import '../services/backend_api_service.dart';
+import '../services/map_marker_service.dart';
 
 class MarkerManagementProvider extends ChangeNotifier {
-  MarkerManagementProvider();
+  MarkerManagementProvider({
+    MarkerBackendApi? api,
+    MapMarkerService? mapMarkerService,
+  })  : _api = api ?? BackendApiService(),
+        _mapMarkerService = mapMarkerService ?? MapMarkerService();
 
-  final BackendApiService _api = BackendApiService();
+  final MarkerBackendApi _api;
+  final MapMarkerService _mapMarkerService;
 
   String? _boundWallet;
   bool _initialized = false;
@@ -32,6 +38,14 @@ class MarkerManagementProvider extends ChangeNotifier {
     final normalized = (walletAddress ?? '').trim();
     if (normalized == (_boundWallet ?? '')) return;
     _boundWallet = normalized.isEmpty ? null : normalized;
+
+    // Ensure the API layer knows which wallet should be considered "active"
+    // for ownership-gated endpoints like marker update/delete.
+    final api = _api;
+    if (api is BackendApiService) {
+      api.setPreferredWalletAddress(_boundWallet);
+    }
+
     _initialized = false;
     _error = null;
     _markers = const <ArtMarker>[];
@@ -94,6 +108,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       final created = await _api.createArtMarkerRecord(payload).timeout(const Duration(seconds: 20));
       if (created == null) return null;
       _markers = <ArtMarker>[created, ..._markers.where((m) => m.id != created.id)];
+      _mapMarkerService.notifyMarkerUpserted(created);
       notifyListeners();
       return created;
     } catch (e) {
@@ -112,6 +127,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       _markers = _markers
           .map((m) => m.id == markerId ? updated : m)
           .toList(growable: false);
+      _mapMarkerService.notifyMarkerUpserted(updated);
       notifyListeners();
       return updated;
     } catch (e) {
@@ -126,6 +142,7 @@ class MarkerManagementProvider extends ChangeNotifier {
       final ok = await _api.deleteArtMarkerRecord(markerId).timeout(const Duration(seconds: 20));
       if (!ok) return false;
       _markers = _markers.where((m) => m.id != markerId).toList(growable: false);
+      _mapMarkerService.notifyMarkerDeleted(markerId);
       notifyListeners();
       return true;
     } catch (e) {
@@ -135,4 +152,3 @@ class MarkerManagementProvider extends ChangeNotifier {
     }
   }
 }
-

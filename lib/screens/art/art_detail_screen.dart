@@ -20,8 +20,8 @@ import '../../services/nft_minting_service.dart';
 import '../../models/collectible.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
-import '../../utils/rarity_ui.dart';
 import '../../utils/map_navigation.dart';
+import '../../utils/artwork_edit_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../config/config.dart';
 import '../../services/share/share_service.dart';
@@ -233,8 +233,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         padding: const EdgeInsets.all(DetailSpacing.xl),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
-                            _buildArtPreview(artwork),
-                            const SizedBox(height: DetailSpacing.xl),
                             _buildArtInfo(artwork),
                             const SizedBox(height: DetailSpacing.xl),
                             _buildDescription(artwork),
@@ -308,17 +306,20 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildAppBar(Artwork artwork) {
+    final scheme = Theme.of(context).colorScheme;
+    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
+
     return SliverAppBar(
-      expandedHeight: 300,
+      expandedHeight: 320,
       floating: false,
       pinned: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: scheme.surface,
       leading: IconButton(
         onPressed: () => Navigator.pop(context),
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+            color: scheme.surface.withValues(alpha: 0.9),
             shape: BoxShape.circle,
           ),
           child: const Icon(Icons.arrow_back),
@@ -329,16 +330,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           onPressed: () {
             ShareService().showShareSheet(
               context,
-              target: ShareTarget.artwork(
-                  artworkId: artwork.id, title: artwork.title),
+              target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
               sourceScreen: 'art_detail',
             );
           },
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+              color: scheme.surface.withValues(alpha: 0.9),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.share_outlined),
@@ -351,17 +350,12 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surface
-                      .withValues(alpha: 0.9),
+                  color: scheme.surface.withValues(alpha: 0.9),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   artwork.isFavorite ? Icons.favorite : Icons.favorite_border,
-                  color: artwork.isFavorite
-                      ? Theme.of(context).colorScheme.error
-                      : null,
+                  color: artwork.isFavorite ? scheme.error : null,
                 ),
               ),
             );
@@ -369,194 +363,49 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                RarityUi.artworkColor(context, artwork.rarity)
-                    .withValues(alpha: 0.3),
-                RarityUi.artworkColor(context, artwork.rarity)
-                    .withValues(alpha: 0.1),
-              ],
-            ),
-          ),
-          child: Center(
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: RarityUi.artworkColor(context, artwork.rarity),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: RarityUi.artworkColor(context, artwork.rarity)
-                        .withValues(alpha: 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: Icon(
-                artwork.arEnabled ? Icons.view_in_ar : Icons.palette,
-                size: 60,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildArtPreview(Artwork artwork) {
-    final rarityColor = RarityUi.artworkColor(context, artwork.rarity);
-    final coverUrl = ArtworkMediaResolver.resolveCover(artwork: artwork);
-
-    return Container(
-      height: 220,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: rarityColor.withValues(alpha: 0.3),
-          width: 2,
-        ),
-        color: Theme.of(context).colorScheme.surfaceContainer,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
+        background: Stack(
           fit: StackFit.expand,
           children: [
-            _buildPreviewCoverImage(coverUrl, rarityColor),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.08),
-                      Colors.black.withValues(alpha: 0.18),
-                    ],
-                  ),
+            _buildPreviewCoverImage(coverUrl),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.05),
+                    Colors.black.withValues(alpha: 0.22),
+                    Colors.black.withValues(alpha: 0.55),
+                  ],
                 ),
               ),
             ),
-            // Rarity badge
-            Positioned(
-              top: 16,
-              right: 16,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: rarityColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  artwork.rarity.name.toUpperCase(),
-                  style: GoogleFonts.outfit(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
-            // Status badge
-            if (artwork.isDiscovered)
-              Positioned(
-                top: 16,
-                left: 16,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.check, size: 16, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        'DISCOVERED',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            // AR badge
-            if (artwork.arEnabled)
-              Positioned(
-                bottom: 16,
-                left: 16,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.view_in_ar,
-                          size: 16, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(
-                        'AR ENABLED',
-                        style: GoogleFonts.outfit(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPreviewCoverImage(String? imageUrl, Color fallbackColor) {
+  Widget _buildPreviewCoverImage(String? imageUrl) {
+    final scheme = Theme.of(context).colorScheme;
+    final resolved = (imageUrl ?? '').trim();
     final placeholder = Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            fallbackColor.withValues(alpha: 0.25),
-            fallbackColor.withValues(alpha: 0.1),
-          ],
-        ),
-      ),
+      color: scheme.surfaceContainerHighest,
       child: Center(
         child: Icon(
           Icons.image_not_supported,
-          color: Colors.white.withValues(alpha: 0.9),
+          color: scheme.outline.withValues(alpha: 0.8),
           size: 40,
         ),
       ),
     );
 
-    if (imageUrl == null || imageUrl.isEmpty) {
+    if (resolved.isEmpty) {
       return placeholder;
     }
 
     return Image.network(
-      imageUrl,
+      resolved,
       fit: BoxFit.cover,
       errorBuilder: (_, __, ___) => placeholder,
       loadingBuilder: (context, child, loadingProgress) {
@@ -567,7 +416,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             height: 48,
             child: InlineLoading(
               shape: BoxShape.circle,
-              color: Theme.of(context).colorScheme.primary,
+              color: scheme.primary,
             ),
           ),
         );
@@ -725,6 +574,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   Widget _buildActionButtons(Artwork artwork) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
+    final profileProvider = context.read<ProfileProvider>();
+    final walletProvider = context.read<WalletProvider>();
+    final currentWallet =
+        profileProvider.currentUser?.walletAddress ?? walletProvider.currentWalletAddress;
+    final isOwner = (currentWallet != null &&
+        (artwork.walletAddress ?? '').isNotEmpty &&
+        currentWallet.toLowerCase() == artwork.walletAddress!.toLowerCase());
+
     return Column(
       children: [
         Row(
@@ -775,6 +632,53 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         const SizedBox(height: DetailSpacing.md),
         Row(
           children: [
+            if (isOwner) ...[
+              Expanded(
+                child: DetailActionButton(
+                  icon: Icons.edit_outlined,
+                  label: l10n.commonEdit,
+                  onPressed: () => openArtworkEditor(context, artwork.id, source: 'art_detail'),
+                ),
+              ),
+              const SizedBox(width: DetailSpacing.md),
+            ],
+            Expanded(
+              child: DetailActionButton(
+                icon: artwork.isPublic ? Icons.visibility_off : Icons.publish_outlined,
+                label: artwork.isPublic ? l10n.commonUnpublish : l10n.commonPublish,
+                backgroundColor: scheme.primaryContainer.withValues(alpha: 0.35),
+                foregroundColor: scheme.primary,
+                onPressed: !isOwner
+                    ? null
+                    : () async {
+                        final messenger = ScaffoldMessenger.of(context);
+                        final provider = context.read<ArtworkProvider>();
+                        try {
+                          final updated = artwork.isPublic
+                              ? await provider.unpublishArtwork(artwork.id)
+                              : await provider.publishArtwork(artwork.id);
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                updated != null ? l10n.commonSavedToast : l10n.commonActionFailedToast,
+                              ),
+                            ),
+                          );
+                        } catch (_) {
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(content: Text(l10n.commonActionFailedToast)),
+                          );
+                        }
+                      },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DetailSpacing.md),
+        Row(
+          children: [
             if (artwork.arEnabled)
               Expanded(
                 child: DetailActionButton(
@@ -790,8 +694,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
               child: DetailActionButton(
                 icon: Icons.navigation_rounded,
                 label: l10n.commonNavigate,
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
+                backgroundColor: scheme.secondaryContainer.withValues(alpha: 0.6),
+                foregroundColor: scheme.onSecondaryContainer,
                 onPressed: () => _showNavigationOptions(artwork),
               ),
             ),
@@ -803,8 +707,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
           child: DetailActionButton(
             icon: Icons.diamond_rounded,
             label: l10n.artworkDetailMintNft,
-            backgroundColor: const Color(0xFFFFD93D),
-            foregroundColor: Colors.black87,
+            backgroundColor: scheme.tertiaryContainer.withValues(alpha: 0.85),
+            foregroundColor: scheme.onTertiaryContainer,
             onPressed: () => _showMintNFTDialog(artwork),
           ),
         ),
@@ -1734,7 +1638,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     final royaltyController = TextEditingController(text: '10');
 
     CollectibleType selectedType = CollectibleType.nft;
-    CollectibleRarity selectedRarity = _convertArtworkRarity(artwork.rarity);
 
     showDialog(
       context: context,
@@ -1847,48 +1750,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     }
                   },
                 ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<CollectibleRarity>(
-                  initialValue: selectedRarity,
-                  decoration: InputDecoration(
-                    labelText: 'Rarity',
-                    labelStyle: GoogleFonts.outfit(),
-                    border: const OutlineInputBorder(),
-                  ),
-                  style: GoogleFonts.outfit(
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
-                  dropdownColor: Theme.of(context).colorScheme.surface,
-                  items: CollectibleRarity.values.map((rarity) {
-                    return DropdownMenuItem(
-                      value: rarity,
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 16,
-                            height: 16,
-                            decoration: BoxDecoration(
-                              color: RarityUi.collectibleColor(context, rarity),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            rarity.toString().split('.').last.toUpperCase(),
-                            style: GoogleFonts.outfit(
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    if (value != null) {
-                      setState(() => selectedRarity = value);
-                    }
-                  },
-                ),
               ],
             ),
           ),
@@ -1918,7 +1779,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   royaltyPercentage:
                       double.tryParse(royaltyController.text) ?? 10.0,
                   type: selectedType,
-                  rarity: selectedRarity,
                 );
               },
               child: Text('Mint NFT',
@@ -1938,7 +1798,6 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     required double mintPrice,
     required double royaltyPercentage,
     required CollectibleType type,
-    required CollectibleRarity rarity,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     final walletAddress = prefs.getString('wallet_address') ?? '';
@@ -1993,7 +1852,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ownerAddress: walletAddress,
         seriesName: name,
         seriesDescription: description,
-        rarity: rarity,
+        rarity: CollectibleRarity.rare,
         requiresARInteraction: artwork.arEnabled,
         type: type,
         totalSupply: totalSupply,
@@ -2053,16 +1912,4 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     }
   }
 
-  CollectibleRarity _convertArtworkRarity(ArtworkRarity artworkRarity) {
-    switch (artworkRarity) {
-      case ArtworkRarity.common:
-        return CollectibleRarity.common;
-      case ArtworkRarity.rare:
-        return CollectibleRarity.rare;
-      case ArtworkRarity.epic:
-        return CollectibleRarity.epic;
-      case ArtworkRarity.legendary:
-        return CollectibleRarity.legendary;
-    }
-  }
 }

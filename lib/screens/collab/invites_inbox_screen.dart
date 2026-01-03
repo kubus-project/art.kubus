@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/collab_invite.dart';
 import '../../providers/collab_provider.dart';
-import '../art/art_detail_screen.dart';
+import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../events/exhibition_detail_screen.dart';
@@ -167,12 +167,10 @@ class _InvitesInboxScreenState extends State<InvitesInboxScreen> {
       return;
     }
 
-    if (type == 'artworks' || type == 'artwork') {
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: id)),
-      );
-      return;
-    }
+      if (type == 'artworks' || type == 'artwork') {
+        openArtwork(context, id, source: 'collab_invite');
+        return;
+      }
 
     if (type == 'collections' || type == 'collection') {
       Navigator.of(context).push(

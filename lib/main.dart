@@ -50,6 +50,8 @@ import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/art/ar_screen.dart';
 import 'screens/art/art_detail_screen.dart';
+import 'screens/desktop/art/desktop_artwork_detail_screen.dart';
+import 'screens/desktop/desktop_shell.dart';
 import 'screens/web3/wallet/connectwallet_screen.dart';
 // user_service initialization moved to profile and wallet flows.
 import 'services/push_notification_service.dart';
@@ -292,7 +294,6 @@ class _AppLauncherState extends State<AppLauncher> {
                 },
               ),
               ChangeNotifierProvider(create: (context) => CollectionsProvider()),
-              ChangeNotifierProvider(create: (context) => PortfolioProvider()),
               ChangeNotifierProxyProvider<TaskProvider, ArtworkProvider>(
                 create: (context) {
                   final artworkProvider = ArtworkProvider();
@@ -302,6 +303,14 @@ class _AppLauncherState extends State<AppLauncher> {
                 update: (context, taskProvider, artworkProvider) {
                   artworkProvider?.setTaskProvider(taskProvider);
                   return artworkProvider ?? ArtworkProvider()..setTaskProvider(taskProvider);
+                },
+              ),
+              ChangeNotifierProxyProvider<ArtworkProvider, PortfolioProvider>(
+                create: (context) => PortfolioProvider(),
+                update: (context, artworkProvider, portfolioProvider) {
+                  final provider = portfolioProvider ?? PortfolioProvider();
+                  provider.bindArtworkProvider(artworkProvider);
+                  return provider;
                 },
               ),
               ChangeNotifierProvider(create: (context) => CollectiblesProvider()),
@@ -491,7 +500,10 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
                   body: Center(child: Text(l10n.artworkNotFound)),
                 );
               }
-              return ArtDetailScreen(artworkId: artworkId);
+              final isDesktop = DesktopBreakpoints.isDesktop(context);
+              return isDesktop
+                  ? DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true)
+                  : ArtDetailScreen(artworkId: artworkId);
             },
             '/wallet_connect': (context) => const ConnectWallet(),
             '/connect_wallet': (context) => const ConnectWallet(),

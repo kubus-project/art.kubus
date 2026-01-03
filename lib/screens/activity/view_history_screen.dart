@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../widgets/empty_state_card.dart';
-import '../art/art_detail_screen.dart';
+import '../../utils/artwork_navigation.dart';
 
 class ViewHistoryScreen extends StatefulWidget {
   const ViewHistoryScreen({super.key});
@@ -97,13 +97,10 @@ class _ViewHistoryScreenState extends State<ViewHistoryScreen> {
                   ),
                 ),
                 trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurface),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: artwork.id)),
-                  );
-                },
-              );
+                  onTap: () {
+                    openArtwork(context, artwork.id, source: 'view_history');
+                  },
+                );
             },
           );
         },

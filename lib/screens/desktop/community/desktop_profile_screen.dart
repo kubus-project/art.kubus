@@ -16,6 +16,7 @@ import '../../../providers/stats_provider.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
+import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
 import '../../web3/achievements/achievements_page.dart';
@@ -34,7 +35,6 @@ import '../../../widgets/institution_badge.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
-import '../art/desktop_artwork_detail_screen.dart';
 import '../../art/collection_detail_screen.dart';
 import '../../collab/invites_inbox_screen.dart';
 import '../../activity/view_history_screen.dart';
@@ -1094,10 +1094,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     
     return GestureDetector(
       onTap: artworkId != null ? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true)),
-        );
+        openArtwork(context, artworkId, source: 'desktop_profile');
       } : null,
       child: MouseRegion(
         cursor: artworkId != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
@@ -1376,12 +1373,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   Widget _buildShowcaseCard({String? imageUrl, required String title, required String subtitle, String? artworkId}) {
     return GestureDetector(
       onTap: artworkId != null ? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true),
-          ),
-        );
+        openArtwork(context, artworkId, source: 'desktop_profile_showcase');
       } : null,
       child: SizedBox(
         width: 220,

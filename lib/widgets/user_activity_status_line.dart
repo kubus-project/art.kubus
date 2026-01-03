@@ -8,7 +8,7 @@ import 'package:art_kubus/l10n/app_localizations.dart';
 import '../config/config.dart';
 import '../models/user_presence.dart';
 import '../providers/presence_provider.dart';
-import '../screens/art/art_detail_screen.dart';
+import '../utils/artwork_navigation.dart';
 import '../screens/art/collection_detail_screen.dart';
 import '../screens/events/event_detail_screen.dart';
 import '../screens/events/exhibition_detail_screen.dart';
@@ -220,7 +220,7 @@ class _UserActivityStatusLineState extends State<UserActivityStatusLine> {
 
     switch (type) {
       case 'artwork':
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ArtDetailScreen(artworkId: id)));
+        openArtwork(context, id, source: 'user_activity_status');
         return;
       case 'exhibition':
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => ExhibitionDetailScreen(exhibitionId: id)));

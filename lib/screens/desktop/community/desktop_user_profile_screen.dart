@@ -13,6 +13,7 @@ import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../services/block_list_service.dart';
+import '../../../utils/artwork_navigation.dart';
 import '../../../utils/media_url_resolver.dart';
 import '../../../community/community_interactions.dart';
 import '../../../providers/themeprovider.dart';
@@ -34,7 +35,6 @@ import '../../../screens/community/profile_screen_methods.dart';
 import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
-import '../art/desktop_artwork_detail_screen.dart';
 import '../../art/collection_detail_screen.dart';
 
 /// Desktop user profile screen - viewing another user's profile
@@ -845,10 +845,7 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     
     return GestureDetector(
       onTap: artworkId != null ? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => DesktopArtworkDetailScreen(artworkId: artworkId, showAppBar: true)),
-        );
+        openArtwork(context, artworkId, source: 'desktop_user_profile');
       } : null,
       child: MouseRegion(
         cursor: artworkId != null ? SystemMouseCursors.click : SystemMouseCursors.basic,

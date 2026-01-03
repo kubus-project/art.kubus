@@ -30,7 +30,7 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
 import '../../widgets/detail/detail_shell_components.dart';
 import 'post_detail_screen.dart';
-import '../art/art_detail_screen.dart';
+import '../../utils/artwork_navigation.dart';
 import '../art/collection_detail_screen.dart';
 import '../events/event_detail_screen.dart';
 import '../../providers/wallet_provider.dart';
@@ -1463,13 +1463,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: artworkId != null ? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArtDetailScreen(artworkId: artworkId),
-          ),
-        );
-      } : null,
+          openArtwork(context, artworkId, source: 'user_profile');
+        } : null,
       child: _buildShowcaseCard(
         imageUrl: imageUrl,
         title: title,

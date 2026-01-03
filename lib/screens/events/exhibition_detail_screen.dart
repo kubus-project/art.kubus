@@ -17,7 +17,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../widgets/detail/detail_shell_components.dart';
-import '../art/art_detail_screen.dart';
+import '../../utils/artwork_navigation.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
   final String exhibitionId;
@@ -575,14 +575,10 @@ class _LinkedArtworksListState extends State<_LinkedArtworksList> {
       tiles.add(
         ListTile(
           dense: true,
-          contentPadding: EdgeInsets.zero,
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => ArtDetailScreen(artworkId: id),
-              ),
-            );
-          },
+            contentPadding: EdgeInsets.zero,
+            onTap: () {
+              openArtwork(context, id, source: 'exhibition_detail');
+            },
           title: Text(
             title,
             style: GoogleFonts.inter(fontWeight: FontWeight.w600),

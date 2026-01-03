@@ -2,13 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_localizations.dart';
 import '../models/community_subject.dart';
-import '../screens/art/art_detail_screen.dart';
 import '../screens/art/collection_detail_screen.dart';
 import '../screens/events/exhibition_detail_screen.dart';
-import '../screens/desktop/art/desktop_artwork_detail_screen.dart';
 import '../screens/desktop/desktop_shell.dart';
 import '../screens/community/user_profile_screen.dart' as mobile_profile;
 import '../screens/desktop/community/desktop_user_profile_screen.dart' as desktop_profile;
+import 'artwork_navigation.dart';
 
 class CommunitySubjectNavigation {
   CommunitySubjectNavigation._();
@@ -40,22 +39,7 @@ class CommunitySubjectNavigation {
     }
 
     if (normalizedType == 'artwork') {
-      if (isDesktop && shellScope != null) {
-        shellScope.pushScreen(
-          DesktopSubScreen(
-            title: titleOverride ?? fallbackTitle(),
-            child: DesktopArtworkDetailScreen(artworkId: subject.id),
-          ),
-        );
-        return;
-      }
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => isDesktop
-              ? DesktopArtworkDetailScreen(artworkId: subject.id, showAppBar: true)
-              : ArtDetailScreen(artworkId: subject.id),
-        ),
-      );
+      await openArtwork(context, subject.id, source: 'community_subject');
       return;
     }
 
