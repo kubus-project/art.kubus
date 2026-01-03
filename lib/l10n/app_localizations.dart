@@ -335,6 +335,66 @@ abstract class AppLocalizations {
   /// **'Share'**
   String get commonShare;
 
+  /// No description provided for @shareOptionCreatePost.
+  ///
+  /// In en, this message translates to:
+  /// **'Create community post'**
+  String get shareOptionCreatePost;
+
+  /// No description provided for @shareOptionSendMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Send in message'**
+  String get shareOptionSendMessage;
+
+  /// No description provided for @shareOptionShareExternal.
+  ///
+  /// In en, this message translates to:
+  /// **'Share outside app'**
+  String get shareOptionShareExternal;
+
+  /// No description provided for @shareLinkCopiedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied to clipboard'**
+  String get shareLinkCopiedToast;
+
+  /// No description provided for @shareMessageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send in message'**
+  String get shareMessageTitle;
+
+  /// No description provided for @shareMessageSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search profiles…'**
+  String get shareMessageSearchHint;
+
+  /// No description provided for @shareMessageNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a message (optional)'**
+  String get shareMessageNoteHint;
+
+  /// No description provided for @shareDmDefaultMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Check this out on art.kubus'**
+  String get shareDmDefaultMessage;
+
+  /// Toast shown after a share DM is sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to {recipient}'**
+  String shareMessageSentToast(String recipient);
+
+  /// No description provided for @shareMessageFailedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send message.'**
+  String get shareMessageFailedToast;
+
   /// No description provided for @commonFeed.
   ///
   /// In en, this message translates to:
@@ -7967,6 +8027,30 @@ abstract class AppLocalizations {
   /// **'Failed to load artwork details. Please try again.'**
   String get artDetailLoadFailedMessage;
 
+  /// No description provided for @artworkDetailLike.
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get artworkDetailLike;
+
+  /// No description provided for @artworkDetailLiked.
+  ///
+  /// In en, this message translates to:
+  /// **'Liked'**
+  String get artworkDetailLiked;
+
+  /// No description provided for @artworkDetailHideComments.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide comments'**
+  String get artworkDetailHideComments;
+
+  /// No description provided for @artworkDetailMintNft.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint as NFT'**
+  String get artworkDetailMintNft;
+
   /// No description provided for @eventCreatorSelectStartEndDatesToast.
   ///
   /// In en, this message translates to:
@@ -10018,66 +10102,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Share via…'**
   String get postDetailShareViaEllipsis;
-
-  /// No description provided for @shareOptionCreatePost.
-  ///
-  /// In en, this message translates to:
-  /// **'Create community post'**
-  String get shareOptionCreatePost;
-
-  /// No description provided for @shareOptionSendMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Send in message'**
-  String get shareOptionSendMessage;
-
-  /// No description provided for @shareOptionShareExternal.
-  ///
-  /// In en, this message translates to:
-  /// **'Share outside app'**
-  String get shareOptionShareExternal;
-
-  /// No description provided for @shareLinkCopiedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Link copied to clipboard'**
-  String get shareLinkCopiedToast;
-
-  /// No description provided for @shareMessageTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Send in message'**
-  String get shareMessageTitle;
-
-  /// No description provided for @shareMessageSearchHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Search profiles…'**
-  String get shareMessageSearchHint;
-
-  /// No description provided for @shareMessageNoteHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Add a message (optional)'**
-  String get shareMessageNoteHint;
-
-  /// No description provided for @shareDmDefaultMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'Check this out on art.kubus'**
-  String get shareDmDefaultMessage;
-
-  /// Toast shown after a share DM is sent.
-  ///
-  /// In en, this message translates to:
-  /// **'Sent to {recipient}'**
-  String shareMessageSentToast(Object recipient);
-
-  /// No description provided for @shareMessageFailedToast.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed to send message.'**
-  String get shareMessageFailedToast;
 
   /// No description provided for @postDetailNoProfilesFoundTitle.
   ///

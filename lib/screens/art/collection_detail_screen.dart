@@ -17,6 +17,7 @@ import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import '../../config/config.dart';
 import 'art_detail_screen.dart';
 
@@ -92,12 +93,12 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
           if (collection == null && (error ?? '').isNotEmpty) {
             return Center(
               child: Padding(
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.all(DetailSpacing.xl),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.error_outline, color: scheme.error, size: 34),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: DetailSpacing.md),
                     Text(
                       l10n.collectionDetailLoadFailedMessage,
                       textAlign: TextAlign.center,
@@ -106,7 +107,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                         color: scheme.onSurface.withValues(alpha: 0.75),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: DetailSpacing.lg),
                     OutlinedButton.icon(
                       onPressed: _reload,
                       icon: const Icon(Icons.refresh),
@@ -210,7 +211,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                padding: const EdgeInsets.fromLTRB(DetailSpacing.lg, DetailSpacing.lg, DetailSpacing.lg, DetailSpacing.xl),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate(
                     [
@@ -219,7 +220,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           entityType: 'collections',
                           entityId: widget.collectionId,
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
                       ],
                       if (description.isNotEmpty) ...[
                         Text(
@@ -230,16 +231,16 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                             color: scheme.onSurface,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: DetailSpacing.sm),
                         Text(
                           description,
                           style: GoogleFonts.inter(
                             fontSize: 14,
-                            height: 1.4,
+                            height: 1.5,
                             color: scheme.onSurface.withValues(alpha: 0.78),
                           ),
                         ),
-                        const SizedBox(height: 18),
+                        const SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
                       ],
                       Row(
                         children: [
@@ -255,18 +256,18 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           if (canEdit)
                             TextButton.icon(
                               onPressed: () => _openEditor(resolved),
-                              icon: const Icon(Icons.edit),
+                              icon: const Icon(Icons.edit, size: 18),
                               label: Text(
                                 l10n.collectionDetailManage,
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                             ),
                         ],
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: DetailSpacing.md),
                       if ((error ?? '').isNotEmpty && collection != null)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.only(bottom: DetailSpacing.md),
                           child: Text(
                             l10n.collectionDetailLoadFailedMessage,
                             style: GoogleFonts.inter(
@@ -287,7 +288,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                         ...artworks.map((art) => _ArtworkRow(artwork: art)),
                       if (isLoading)
                         Padding(
-                          padding: const EdgeInsets.only(top: 16),
+                          padding: const EdgeInsets.only(top: DetailSpacing.lg),
                           child: LinearProgressIndicator(color: scheme.primary),
                         ),
                     ],
@@ -320,10 +321,10 @@ class _ArtworkRow extends StatelessWidget {
     final imageUrl = MediaUrlResolver.resolve(rawUrl);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: DetailSpacing.md),
       child: Material(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(DetailSpacing.md),
         child: InkWell(
           onTap: id.isEmpty
               ? null
@@ -334,17 +335,17 @@ class _ArtworkRow extends StatelessWidget {
                     ),
                   );
                 },
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(DetailSpacing.md),
           child: Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(DetailSpacing.md),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(DetailSpacing.md),
               border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
             ),
             child: Row(
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(DetailSpacing.sm + 2),
                   child: Container(
                     width: 56,
                     height: 56,
@@ -361,7 +362,7 @@ class _ArtworkRow extends StatelessWidget {
                           ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DetailSpacing.md),
                 Expanded(
                   child: Text(
                     title,
@@ -745,10 +746,10 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: DetailSpacing.xl,
+          right: DetailSpacing.xl,
+          top: DetailSpacing.xl,
+          bottom: MediaQuery.of(context).viewInsets.bottom + DetailSpacing.lg,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -771,7 +772,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DetailSpacing.md),
             Text(
               l10n.commonCoverImage,
               style: GoogleFonts.inter(
@@ -780,9 +781,9 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                 color: scheme.onSurface,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DetailSpacing.sm),
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailSpacing.md),
               child: Container(
                 height: 140,
                 width: double.infinity,
@@ -791,7 +792,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                     ? Icon(
                         Icons.image_outlined,
                         size: 44,
-                        color: scheme.onSurface.withValues(alpha: 0.45),
+                        color: scheme.onSurface.withValues(alpha: 0.4),
                       )
                     : Image.network(
                         coverUrl,
@@ -799,12 +800,12 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                         errorBuilder: (_, __, ___) => Icon(
                           Icons.broken_image_outlined,
                           size: 44,
-                          color: scheme.onSurface.withValues(alpha: 0.45),
+                          color: scheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: DetailSpacing.md),
             OutlinedButton.icon(
               onPressed: (_saving || _updatingCover) ? null : () => _changeCover(collection),
               icon: _updatingCover
@@ -813,10 +814,10 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary),
                     )
-                  : const Icon(Icons.image_outlined),
-              label: Text(l10n.commonChangeCover),
+                  : const Icon(Icons.image_outlined, size: 18),
+              label: Text(l10n.commonChangeCover, style: GoogleFonts.inter(fontSize: 13)),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DetailSpacing.md),
             Form(
               key: _formKey,
               child: Column(
@@ -830,13 +831,13 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       color: scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: DetailSpacing.sm),
                   TextFormField(
                     controller: _nameController,
                     decoration: InputDecoration(
                       hintText: l10n.collectionSettingsNameHint,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(DetailSpacing.md),
                       ),
                     ),
                     validator: (value) {
@@ -846,7 +847,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: DetailSpacing.md),
                   Text(
                     l10n.collectionSettingsDescriptionLabel,
                     style: GoogleFonts.inter(
@@ -855,18 +856,18 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       color: scheme.onSurface,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: DetailSpacing.sm),
                   TextFormField(
                     controller: _descriptionController,
                     maxLines: 3,
                     decoration: InputDecoration(
                       hintText: l10n.collectionSettingsDescriptionHint,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(DetailSpacing.md),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: DetailSpacing.md),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(
@@ -877,7 +878,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                       l10n.collectionSettingsPublicSubtitle,
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.7),
+                        color: scheme.onSurface.withValues(alpha: 0.65),
                       ),
                     ),
                     value: _isPublic,
@@ -886,7 +887,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: DetailSpacing.md),
             Row(
               children: [
                 Text(
@@ -911,18 +912,18 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                             color: scheme.primary,
                           ),
                         )
-                      : const Icon(Icons.add),
-                  label: Text(l10n.collectionDetailAddArtwork),
+                      : const Icon(Icons.add, size: 18),
+                  label: Text(l10n.collectionDetailAddArtwork, style: GoogleFonts.inter(fontSize: 13)),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: DetailSpacing.sm),
             if (collection.artworks.isEmpty)
               Text(
                 l10n.collectionDetailNoArtworksYet,
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: scheme.onSurface.withValues(alpha: 0.7),
+                  color: scheme.onSurface.withValues(alpha: 0.65),
                 ),
               )
             else
@@ -945,7 +946,7 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                     return ListTile(
                       contentPadding: EdgeInsets.zero,
                       leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(DetailSpacing.sm),
                         child: Container(
                           width: 44,
                           height: 44,
@@ -977,21 +978,21 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                             .toString(),
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: scheme.onSurface.withValues(alpha: 0.7),
+                          color: scheme.onSurface.withValues(alpha: 0.65),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       trailing: IconButton(
                         icon: Icon(Icons.remove_circle_outline,
-                            color: scheme.onSurface.withValues(alpha: 0.7)),
+                            color: scheme.onSurface.withValues(alpha: 0.65)),
                         onPressed: () => _removeArtwork(collection, art),
                       ),
                     );
                   },
                 ),
               ),
-            const SizedBox(height: 14),
+            const SizedBox(height: DetailSpacing.lg),
             Row(
               children: [
                 TextButton(

@@ -16,6 +16,7 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../widgets/collaboration_panel.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import '../art/art_detail_screen.dart';
 
 class ExhibitionDetailScreen extends StatefulWidget {
@@ -359,7 +360,7 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1100),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DetailSpacing.lg),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth >= 900;
@@ -377,11 +378,11 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   elevation: 0,
                   color: scheme.surface,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+                    borderRadius: BorderRadius.circular(DetailSpacing.lg),
+                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(DetailSpacing.lg),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -395,19 +396,19 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                             if (canManage)
                               TextButton.icon(
                                 onPressed: () => _showLinkArtworksDialog(ex),
-                                icon: const Icon(Icons.add),
-                                label: Text(l10n.commonAdd, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                                icon: const Icon(Icons.add, size: 18),
+                                label: Text(l10n.commonAdd, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
                               ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: DetailSpacing.sm),
                         Text(
                           canManage
                               ? l10n.exhibitionDetailArtworksManageHint
                               : l10n.exhibitionDetailArtworksViewHint,
-                          style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
+                          style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: DetailSpacing.md),
                         _LinkedArtworksList(exhibition: ex),
                       ],
                     ),
@@ -433,12 +434,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   details,
-                                  const SizedBox(height: 14),
+                                  const SizedBox(height: DetailSpacing.lg),
                                   artworksCard,
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 16),
+                            const SizedBox(width: DetailSpacing.lg),
                             Expanded(flex: 5, child: collab),
                           ],
                         ),
@@ -457,13 +458,13 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                 return ListView(
                   children: [
                     details,
-                    const SizedBox(height: 14),
+                    const SizedBox(height: DetailSpacing.lg),
                     artworksCard,
-                    const SizedBox(height: 14),
+                    const SizedBox(height: DetailSpacing.lg),
                     collab,
                     if (provider.isLoading)
                       Padding(
-                        padding: const EdgeInsets.only(top: 16),
+                        padding: const EdgeInsets.only(top: DetailSpacing.lg),
                         child: LinearProgressIndicator(color: scheme.primary),
                       ),
                   ],
@@ -659,11 +660,11 @@ class _ExhibitionDetailsCard extends StatelessWidget {
       elevation: 0,
       color: scheme.surface,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(DetailSpacing.lg),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DetailSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -674,15 +675,15 @@ class _ExhibitionDetailsCard extends StatelessWidget {
                 if (canManage)
                   TextButton.icon(
                     onPressed: onChangeCover,
-                    icon: const Icon(Icons.image_outlined),
-                    label: Text(l10n.commonChangeCover, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    icon: const Icon(Icons.image_outlined, size: 18),
+                    label: Text(l10n.commonChangeCover, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
                   ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: DetailSpacing.md),
             if (coverUrl != null) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DetailSpacing.md),
                 child: AspectRatio(
                   aspectRatio: 16 / 9,
                   child: Image.network(
@@ -694,13 +695,13 @@ class _ExhibitionDetailsCard extends StatelessWidget {
                       child: Icon(
                         Icons.broken_image_outlined,
                         size: 48,
-                        color: scheme.onSurface.withValues(alpha: 0.45),
+                        color: scheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: DetailSpacing.md),
             ],
             if (dateRange != null) _InfoRow(icon: Icons.schedule, label: dateRange),
             if (location != null) _InfoRow(icon: Icons.place_outlined, label: location),
@@ -709,7 +710,7 @@ class _ExhibitionDetailsCard extends StatelessWidget {
               label: l10n.exhibitionDetailStatusRowLabel(_labelForStatus(l10n, exhibition.status)),
             ),
             if (canPublish) ...[
-              const SizedBox(height: 6),
+              const SizedBox(height: DetailSpacing.sm),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 value: (exhibition.status ?? '').trim().toLowerCase() == 'published',
@@ -719,23 +720,23 @@ class _ExhibitionDetailsCard extends StatelessWidget {
                   (exhibition.status ?? '').trim().toLowerCase() == 'published'
                       ? l10n.commonPublished
                       : l10n.commonDraft,
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.7)),
+                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
                 ),
               ),
             ],
             if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-              const SizedBox(height: 12),
-              Text(exhibition.description!, style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8))),
+              const SizedBox(height: DetailSpacing.md),
+              Text(exhibition.description!, style: GoogleFonts.inter(fontSize: 13, height: 1.5, color: scheme.onSurface.withValues(alpha: 0.8))),
             ],
             if (poap?.poap != null) ...[
-              const SizedBox(height: 14),
-              Divider(color: scheme.outlineVariant.withValues(alpha: 0.6)),
-              const SizedBox(height: 10),
+              const SizedBox(height: DetailSpacing.lg),
+              Divider(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+              const SizedBox(height: DetailSpacing.md),
               Text(l10n.exhibitionDetailBadgeTitle, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 6),
+              const SizedBox(height: DetailSpacing.sm),
               Text(
                 poap!.claimed == true ? l10n.exhibitionDetailBadgeClaimed : l10n.exhibitionDetailBadgeNotClaimed,
-                style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.8)),
+                style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
               ),
             ],
           ],
@@ -770,15 +771,15 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: DetailSpacing.sm),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: scheme.onSurface.withValues(alpha: 0.7)),
-          const SizedBox(width: 10),
+          Icon(icon, size: 18, color: scheme.onSurface.withValues(alpha: 0.6)),
+          const SizedBox(width: DetailSpacing.sm),
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface),
+              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.9)),
             ),
           ),
         ],

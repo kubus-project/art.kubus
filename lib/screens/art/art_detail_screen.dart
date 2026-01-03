@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../widgets/artwork_creator_byline.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
@@ -115,8 +116,11 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         
         if (_artworkLoading) {
           return Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              title: Text(l10n.artDetailLoadingTitle, style: GoogleFonts.outfit()),
+              title: Text(l10n.artDetailLoadingTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
             ),
             body: const Center(child: InlineLoading()),
           );
@@ -124,27 +128,40 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
 
         if (_artworkError != null) {
           return Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              title: Text(l10n.artDetailTitle, style: GoogleFonts.outfit()),
+              title: Text(l10n.artDetailTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
             ),
             body: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    _artworkError!,
-                    style: GoogleFonts.outfit(
-                      fontSize: 16,
-                      color: Theme.of(context).colorScheme.onSurface,
+              child: Padding(
+                padding: const EdgeInsets.all(DetailSpacing.xl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _loadArtworkDetails,
-                    child: Text(l10n.commonRetry),
-                  ),
-                ],
+                    const SizedBox(height: DetailSpacing.lg),
+                    Text(
+                      _artworkError!,
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: DetailSpacing.xl),
+                    FilledButton.icon(
+                      onPressed: _loadArtworkDetails,
+                      icon: const Icon(Icons.refresh, size: 18),
+                      label: Text(l10n.commonRetry, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -152,11 +169,35 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         
         if (artwork == null) {
           return Scaffold(
+            backgroundColor: Theme.of(context).colorScheme.surface,
             appBar: AppBar(
-              title: Text(l10n.artworkNotFound, style: GoogleFonts.outfit()),
+              title: Text(l10n.artworkNotFound, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              elevation: 0,
             ),
             body: Center(
-              child: Text(l10n.artworkNotFound),
+              child: Padding(
+                padding: const EdgeInsets.all(DetailSpacing.xl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.image_not_supported_outlined,
+                      size: 56,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                    ),
+                    const SizedBox(height: DetailSpacing.lg),
+                    Text(
+                      l10n.artworkNotFound,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           );
         }
@@ -175,25 +216,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     slivers: [
                       _buildAppBar(artwork),
                       SliverPadding(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(DetailSpacing.xl),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             _buildArtPreview(artwork),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: DetailSpacing.xl),
                             _buildArtInfo(artwork),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: DetailSpacing.xl),
                             _buildDescription(artwork),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: DetailSpacing.xl),
                             _buildSocialStats(artwork),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: DetailSpacing.xl),
                             _buildActionButtons(artwork),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: DetailSpacing.xl),
                             if (AppConfig.isFeatureEnabled('collabInvites')) ...[
                               CollaborationPanel(
                                 entityType: 'artworks',
                                 entityId: artwork.id,
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: DetailSpacing.xl),
                             ],
                             _buildCommentsSection(artwork, artworkProvider),
                             const SizedBox(height: 100), // Bottom padding
@@ -510,35 +551,36 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       children: [
         Text(
           artwork.title,
-          style: GoogleFonts.outfit(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
+          style: GoogleFonts.inter(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            height: 1.2,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: DetailSpacing.sm),
         ArtworkCreatorByline(
           artwork: artwork,
-          style: GoogleFonts.outfit(
-            fontSize: 18,
+          style: GoogleFonts.inter(
+            fontSize: 16,
             color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         Wrap(
-          spacing: 12,
-          runSpacing: 8,
+          spacing: DetailSpacing.sm,
+          runSpacing: DetailSpacing.sm,
           children: [
-            _buildInfoChip(Icons.category, artwork.category),
+            _buildInfoChip(Icons.category_outlined, artwork.category),
             if (artwork.averageRating != null)
-              _buildInfoChip(Icons.star, '${artwork.averageRating?.toStringAsFixed(1)} (${artwork.ratingsCount})'),
-            _buildInfoChip(Icons.access_time, artwork.createdAt.toString().split(' ')[0]),
+              _buildInfoChip(Icons.star_rounded, '${artwork.averageRating?.toStringAsFixed(1)} (${artwork.ratingsCount})'),
+            _buildInfoChip(Icons.schedule_outlined, artwork.createdAt.toString().split(' ')[0]),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         if (artwork.tags.isNotEmpty)
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: DetailSpacing.sm,
+            runSpacing: DetailSpacing.sm,
             children: artwork.tags.map((tag) => _buildTag(tag)).toList(),
           ),
       ],
@@ -546,23 +588,28 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildInfoChip(IconData icon, String label) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          color: scheme.outline.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16),
+          Icon(icon, size: 15, color: scheme.onSurface.withValues(alpha: 0.7)),
           const SizedBox(width: 6),
           Text(
             label,
-            style: GoogleFonts.outfit(fontSize: 12),
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: scheme.onSurface.withValues(alpha: 0.8),
+            ),
           ),
         ],
       ),
@@ -570,20 +617,21 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildTag(String tag) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: scheme.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+          color: scheme.primary.withValues(alpha: 0.2),
         ),
       ),
       child: Text(
         '#$tag',
-        style: GoogleFonts.outfit(
-          fontSize: 11,
-          color: Theme.of(context).colorScheme.primary,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          color: scheme.primary,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -591,22 +639,26 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildDescription(Artwork artwork) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Description',
-          style: GoogleFonts.outfit(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+          l10n.commonDescription,
+          style: GoogleFonts.inter(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DetailSpacing.md),
         Text(
           artwork.description,
-          style: GoogleFonts.outfit(
-            fontSize: 16,
-            height: 1.5,
+          style: GoogleFonts.inter(
+            fontSize: 15,
+            height: 1.6,
+            color: scheme.onSurface.withValues(alpha: 0.8),
           ),
         ),
       ],
@@ -614,41 +666,59 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildSocialStats(Artwork artwork) {
+    final scheme = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: DetailSpacing.lg, horizontal: DetailSpacing.md),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainer,
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.08)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildStatItem(Icons.favorite, artwork.likesCount, 'Likes'),
-          _buildStatItem(Icons.comment, artwork.commentsCount, 'Comments'),
-          _buildStatItem(Icons.visibility, artwork.viewsCount, 'Views'),
-          _buildStatItem(Icons.explore, artwork.discoveryCount, 'Discoveries'),
+          _buildStatItem(Icons.favorite_rounded, artwork.likesCount, 'Likes'),
+          _buildStatDivider(),
+          _buildStatItem(Icons.chat_bubble_outline_rounded, artwork.commentsCount, 'Comments'),
+          _buildStatDivider(),
+          _buildStatItem(Icons.visibility_outlined, artwork.viewsCount, 'Views'),
+          _buildStatDivider(),
+          _buildStatItem(Icons.explore_outlined, artwork.discoveryCount, 'Discoveries'),
         ],
       ),
     );
   }
 
+  Widget _buildStatDivider() {
+    return Container(
+      height: 32,
+      width: 1,
+      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.15),
+    );
+  }
+
   Widget _buildStatItem(IconData icon, int count, String label) {
+    final scheme = Theme.of(context).colorScheme;
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(height: 4),
+        Icon(icon, size: 22, color: scheme.primary.withValues(alpha: 0.8)),
+        const SizedBox(height: 6),
         Text(
           count.toString(),
-          style: GoogleFonts.outfit(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: scheme.onSurface,
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: scheme.onSurface.withValues(alpha: 0.55),
+            fontWeight: FontWeight.w500,
           ),
         ),
       ],
@@ -656,6 +726,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   }
 
   Widget _buildActionButtons(Artwork artwork) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Row(
@@ -663,107 +735,70 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             Expanded(
               child: Consumer<ArtworkProvider>(
                 builder: (context, provider, child) {
-                  return ElevatedButton.icon(
+                  final isLiked = artwork.isLikedByCurrentUser;
+                  return _ActionButton(
+                    icon: isLiked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    label: isLiked ? l10n.artworkDetailLiked : l10n.artworkDetailLike,
+                    isActive: isLiked,
+                    activeColor: scheme.error,
                     onPressed: () => provider.toggleLike(artwork.id),
-                    icon: Icon(
-                      artwork.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
-                      color: artwork.isLikedByCurrentUser ? Colors.red : null,
-                    ),
-                    label: Text(
-                      artwork.isLikedByCurrentUser ? 'Liked' : 'Like',
-                      style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      backgroundColor: artwork.isLikedByCurrentUser 
-                          ? Colors.red.withValues(alpha: 0.1)
-                          : Theme.of(context).colorScheme.surfaceContainer,
-                      foregroundColor: artwork.isLikedByCurrentUser 
-                          ? Colors.red 
-                          : Theme.of(context).colorScheme.onSurface,
-                    ),
                   );
                 },
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: DetailSpacing.md),
             Expanded(
-              child: ElevatedButton.icon(
+              child: _ActionButton(
+                icon: _showComments ? Icons.chat_bubble_rounded : Icons.chat_bubble_outline_rounded,
+                label: _showComments ? l10n.artworkDetailHideComments : l10n.commonComments,
+                isActive: _showComments,
+                activeColor: scheme.primary,
                 onPressed: () {
                   setState(() {
                     _showComments = !_showComments;
                   });
-
                   if (_showComments) {
                     context.read<ArtworkProvider>().loadComments(widget.artworkId);
                   }
                 },
-                icon: Icon(
-                  _showComments ? Icons.comment : Icons.comment_outlined,
-                ),
-                label: Text(
-                  _showComments ? 'Hide Comments' : 'Comments',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DetailSpacing.md),
         Row(
           children: [
             if (artwork.arEnabled)
               Expanded(
-                child: ElevatedButton.icon(
+                child: _ActionButton(
+                  icon: Icons.view_in_ar_rounded,
+                  label: l10n.commonViewInAr,
+                  backgroundColor: scheme.primary,
+                  foregroundColor: Colors.white,
                   onPressed: () => Navigator.pushNamed(context, '/ar'),
-                  icon: const Icon(Icons.view_in_ar),
-                  label: Text(
-                    'Experience AR',
-                    style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    foregroundColor: Colors.white,
-                  ),
                 ),
               ),
-            if (artwork.arEnabled) const SizedBox(width: 12),
+            if (artwork.arEnabled) const SizedBox(width: DetailSpacing.md),
             Expanded(
-              child: ElevatedButton.icon(
+              child: _ActionButton(
+                icon: Icons.navigation_rounded,
+                label: l10n.commonNavigate,
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
                 onPressed: () => _showNavigationOptions(artwork),
-                icon: const Icon(Icons.navigation),
-                label: Text(
-                  'Navigate',
-                  style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-                ),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DetailSpacing.md),
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
+          child: _ActionButton(
+            icon: Icons.diamond_rounded,
+            label: l10n.artworkDetailMintNft,
+            backgroundColor: const Color(0xFFFFD93D),
+            foregroundColor: Colors.black87,
             onPressed: () => _showMintNFTDialog(artwork),
-            icon: const Icon(Icons.diamond),
-            label: Text(
-              'Mint as NFT',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.w600),
-            ),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: const Color(0xFFFFD93D),
-              foregroundColor: Colors.black,
-            ),
           ),
         ),
       ],
@@ -1998,4 +2033,75 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     }
   }
 
+}
+
+/// A reusable action button for detail screens
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isActive;
+  final Color? activeColor;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    this.onPressed,
+    this.isActive = false,
+    this.activeColor,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final effectiveActiveColor = activeColor ?? scheme.primary;
+    
+    final bgColor = backgroundColor ?? 
+        (isActive ? effectiveActiveColor.withValues(alpha: 0.1) : scheme.surfaceContainerHighest);
+    final fgColor = foregroundColor ?? 
+        (isActive ? effectiveActiveColor : scheme.onSurface);
+
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isActive 
+                  ? effectiveActiveColor.withValues(alpha: 0.25)
+                  : scheme.outline.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: fgColor),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: fgColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

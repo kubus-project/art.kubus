@@ -1931,6 +1931,10 @@
   "artDetailLoadingTitle": "Loading artwork",
   "artDetailTitle": "Artwork",
   "artDetailLoadFailedMessage": "Failed to load artwork details. Please try again.",
+  "artworkDetailLike": "Like",
+  "artworkDetailLiked": "Liked",
+  "artworkDetailHideComments": "Hide comments",
+  "artworkDetailMintNft": "Mint as NFT",
 
   "eventCreatorSelectStartEndDatesToast": "Please select start and end dates",
   "eventCreatorEnterCapacityToast": "Please enter event capacity",

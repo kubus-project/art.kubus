@@ -54,6 +54,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Future<void> _handleAuthSuccess(Map<String, dynamic> payload) async {
     final l10n = AppLocalizations.of(context)!;
     final redirectRoute = widget.redirectRoute?.trim();
+    final isModalReauth = widget.onAuthSuccess != null;
     final data = (payload['data'] as Map<String, dynamic>?) ?? payload;
     final user = (data['user'] as Map<String, dynamic>?) ?? data;
     String? walletAddress = user['walletAddress'] ?? user['wallet_address'];
@@ -76,21 +77,27 @@ class _SignInScreenState extends State<SignInScreen> {
       await prefs.setString('user_id', userId.toString());
     }
     if (!mounted) return;
-    try {
-      if (walletAddress != null && walletAddress.toString().isNotEmpty) {
-        await Provider.of<ProfileProvider>(context, listen: false)
-            .loadProfile(walletAddress.toString())
-            .timeout(const Duration(seconds: 5));
+
+    // In modal re-auth flows, avoid running protected API calls here because the
+    // auth coordinator may be waiting on this route to pop (deadlock risk).
+    // The app refreshes profile/session via AuthSessionProvider.onSessionRestored.
+    if (!isModalReauth) {
+      try {
+        if (walletAddress != null && walletAddress.toString().isNotEmpty) {
+          await Provider.of<ProfileProvider>(context, listen: false)
+              .loadProfile(walletAddress.toString())
+              .timeout(const Duration(seconds: 5));
+        }
+      } catch (e) {
+        AppConfig.debugPrint('SignInScreen: profile load skipped/failed: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.authSignedInProfileRefreshSoon)),
+          );
+        }
       }
-    } catch (e) {
-      AppConfig.debugPrint('SignInScreen: profile load skipped/failed: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.authSignedInProfileRefreshSoon)),
-        );
-      }
+      if (!mounted) return;
     }
-    if (!mounted) return;
 
     if (widget.onAuthSuccess != null) {
       try {

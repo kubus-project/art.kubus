@@ -27,6 +27,7 @@ import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/empty_state_card.dart';
 import '../../../widgets/profile_artist_info_fields.dart';
+import '../../../widgets/detail/detail_shell_components.dart';
 import '../../community/profile_screen_methods.dart';
 import '../../../widgets/artist_badge.dart';
 import '../../../widgets/institution_badge.dart';
@@ -167,14 +168,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 20),
+                        const SizedBox(height: DetailSpacing.xl),
                         _buildHeader(themeProvider),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: DetailSpacing.xl),
                         // Profile card with inline stats on wide screens
                         _buildProfileCard(themeProvider, profileProvider, isArtist, isInstitution),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: DetailSpacing.lg),
                         _buildStatsCards(themeProvider, profileProvider, isLarge),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: DetailSpacing.xl),
                         // Two-column layout for wide screens
                         if (isWide)
                           _buildTwoColumnLayout(
@@ -188,7 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                             isArtist: isArtist,
                             isInstitution: isInstitution,
                           ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: DetailSpacing.xl),
                       ],
                     ),
                   ),
@@ -217,12 +218,12 @@ class _ProfileScreenState extends State<ProfileScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildPerformanceStatsSection(themeProvider),
-              const SizedBox(height: 16),
+              const SizedBox(height: DetailSpacing.lg),
               _buildAchievementsSection(themeProvider),
             ],
           ),
         ),
-        const SizedBox(width: 24),
+        const SizedBox(width: DetailSpacing.xl),
         // Right column: Content sections + Posts (wider)
         Expanded(
           child: Column(
@@ -230,19 +231,19 @@ class _ProfileScreenState extends State<ProfileScreen>
             children: [
               if (isArtist) ...[
                 _buildArtistPortfolioSection(themeProvider),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
                 _buildArtistCollectionsSection(themeProvider),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
                 _buildArtistEventsSection(themeProvider),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
               ] else if (isInstitution) ...[
                 _buildInstitutionEventsSection(themeProvider),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
                 _buildInstitutionCollectionsSection(themeProvider),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
               ] else ...[
                 _buildViewedArtworksSection(themeProvider),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
               ],
               _buildPostsSection(themeProvider),
             ],
@@ -263,25 +264,25 @@ class _ProfileScreenState extends State<ProfileScreen>
       children: [
         if (isArtist) ...[
           _buildArtistPortfolioSection(themeProvider),
-          const SizedBox(height: 16),
+          const SizedBox(height: DetailSpacing.lg),
           _buildArtistCollectionsSection(themeProvider),
-          const SizedBox(height: 16),
+          const SizedBox(height: DetailSpacing.lg),
           _buildArtistEventsSection(themeProvider),
-          const SizedBox(height: 16),
+          const SizedBox(height: DetailSpacing.lg),
         ] else if (isInstitution) ...[
           _buildInstitutionEventsSection(themeProvider),
-          const SizedBox(height: 16),
+          const SizedBox(height: DetailSpacing.lg),
           _buildInstitutionCollectionsSection(themeProvider),
-          const SizedBox(height: 16),
+          const SizedBox(height: DetailSpacing.lg),
         ],
         if (!isArtist && !isInstitution) ...[
           _buildViewedArtworksSection(themeProvider),
-          const SizedBox(height: 16),
+          const SizedBox(height: DetailSpacing.lg),
         ],
         _buildPerformanceStatsSection(themeProvider),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         _buildAchievementsSection(themeProvider),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         _buildPostsSection(themeProvider),
       ],
     );

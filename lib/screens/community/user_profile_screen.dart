@@ -28,6 +28,7 @@ import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import 'post_detail_screen.dart';
 import '../art/art_detail_screen.dart';
 import '../art/collection_detail_screen.dart';
@@ -514,29 +515,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.symmetric(horizontal: DetailSpacing.xl),
             child: Column(
               children: [
                 _buildProfileHeader(themeProvider, isArtist: isArtist, isInstitution: isInstitution),
-                const SizedBox(height: 12),
+                const SizedBox(height: DetailSpacing.md),
                 _buildStatsRow(l10n),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
                 _buildActionButtons(themeProvider, l10n),
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
                 if (isArtist) ...[
                   _buildArtistHighlightsGrid(l10n),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: DetailSpacing.xl),
                 ],
                 isInstitution
                     ? _buildInstitutionHighlights(l10n)
                     : _buildAchievements(themeProvider, l10n),
-                const SizedBox(height: 24),
+                const SizedBox(height: DetailSpacing.xl),
                 _buildPostsSection(l10n),
                 if (isArtist) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: DetailSpacing.xl),
                   _buildArtistEventsShowcase(l10n),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: DetailSpacing.xxl),
               ],
             ),
           ),

@@ -33,6 +33,7 @@ import '../../widgets/user_activity_status_line.dart';
 import '../../widgets/topbar_icon.dart';
 import '../../widgets/empty_state_card.dart';
 import '../../widgets/profile_artist_info_fields.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import 'post_detail_screen.dart';
 import '../art/art_detail_screen.dart';
 import '../art/collection_detail_screen.dart';
@@ -182,27 +183,27 @@ class _ProfileScreenState extends State<ProfileScreen>
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
                       _buildProfileHeader(isArtist: isArtist, isInstitution: isInstitution),
-                      SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
                       _buildStatsSection(),
-                      SliverToBoxAdapter(child: SizedBox(height: 28)),
+                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xxl)),
                       if (isArtist) ...[
                         SliverToBoxAdapter(child: _buildArtistHighlightsGrid()),
-                        SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
                       ],
                       SliverToBoxAdapter(
                         child: isInstitution
                             ? _buildInstitutionHighlightsSection()
                             : _buildAchievementsSection(),
                       ),
-                      SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildPerformanceStats()),
-                      SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
                       SliverToBoxAdapter(child: _buildPostsSection()),
                       if (isArtist) ...[
-                        SliverToBoxAdapter(child: SizedBox(height: 24)),
+                        const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xl)),
                         SliverToBoxAdapter(child: _buildArtistEventsShowcase()),
                       ],
-                      SliverToBoxAdapter(child: SizedBox(height: 32)),
+                      const SliverToBoxAdapter(child: SizedBox(height: DetailSpacing.xxl)),
                     ],
                   ),
                 ),

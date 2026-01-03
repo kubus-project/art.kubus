@@ -16,6 +16,7 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/inline_loading.dart';
+import '../../../widgets/detail/detail_shell_components.dart';
 
 class DesktopArtworkDetailScreen extends StatefulWidget {
   final String artworkId;
@@ -166,7 +167,7 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                 )
               : null,
           body: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(DetailSpacing.xl),
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final showTwoColumns = constraints.maxWidth >= 900;
@@ -184,7 +185,7 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                           isSignedIn: isSignedIn,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: DetailSpacing.lg),
                       SizedBox(
                         height: commentsHeight,
                         child: _buildCommentsPanel(artwork, artworkProvider, isSignedIn),
@@ -204,7 +205,7 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
                         isSignedIn: isSignedIn,
                       ),
                     ),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: DetailSpacing.xl),
                     SizedBox(
                       width: sideWidth,
                       child: _buildRightPane(
@@ -232,11 +233,11 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
     return ListView(
       children: [
         _buildMedia(coverUrl),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         _buildHeader(artwork),
-        const SizedBox(height: 12),
+        const SizedBox(height: DetailSpacing.md),
         _buildActionsRow(artwork, artworkProvider, isSignedIn),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.lg),
         _buildDescription(artwork),
       ],
     );

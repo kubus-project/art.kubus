@@ -132,4 +132,37 @@ void main() {
     expect(requestCount, 2);
     expect(result['success'], isTrue);
   });
+
+  test('auth endpoints bypass in-flight reauth gating', () async {
+    final api = BackendApiService();
+    api.setAuthTokenForTesting('expired-token');
+
+    final neverSettlingCoordinator = _TestAuthCoordinator(onPrompt: (_) async {
+      // Never completes, simulating an in-flight prompt that hasn't resolved yet.
+      await Completer<void>().future;
+      return const AuthReauthResult(AuthReauthOutcome.cancelled);
+    });
+    api.bindAuthCoordinator(neverSettlingCoordinator);
+    unawaited(
+      neverSettlingCoordinator.handleAuthFailure(
+        const AuthFailureContext(
+          statusCode: 401,
+          method: 'GET',
+          path: '/api/profiles/me',
+          body: 'Token expired',
+        ),
+      ),
+    );
+    expect(neverSettlingCoordinator.isResolving, isTrue);
+
+    api.setHttpClient(
+      MockClient((request) async {
+        return http.Response(jsonEncode({'data': {'token': 'new-token', 'user': {'walletAddress': 'me'}}}), 200);
+      }),
+    );
+
+    await api
+        .loginWithEmail(email: 'me@example.com', password: 'passwordpassword')
+        .timeout(const Duration(milliseconds: 200));
+  });
 }
