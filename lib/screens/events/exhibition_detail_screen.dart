@@ -10,6 +10,8 @@ import '../../providers/artwork_provider.dart';
 import '../../providers/collab_provider.dart';
 import '../../providers/exhibitions_provider.dart';
 import '../../screens/collab/invites_inbox_screen.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
@@ -328,6 +330,17 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       appBar: AppBar(
         title: Text(ex.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         actions: [
+          IconButton(
+            tooltip: l10n.commonShare,
+            onPressed: () {
+              ShareService().showShareSheet(
+                context,
+                target: ShareTarget.exhibition(exhibitionId: widget.exhibitionId, title: ex.title),
+                sourceScreen: 'exhibition_detail',
+              );
+            },
+            icon: const Icon(Icons.share_outlined),
+          ),
           IconButton(
             tooltip: l10n.exhibitionDetailInvitesTooltip,
             onPressed: () {

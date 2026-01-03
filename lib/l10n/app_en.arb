@@ -13,6 +13,7 @@
   "commonSave": "Save",
   "commonSavedToast": "Saved",
   "commonActionFailedToast": "Something went wrong. Please try again.",
+  "commonNetworkErrorToast": "Network error. Please try again.",
   "commonTitle": "Title",
   "commonDescription": "Description",
   "commonPrice": "Price",
@@ -42,6 +43,24 @@
   "commonSearch": "Search",
   "commonNotifications": "Notifications",
   "commonShare": "Share",
+  "shareOptionCreatePost": "Create community post",
+  "shareOptionSendMessage": "Send in message",
+  "shareOptionShareExternal": "Share outside app",
+  "shareLinkCopiedToast": "Link copied to clipboard",
+  "shareMessageTitle": "Send in message",
+  "shareMessageSearchHint": "Search profiles…",
+  "shareMessageNoteHint": "Add a message (optional)",
+  "shareDmDefaultMessage": "Check this out on art.kubus",
+  "shareMessageSentToast": "Sent to {recipient}",
+  "@shareMessageSentToast": {
+    "description": "Toast shown after a share DM is sent.",
+    "placeholders": {
+      "recipient": {
+        "type": "String"
+      }
+    }
+  },
+  "shareMessageFailedToast": "Failed to send message.",
   "commonFeed": "Feed",
   "commonGroup": "Group",
   "commonImage": "Image",

@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
@@ -367,10 +368,14 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
         imageUrl = MediaUrlResolver.resolve(raw) ?? raw;
       }
 
+      final draft = hub.draft;
       await hub.submitGroupPost(
         summary.id,
         content: content,
         imageUrl: imageUrl,
+        artworkId: draft.artwork?.id,
+        subjectType: draft.subjectType,
+        subjectId: draft.subjectId,
       );
 
       if (!mounted) return;
@@ -571,14 +576,13 @@ class _GroupFeedScreenState extends State<GroupFeedScreen> {
                     ),
                     const SizedBox(width: 8),
                     TextButton.icon(
-                      onPressed: () => SharePlus.instance.share(
-                        ShareParams(
-                          text: l10n.communityGroupFeedShareText(
-                            post.authorName,
-                            _group.name,
-                          ),
-                        ),
-                      ),
+                      onPressed: () {
+                        ShareService().showShareSheet(
+                          context,
+                          target: ShareTarget.post(postId: post.id, title: post.content),
+                          sourceScreen: 'group_feed',
+                        );
+                      },
                       icon: const Icon(Icons.share_outlined, size: 18),
                       label: Text(l10n.commonShare),
                     ),

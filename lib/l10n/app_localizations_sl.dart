@@ -48,6 +48,9 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonActionFailedToast => 'Nekaj je šlo narobe. Poskusi znova.';
 
   @override
+  String get commonNetworkErrorToast => 'Napaka omrežja. Poskusi znova.';
+
+  @override
   String get commonTitle => 'Naslov';
 
   @override
@@ -5316,6 +5319,38 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postDetailShareViaEllipsis => 'Deli prek…';
 
   @override
+  String get shareOptionCreatePost => 'Ustvari objavo v skupnosti';
+
+  @override
+  String get shareOptionSendMessage => 'Pošlji v sporočilu';
+
+  @override
+  String get shareOptionShareExternal => 'Deli izven aplikacije';
+
+  @override
+  String get shareLinkCopiedToast => 'Povezava kopirana v odložišče';
+
+  @override
+  String get shareMessageTitle => 'Pošlji v sporočilu';
+
+  @override
+  String get shareMessageSearchHint => 'Išči profile…';
+
+  @override
+  String get shareMessageNoteHint => 'Dodaj sporočilo (neobvezno)';
+
+  @override
+  String get shareDmDefaultMessage => 'Poglej si to na art.kubus';
+
+  @override
+  String shareMessageSentToast(Object recipient) {
+    return 'Poslano: $recipient';
+  }
+
+  @override
+  String get shareMessageFailedToast => 'Pošiljanje sporočila ni uspelo.';
+
+  @override
   String get postDetailNoProfilesFoundTitle => 'Profilov ni bilo mogoče najti';
 
   @override
@@ -6404,10 +6439,10 @@ class AppLocalizationsSl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '# let',
-      few: '# leta',
-      two: '# leti',
-      one: '# leto',
+      other: '$count let',
+      few: '$count leta',
+      two: '$count leti',
+      one: '$count leto',
     );
     return '$_temp0';
   }

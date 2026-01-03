@@ -2528,7 +2528,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required String content,
     String? parentCommentId,
   }) async {
-    try { await _ensureAuthWithStoredWallet(); } catch (_) {}
+    await _ensureAuthBeforeRequest();
     final uri = Uri.parse('$baseUrl/api/artworks/$artworkId/comments');
     final response = await _post(
       uri,
@@ -2741,6 +2741,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     List<String>? mediaUrls,
     List<String>? mediaCids,
     String? artworkId,
+    String? subjectType,
+    String? subjectId,
     String? postType,
     String category = 'post',
     List<String>? tags,
@@ -2765,6 +2767,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         mediaUrls: aggregatedMedia.isEmpty ? null : aggregatedMedia,
         mediaCids: mediaCids,
         artworkId: artworkId,
+        subjectType: subjectType,
+        subjectId: subjectId,
         postType: postType,
         tags: tags,
         mentions: mentions,
@@ -3119,6 +3123,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     List<String>? mediaUrls,
     List<String>? mediaCids,
     String? artworkId,
+    String? subjectType,
+    String? subjectId,
     String? postType,
     String category = 'post',
     List<String>? tags,
@@ -3144,6 +3150,8 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
         mediaUrls: aggregatedMedia.isEmpty ? null : aggregatedMedia,
         mediaCids: mediaCids,
         artworkId: artworkId,
+        subjectType: subjectType,
+        subjectId: subjectId,
         postType: postType,
         tags: tags,
         mentions: mentions,
@@ -6454,6 +6462,8 @@ Map<String, dynamic> _buildCommunityPostPayload({
   List<String>? mediaUrls,
   List<String>? mediaCids,
   String? artworkId,
+  String? subjectType,
+  String? subjectId,
   String? postType,
   List<String>? tags,
   List<String>? mentions,
@@ -6468,6 +6478,8 @@ Map<String, dynamic> _buildCommunityPostPayload({
     if (mediaUrls != null && mediaUrls.isNotEmpty) 'mediaUrls': mediaUrls,
     if (mediaCids != null && mediaCids.isNotEmpty) 'mediaCids': mediaCids,
     if (artworkId != null) 'artworkId': artworkId,
+    if (subjectType != null && subjectType.trim().isNotEmpty) 'subjectType': subjectType.trim(),
+    if (subjectId != null && subjectId.trim().isNotEmpty) 'subjectId': subjectId.trim(),
     if (postType != null) 'postType': postType,
     if (tags != null && tags.isNotEmpty) 'tags': tags,
     if (mentions != null && mentions.isNotEmpty) 'mentions': mentions,

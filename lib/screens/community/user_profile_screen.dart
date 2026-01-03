@@ -10,6 +10,8 @@ import '../../models/user.dart';
 import '../../services/user_service.dart';
 import '../../models/achievements.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../services/block_list_service.dart';
 import '../../utils/category_accent_color.dart';
 import '../../utils/media_url_resolver.dart';
@@ -488,11 +490,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> with TickerProvid
           TopBarIcon(
             icon: const Icon(Icons.share),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.userProfileSharedToast),
-                  duration: Duration(seconds: 2),
-                ),
+              final targetWallet = user?.id.toString().trim();
+              if (targetWallet == null || targetWallet.isEmpty) return;
+              ShareService().showShareSheet(
+                context,
+                target: ShareTarget.profile(walletAddress: targetWallet, title: user?.name),
+                sourceScreen: 'user_profile',
               );
             },
             tooltip: l10n.userProfileShareTooltip,

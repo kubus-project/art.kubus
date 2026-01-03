@@ -23,6 +23,8 @@ import '../../utils/rarity_ui.dart';
 import '../../utils/map_navigation.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../config/config.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 class ArtDetailScreen extends StatefulWidget {
@@ -266,6 +268,23 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         ),
       ),
       actions: [
+        IconButton(
+          onPressed: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
+              sourceScreen: 'art_detail',
+            );
+          },
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.share_outlined),
+          ),
+        ),
         Consumer<ArtworkProvider>(
           builder: (context, provider, child) {
             return IconButton(
@@ -1326,6 +1345,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         }
       }
 
+      backendMessage = backendMessage?.replaceAll('â€¦', '…');
+
       final fallbackMessage = authRequired
           ? l10n.communityCommentAuthRequiredToast
           : (backendMessage ?? '${l10n.commonSomethingWentWrong} (${e.statusCode})');
@@ -1367,7 +1388,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
         SnackBar(
           content: Text(
             looksLikeNetwork
-                ? 'Network error while posting comment (backend unreachable / blocked).'
+                ? l10n.commonNetworkErrorToast
                 : l10n.commonSomethingWentWrong,
             style: GoogleFonts.outfit(),
           ),

@@ -2,16 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import '../../utils/kubus_color_roles.dart';
 import '../../utils/wallet_utils.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/avatar_widget.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../providers/app_refresh_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../providers/themeprovider.dart';
@@ -1011,165 +1011,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   void _showShareModal() {
     if (_post == null || !mounted) return;
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final searchController = TextEditingController();
-    List<Map<String, dynamic>> searchResults = [];
-    bool isSearching = false;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.symmetric(vertical: 12), decoration: BoxDecoration(color: theme.colorScheme.outline, borderRadius: BorderRadius.circular(2))),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(l10n.postDetailSharePostTitle, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface)),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(sheetContext)),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: TextField(
-                  controller: searchController,
-                  decoration: InputDecoration(
-                    hintText: l10n.postDetailSearchProfilesHint,
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: theme.colorScheme.primaryContainer,
-                  ),
-                  onChanged: (query) async {
-                    if (query.trim().isEmpty) {
-                      setModalState(() { searchResults.clear(); });
-                      return;
-                    }
-                    setModalState(() => isSearching = true);
-                    try {
-                      final resp = await BackendApiService().search(query: query, type: 'profiles', limit: 20);
-                      final list = <Map<String, dynamic>>[];
-                      if (resp['success'] == true && resp['results'] is Map) {
-                        final profiles = (resp['results']['profiles'] as List?) ?? [];
-                        for (final p in profiles) { try { list.add(p as Map<String, dynamic>); } catch (_) {} }
-                      }
-                      setModalState(() { searchResults = list; isSearching = false; });
-                    } catch (e) {
-                      setModalState(() => isSearching = false);
-                    }
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: Icon(Icons.link, color: theme.colorScheme.primary),
-                      title: Text(l10n.postDetailCopyLink, style: GoogleFonts.inter()),
-                      onTap: () async {
-                        final sheetNavigator = Navigator.of(sheetContext);
-                        final messenger = ScaffoldMessenger.of(context);
-                        final postId = _post!.id;
-
-                        await Clipboard.setData(
-                          ClipboardData(text: 'https://app.kubus.site/post/$postId'),
-                        );
-
-                        if (!mounted) return;
-                        sheetNavigator.pop();
-                        messenger.showSnackBar(
-                          SnackBar(content: Text(l10n.postDetailLinkCopiedToast)),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: Icon(Icons.share, color: theme.colorScheme.primary),
-                      title: Text(l10n.postDetailShareViaEllipsis, style: GoogleFonts.inter()),
-                      onTap: () async {
-                        Navigator.pop(sheetContext);
-                        final shareText = '${_post!.content}\\n\\n- ${_post!.authorName} on app.kubus\\n\\nhttps://app.kubus.site/post/${_post!.id}';
-                        await SharePlus.instance.share(ShareParams(text: shareText));
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              if (searchController.text.isNotEmpty) ...[
-                const Divider(),
-                Expanded(
-                  child: isSearching
-                      ? const Center(child: CircularProgressIndicator())
-                      : searchResults.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: EmptyStateCard(
-                                  icon: Icons.search_off,
-                                  title: l10n.postDetailNoProfilesFoundTitle,
-                                  description: l10n.postDetailNoProfilesFoundDescription,
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              itemCount: searchResults.length,
-                              itemBuilder: (ctx, idx) {
-                                final profile = searchResults[idx];
-                                final walletAddr = profile['wallet_address'] ?? profile['walletAddress'] ?? profile['wallet'] ?? profile['walletAddr'];
-                                final username = profile['username'] ?? walletAddr ?? l10n.commonUnknown;
-                                final display = profile['displayName'] ?? profile['display_name'] ?? username;
-                                final avatar = profile['avatar'] ?? profile['avatar_url'];
-                                return ListTile(
-                                  leading: AvatarWidget(wallet: username, avatarUrl: avatar, radius: 20),
-                                  title: Text(display ?? l10n.commonUnnamed, style: GoogleFonts.inter()),
-                                  subtitle: Text('@$username', style: GoogleFonts.inter(fontSize: 12)),
-                                  onTap: () async {
-                                    Navigator.pop(sheetContext);
-                                    final messenger = ScaffoldMessenger.of(context);
-
-                                    try {
-                                      await BackendApiService().sharePostViaDM(
-                                        postId: _post!.id,
-                                        recipientWallet: (walletAddr ?? username).toString(),
-                                        message: l10n.postDetailShareDmDefaultMessage,
-                                      );
-
-                                      if (!mounted) return;
-                                      messenger.showSnackBar(
-                                        SnackBar(content: Text(l10n.postDetailShareSuccessToast(username.toString()))),
-                                      );
-                                    } catch (e) {
-                                      if (kDebugMode) {
-                                        debugPrint('PostDetailScreen: share via DM failed: $e');
-                                      }
-                                      if (!mounted) return;
-                                      messenger.showSnackBar(
-                                        SnackBar(content: Text(l10n.postDetailShareFailedToast)),
-                                      );
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.post(postId: _post!.id, title: _post!.content),
+      sourceScreen: 'post_detail',
+      onCreatePostRequested: () async {
+        if (!mounted) return;
+        _showRepostModal();
+      },
     );
   }
 

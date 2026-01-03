@@ -11,6 +11,8 @@ import '../../models/collection_record.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/collections_provider.dart';
 import '../../providers/wallet_provider.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../utils/wallet_utils.dart';
@@ -148,6 +150,17 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 elevation: 0,
                 foregroundColor: scheme.onSurface,
                 actions: [
+                  IconButton(
+                    tooltip: l10n.commonShare,
+                    onPressed: () {
+                      ShareService().showShareSheet(
+                        context,
+                        target: ShareTarget.collection(collectionId: widget.collectionId, title: name),
+                        sourceScreen: 'collection_detail',
+                      );
+                    },
+                    icon: const Icon(Icons.share_outlined),
+                  ),
                   if (canEdit)
                     IconButton(
                       tooltip: l10n.commonEdit,

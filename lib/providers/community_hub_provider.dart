@@ -10,6 +10,8 @@ class CommunityPostDraft {
   final List<String> mentions;
   final CommunityGroupSummary? targetGroup;
   final CommunityArtworkReference? artwork;
+  final String? subjectType;
+  final String? subjectId;
   final CommunityLocation? location;
   final String? locationLabel;
 
@@ -19,6 +21,8 @@ class CommunityPostDraft {
     this.mentions = const [],
     this.targetGroup,
     this.artwork,
+    this.subjectType,
+    this.subjectId,
     this.location,
     this.locationLabel,
   });
@@ -31,6 +35,9 @@ class CommunityPostDraft {
     bool clearGroup = false,
     CommunityArtworkReference? artwork,
     bool clearArtwork = false,
+    String? subjectType,
+    String? subjectId,
+    bool clearSubject = false,
     CommunityLocation? location,
     bool clearLocation = false,
     String? locationLabel,
@@ -43,6 +50,8 @@ class CommunityPostDraft {
           mentions != null ? List<String>.from(mentions) : List<String>.from(this.mentions),
       targetGroup: clearGroup ? null : (targetGroup ?? this.targetGroup),
       artwork: clearArtwork ? null : (artwork ?? this.artwork),
+      subjectType: clearSubject ? null : (subjectType ?? this.subjectType),
+      subjectId: clearSubject ? null : (subjectId ?? this.subjectId),
       location: clearLocation ? null : (location ?? this.location),
       locationLabel: clearLocationLabel ? null : (locationLabel ?? this.locationLabel),
     );
@@ -222,6 +231,8 @@ class CommunityHubProvider extends ChangeNotifier {
     List<String>? mediaUrls,
     List<String>? mediaCids,
     String? artworkId,
+    String? subjectType,
+    String? subjectId,
     String? postType,
     String category = 'post',
     List<String>? tags,
@@ -236,6 +247,8 @@ class CommunityHubProvider extends ChangeNotifier {
       mediaUrls: mediaUrls,
       mediaCids: mediaCids,
       artworkId: artworkId,
+      subjectType: subjectType,
+      subjectId: subjectId,
       postType: postType,
       category: category,
       tags: tags,
@@ -333,6 +346,9 @@ class CommunityHubProvider extends ChangeNotifier {
   CommunityPostDraft _draft = const CommunityPostDraft();
   CommunityPostDraft get draft => _draft;
 
+  int _composerOpenNonce = 0;
+  int get composerOpenNonce => _composerOpenNonce;
+
   void resetDraft() {
     _draft = const CommunityPostDraft();
     notifyListeners();
@@ -352,6 +368,18 @@ class CommunityHubProvider extends ChangeNotifier {
 
   void setDraftArtwork(CommunityArtworkReference? artwork) {
     _draft = _draft.copyWith(artwork: artwork, clearArtwork: artwork == null);
+    notifyListeners();
+  }
+
+  void setDraftSubject({String? type, String? id}) {
+    final nextType = type?.trim();
+    final nextId = id?.trim();
+    if ((nextType == null || nextType.isEmpty) || (nextId == null || nextId.isEmpty)) {
+      _draft = _draft.copyWith(clearSubject: true);
+      notifyListeners();
+      return;
+    }
+    _draft = _draft.copyWith(subjectType: nextType, subjectId: nextId, clearSubject: false);
     notifyListeners();
   }
 
@@ -392,6 +420,38 @@ class CommunityHubProvider extends ChangeNotifier {
   void removeMention(String handle) {
     final updated = _draft.mentions.where((m) => m != handle).toList();
     _draft = _draft.copyWith(mentions: updated);
+    notifyListeners();
+  }
+
+  /// Request that a community composer opens (mobile sheet or desktop inline),
+  /// optionally pre-seeded with a linked subject.
+  void requestComposerOpen({
+    String? presetCategory,
+    CommunityGroupSummary? presetGroup,
+    CommunityArtworkReference? presetArtwork,
+    String? subjectType,
+    String? subjectId,
+  }) {
+    final nextCategory = presetCategory?.trim();
+    if (nextCategory != null && nextCategory.isNotEmpty) {
+      _draft = _draft.copyWith(category: nextCategory);
+    }
+    if (presetGroup != null) {
+      _draft = _draft.copyWith(targetGroup: presetGroup, clearGroup: false);
+    }
+    if (presetArtwork != null) {
+      _draft = _draft.copyWith(artwork: presetArtwork, clearArtwork: false);
+    }
+    final nextSubjectType = subjectType?.trim();
+    final nextSubjectId = subjectId?.trim();
+    if (nextSubjectType != null &&
+        nextSubjectType.isNotEmpty &&
+        nextSubjectId != null &&
+        nextSubjectId.isNotEmpty) {
+      _draft = _draft.copyWith(subjectType: nextSubjectType, subjectId: nextSubjectId, clearSubject: false);
+    }
+
+    _composerOpenNonce++;
     notifyListeners();
   }
 }

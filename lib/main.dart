@@ -39,8 +39,10 @@ import 'providers/analytics_filters_provider.dart';
 import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
 import 'providers/auth_session_provider.dart';
+import 'providers/deep_link_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/app_navigator.dart';
+import 'core/deep_link_bootstrap_screen.dart';
 import 'main_app.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -57,6 +59,7 @@ import 'services/backend_api_service.dart';
 import 'screens/collab/invites_inbox_screen.dart';
 import 'screens/events/event_detail_screen.dart';
 import 'screens/events/exhibition_detail_screen.dart';
+import 'services/share/share_deep_link_parser.dart';
 
 void main() {
   // We'll initialize the bindings inside the runZonedGuarded callback so the
@@ -264,6 +267,7 @@ class _AppLauncherState extends State<AppLauncher> {
               ChangeNotifierProvider(create: (context) => CacheProvider()),
               ChangeNotifierProvider(create: (context) => CommunityHubProvider()),
               ChangeNotifierProvider(create: (context) => CommunityCommentsProvider()),
+              ChangeNotifierProvider(create: (context) => DeepLinkProvider()),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, CollabProvider>(
@@ -437,6 +441,24 @@ class _ArtKubusState extends State<ArtKubus> with WidgetsBindingObserver {
           theme: themeProvider.lightTheme,
           darkTheme: themeProvider.darkTheme,
           themeMode: themeProvider.themeMode,
+          onGenerateRoute: (settings) {
+            final name = (settings.name ?? '').trim();
+            if (name.isEmpty) {
+              return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
+            }
+
+            final uri = Uri.tryParse(name) ?? Uri(path: name);
+            final target = const ShareDeepLinkParser().parse(uri);
+            if (target != null) {
+              return MaterialPageRoute(
+                builder: (_) => DeepLinkBootstrapScreen(target: target),
+                settings: settings,
+              );
+            }
+
+            // Fall back to the main initializer for unknown named routes (e.g. browser refresh on /foo).
+            return MaterialPageRoute(builder: (_) => const AppInitializer(), settings: settings);
+          },
           home: const AppInitializer(),
           routes: {
             '/main': (context) => const MainApp(),

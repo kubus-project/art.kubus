@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 
 import 'package:art_kubus/l10n/app_localizations.dart';
 
@@ -11,6 +10,8 @@ import '../../../providers/artwork_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../services/backend_api_service.dart';
+import '../../../services/share/share_service.dart';
+import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/avatar_widget.dart';
@@ -366,18 +367,12 @@ class _DesktopArtworkDetailScreenState extends State<DesktopArtworkDetailScreen>
         _actionButton(
           icon: Icons.share_outlined,
           label: l10n.commonShare,
-          onPressed: () async {
-            try {
-              final shareText = l10n.arShareText(
-                artwork.title.isNotEmpty ? artwork.title : l10n.commonUnknown,
-                artwork.artist.isNotEmpty ? artwork.artist : l10n.commonUnknown,
-              );
-              await SharePlus.instance.share(ShareParams(text: shareText));
-            } catch (_) {
-              messenger.showSnackBar(
-                SnackBar(content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter())),
-              );
-            }
+          onPressed: () {
+            ShareService().showShareSheet(
+              context,
+              target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
+              sourceScreen: 'desktop_art_detail',
+            );
           },
           foreground: scheme.onSurface,
           background: scheme.surfaceContainerHighest,

@@ -20,6 +20,8 @@ import '../../../utils/artwork_media_resolver.dart';
 import '../../../utils/rarity_ui.dart';
 import '../../../utils/app_color_utils.dart';
 import '../../../utils/kubus_color_roles.dart';
+import '../../../services/share/share_service.dart';
+import '../../../services/share/share_types.dart';
 
 class Marketplace extends StatefulWidget {
   const Marketplace({super.key});
@@ -1816,7 +1818,14 @@ class _MarketplaceState extends State<Marketplace>
                         const SizedBox(width: 12),
                         IconButton(
                           onPressed: () {
-                            // Share functionality
+                            ShareService().showShareSheet(
+                              context,
+                              target: ShareTarget.artwork(
+                                artworkId: series.artworkId,
+                                title: series.name,
+                              ),
+                              sourceScreen: 'marketplace_series',
+                            );
                           },
                           icon: Container(
                             padding: const EdgeInsets.all(12),

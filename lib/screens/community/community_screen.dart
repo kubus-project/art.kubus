@@ -17,7 +17,6 @@ import '../../widgets/empty_state_card.dart';
 import '../../widgets/community/community_post_card.dart';
 import '../../widgets/community/community_post_options_sheet.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -34,6 +33,8 @@ import '../../providers/community_hub_provider.dart';
 import '../../providers/community_comments_provider.dart';
 import '../../models/community_group.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../services/block_list_service.dart';
 import '../../services/push_notification_service.dart';
 import '../map_screen.dart';
@@ -93,6 +94,7 @@ class _CommunityScreenState extends State<CommunityScreen>
   int _messageUnreadCount = 0;
   int _bellUnreadCount = 0;
   bool _animationsInitialized = false;
+  int _lastHandledComposerOpenNonce = 0;
 
   late TabController _tabController;
 
@@ -1098,6 +1100,8 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   @override
   Widget build(BuildContext context) {
+    final hub = context.watch<CommunityHubProvider>();
+    _maybeHandleComposerOpenRequest(hub);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -2068,12 +2072,13 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
             trailing: IconButton(
               tooltip: l10n.commonShare,
-              onPressed: () => SharePlus.instance.share(
-                ShareParams(
-                  text:
-                      l10n.communityArtFeedShareText(post.authorName),
-                ),
-              ),
+              onPressed: () {
+                ShareService().showShareSheet(
+                  context,
+                  target: ShareTarget.post(postId: post.id, title: post.content),
+                  sourceScreen: 'community_art_feed',
+                );
+              },
               icon: const Icon(Icons.share_outlined),
             ),
           ),
@@ -4006,9 +4011,10 @@ class _CommunityScreenState extends State<CommunityScreen>
     CommunityGroupSummary? presetGroup,
     String? presetCategory,
     bool artContext = false,
+    bool resetDraft = true,
   }) {
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
-    hub.resetDraft();
+    if (resetDraft) hub.resetDraft();
 
     final seedCategory =
         presetCategory ?? (artContext ? 'art_drop' : null);
@@ -5831,6 +5837,8 @@ class _CommunityScreenState extends State<CommunityScreen>
     final location = draft.location;
     final locationLabel = draft.locationLabel ?? location?.name;
     final artworkId = draft.artwork?.id;
+    final subjectType = draft.subjectType;
+    final subjectId = draft.subjectId;
     final postType = _resolveComposerPostType();
     final tags = draft.tags;
     final mentions = draft.mentions;
@@ -5842,6 +5850,8 @@ class _CommunityScreenState extends State<CommunityScreen>
         content: content,
         mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
         artworkId: artworkId,
+        subjectType: subjectType,
+        subjectId: subjectId,
         postType: postType,
         category: category,
         tags: tags,
@@ -5859,6 +5869,8 @@ class _CommunityScreenState extends State<CommunityScreen>
       content: content,
       mediaUrls: mediaUrls.isEmpty ? null : mediaUrls,
       artworkId: artworkId,
+      subjectType: subjectType,
+      subjectId: subjectId,
       postType: postType,
       category: category,
       tags: tags,
@@ -7037,231 +7049,27 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   void _showShareModal(CommunityPost post) {
     if (!mounted) return;
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-    final searchController = TextEditingController();
-    List<Map<String, dynamic>> searchResults = [];
-    bool isSearching = false;
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (sheetContext) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  decoration: BoxDecoration(
-                      color: theme.colorScheme.outline,
-                      borderRadius: BorderRadius.circular(2))),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(l10n.postDetailSharePostTitle,
-                        style: GoogleFonts.inter(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface)),
-                    IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(sheetContext)),
-                  ],
-                ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                child: TextField(
-                  controller: searchController,
-                  decoration: InputDecoration(
-                    hintText: l10n.postDetailSearchProfilesHint,
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    filled: true,
-                    fillColor: theme.colorScheme.primaryContainer,
-                  ),
-                  onChanged: (query) async {
-                    if (query.trim().isEmpty) {
-                      setModalState(() {
-                        searchResults.clear();
-                      });
-                      return;
-                    }
-                    setModalState(() => isSearching = true);
-                    try {
-                      final resp = await BackendApiService()
-                          .search(query: query, type: 'profiles', limit: 20);
-                      final list = <Map<String, dynamic>>[];
-                      if (resp['success'] == true && resp['results'] is Map) {
-                        final profiles =
-                            (resp['results']['profiles'] as List?) ?? [];
-                        for (final p in profiles) {
-                          try {
-                            list.add(p as Map<String, dynamic>);
-                          } catch (_) {}
-                        }
-                      }
-                      setModalState(() {
-                        searchResults = list;
-                        isSearching = false;
-                      });
-                    } catch (e) {
-                      setModalState(() => isSearching = false);
-                    }
-                  },
-                ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading:
-                          Icon(Icons.link, color: theme.colorScheme.primary),
-                      title: Text(l10n.postDetailCopyLink, style: GoogleFonts.inter()),
-                      onTap: () async {
-                        final messenger = ScaffoldMessenger.of(context);
-                        final sheetNavigator = Navigator.of(sheetContext);
-                        await Clipboard.setData(ClipboardData(
-                            text: 'https://app.kubus.site/post/${post.id}'));
-                        if (!mounted) return;
-                        sheetNavigator.pop();
-                        messenger.showSnackBar(
-                          SnackBar(content: Text(l10n.postDetailLinkCopiedToast)),
-                        );
-
-                        // Track analytics
-                        BackendApiService().trackAnalyticsEvent(
-                          eventType: 'share_copy_link',
-                          postId: post.id,
-                          metadata: {'method': 'copy_link'},
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading:
-                          Icon(Icons.share, color: theme.colorScheme.primary),
-                      title: Text(l10n.postDetailShareViaEllipsis, style: GoogleFonts.inter()),
-                      onTap: () async {
-                        Navigator.pop(sheetContext);
-                        final shareText =
-                            '${post.content}\n\n- ${post.authorName} on app.kubus\n\nhttps://app.kubus.site/post/${post.id}';
-                        await SharePlus.instance
-                            .share(ShareParams(text: shareText));
-                        BackendApiService().trackAnalyticsEvent(
-                          eventType: 'share_external',
-                          postId: post.id,
-                          metadata: {'method': 'platform_share'},
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              if (searchController.text.isNotEmpty) ...[
-                const Divider(),
-                Expanded(
-                  child: isSearching
-                      ? const Center(child: CircularProgressIndicator())
-                      : searchResults.isEmpty
-                          ? Center(
-                              child: EmptyStateCard(
-                                icon: Icons.person_search,
-                                title: l10n.postDetailNoProfilesFoundTitle,
-                                description: l10n.postDetailNoProfilesFoundDescription,
-                              ),
-                            )
-                          : ListView.builder(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
-                              itemCount: searchResults.length,
-                              itemBuilder: (ctx, idx) {
-                                final profile = searchResults[idx];
-                                final walletAddr = profile['wallet_address'] ??
-                                    profile['walletAddress'] ??
-                                    profile['wallet'] ??
-                                    profile['walletAddr'];
-                                final username = profile['username'] ??
-                                    walletAddr ??
-                                  l10n.commonUnknown;
-                                final display = profile['displayName'] ??
-                                    profile['display_name'] ??
-                                    username;
-                                final avatar =
-                                    profile['avatar'] ?? profile['avatar_url'];
-                                return ListTile(
-                                  leading: AvatarWidget(
-                                      wallet: username,
-                                      avatarUrl: avatar,
-                                      radius: 20),
-                                    title: Text(display ?? l10n.commonUnnamed,
-                                      style: GoogleFonts.inter()),
-                                  subtitle: Text('@$username',
-                                      style: GoogleFonts.inter(fontSize: 12)),
-                                  onTap: () async {
-                                    Navigator.pop(sheetContext);
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
-
-                                    try {
-                                      // Share post via DM
-                                      await BackendApiService().sharePostViaDM(
-                                        postId: post.id,
-                                        recipientWallet: walletAddr ?? username,
-                                        message: l10n.postDetailShareDmDefaultMessage,
-                                      );
-                                      BackendApiService().trackAnalyticsEvent(
-                                        eventType: 'share_dm',
-                                        postId: post.id,
-                                        metadata: {
-                                          'recipient': walletAddr ?? username
-                                        },
-                                      );
-
-                                      if (!mounted) return;
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            l10n.postDetailShareSuccessToast(username.toString()),
-                                          ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (kDebugMode) {
-                                        debugPrint('CommunityScreen: share via DM failed: $e');
-                                      }
-                                      if (!mounted) return;
-                                      messenger.showSnackBar(
-                                        SnackBar(
-                                          content: Text(l10n.postDetailShareFailedToast),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.post(postId: post.id, title: post.content),
+      sourceScreen: 'community_feed',
+      onCreatePostRequested: () async {
+        if (!mounted) return;
+        _showRepostModal(post);
+      },
     );
+  }
+
+  void _maybeHandleComposerOpenRequest(CommunityHubProvider hub) {
+    final nonce = hub.composerOpenNonce;
+    if (nonce == 0) return;
+    if (nonce == _lastHandledComposerOpenNonce) return;
+    _lastHandledComposerOpenNonce = nonce;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _createNewPost(resetDraft: false);
+    });
   }
 
   void _showRepostModal(CommunityPost post) {

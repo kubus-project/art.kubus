@@ -15,6 +15,8 @@ import '../../providers/task_provider.dart';
 import '../../providers/artwork_provider.dart';
 import '../../providers/stats_provider.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../utils/media_url_resolver.dart';
 import '../../community/community_interactions.dart';
 import '../web3/wallet/wallet_home.dart';
@@ -2068,79 +2070,16 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   // Navigation and interaction methods
   void _shareProfile() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.outline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Share Profile',
-              style: GoogleFonts.inter(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildShareOption(Icons.link, 'Copy Link'),
-                _buildShareOption(Icons.qr_code, 'QR Code'),
-                _buildShareOption(Icons.share, 'Social'),
-              ],
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
+    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+    final wallet = (profileProvider.currentUser?.walletAddress ?? '').trim();
+    if (wallet.isEmpty) return;
+    ShareService().showShareSheet(
+      context,
+      target: ShareTarget.profile(
+        walletAddress: wallet,
+        title: profileProvider.currentUser?.displayName ?? profileProvider.currentUser?.username,
       ),
-    );
-  }
-
-  Widget _buildShareOption(IconData icon, String label) {
-    return GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Provider.of<ThemeProvider>(context).accentColor.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(30),
-            ),
-            child: Icon(
-              icon,
-              color: Provider.of<ThemeProvider>(context).accentColor,
-              size: 30,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
+      sourceScreen: 'profile',
     );
   }
 

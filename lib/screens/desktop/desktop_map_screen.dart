@@ -22,6 +22,8 @@ import '../../models/exhibition.dart';
 import '../../models/map_marker_subject.dart';
 import '../../config/config.dart';
 import '../../services/backend_api_service.dart';
+import '../../services/share/share_service.dart';
+import '../../services/share/share_types.dart';
 import '../../services/map_marker_service.dart';
 import '../../services/ar_service.dart';
 import '../../utils/map_marker_subject_loader.dart';
@@ -884,22 +886,11 @@ class _DesktopMapScreenState extends State<DesktopMapScreen>
                       const SizedBox(width: 8),
                       IconButton(
                         onPressed: () {
-                          final shellScope = DesktopShellScope.of(context);
-                          if (shellScope != null) {
-                            shellScope.pushScreen(
-                              DesktopSubScreen(
-                                title: artwork.title,
-                                child: DesktopArtworkDetailScreen(artworkId: artwork.id),
-                              ),
-                            );
-                          } else {
-                            unawaited(Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    DesktopArtworkDetailScreen(artworkId: artwork.id, showAppBar: true),
-                              ),
-                            ));
-                          }
+                          ShareService().showShareSheet(
+                            context,
+                            target: ShareTarget.artwork(artworkId: artwork.id, title: artwork.title),
+                            sourceScreen: 'desktop_map',
+                          );
                         },
                         icon: const Icon(Icons.share, size: 20),
                         style: IconButton.styleFrom(
