@@ -45,62 +45,78 @@ class _AppInitializerState extends State<AppInitializer> {
     });
   }
 
+  Future<T?> _safeStep<T>(
+    String label,
+    Future<T> Function() step, {
+    Duration timeout = const Duration(seconds: 8),
+  }) async {
+    try {
+      return await step().timeout(timeout);
+    } catch (e) {
+      AppConfig.debugPrint('AppInitializer: $label failed: $e');
+      return null;
+    }
+  }
+
   Future<void> _initializeApp() async {
-    // Load JWT token for backend authentication
-    await BackendApiService().loadAuthToken();
-    if (!mounted) return;
+    final navigator = Navigator.of(context);
 
-    final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
-    await localeProvider.initialize();
-    if (!mounted) return;
-    
-    // Initialize ConfigProvider first
-    final configProvider = Provider.of<ConfigProvider>(context, listen: false);
-    await configProvider.initialize();
-    if (!mounted) return;
+    try {
+      // Load JWT token for backend authentication (do not block indefinitely on startup).
+      await _safeStep<void>(
+        'loadAuthToken',
+        BackendApiService().loadAuthToken,
+        timeout: const Duration(seconds: 3),
+      );
+      if (!mounted) return;
 
-    // Ensure cache provider is hydrated before any screen depends on it.
-    final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
-    await cacheProvider.initialize();
-    if (!mounted) return;
-    
-    // Initialize WalletProvider early to restore cached wallet
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    await walletProvider.initialize();
-    final walletAddress = walletProvider.currentWalletAddress;
-    if (!mounted) return;
-    
-    // Sync Web3Provider with WalletProvider if wallet was restored
-    if (walletAddress != null) {
-      final web3Provider = Provider.of<Web3Provider>(context, listen: false);
-      try {
-        await web3Provider.connectExistingWallet(walletAddress);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('AppInitializer: Web3Provider sync failed: $e');
+      final localeProvider = Provider.of<LocaleProvider>(context, listen: false);
+      await _safeStep<void>('locale.initialize', localeProvider.initialize, timeout: const Duration(seconds: 4));
+      if (!mounted) return;
+
+      // Initialize ConfigProvider first
+      final configProvider = Provider.of<ConfigProvider>(context, listen: false);
+      await _safeStep<void>('config.initialize', configProvider.initialize, timeout: const Duration(seconds: 6));
+      if (!mounted) return;
+
+      // Ensure cache provider is hydrated before any screen depends on it.
+      final cacheProvider = Provider.of<CacheProvider>(context, listen: false);
+      await _safeStep<void>('cache.initialize', cacheProvider.initialize, timeout: const Duration(seconds: 6));
+      if (!mounted) return;
+
+      // Initialize WalletProvider early to restore cached wallet (safe for fresh starts).
+      final walletProvider = Provider.of<WalletProvider>(context, listen: false);
+      await _safeStep<void>('wallet.initialize', walletProvider.initialize, timeout: const Duration(seconds: 8));
+      final walletAddress = walletProvider.currentWalletAddress;
+      if (!mounted) return;
+
+      // Sync Web3Provider with WalletProvider if wallet was restored
+      if (walletAddress != null && walletAddress.isNotEmpty) {
+        final web3Provider = Provider.of<Web3Provider>(context, listen: false);
+        try {
+          await web3Provider.connectExistingWallet(walletAddress).timeout(const Duration(seconds: 6));
+        } catch (e) {
+          AppConfig.debugPrint('AppInitializer: Web3Provider sync failed: $e');
         }
       }
-    }
-    if (!mounted) return;
-    
-    // Initialize ProfileProvider and load profile if wallet exists
-    final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
-    await profileProvider.initialize();
-    if (walletAddress != null && walletAddress.isNotEmpty) {
-      try {
-        await profileProvider.loadProfile(walletAddress);
-      } catch (e) {
-        if (kDebugMode) {
-          debugPrint('AppInitializer: ProfileProvider load failed: $e');
+      if (!mounted) return;
+
+      // Initialize ProfileProvider and load profile if wallet exists
+      final profileProvider = Provider.of<ProfileProvider>(context, listen: false);
+      await _safeStep<void>('profile.initialize', profileProvider.initialize, timeout: const Duration(seconds: 8));
+      if (walletAddress != null && walletAddress.isNotEmpty) {
+        try {
+          await profileProvider.loadProfile(walletAddress).timeout(const Duration(seconds: 6));
+        } catch (e) {
+          AppConfig.debugPrint('AppInitializer: ProfileProvider load failed: $e');
         }
       }
-    }
-    if (!mounted) return;
-    
-    // Initialize SavedItemsProvider
-    final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
-    await savedItemsProvider.initialize();
-    if (!mounted) return;
+      if (!mounted) return;
+
+      // Initialize SavedItemsProvider
+      final savedItemsProvider = Provider.of<SavedItemsProvider>(context, listen: false);
+      await _safeStep<void>('saved_items.initialize', savedItemsProvider.initialize, timeout: const Duration(seconds: 6));
+      if (!mounted) return;
     
     // Initialize ArtworkProvider (no mock data needed)
     final artworkProvider = Provider.of<ArtworkProvider>(context, listen: false);
@@ -108,9 +124,19 @@ class _AppInitializerState extends State<AppInitializer> {
     
     // ProfileProvider always uses backend data (no setUseMockData method)
     
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _safeStep<SharedPreferences>(
+          'SharedPreferences.getInstance',
+          SharedPreferences.getInstance,
+          timeout: const Duration(seconds: 5),
+        ) ??
+        (throw Exception('SharedPreferences unavailable'));
 
-    final onboardingState = await OnboardingStateService.load(prefs: prefs);
+    final onboardingState = await _safeStep<OnboardingState>(
+          'OnboardingStateService.load',
+          () => OnboardingStateService.load(prefs: prefs),
+          timeout: const Duration(seconds: 5),
+        ) ??
+        (throw Exception('OnboardingState unavailable'));
     
     // Check user preference for skipping onboarding (defaults to config setting)
     final userSkipOnboarding = prefs.getBool('skipOnboardingForReturningUsers') ?? AppConfig.skipOnboardingForReturningUsers;
@@ -172,7 +198,7 @@ class _AppInitializerState extends State<AppInitializer> {
     if (pendingDeepLink != null) {
       await warmupFuture;
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
+      navigator.pushReplacement(
         MaterialPageRoute(builder: (context) => const MainApp()),
       );
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -194,11 +220,11 @@ class _AppInitializerState extends State<AppInitializer> {
       await warmupFuture;
       if (!mounted) return;
       if (shouldShowSignIn) {
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const SignInScreen()),
         );
       } else {
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const MainApp()),
         );
       }
@@ -210,7 +236,7 @@ class _AppInitializerState extends State<AppInitializer> {
           debugPrint('AppInitializer: route -> DesktopOnboardingScreen');
         }
         unawaited(warmupFuture);
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const DesktopOnboardingScreen()),
         );
       } else {
@@ -218,7 +244,7 @@ class _AppInitializerState extends State<AppInitializer> {
           debugPrint('AppInitializer: route -> OnboardingScreen');
         }
         unawaited(warmupFuture);
-        Navigator.of(context).pushReplacement(
+        navigator.pushReplacement(
           MaterialPageRoute(builder: (context) => const OnboardingScreen()),
         );
       }
@@ -229,8 +255,17 @@ class _AppInitializerState extends State<AppInitializer> {
       }
       await warmupFuture;
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
+      navigator.pushReplacement(
         MaterialPageRoute(builder: (context) => shouldShowSignIn ? const SignInScreen() : const MainApp()),
+      );
+    }
+    } catch (e, st) {
+      AppConfig.debugPrint('AppInitializer: initialization failed: $e');
+      AppConfig.debugPrint('AppInitializer: init stack: $st');
+      if (!mounted) return;
+      final isDesktop = DesktopBreakpoints.isDesktop(context);
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => isDesktop ? const DesktopOnboardingScreen() : const OnboardingScreen()),
       );
     }
   }

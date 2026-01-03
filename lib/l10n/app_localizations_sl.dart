@@ -129,6 +129,38 @@ class AppLocalizationsSl extends AppLocalizations {
   String get commonShare => 'Deli';
 
   @override
+  String get shareOptionCreatePost => 'Ustvari objavo v skupnosti';
+
+  @override
+  String get shareOptionSendMessage => 'Pošlji v sporočilu';
+
+  @override
+  String get shareOptionShareExternal => 'Deli izven aplikacije';
+
+  @override
+  String get shareLinkCopiedToast => 'Povezava kopirana v odložišče';
+
+  @override
+  String get shareMessageTitle => 'Pošlji v sporočilu';
+
+  @override
+  String get shareMessageSearchHint => 'Išči profile…';
+
+  @override
+  String get shareMessageNoteHint => 'Dodaj sporočilo (neobvezno)';
+
+  @override
+  String get shareDmDefaultMessage => 'Poglej si to na art.kubus';
+
+  @override
+  String shareMessageSentToast(String recipient) {
+    return 'Poslano: $recipient';
+  }
+
+  @override
+  String get shareMessageFailedToast => 'Pošiljanje sporočila ni uspelo.';
+
+  @override
   String get commonFeed => 'Objave';
 
   @override
@@ -4201,6 +4233,18 @@ class AppLocalizationsSl extends AppLocalizations {
   String get artDetailLoadFailedMessage => 'Nalaganje podrobnosti umetnine ni uspelo. Poskusi znova.';
 
   @override
+  String get artworkDetailLike => 'Všečkaj';
+
+  @override
+  String get artworkDetailLiked => 'Všečkano';
+
+  @override
+  String get artworkDetailHideComments => 'Skrij komentarje';
+
+  @override
+  String get artworkDetailMintNft => 'Izdaj kot NFT';
+
+  @override
   String get eventCreatorSelectStartEndDatesToast => 'Prosim, izberi začetni in končni datum';
 
   @override
@@ -5319,38 +5363,6 @@ class AppLocalizationsSl extends AppLocalizations {
   String get postDetailShareViaEllipsis => 'Deli prek…';
 
   @override
-  String get shareOptionCreatePost => 'Ustvari objavo v skupnosti';
-
-  @override
-  String get shareOptionSendMessage => 'Pošlji v sporočilu';
-
-  @override
-  String get shareOptionShareExternal => 'Deli izven aplikacije';
-
-  @override
-  String get shareLinkCopiedToast => 'Povezava kopirana v odložišče';
-
-  @override
-  String get shareMessageTitle => 'Pošlji v sporočilu';
-
-  @override
-  String get shareMessageSearchHint => 'Išči profile…';
-
-  @override
-  String get shareMessageNoteHint => 'Dodaj sporočilo (neobvezno)';
-
-  @override
-  String get shareDmDefaultMessage => 'Poglej si to na art.kubus';
-
-  @override
-  String shareMessageSentToast(Object recipient) {
-    return 'Poslano: $recipient';
-  }
-
-  @override
-  String get shareMessageFailedToast => 'Pošiljanje sporočila ni uspelo.';
-
-  @override
   String get postDetailNoProfilesFoundTitle => 'Profilov ni bilo mogoče najti';
 
   @override
@@ -6439,10 +6451,10 @@ class AppLocalizationsSl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count let',
-      few: '$count leta',
-      two: '$count leti',
-      one: '$count leto',
+      other: '# let',
+      few: '# leta',
+      two: '# leti',
+      one: '# leto',
     );
     return '$_temp0';
   }

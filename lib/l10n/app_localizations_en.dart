@@ -129,6 +129,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonShare => 'Share';
 
   @override
+  String get shareOptionCreatePost => 'Create community post';
+
+  @override
+  String get shareOptionSendMessage => 'Send in message';
+
+  @override
+  String get shareOptionShareExternal => 'Share outside app';
+
+  @override
+  String get shareLinkCopiedToast => 'Link copied to clipboard';
+
+  @override
+  String get shareMessageTitle => 'Send in message';
+
+  @override
+  String get shareMessageSearchHint => 'Search profiles…';
+
+  @override
+  String get shareMessageNoteHint => 'Add a message (optional)';
+
+  @override
+  String get shareDmDefaultMessage => 'Check this out on art.kubus';
+
+  @override
+  String shareMessageSentToast(String recipient) {
+    return 'Sent to $recipient';
+  }
+
+  @override
+  String get shareMessageFailedToast => 'Failed to send message.';
+
+  @override
   String get commonFeed => 'Feed';
 
   @override
@@ -4187,6 +4219,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get artDetailLoadFailedMessage => 'Failed to load artwork details. Please try again.';
 
   @override
+  String get artworkDetailLike => 'Like';
+
+  @override
+  String get artworkDetailLiked => 'Liked';
+
+  @override
+  String get artworkDetailHideComments => 'Hide comments';
+
+  @override
+  String get artworkDetailMintNft => 'Mint as NFT';
+
+  @override
   String get eventCreatorSelectStartEndDatesToast => 'Please select start and end dates';
 
   @override
@@ -5299,38 +5343,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get postDetailShareViaEllipsis => 'Share via…';
 
   @override
-  String get shareOptionCreatePost => 'Create community post';
-
-  @override
-  String get shareOptionSendMessage => 'Send in message';
-
-  @override
-  String get shareOptionShareExternal => 'Share outside app';
-
-  @override
-  String get shareLinkCopiedToast => 'Link copied to clipboard';
-
-  @override
-  String get shareMessageTitle => 'Send in message';
-
-  @override
-  String get shareMessageSearchHint => 'Search profiles…';
-
-  @override
-  String get shareMessageNoteHint => 'Add a message (optional)';
-
-  @override
-  String get shareDmDefaultMessage => 'Check this out on art.kubus';
-
-  @override
-  String shareMessageSentToast(Object recipient) {
-    return 'Sent to $recipient';
-  }
-
-  @override
-  String get shareMessageFailedToast => 'Failed to send message.';
-
-  @override
   String get postDetailNoProfilesFoundTitle => 'No profiles found';
 
   @override
@@ -6417,8 +6429,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count years',
-      one: '$count year',
+      other: '# years',
+      one: '# year',
     );
     return '$_temp0';
   }
