@@ -91,6 +91,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final post = _post;
         if (!mounted || post == null) return;
+        try {
+          context.read<CommunitySubjectProvider>().primeFromPosts([post]);
+        } catch (_) {}
         context.read<CommunityCommentsProvider>().loadComments(post.id, force: true);
       });
     } else if (widget.postId != null) {

@@ -1009,6 +1009,9 @@ class _CommunityScreenState extends State<CommunityScreen>
         final post = await BackendApiService().getCommunityPostById(id);
         if (_isDuplicatePost(post)) return;
         if (!mounted) return;
+        try {
+          context.read<CommunitySubjectProvider>().primeFromPosts([post]);
+        } catch (_) {}
 
         final atTop = _feedScrollController.hasClients
             ? _feedScrollController.offset <= 120
@@ -5936,21 +5939,56 @@ class _CommunityScreenState extends State<CommunityScreen>
     }
   }
 
+  CommunityPost _mergeDraftSubject(
+    CommunityPost createdPost,
+    CommunityPostDraft draft,
+  ) {
+    final createdType = (createdPost.subjectType ?? '').trim();
+    final createdId = (createdPost.subjectId ?? '').trim();
+    final draftType = (draft.subjectType ?? '').trim();
+    final draftId = (draft.subjectId ?? '').trim();
+
+    var resolved = createdPost;
+    final needsType = createdType.isEmpty;
+    final needsId = createdId.isEmpty;
+    if ((needsType || needsId) && draftType.isNotEmpty && draftId.isNotEmpty) {
+      resolved = resolved.copyWith(
+        subjectType: needsType ? draftType : createdType,
+        subjectId: needsId ? draftId : createdId,
+        artwork: (draftType == 'artwork' && draft.artwork != null)
+            ? draft.artwork
+            : resolved.artwork,
+      );
+    } else if (createdType == 'artwork' &&
+        resolved.artwork == null &&
+        draft.artwork != null &&
+        draft.artwork!.id == createdId) {
+      resolved = resolved.copyWith(artwork: draft.artwork);
+    }
+
+    return resolved;
+  }
+
   void _handlePostSuccess(CommunityPost createdPost,
       {required bool isGroupPost}) {
     final hub = Provider.of<CommunityHubProvider>(context, listen: false);
+    final subjectProvider =
+        Provider.of<CommunitySubjectProvider>(context, listen: false);
+    final draft = hub.draft;
+    final resolvedPost = _mergeDraftSubject(createdPost, draft);
     hub.resetDraft();
     if (!mounted) return;
+    subjectProvider.primeFromPosts([resolvedPost]);
     setState(() {
       _newPostController.clear();
       _selectedPostImage = null;
       _selectedPostImageBytes = null;
       _selectedPostVideo = null;
       if (!isGroupPost) {
-        if (createdPost.id.isNotEmpty) {
-          _recentlyCreatedPostIds.add(createdPost.id);
+        if (resolvedPost.id.isNotEmpty) {
+          _recentlyCreatedPostIds.add(resolvedPost.id);
         }
-        final updated = [createdPost, ..._communityPosts];
+        final updated = [resolvedPost, ..._communityPosts];
         _communityPosts = updated;
         if (_activeFeed == CommunityFeedType.following) {
           _followingFeedPosts = updated;

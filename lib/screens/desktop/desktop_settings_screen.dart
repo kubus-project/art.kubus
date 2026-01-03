@@ -15,6 +15,7 @@ import '../../services/backend_api_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/settings_service.dart';
 import '../../widgets/avatar_widget.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import '../../utils/app_animations.dart';
 import 'components/desktop_widgets.dart';
 import 'community/desktop_profile_edit_screen.dart';
@@ -272,11 +273,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
     ];
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(DetailSpacing.lg),
       children: [
         // Header with back button
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(DetailSpacing.lg),
           child: Row(
             children: [
               IconButton(
@@ -287,15 +288,11 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 ),
                 tooltip: l10n.commonBack,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: DetailSpacing.sm),
               Expanded(
                 child: Text(
                   l10n.settingsTitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                  style: DetailTypography.sectionTitle(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -303,23 +300,23 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: DetailSpacing.sm),
 
         // Settings items
         ...settingsItems.map((item) => _buildSettingsSidebarItem(item, themeProvider)),
 
-        const SizedBox(height: 24),
+        SizedBox(height: DetailSpacing.xl),
         const Divider(),
-        const SizedBox(height: 16),
+        SizedBox(height: DetailSpacing.lg),
 
         // Logout button
         Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: _handleLogout,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(DetailRadius.md),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(DetailSpacing.lg),
               child: Row(
                 children: [
                   Icon(
@@ -327,12 +324,10 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     size: 22,
                     color: errorColor,
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: DetailSpacing.lg),
                   Text(
                     l10n.settingsLogoutButton,
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                    style: DetailTypography.label(context).copyWith(
                       color: errorColor,
                     ),
                   ),
@@ -384,13 +379,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         onTap: () {
           setState(() => _selectedSettingsIndex = item.index);
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DetailRadius.md),
         child: Container(
           key: ValueKey('desktop_settings_sidebar_item_${item.index}'),
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(DetailSpacing.lg),
           decoration: BoxDecoration(
             color: isSelected ? sectionColor.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(DetailRadius.md),
           ),
           child: Row(
             children: [
@@ -401,15 +396,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                     ? sectionColor
                     : scheme.onSurface.withValues(alpha: 0.6),
               ),
-               const SizedBox(width: 16),
+               SizedBox(width: DetailSpacing.lg),
               Expanded(
                 child: Text(
                   item.title,
-                  style: GoogleFonts.inter(
-                    fontSize: 15,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? sectionColor : scheme.onSurface,
-                  ),
+                  style: isSelected 
+                      ? DetailTypography.label(context).copyWith(color: sectionColor)
+                      : DetailTypography.body(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -486,7 +479,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         String displayCount(int value) => isLoading ? '\u2026' : value.toString();
 
         return Container(
-          padding: const EdgeInsets.all(32),
+          padding: EdgeInsets.all(DetailSpacing.xxl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -495,7 +488,7 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                 padding: EdgeInsets.zero,
                 showBorder: false,
                 child: Container(
-                  padding: const EdgeInsets.all(32),
+                  padding: EdgeInsets.all(DetailSpacing.xxl),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topLeft,
@@ -505,17 +498,17 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         headerColor.withValues(alpha: 0.8),
                       ],
                     ),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(DetailRadius.xl),
                   ),
                   child: Row(
                     children: [
                       AvatarWidget(
                         avatarUrl: user?.avatar,
                         wallet: user?.walletAddress ?? '',
-                        radius: 48,
+                        radius: 52,
                         allowFabricatedFallback: true,
                       ),
-                      const SizedBox(width: 24),
+                      SizedBox(width: DetailSpacing.xl),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,13 +516,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                             Text(
                               user?.displayName ?? l10n.settingsGuestUserName,
                               style: GoogleFonts.inter(
-                                fontSize: 24,
+                                fontSize: 26,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
                             if (user?.bio != null) ...[
-                              const SizedBox(height: 4),
+                              SizedBox(height: DetailSpacing.xs),
                               Text(
                                 user!.bio,
                                 style: GoogleFonts.inter(
@@ -540,13 +533,13 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
-                            const SizedBox(height: 12),
+                            SizedBox(height: DetailSpacing.md),
                             Row(
                               children: [
                                 _buildProfileStat(l10n.userProfileArtworksTitle, displayCount(artworks)),
-                                const SizedBox(width: 24),
+                                SizedBox(width: DetailSpacing.xl),
                                 _buildProfileStat(l10n.userProfileFollowersStatLabel, displayCount(followers)),
-                                const SizedBox(width: 24),
+                                SizedBox(width: DetailSpacing.xl),
                                 _buildProfileStat(l10n.userProfileFollowingStatLabel, displayCount(following)),
                               ],
                             ),
@@ -574,9 +567,9 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: headerColor,
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: EdgeInsets.symmetric(horizontal: DetailSpacing.lg + DetailSpacing.xs, vertical: DetailSpacing.md),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(DetailRadius.md),
                           ),
                         ),
                       ),
@@ -598,11 +591,12 @@ class _DesktopSettingsScreenState extends State<DesktopSettingsScreen>
         Text(
           value,
           style: GoogleFonts.inter(
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
             color: Colors.white,
           ),
         ),
+        SizedBox(height: DetailSpacing.xs),
         Text(
           label,
           style: GoogleFonts.inter(

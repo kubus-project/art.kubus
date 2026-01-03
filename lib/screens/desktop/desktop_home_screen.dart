@@ -20,6 +20,7 @@ import '../../config/config.dart';
 import '../../models/artwork.dart';
 import '../../models/recent_activity.dart';
 import '../../models/user_persona.dart';
+import '../../models/user_profile.dart';
 import '../../models/wallet.dart';
 import '../../community/community_interactions.dart';
 import '../../widgets/empty_state_card.dart';
@@ -29,6 +30,7 @@ import '../../widgets/artist_badge.dart';
 import '../../widgets/institution_badge.dart';
 import '../../widgets/inline_loading.dart';
 import '../../widgets/artwork_creator_byline.dart';
+import '../../widgets/detail/detail_shell_components.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/activity_navigation.dart';
 import '../../utils/artwork_media_resolver.dart';
@@ -57,6 +59,7 @@ class DesktopHomeScreen extends StatefulWidget {
   @override
   State<DesktopHomeScreen> createState() => _DesktopHomeScreenState();
 }
+
 
 class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     with TickerProviderStateMixin {
@@ -378,7 +381,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Welcome card
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(32, 0, 32, 24),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xl),
                     child: _buildWelcomeCard(),
                   ),
                 ),
@@ -386,7 +389,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Stats grid
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xxl),
                     child: _buildStatsGrid(),
                   ),
                 ),
@@ -394,7 +397,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Quick actions
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(32, 0, 32, 32),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, DetailSpacing.xxl),
                     child: _buildQuickActions(),
                   ),
                 ),
@@ -402,7 +405,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 // Featured artworks
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(32, 0, 32, 48),
+                    padding: const EdgeInsets.fromLTRB(DetailSpacing.xxl, 0, DetailSpacing.xxl, 56),
                     child: _buildFeaturedArtworks(),
                   ),
                 ),
@@ -423,7 +426,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final isInstitution = user?.isInstitution ?? false;
 
     return Container(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(DetailSpacing.xxl),
       child: Row(
         children: [
           // Left side - greeting
@@ -436,20 +439,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   child: Row(
                     children: [
                       const AppLogo(width: 44, height: 44),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: DetailSpacing.lg),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             _getGreeting(l10n),
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withValues(alpha: 0.6),
-                            ),
+                            style: DetailTypography.caption(context),
                           ),
+                          const SizedBox(height: DetailSpacing.xs),
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -460,20 +458,21 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                                       l10n.desktopHomeWelcomeFallbackName,
                                   style: GoogleFonts.inter(
                                     fontSize: 24,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w700,
                                     color:
                                         Theme.of(context).colorScheme.onSurface,
+                                    letterSpacing: -0.3,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                   softWrap: false,
                                 ),
                               ),
                               if (isArtist) ...[
-                                const SizedBox(width: 8),
+                                const SizedBox(width: DetailSpacing.sm),
                                 const ArtistBadge(),
                               ],
                               if (isInstitution) ...[
-                                const SizedBox(width: 8),
+                                const SizedBox(width: DetailSpacing.sm),
                                 const InstitutionBadge(),
                               ],
                             ],
@@ -504,7 +503,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   ),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: DetailSpacing.lg),
               _buildNotificationButton(themeProvider),
             ],
           ),
@@ -522,17 +521,17 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             onTap: () {
               _showNotificationsPanel(themeProvider, np);
             },
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(DetailRadius.md),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(DetailSpacing.md),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(DetailRadius.md),
                 border: Border.all(
                   color: Theme.of(context)
                       .colorScheme
-                      .outline
-                      .withValues(alpha: 0.2),
+                      .outlineVariant
+                      .withValues(alpha: 0.4),
                 ),
               ),
               child: Stack(
@@ -553,7 +552,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         ),
                         child: Text(
                           np.unreadCount > 9 ? '9+' : np.unreadCount.toString(),
-                          style: GoogleFonts.inter(
+                          style: DetailTypography.label(context).copyWith(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -579,7 +578,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       padding: EdgeInsets.zero,
       showBorder: false,
       child: Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(DetailSpacing.xxl),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -589,7 +588,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               themeProvider.accentColor.withValues(alpha: 0.8),
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(DetailRadius.xl),
         ),
         child: Row(
           children: [
@@ -601,20 +600,21 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     l10n.desktopHomeDiscoverArtTitle,
                     style: GoogleFonts.inter(
                       fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
+                      letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: DetailSpacing.md),
                   Text(
                     l10n.desktopHomeDiscoverArtDescription,
                     style: GoogleFonts.inter(
                       fontSize: 16,
                       color: Colors.white.withValues(alpha: 0.9),
-                      height: 1.5,
+                      height: 1.6,
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: DetailSpacing.xl),
                   if (web3Provider.isConnected)
                     _buildWalletBalances()
                   else
@@ -626,25 +626,25 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         backgroundColor: Colors.white,
                         foregroundColor: themeProvider.accentColor,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
+                          horizontal: DetailSpacing.xl,
                           vertical: 14,
                         ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(DetailRadius.md),
                         ),
                       ),
                     ),
                 ],
               ),
             ),
-            const SizedBox(width: 48),
+            const SizedBox(width: 56),
             // Decorative 3D cube/AR icon
             Container(
               width: 160,
               height: 160,
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(DetailRadius.xl),
               ),
               child: const Icon(
                 Icons.view_in_ar,
@@ -683,10 +683,13 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
 
   Widget _buildBalanceChip(String symbol, String amount) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DetailSpacing.lg,
+        vertical: 10,
+      ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(DetailRadius.md),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -701,7 +704,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             child: Center(
               child: Text(
                 symbol == 'KUB8' ? 'K' : 'S',
-                style: GoogleFonts.inter(
+                style: DetailTypography.label(context).copyWith(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Provider.of<ThemeProvider>(context).accentColor,
@@ -712,7 +715,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           const SizedBox(width: 10),
           Text(
             '$amount $symbol',
-            style: GoogleFonts.inter(
+            style: DetailTypography.body(context).copyWith(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -800,11 +803,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           icon: Icons.analytics_outlined,
           iconColor: AppColorUtils.coralAccent,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (isLoadingArtworks || isLoadingActivity)
           const Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
+              padding: EdgeInsets.symmetric(vertical: DetailSpacing.xl),
               child: InlineLoading(),
             ),
           ),
@@ -813,8 +816,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             final cardWidth = (constraints.maxWidth - 48) / 4;
 
             return Wrap(
-              spacing: 16,
-              runSpacing: 16,
+              spacing: DetailSpacing.lg,
+              runSpacing: DetailSpacing.lg,
               children: [
                 SizedBox(
                   width: cardWidth,
@@ -869,7 +872,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final l10n = AppLocalizations.of(context)!;
     final quickScreens = navigationProvider.getQuickActionScreens(maxItems: 12);
     final persona = profileProvider.userPersona;
-    final suggestedKeys = _suggestedQuickActionKeys(persona)
+    final suggestedKeys = _suggestedQuickActionKeys(persona, profileProvider.currentUser)
         .where((key) => NavigationProvider.screenDefinitions.containsKey(key))
         .toList(growable: false);
 
@@ -884,7 +887,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           icon: Icons.flash_on,
           iconColor: AppColorUtils.amberAccent,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: DetailSpacing.xl),
         if (quickScreens.isEmpty)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -900,24 +903,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           .withValues(alpha: 0.5),
                       size: 40,
                     ),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: DetailSpacing.xl),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             l10n.desktopHomeQuickActionsEmptyTitle,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
+                            style: DetailTypography.cardTitle(context),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: DetailSpacing.xs),
                           Text(
                             l10n.desktopHomeQuickActionsEmptyDescription,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
+                            style: DetailTypography.body(context).copyWith(
                               color: Theme.of(context)
                                   .colorScheme
                                   .onSurface
@@ -931,10 +929,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ),
               ),
               if (suggestedKeys.isNotEmpty) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: DetailSpacing.lg),
                 Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
+                  spacing: DetailSpacing.md,
+                  runSpacing: DetailSpacing.md,
                   children: suggestedKeys.map((key) {
                     final def = NavigationProvider.screenDefinitions[key]!;
                     return _buildQuickActionCard(
@@ -955,7 +953,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             child: Row(
               children: quickScreens.map((screen) {
                 return Padding(
-                  padding: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.only(right: DetailSpacing.md),
                   child: _buildQuickActionCard(
                     screen.name,
                     screen.icon,
@@ -971,17 +969,41 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     );
   }
 
-  List<String> _suggestedQuickActionKeys(UserPersona? persona) {
+  List<String> _suggestedQuickActionKeys(UserPersona? persona, UserProfile? currentUser) {
+    // Base suggestions by persona
+    List<String> suggestions;
     switch (persona) {
       case UserPersona.lover:
-        return const ['map', 'community', 'marketplace'];
+        suggestions = const ['map', 'community', 'marketplace'];
+        break;
       case UserPersona.creator:
-        return const ['studio', 'ar', 'map'];
+        suggestions = const ['studio', 'ar', 'map'];
+        break;
       case UserPersona.institution:
-        return const ['institution_hub', 'map', 'community'];
+        suggestions = const ['institution_hub', 'map', 'community'];
+        break;
       case null:
-        return const ['map', 'studio', 'institution_hub'];
+        suggestions = const ['map', 'studio', 'institution_hub'];
+        break;
     }
+
+    // If user has both badges, hide the one not currently active
+    // If only one badge is active, show it; if both active, show the first one they earned
+    final isArtist = currentUser?.isArtist ?? false;
+    final isInstitution = currentUser?.isInstitution ?? false;
+
+    if (isArtist && isInstitution) {
+      // Both badges are active - hide institution_hub, keep studio
+      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+    } else if (isInstitution && !isArtist) {
+      // Only institution badge is active - hide studio
+      suggestions = suggestions.where((key) => key != 'studio').toList();
+    } else if (isArtist && !isInstitution) {
+      // Only artist badge is active - hide institution_hub
+      suggestions = suggestions.where((key) => key != 'institution_hub').toList();
+    }
+
+    return suggestions;
   }
 
   void _handleQuickAction(String screenKey) {
@@ -1168,17 +1190,18 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(DetailRadius.xl),
+        ),
         title: Row(
           children: [
             Icon(Icons.view_in_ar,
                 color: Theme.of(context).colorScheme.tertiary),
-            const SizedBox(width: 12),
+            const SizedBox(width: DetailSpacing.md),
             Text(
               l10n.arWebFallbackFeature,
-              style: GoogleFonts.inter(
+              style: DetailTypography.cardTitle(context).copyWith(
                 fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ],
@@ -1189,7 +1212,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           children: [
             Text(
               l10n.arWebFallbackDescription,
-              style: GoogleFonts.inter(
+              style: DetailTypography.body(context).copyWith(
                 color: Theme.of(context)
                     .colorScheme
                     .onSurface
@@ -1228,7 +1251,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 height: 48,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(DetailRadius.md),
                 ),
                 child: Icon(
                   icon,
@@ -1252,7 +1275,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                     ),
                     child: Text(
                       visitCount.toString(),
-                      style: GoogleFonts.inter(
+                      style: DetailTypography.label(context).copyWith(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -1263,16 +1286,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 ),
             ],
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: DetailSpacing.md),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: DetailTypography.body(context).copyWith(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: DetailSpacing.sm),
           Icon(
             Icons.arrow_forward_ios,
             size: 14,
@@ -1304,7 +1326,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 label: Text(l10n.commonViewAll),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DetailSpacing.xl),
             if (artworks.isEmpty)
               EmptyStateCard(
                 icon: Icons.image_not_supported,
@@ -1313,7 +1335,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               )
             else
               SizedBox(
-                height: 260,
+                height: 280,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   itemCount: artworks.length,
@@ -1332,8 +1354,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
 
     return DesktopCard(
-      width: 200,
-      margin: EdgeInsets.only(right: index < 5 ? 16 : 0),
+      width: 220,
+      margin: EdgeInsets.only(right: index < 5 ? DetailSpacing.lg : 0),
       padding: EdgeInsets.zero,
       onTap: () {
         final shellScope = DesktopShellScope.of(context);
@@ -1357,43 +1379,37 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         children: [
           // Image
           SizedBox(
-            height: 140,
+            height: 160,
             child: ClipRRect(
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+                  const BorderRadius.vertical(top: Radius.circular(DetailRadius.lg)),
               child: _buildDesktopCardCover(artwork, themeProvider),
             ),
           ),
 
           // Info
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DetailSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   artwork.title,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.cardTitle(context).copyWith(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: DetailSpacing.xs),
                 ArtworkCreatorByline(
                   artwork: artwork,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.caption(context).copyWith(
                     fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
                   ),
                   maxLines: 1,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: DetailSpacing.md),
                 Row(
                   children: [
                     Icon(
@@ -1404,18 +1420,14 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           .onSurface
                           .withValues(alpha: 0.5),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: DetailSpacing.xs),
                     Text(
                       artwork.likesCount.toString(),
-                      style: GoogleFonts.inter(
+                      style: DetailTypography.caption(context).copyWith(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DetailSpacing.md),
                     Icon(
                       Icons.visibility,
                       size: 14,
@@ -1424,15 +1436,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           .onSurface
                           .withValues(alpha: 0.5),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: DetailSpacing.xs),
                     Text(
                       artwork.viewsCount.toString(),
-                      style: GoogleFonts.inter(
+                      style: DetailTypography.caption(context).copyWith(
                         fontSize: 12,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -1573,32 +1581,34 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     return Container(
       color: Theme.of(context).colorScheme.surface,
       child: ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(DetailSpacing.xxl),
         children: [
           Text(
             l10n.homeActivityTitle,
             style: GoogleFonts.inter(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
               color: Theme.of(context).colorScheme.onSurface,
+              letterSpacing: -0.3,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: DetailSpacing.xl),
 
           // Recent activity from provider
           _buildRecentActivitySection(themeProvider),
-          const SizedBox(height: 24),
+          const SizedBox(height: DetailSpacing.xxl),
 
           // Trending Art Section
           _buildTrendingArtSection(themeProvider),
-          const SizedBox(height: 24),
+          const SizedBox(height: DetailSpacing.xxl),
 
           // Top Creators Section
           _buildTopCreatorsSection(themeProvider),
-          const SizedBox(height: 24),
+          const SizedBox(height: DetailSpacing.xxl),
 
           // Platform Stats Section
           _buildPlatformStatsSection(themeProvider),
+          const SizedBox(height: DetailSpacing.xl),
         ],
       ),
     );
@@ -1618,27 +1628,19 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         if (onTitleTap != null)
           InkWell(
             onTap: onTitleTap,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(DetailRadius.sm),
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              padding: const EdgeInsets.symmetric(vertical: DetailSpacing.xs, horizontal: 2),
               child: Text(
                 title,
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: scheme.onSurface,
-                ),
+                style: DetailTypography.sectionTitle(context).copyWith(fontSize: 17),
               ),
             ),
           )
         else
           Text(
             title,
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: scheme.onSurface,
-            ),
+            style: DetailTypography.sectionTitle(context).copyWith(fontSize: 17),
           ),
         const Spacer(),
         IconButton(
@@ -1647,7 +1649,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           icon: Icon(
             Icons.refresh,
             size: 18,
-            color: scheme.onSurface.withValues(alpha: 0.6),
+            color: scheme.onSurface.withValues(alpha: 0.5),
           ),
         ),
       ],
@@ -1733,11 +1735,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           .onSurface
                           .withValues(alpha: 0.5),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DetailSpacing.md),
                     Expanded(
                       child: Text(
                         l10n.desktopHomeTrendingArtEmpty,
-                        style: GoogleFonts.inter(
+                        style: DetailTypography.body(context).copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -1781,9 +1783,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           }
         }
       },
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 8),
-      borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.all(DetailSpacing.md),
+      margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
+      borderRadius: BorderRadius.circular(DetailRadius.md),
       child: Row(
         children: [
           Container(
@@ -1796,7 +1798,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   AppColorUtils.tealAccent.withValues(alpha: 0.15),
                 ],
               ),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(DetailRadius.sm),
             ),
             child: Center(
               child: Icon(
@@ -1806,29 +1808,23 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: DetailSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   entry.title,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.cardTitle(context).copyWith(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   entry.subtitle ?? l10n.commonNotAvailableShort,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.caption(context).copyWith(
                     fontSize: 12,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -1848,32 +1844,28 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                         .likeAction
                         .withValues(alpha: 0.7),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: DetailSpacing.xs),
                   Text(
                     entry.likes.toString(),
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.label(context).copyWith(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.7),
                     ),
                   ),
                 ],
               ),
               if (entry.hasAR)
                 Container(
-                  margin: const EdgeInsets.only(top: 4),
+                  margin: const EdgeInsets.only(top: DetailSpacing.xs),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColorUtils.tealAccent.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(DetailRadius.xs),
                   ),
                   child: Text(
                     l10n.commonArShort,
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.label(context).copyWith(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
                       color: AppColorUtils.tealAccent,
@@ -1911,7 +1903,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               onRefresh: _refreshTopCreators,
               onTitleTap: () => _navigateToTab(2),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DetailSpacing.md),
             if (isLoading)
               Center(
                 child: CircularProgressIndicator(
@@ -1928,13 +1920,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       Icons.error_outline,
                       color: Theme.of(context).colorScheme.error,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DetailSpacing.md),
                     Expanded(
                       child: Text(
                         l10n.desktopHomeTopCreatorsLoadFailed,
-                        style: GoogleFonts.inter(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
+                        style: DetailTypography.body(context),
                       ),
                     ),
                   ],
@@ -1951,11 +1941,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                           .onSurface
                           .withValues(alpha: 0.5),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: DetailSpacing.md),
                     Expanded(
                       child: Text(
                         l10n.desktopHomeTopCreatorsEmpty,
-                        style: GoogleFonts.inter(
+                        style: DetailTypography.body(context).copyWith(
                           color: Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -2003,9 +1993,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           }
         }
       },
-      padding: const EdgeInsets.all(10),
-      margin: const EdgeInsets.only(bottom: 8),
-      borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.all(DetailSpacing.sm + 2),
+      margin: const EdgeInsets.only(bottom: DetailSpacing.sm),
+      borderRadius: BorderRadius.circular(DetailRadius.md),
       child: Row(
         children: [
           AvatarWidget(
@@ -2014,7 +2004,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             radius: 20,
             allowFabricatedFallback: true,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: DetailSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2022,10 +2012,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 Text(
                   (creator['name'] ?? l10n.desktopHomeCreatorFallbackName)
                       .toString(),
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.cardTitle(context).copyWith(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -2033,12 +2021,8 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                 if (creator['username'] != null)
                   Text(
                     '@${creator['username']}',
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.caption(context).copyWith(
                       fontSize: 12,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurface
-                          .withValues(alpha: 0.6),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -2053,11 +2037,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   .colorScheme
                   .secondary
                   .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Text(
               l10n.desktopHomePostsCount(creator['postCount'] as int? ?? 0),
-              style: GoogleFonts.inter(
+              style: DetailTypography.label(context).copyWith(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.secondary,
@@ -2124,7 +2108,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           onRefresh: _refreshPlatformStats,
           onTitleTap: () => _navigateToTab(2),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: DetailSpacing.md),
         if (isLoading)
           Center(
             child: CircularProgressIndicator(
@@ -2141,13 +2125,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   Icons.error_outline,
                   color: Theme.of(context).colorScheme.error,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DetailSpacing.md),
                 Expanded(
                   child: Text(
                     l10n.desktopHomePlatformStatsLoadFailed,
-                    style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: DetailTypography.body(context),
                   ),
                 ),
               ],
@@ -2155,10 +2137,10 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           )
         else
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(DetailSpacing.lg),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(DetailRadius.md),
             ),
             child: Column(
               children: [
@@ -2168,21 +2150,21 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   Icons.view_in_ar,
                   scheme.primary,
                 ),
-                const Divider(height: 24),
+                const Divider(height: DetailSpacing.xl),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsArEnabled,
                   arEnabled.toString(),
                   Icons.visibility,
                   scheme.tertiary,
                 ),
-                const Divider(height: 24),
+                const Divider(height: DetailSpacing.xl),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsCommunityPosts,
                   posts.toString(),
                   Icons.forum,
                   scheme.secondary,
                 ),
-                const Divider(height: 24),
+                const Divider(height: DetailSpacing.xl),
                 _buildPlatformStatRow(
                   l10n.desktopHomePlatformStatsActiveGroups,
                   groups.toString(),
@@ -2205,15 +2187,15 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
           height: 36,
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(DetailRadius.sm),
           ),
           child: Icon(icon, color: color, size: 18),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: DetailSpacing.md),
         Expanded(
           child: Text(
             label,
-            style: GoogleFonts.inter(
+            style: DetailTypography.body(context).copyWith(
               fontSize: 13,
               color: Theme.of(context)
                   .colorScheme
@@ -2224,10 +2206,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
         ),
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: DetailTypography.cardTitle(context).copyWith(
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ],
@@ -2259,13 +2240,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                   Icons.error_outline,
                   color: Theme.of(context).colorScheme.error,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DetailSpacing.md),
                 Expanded(
                   child: Text(
                     l10n.homeUnableToLoadActivityTitle,
-                    style: GoogleFonts.inter(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    style: DetailTypography.body(context),
                   ),
                 ),
               ],
@@ -2282,11 +2261,11 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
                       .onSurface
                       .withValues(alpha: 0.5),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: DetailSpacing.md),
                 Expanded(
                   child: Text(
                     l10n.homeNoRecentActivityDescription,
-                    style: GoogleFonts.inter(
+                    style: DetailTypography.body(context).copyWith(
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
@@ -2314,7 +2293,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               onRefresh: () => unawaited(activityProvider.refresh(force: true)),
               onTitleTap: _openFullActivity,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: DetailSpacing.md),
             content,
           ],
         );
@@ -2326,9 +2305,9 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
     final activityColor = _getActivityColor(activity.category);
     return DesktopCard(
       onTap: () => ActivityNavigation.open(context, activity),
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 12),
-      borderRadius: BorderRadius.circular(12),
+      padding: const EdgeInsets.all(DetailSpacing.md),
+      margin: const EdgeInsets.only(bottom: DetailSpacing.md),
+      borderRadius: BorderRadius.circular(DetailRadius.md),
       child: Row(
         children: [
           Container(
@@ -2336,7 +2315,7 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
             height: 36,
             decoration: BoxDecoration(
               color: activityColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(DetailRadius.sm),
             ),
             child: Icon(
               _getActivityIcon(activity.category),
@@ -2344,29 +2323,24 @@ class _DesktopHomeScreenState extends State<DesktopHomeScreen>
               size: 18,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: DetailSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   activity.title,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.body(context).copyWith(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   activity.description,
-                  style: GoogleFonts.inter(
+                  style: DetailTypography.caption(context).copyWith(
                     fontSize: 11,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.6),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

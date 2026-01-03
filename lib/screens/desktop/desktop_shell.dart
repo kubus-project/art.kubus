@@ -281,15 +281,39 @@ class _DesktopShellState extends State<DesktopShell>
     }
   }
 
-  List<DesktopNavItem> _navItemsForState(bool isSignedIn) {
-    return isSignedIn ? _signedInNavItems : _guestNavItems;
+  List<DesktopNavItem> _navItemsForState(bool isSignedIn, {required bool isArtist, required bool isInstitution}) {
+    if (!isSignedIn) {
+      return _guestNavItems;
+    }
+
+    // Start with all signed-in items
+    var items = List<DesktopNavItem>.of(_signedInNavItems);
+
+    // If user has both badges, hide Organize (Institution Hub)
+    // If only Institution badge is active, hide Create (Artist Studio)
+    // If only Artist badge is active, hide Organize (Institution Hub)
+    if (isArtist && isInstitution) {
+      // Both badges are active - hide Organize, keep Create
+      items = items.where((item) => item.route != '/institution').toList();
+    } else if (isInstitution && !isArtist) {
+      // Only institution badge is active - hide Create
+      items = items.where((item) => item.route != '/artist-studio').toList();
+    } else if (isArtist && !isInstitution) {
+      // Only artist badge is active - hide Organize
+      items = items.where((item) => item.route != '/institution').toList();
+    }
+
+    return items;
   }
 
   @override
   Widget build(BuildContext context) {
     final profileProvider = Provider.of<ProfileProvider>(context);
     final isSignedIn = profileProvider.isSignedIn;
-    final navItems = _navItemsForState(isSignedIn);
+    final currentUser = profileProvider.currentUser;
+    final isArtist = currentUser?.isArtist ?? false;
+    final isInstitution = currentUser?.isInstitution ?? false;
+    final navItems = _navItemsForState(isSignedIn, isArtist: isArtist, isInstitution: isInstitution);
     final isWalletRoute = _activeRoute == _walletRoute;
     final hasActiveRoute = navItems.any((item) => item.route == _activeRoute);
     final effectiveRoute = hasActiveRoute || isWalletRoute ? _activeRoute : navItems.first.route;
