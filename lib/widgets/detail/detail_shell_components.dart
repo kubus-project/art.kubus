@@ -30,6 +30,332 @@ class DetailSpacing {
   static const double sectionGap = xl;
 }
 
+/// Design system typography styles
+class DetailTypography {
+  const DetailTypography._();
+
+  /// Screen title (AppBar)
+  static TextStyle screenTitle(BuildContext context) => GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurface,
+      );
+
+  /// Section header (16px, bold)
+  static TextStyle sectionTitle(BuildContext context) => GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: Theme.of(context).colorScheme.onSurface,
+      );
+
+  /// Card title (15px, semibold)
+  static TextStyle cardTitle(BuildContext context) => GoogleFonts.inter(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurface,
+      );
+
+  /// Body text (14px)
+  static TextStyle body(BuildContext context) => GoogleFonts.inter(
+        fontSize: 14,
+        height: 1.5,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85),
+      );
+
+  /// Secondary/caption text (13px)
+  static TextStyle caption(BuildContext context) => GoogleFonts.inter(
+        fontSize: 13,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+      );
+
+  /// Small label text (12px)
+  static TextStyle label(BuildContext context) => GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      );
+
+  /// Button text
+  static TextStyle button(BuildContext context) => GoogleFonts.inter(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      );
+}
+
+/// Standard border radius values
+class DetailRadius {
+  const DetailRadius._();
+
+  static const double xs = 6;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 20;
+}
+
+/// A unified card component for detail screens with consistent styling
+class DetailCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final Color? backgroundColor;
+  final bool showBorder;
+  final double borderRadius;
+  final VoidCallback? onTap;
+
+  const DetailCard({
+    super.key,
+    required this.child,
+    this.padding,
+    this.backgroundColor,
+    this.showBorder = true,
+    this.borderRadius = DetailRadius.md,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final card = Container(
+      decoration: BoxDecoration(
+        color: backgroundColor ?? scheme.surface,
+        borderRadius: BorderRadius.circular(borderRadius),
+        border: showBorder
+            ? Border.all(color: scheme.outlineVariant.withValues(alpha: 0.4))
+            : null,
+      ),
+      padding: padding ?? const EdgeInsets.all(DetailSpacing.lg),
+      child: child,
+    );
+
+    if (onTap != null) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(borderRadius),
+          child: card,
+        ),
+      );
+    }
+
+    return card;
+  }
+}
+
+/// A section header with optional action button - unified design
+class SectionHeader extends StatelessWidget {
+  final String title;
+  final String? actionLabel;
+  final IconData? actionIcon;
+  final VoidCallback? onAction;
+  final Widget? trailing;
+
+  const SectionHeader({
+    super.key,
+    required this.title,
+    this.actionLabel,
+    this.actionIcon,
+    this.onAction,
+    this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(title, style: DetailTypography.sectionTitle(context)),
+        ),
+        if (trailing != null) trailing!,
+        if (onAction != null && trailing == null)
+          TextButton.icon(
+            onPressed: onAction,
+            icon: Icon(actionIcon ?? Icons.arrow_forward, size: 16),
+            label: Text(
+              actionLabel ?? '',
+              style: DetailTypography.button(context),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// An info row with icon and label - used for metadata display
+class InfoRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String? value;
+  final TextStyle? labelStyle;
+  final Color? iconColor;
+
+  const InfoRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.value,
+    this.labelStyle,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DetailSpacing.sm),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: iconColor ?? scheme.onSurface.withValues(alpha: 0.55),
+          ),
+          const SizedBox(width: DetailSpacing.sm),
+          Expanded(
+            child: Text(
+              value != null ? '$label: $value' : label,
+              style: labelStyle ?? DetailTypography.caption(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A stat chip for displaying counts/metrics inline
+class StatChip extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String? label;
+  final Color? color;
+
+  const StatChip({
+    super.key,
+    required this.icon,
+    required this.value,
+    this.label,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final effectiveColor = color ?? scheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DetailSpacing.md,
+        vertical: DetailSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: effectiveColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(DetailRadius.sm),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: effectiveColor),
+          const SizedBox(width: DetailSpacing.xs),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: effectiveColor,
+            ),
+          ),
+          if (label != null) ...[
+            const SizedBox(width: DetailSpacing.xs),
+            Text(
+              label!,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: effectiveColor.withValues(alpha: 0.8),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// A unified action button for detail screens with consistent styling
+class DetailActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isActive;
+  final Color? activeColor;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+
+  const DetailActionButton({
+    super.key,
+    required this.icon,
+    required this.label,
+    this.onPressed,
+    this.isActive = false,
+    this.activeColor,
+    this.backgroundColor,
+    this.foregroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final effectiveActiveColor = activeColor ?? scheme.primary;
+
+    final bgColor = backgroundColor ??
+        (isActive
+            ? effectiveActiveColor.withValues(alpha: 0.1)
+            : scheme.surfaceContainerHighest);
+    final fgColor =
+        foregroundColor ?? (isActive ? effectiveActiveColor : scheme.onSurface);
+
+    return Material(
+      color: bgColor,
+      borderRadius: BorderRadius.circular(DetailRadius.md),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(DetailRadius.md),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            vertical: DetailSpacing.md,
+            horizontal: DetailSpacing.lg,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(DetailRadius.md),
+            border: Border.all(
+              color: isActive
+                  ? effectiveActiveColor.withValues(alpha: 0.25)
+                  : scheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 18, color: fgColor),
+              const SizedBox(width: DetailSpacing.sm),
+              Flexible(
+                child: Text(
+                  label,
+                  style:
+                      DetailTypography.button(context).copyWith(color: fgColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// A shared header component for detail screens (artwork, exhibition, collection, profile)
 /// Supports cover image/gradient background with title overlay and primary actions.
 class DetailHeader extends StatelessWidget {
@@ -314,7 +640,8 @@ class DetailActionsRow extends StatelessWidget {
       spacing: spacing,
       runSpacing: spacing,
       alignment: WrapAlignment.start,
-      children: actions.map((action) => _buildActionButton(context, action)).toList(),
+      children:
+          actions.map((action) => _buildActionButton(context, action)).toList(),
     );
   }
 
@@ -487,7 +814,8 @@ class _CollapsibleSectionState extends State<_CollapsibleSection>
     _iconTurns = Tween<double>(begin: 0.0, end: 0.5).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    _heightFactor = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+    _heightFactor =
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
 
     if (_expanded) {
       _controller.value = 1.0;
@@ -592,7 +920,8 @@ class CollaboratorsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
-    final visibleCount = collaborators.length > maxVisible ? maxVisible : collaborators.length;
+    final visibleCount =
+        collaborators.length > maxVisible ? maxVisible : collaborators.length;
     final remainingCount = collaborators.length - visibleCount;
 
     if (collaborators.isEmpty) {
@@ -707,7 +1036,8 @@ class CollaboratorsRow extends StatelessWidget {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
-    return '${parts[0].substring(0, 1)}${parts[1].substring(0, 1)}'.toUpperCase();
+    return '${parts[0].substring(0, 1)}${parts[1].substring(0, 1)}'
+        .toUpperCase();
   }
 }
 
@@ -750,7 +1080,8 @@ class ResponsiveTwoPaneLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final showTwoPane = constraints.maxWidth >= breakpoint && sidePanel != null;
+        final showTwoPane =
+            constraints.maxWidth >= breakpoint && sidePanel != null;
 
         if (!showTwoPane) {
           return Padding(
@@ -968,7 +1299,8 @@ class DetailArtworkCard extends StatelessWidget {
                       ? Image.network(
                           imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _buildPlaceholder(context, effectiveAccent),
+                          errorBuilder: (_, __, ___) =>
+                              _buildPlaceholder(context, effectiveAccent),
                         )
                       : _buildPlaceholder(context, effectiveAccent),
                 ),

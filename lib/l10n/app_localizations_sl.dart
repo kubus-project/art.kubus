@@ -2596,10 +2596,10 @@ class AppLocalizationsSl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '# odkritij',
-      few: '# odkritja',
-      two: '# odkritji',
-      one: '# odkritje',
+      other: '$count odkritij',
+      few: '$count odkritja',
+      two: '$count odkritji',
+      one: '$count odkritje',
     );
     return '$_temp0';
   }
@@ -6451,10 +6451,10 @@ class AppLocalizationsSl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '# let',
-      few: '# leta',
-      two: '# leti',
-      one: '# leto',
+      other: '$count let',
+      few: '$count leta',
+      two: '$count leti',
+      one: '$count leto',
     );
     return '$_temp0';
   }

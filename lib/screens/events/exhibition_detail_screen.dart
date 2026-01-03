@@ -40,7 +40,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final provider = context.read<ExhibitionsProvider>();
-      unawaited(provider.recordExhibitionView(widget.exhibitionId, source: 'exhibition_detail'));
+      unawaited(provider.recordExhibitionView(widget.exhibitionId,
+          source: 'exhibition_detail'));
       unawaited(_load());
     });
   }
@@ -59,7 +60,12 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     final role = (myRole ?? '').trim().toLowerCase();
     if (role.isEmpty) return false;
     // Keep in sync with backend `canEditEntity` (curator+) while preserving legacy `host`.
-    return role == 'owner' || role == 'admin' || role == 'publisher' || role == 'editor' || role == 'curator' || role == 'host';
+    return role == 'owner' ||
+        role == 'admin' ||
+        role == 'publisher' ||
+        role == 'editor' ||
+        role == 'curator' ||
+        role == 'host';
   }
 
   bool _canPublishExhibition(String? myRole) {
@@ -79,7 +85,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     if ((exhibition.status ?? '').trim().toLowerCase() == nextStatus) return;
 
     try {
-      await provider.updateExhibition(exhibition.id, <String, dynamic>{'status': nextStatus});
+      await provider.updateExhibition(
+          exhibition.id, <String, dynamic>{'status': nextStatus});
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
@@ -91,7 +98,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+          content:
+              Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -119,7 +127,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (bytes == null || bytes.isEmpty) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+            content:
+                Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -136,7 +145,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (url == null || url.isEmpty) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+            content:
+                Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
             backgroundColor: scheme.error,
             behavior: SnackBarBehavior.floating,
           ),
@@ -144,7 +154,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         return;
       }
 
-      await provider.updateExhibition(exhibition.id, <String, dynamic>{'coverUrl': url});
+      await provider
+          .updateExhibition(exhibition.id, <String, dynamic>{'coverUrl': url});
 
       if (!mounted) return;
       messenger.showSnackBar(
@@ -157,7 +168,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
+          content:
+              Text(l10n.commonActionFailedToast, style: GoogleFonts.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -194,11 +206,10 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     if (!mounted) return;
 
-    final members = collabProvider.collaboratorsFor('exhibitions', exhibition.id);
-    final allowedUserIds = members
-        .map((m) => m.userId.trim())
-        .where((v) => v.isNotEmpty)
-        .toSet();
+    final members =
+        collabProvider.collaboratorsFor('exhibitions', exhibition.id);
+    final allowedUserIds =
+        members.map((m) => m.userId.trim()).where((v) => v.isNotEmpty).toSet();
     final allowedWalletsLower = members
         .map((m) => (m.user?.walletAddress ?? '').trim().toLowerCase())
         .where((v) => v.isNotEmpty)
@@ -206,23 +217,33 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     bool isMemberOwned(Artwork art) {
       final meta = art.metadata ?? const <String, dynamic>{};
-      final creatorId = (meta['creatorId'] ?? meta['creator_id'])?.toString().trim();
-      if (creatorId != null && creatorId.isNotEmpty && allowedUserIds.contains(creatorId)) {
+      final creatorId =
+          (meta['creatorId'] ?? meta['creator_id'])?.toString().trim();
+      if (creatorId != null &&
+          creatorId.isNotEmpty &&
+          allowedUserIds.contains(creatorId)) {
         return true;
       }
-      final wallet = (meta['walletAddress'] ?? meta['wallet_address'])?.toString().trim().toLowerCase();
-      if (wallet != null && wallet.isNotEmpty && allowedWalletsLower.contains(wallet)) {
+      final wallet = (meta['walletAddress'] ?? meta['wallet_address'])
+          ?.toString()
+          .trim()
+          .toLowerCase();
+      if (wallet != null &&
+          wallet.isNotEmpty &&
+          allowedWalletsLower.contains(wallet)) {
         return true;
       }
       return false;
     }
 
-    final artworks = List<Artwork>.from(artworkProvider.artworks.where(isMemberOwned));
+    final artworks =
+        List<Artwork>.from(artworkProvider.artworks.where(isMemberOwned));
     if (artworks.isEmpty) {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text(l10n.exhibitionDetailNoArtworksAvailableToLinkToast, style: GoogleFonts.inter()),
+            content: Text(l10n.exhibitionDetailNoArtworksAvailableToLinkToast,
+                style: GoogleFonts.inter()),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -238,7 +259,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
         return StatefulBuilder(
           builder: (context, setLocalState) {
             return AlertDialog(
-              title: Text(l10n.exhibitionDetailAddArtworksDialogTitle, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+              title: Text(l10n.exhibitionDetailAddArtworksDialogTitle,
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
               content: SizedBox(
                 width: 520,
                 child: ListView.builder(
@@ -264,7 +286,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                       ),
                       subtitle: Text(
                         art.artist.isNotEmpty ? art.artist : '—',
-                        style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.75)),
+                        style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.75)),
                       ),
                       controlAffinity: ListTileControlAffinity.leading,
                       contentPadding: EdgeInsets.zero,
@@ -281,7 +305,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   onPressed: selectedIds.isEmpty
                       ? null
                       : () => Navigator.of(dialogContext).pop(true),
-                  child: Text(l10n.commonLink, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  child: Text(l10n.commonLink,
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                 ),
               ],
             );
@@ -293,17 +318,20 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
     if (confirmed != true) return;
 
     try {
-      await exhibitionsProvider.linkExhibitionArtworks(exhibition.id, selectedIds.toList());
+      await exhibitionsProvider.linkExhibitionArtworks(
+          exhibition.id, selectedIds.toList());
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.exhibitionDetailArtworksLinkedToast, style: GoogleFonts.inter()),
+          content: Text(l10n.exhibitionDetailArtworksLinkedToast,
+              style: GoogleFonts.inter()),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (_) {
       messenger.showSnackBar(
         SnackBar(
-          content: Text(l10n.exhibitionDetailLinkArtworksFailedToast, style: GoogleFonts.inter()),
+          content: Text(l10n.exhibitionDetailLinkArtworksFailedToast,
+              style: GoogleFonts.inter()),
           backgroundColor: scheme.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -319,7 +347,9 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     final ex = provider.exhibitions.firstWhere(
       (e) => e.id == widget.exhibitionId,
-      orElse: () => widget.initialExhibition ?? Exhibition(id: widget.exhibitionId, title: 'Exhibition'),
+      orElse: () =>
+          widget.initialExhibition ??
+          Exhibition(id: widget.exhibitionId, title: 'Exhibition'),
     );
 
     final poap = provider.poapStatusFor(widget.exhibitionId);
@@ -329,14 +359,16 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(ex.title, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+        title: Text(ex.title,
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         actions: [
           IconButton(
             tooltip: l10n.commonShare,
             onPressed: () {
               ShareService().showShareSheet(
                 context,
-                target: ShareTarget.exhibition(exhibitionId: widget.exhibitionId, title: ex.title),
+                target: ShareTarget.exhibition(
+                    exhibitionId: widget.exhibitionId, title: ex.title),
                 sourceScreen: 'exhibition_detail',
               );
             },
@@ -345,7 +377,8 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
           IconButton(
             tooltip: l10n.exhibitionDetailInvitesTooltip,
             onPressed: () {
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const InvitesInboxScreen()));
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const InvitesInboxScreen()));
             },
             icon: const Icon(Icons.inbox_outlined),
           ),
@@ -374,44 +407,32 @@ class _ExhibitionDetailScreenState extends State<ExhibitionDetailScreen> {
                   onChangeCover: canManage ? () => _changeCover(ex) : null,
                 );
 
-                final artworksCard = Card(
-                  elevation: 0,
-                  color: scheme.surface,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(DetailSpacing.lg),
-                    side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(DetailSpacing.lg),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              l10n.exhibitionDetailArtworksTitle,
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                            ),
-                            const Spacer(),
-                            if (canManage)
-                              TextButton.icon(
+                final artworksCard = DetailCard(
+                  borderRadius: DetailRadius.md,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SectionHeader(
+                        title: l10n.exhibitionDetailArtworksTitle,
+                        trailing: canManage
+                            ? TextButton.icon(
                                 onPressed: () => _showLinkArtworksDialog(ex),
-                                icon: const Icon(Icons.add, size: 18),
-                                label: Text(l10n.commonAdd, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: DetailSpacing.sm),
-                        Text(
-                          canManage
-                              ? l10n.exhibitionDetailArtworksManageHint
-                              : l10n.exhibitionDetailArtworksViewHint,
-                          style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
-                        ),
-                        const SizedBox(height: DetailSpacing.md),
-                        _LinkedArtworksList(exhibition: ex),
-                      ],
-                    ),
+                                icon: const Icon(Icons.add, size: 16),
+                                label: Text(l10n.commonAdd,
+                                    style: DetailTypography.button(context)),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: DetailSpacing.sm),
+                      Text(
+                        canManage
+                            ? l10n.exhibitionDetailArtworksManageHint
+                            : l10n.exhibitionDetailArtworksViewHint,
+                        style: DetailTypography.caption(context),
+                      ),
+                      const SizedBox(height: DetailSpacing.md),
+                      _LinkedArtworksList(exhibition: ex),
+                    ],
                   ),
                 );
 
@@ -648,99 +669,112 @@ class _ExhibitionDetailsCard extends StatelessWidget {
 
     String? dateRange;
     if (exhibition.startsAt != null || exhibition.endsAt != null) {
-      final start = exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
-      final end = exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
-      dateRange = [start, end].whereType<String>().join(' • ');
+      final start =
+          exhibition.startsAt != null ? _fmtDate(exhibition.startsAt!) : null;
+      final end =
+          exhibition.endsAt != null ? _fmtDate(exhibition.endsAt!) : null;
+      dateRange = [start, end].whereType<String>().join(' → ');
       if (dateRange.trim().isEmpty) dateRange = null;
     }
 
-    final location = (exhibition.locationName ?? '').trim().isNotEmpty ? exhibition.locationName!.trim() : null;
+    final location = (exhibition.locationName ?? '').trim().isNotEmpty
+        ? exhibition.locationName!.trim()
+        : null;
 
-    return Card(
-      elevation: 0,
-      color: scheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DetailSpacing.lg),
-        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(DetailSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(l10n.exhibitionDetailOverviewTitle, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
-                const Spacer(),
-                if (canManage)
-                  TextButton.icon(
+    return DetailCard(
+      borderRadius: DetailRadius.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          SectionHeader(
+            title: l10n.exhibitionDetailOverviewTitle,
+            trailing: canManage
+                ? TextButton.icon(
                     onPressed: onChangeCover,
-                    icon: const Icon(Icons.image_outlined, size: 18),
-                    label: Text(l10n.commonChangeCover, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: DetailSpacing.md),
-            if (coverUrl != null) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(DetailSpacing.md),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: Image.network(
-                    coverUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      color: scheme.surfaceContainerHighest,
-                      alignment: Alignment.center,
-                      child: Icon(
-                        Icons.broken_image_outlined,
+                    icon: const Icon(Icons.image_outlined, size: 16),
+                    label: Text(l10n.commonChangeCover,
+                        style: DetailTypography.button(context)),
+                  )
+                : null,
+          ),
+          const SizedBox(height: DetailSpacing.md),
+
+          // Cover image
+          if (coverUrl != null) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(DetailRadius.sm),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  coverUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: scheme.surfaceContainerHighest,
+                    alignment: Alignment.center,
+                    child: Icon(Icons.broken_image_outlined,
                         size: 48,
-                        color: scheme.onSurface.withValues(alpha: 0.4),
-                      ),
-                    ),
+                        color: scheme.onSurface.withValues(alpha: 0.35)),
                   ),
                 ),
               ),
-              const SizedBox(height: DetailSpacing.md),
-            ],
-            if (dateRange != null) _InfoRow(icon: Icons.schedule, label: dateRange),
-            if (location != null) _InfoRow(icon: Icons.place_outlined, label: location),
-            _InfoRow(
-              icon: Icons.event_available_outlined,
-              label: l10n.exhibitionDetailStatusRowLabel(_labelForStatus(l10n, exhibition.status)),
             ),
-            if (canPublish) ...[
-              const SizedBox(height: DetailSpacing.sm),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                value: (exhibition.status ?? '').trim().toLowerCase() == 'published',
-                onChanged: onPublishChanged,
-                title: Text(l10n.commonPublish, style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                subtitle: Text(
-                  (exhibition.status ?? '').trim().toLowerCase() == 'published'
-                      ? l10n.commonPublished
-                      : l10n.commonDraft,
-                  style: GoogleFonts.inter(fontSize: 12, color: scheme.onSurface.withValues(alpha: 0.6)),
-                ),
-              ),
-            ],
-            if ((exhibition.description ?? '').trim().isNotEmpty) ...[
-              const SizedBox(height: DetailSpacing.md),
-              Text(exhibition.description!, style: GoogleFonts.inter(fontSize: 13, height: 1.5, color: scheme.onSurface.withValues(alpha: 0.8))),
-            ],
-            if (poap?.poap != null) ...[
-              const SizedBox(height: DetailSpacing.lg),
-              Divider(color: scheme.outlineVariant.withValues(alpha: 0.5)),
-              const SizedBox(height: DetailSpacing.md),
-              Text(l10n.exhibitionDetailBadgeTitle, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
-              const SizedBox(height: DetailSpacing.sm),
-              Text(
-                poap!.claimed == true ? l10n.exhibitionDetailBadgeClaimed : l10n.exhibitionDetailBadgeNotClaimed,
-                style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.7)),
-              ),
-            ],
+            const SizedBox(height: DetailSpacing.lg),
           ],
-        ),
+
+          // Metadata rows
+          if (dateRange != null)
+            InfoRow(icon: Icons.schedule_outlined, label: dateRange),
+          if (location != null)
+            InfoRow(icon: Icons.place_outlined, label: location),
+          InfoRow(
+            icon: Icons.event_available_outlined,
+            label: l10n.exhibitionDetailStatusRowLabel(
+                _labelForStatus(l10n, exhibition.status)),
+          ),
+
+          // Publish toggle
+          if (canPublish) ...[
+            const SizedBox(height: DetailSpacing.sm),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              value:
+                  (exhibition.status ?? '').trim().toLowerCase() == 'published',
+              onChanged: onPublishChanged,
+              title: Text(l10n.commonPublish,
+                  style: DetailTypography.cardTitle(context)),
+              subtitle: Text(
+                (exhibition.status ?? '').trim().toLowerCase() == 'published'
+                    ? l10n.commonPublished
+                    : l10n.commonDraft,
+                style: DetailTypography.label(context),
+              ),
+            ),
+          ],
+
+          // Description
+          if ((exhibition.description ?? '').trim().isNotEmpty) ...[
+            const SizedBox(height: DetailSpacing.md),
+            Text(exhibition.description!,
+                style: DetailTypography.body(context)),
+          ],
+
+          // POAP badge section
+          if (poap?.poap != null) ...[
+            const SizedBox(height: DetailSpacing.lg),
+            Divider(color: scheme.outlineVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: DetailSpacing.md),
+            Text(l10n.exhibitionDetailBadgeTitle,
+                style: DetailTypography.cardTitle(context)),
+            const SizedBox(height: DetailSpacing.sm),
+            Text(
+              poap!.claimed == true
+                  ? l10n.exhibitionDetailBadgeClaimed
+                  : l10n.exhibitionDetailBadgeNotClaimed,
+              style: DetailTypography.caption(context),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -761,29 +795,4 @@ class _ExhibitionDetailsCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  const _InfoRow({required this.icon, required this.label});
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: DetailSpacing.sm),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: scheme.onSurface.withValues(alpha: 0.6)),
-          const SizedBox(width: DetailSpacing.sm),
-          Expanded(
-            child: Text(
-              label,
-              style: GoogleFonts.inter(fontSize: 13, color: scheme.onSurface.withValues(alpha: 0.9)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// Remove old _InfoRow since we now use InfoRow from detail_shell_components

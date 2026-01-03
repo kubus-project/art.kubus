@@ -82,12 +82,12 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
         builder: (context, collectionsProvider, walletProvider, _) {
           final collection =
               collectionsProvider.getCollectionById(widget.collectionId);
-          final isLoading =
-              collectionsProvider.isLoading(widget.collectionId);
+          final isLoading = collectionsProvider.isLoading(widget.collectionId);
           final error = collectionsProvider.errorFor(widget.collectionId);
 
           if (collection == null && isLoading) {
-            return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+            return const Center(
+                child: CircularProgressIndicator(strokeWidth: 2));
           }
 
           if (collection == null && (error ?? '').isNotEmpty) {
@@ -133,8 +133,7 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
               ? resolved.name
               : l10n.userProfileCollectionFallbackTitle;
           final description = (resolved.description ?? '').trim();
-          final thumbnailUrl =
-              MediaUrlResolver.resolve(resolved.thumbnailUrl);
+          final thumbnailUrl = MediaUrlResolver.resolve(resolved.thumbnailUrl);
           final artworks = resolved.artworks;
 
           final walletAddress = walletProvider.currentWalletAddress;
@@ -156,7 +155,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                     onPressed: () {
                       ShareService().showShareSheet(
                         context,
-                        target: ShareTarget.collection(collectionId: widget.collectionId, title: name),
+                        target: ShareTarget.collection(
+                            collectionId: widget.collectionId, title: name),
                         sourceScreen: 'collection_detail',
                       );
                     },
@@ -211,7 +211,8 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                 ),
               ),
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(DetailSpacing.lg, DetailSpacing.lg, DetailSpacing.lg, DetailSpacing.xl),
+                padding: const EdgeInsets.fromLTRB(DetailSpacing.lg,
+                    DetailSpacing.lg, DetailSpacing.lg, DetailSpacing.xl),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate(
                     [
@@ -220,70 +221,45 @@ class _CollectionDetailScreenState extends State<CollectionDetailScreen> {
                           entityType: 'collections',
                           entityId: widget.collectionId,
                         ),
-                        const SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                        const SizedBox(
+                            height: DetailSpacing.lg + DetailSpacing.xs),
                       ],
                       if (description.isNotEmpty) ...[
                         Text(
                           l10n.collectionDetailDescription,
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: scheme.onSurface,
-                          ),
+                          style: DetailTypography.sectionTitle(context),
                         ),
                         const SizedBox(height: DetailSpacing.sm),
-                        Text(
-                          description,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            height: 1.5,
-                            color: scheme.onSurface.withValues(alpha: 0.78),
-                          ),
-                        ),
-                        const SizedBox(height: DetailSpacing.lg + DetailSpacing.xs),
+                        Text(description,
+                            style: DetailTypography.body(context)),
+                        const SizedBox(
+                            height: DetailSpacing.lg + DetailSpacing.xs),
                       ],
-                      Row(
-                        children: [
-                          Text(
-                            l10n.collectionDetailArtworks,
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: scheme.onSurface,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (canEdit)
-                            TextButton.icon(
-                              onPressed: () => _openEditor(resolved),
-                              icon: const Icon(Icons.edit, size: 18),
-                              label: Text(
-                                l10n.collectionDetailManage,
-                                style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                            ),
-                        ],
+                      SectionHeader(
+                        title: l10n.collectionDetailArtworks,
+                        trailing: canEdit
+                            ? TextButton.icon(
+                                onPressed: () => _openEditor(resolved),
+                                icon: const Icon(Icons.edit, size: 16),
+                                label: Text(l10n.collectionDetailManage,
+                                    style: DetailTypography.button(context)),
+                              )
+                            : null,
                       ),
                       const SizedBox(height: DetailSpacing.md),
                       if ((error ?? '').isNotEmpty && collection != null)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: DetailSpacing.md),
+                          padding:
+                              const EdgeInsets.only(bottom: DetailSpacing.md),
                           child: Text(
                             l10n.collectionDetailLoadFailedMessage,
                             style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: scheme.error,
-                            ),
+                                fontSize: 12, color: scheme.error),
                           ),
                         ),
                       if (artworks.isEmpty)
-                        Text(
-                          l10n.collectionDetailNoArtworksYet,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: scheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                        )
+                        Text(l10n.collectionDetailNoArtworksYet,
+                            style: DetailTypography.caption(context))
                       else
                         ...artworks.map((art) => _ArtworkRow(artwork: art)),
                       if (isLoading)
@@ -313,7 +289,8 @@ class _ArtworkRow extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context)!;
     final id = artwork.id;
-    final title = artwork.title.isNotEmpty ? artwork.title : l10n.commonUntitled;
+    final title =
+        artwork.title.isNotEmpty ? artwork.title : l10n.commonUntitled;
     final rawUrl = artwork.imageUrl ??
         (artwork.imageCid != null && artwork.imageCid!.isNotEmpty
             ? 'ipfs://${artwork.imageCid}'
@@ -322,63 +299,50 @@ class _ArtworkRow extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.only(bottom: DetailSpacing.md),
-      child: Material(
-        color: scheme.surface,
-        borderRadius: BorderRadius.circular(DetailSpacing.md),
-        child: InkWell(
-          onTap: id.isEmpty
-              ? null
-              : () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ArtDetailScreen(artworkId: id),
-                    ),
-                  );
-                },
-          borderRadius: BorderRadius.circular(DetailSpacing.md),
-          child: Container(
-            padding: const EdgeInsets.all(DetailSpacing.md),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(DetailSpacing.md),
-              border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
+      child: DetailCard(
+        onTap: id.isEmpty
+            ? null
+            : () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => ArtDetailScreen(artworkId: id)),
+                );
+              },
+        padding: const EdgeInsets.all(DetailSpacing.md),
+        borderRadius: DetailRadius.sm,
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(DetailRadius.xs),
+              child: Container(
+                width: 56,
+                height: 56,
+                color: scheme.surfaceContainerHighest,
+                child: imageUrl == null
+                    ? Icon(Icons.image_outlined,
+                        color: scheme.onSurface.withValues(alpha: 0.4))
+                    : Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.broken_image_outlined,
+                          color: scheme.onSurface.withValues(alpha: 0.4),
+                        ),
+                      ),
+              ),
             ),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(DetailSpacing.sm + 2),
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    color: scheme.surfaceContainerHighest,
-                    child: imageUrl == null
-                        ? Icon(Icons.image_outlined, color: scheme.onSurface.withValues(alpha: 0.5))
-                        : Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.broken_image_outlined,
-                              color: scheme.onSurface.withValues(alpha: 0.5),
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(width: DetailSpacing.md),
-                Expanded(
-                  child: Text(
-                    title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: scheme.onSurface,
-                    ),
-                  ),
-                ),
-                Icon(Icons.chevron_right, color: scheme.onSurface.withValues(alpha: 0.45)),
-              ],
+            const SizedBox(width: DetailSpacing.md),
+            Expanded(
+              child: Text(
+                title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: DetailTypography.cardTitle(context),
+              ),
             ),
-          ),
+            Icon(Icons.chevron_right,
+                color: scheme.onSurface.withValues(alpha: 0.4)),
+          ],
         ),
       ),
     );
@@ -410,7 +374,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.initialCollection.name);
+    _nameController =
+        TextEditingController(text: widget.initialCollection.name);
     _descriptionController =
         TextEditingController(text: widget.initialCollection.description ?? '');
     _isPublic = widget.initialCollection.isPublic;
@@ -506,8 +471,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          content:
-              Text(l10n.collectionSettingsSavedToast(_nameController.text.trim())),
+          content: Text(
+              l10n.collectionSettingsSavedToast(_nameController.text.trim())),
         ),
       );
       Navigator.of(context).maybePop();
@@ -606,7 +571,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                   itemBuilder: (context, index) {
                     final art = available[index];
                     final checked = selectedIds.contains(art.id);
-                    final imageUrl = ArtworkMediaResolver.resolveCover(artwork: art);
+                    final imageUrl =
+                        ArtworkMediaResolver.resolveCover(artwork: art);
                     return CheckboxListTile(
                       value: checked,
                       onChanged: (v) {
@@ -738,8 +704,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final provider = context.watch<CollectionsProvider>();
-    final collection =
-        provider.getCollectionById(widget.collectionId) ?? widget.initialCollection;
+    final collection = provider.getCollectionById(widget.collectionId) ??
+        widget.initialCollection;
 
     final coverUrl = MediaUrlResolver.resolve(collection.thumbnailUrl);
 
@@ -807,15 +773,19 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
             ),
             const SizedBox(height: DetailSpacing.md),
             OutlinedButton.icon(
-              onPressed: (_saving || _updatingCover) ? null : () => _changeCover(collection),
+              onPressed: (_saving || _updatingCover)
+                  ? null
+                  : () => _changeCover(collection),
               icon: _updatingCover
                   ? SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: scheme.primary),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: scheme.primary),
                     )
                   : const Icon(Icons.image_outlined, size: 18),
-              label: Text(l10n.commonChangeCover, style: GoogleFonts.inter(fontSize: 13)),
+              label: Text(l10n.commonChangeCover,
+                  style: GoogleFonts.inter(fontSize: 13)),
             ),
             const SizedBox(height: DetailSpacing.md),
             Form(
@@ -913,7 +883,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                           ),
                         )
                       : const Icon(Icons.add, size: 18),
-                  label: Text(l10n.collectionDetailAddArtwork, style: GoogleFonts.inter(fontSize: 13)),
+                  label: Text(l10n.collectionDetailAddArtwork,
+                      style: GoogleFonts.inter(fontSize: 13)),
                 ),
               ],
             ),
@@ -954,7 +925,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
                           child: imageUrl == null
                               ? Icon(
                                   Icons.image_outlined,
-                                  color: scheme.onSurface.withValues(alpha: 0.5),
+                                  color:
+                                      scheme.onSurface.withValues(alpha: 0.5),
                                 )
                               : Image.network(
                                   imageUrl,
@@ -996,7 +968,8 @@ class _CollectionEditSheetState extends State<_CollectionEditSheet> {
             Row(
               children: [
                 TextButton(
-                  onPressed: _saving ? null : () => Navigator.of(context).maybePop(),
+                  onPressed:
+                      _saving ? null : () => Navigator.of(context).maybePop(),
                   child: Text(l10n.commonCancel),
                 ),
                 const Spacer(),
