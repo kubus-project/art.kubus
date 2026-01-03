@@ -15,8 +15,10 @@ import '../../../providers/community_hub_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../providers/wallet_provider.dart';
 import '../../../providers/app_refresh_provider.dart';
+import '../../../providers/community_subject_provider.dart';
 import '../../../community/community_interactions.dart';
 import '../../../models/community_group.dart';
+import '../../../models/community_subject.dart';
 import '../../../models/conversation.dart';
 import '../../../services/backend_api_service.dart';
 import '../../../services/block_list_service.dart';
@@ -30,10 +32,13 @@ import '../../../widgets/user_activity_status_line.dart';
 import '../../../widgets/community/community_post_card.dart';
 import '../../../widgets/community/community_author_role_badges.dart';
 import '../../../widgets/community/community_post_options_sheet.dart';
+import '../../../widgets/community/community_subject_picker.dart';
 import '../../../utils/app_animations.dart';
 import '../../../utils/app_color_utils.dart';
+import '../../../utils/media_url_resolver.dart';
 import '../../../utils/kubus_color_roles.dart';
 import '../../../utils/wallet_utils.dart';
+import '../../../utils/community_subject_navigation.dart';
 import '../components/desktop_widgets.dart';
 import '../desktop_shell.dart';
 import '../../community/group_feed_screen.dart';
@@ -445,6 +450,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       );
       final filtered = await _filterBlockedPosts(posts);
       if (mounted) {
+        _primeSubjectPreviews(filtered);
+      }
+      if (mounted) {
         setState(() {
           _discoverPosts = filtered;
           _isLoadingDiscover = false;
@@ -618,6 +626,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         sort: sort,
       );
       final filtered = await _filterBlockedPosts(posts);
+      if (mounted) {
+        _primeSubjectPreviews(filtered);
+      }
       if (mounted) {
         setState(() {
           _followingPosts = filtered;
@@ -1247,6 +1258,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
       final chosenPosts =
           posts.isNotEmpty ? posts : _filterLocalPostsByTag(sanitized);
       final filtered = await _filterBlockedPosts(chosenPosts);
+      if (mounted) {
+        _primeSubjectPreviews(filtered);
+      }
       if (!mounted) return;
       setState(() {
         _tagFeeds[key] = previous.copyWith(
@@ -1259,6 +1273,9 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     } catch (e) {
       final fallback = _filterLocalPostsByTag(sanitized);
       final filtered = await _filterBlockedPosts(fallback);
+      if (mounted) {
+        _primeSubjectPreviews(filtered);
+      }
       if (!mounted) return;
       setState(() {
         _tagFeeds[key] = previous.copyWith(
@@ -1899,6 +1916,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           mentionMatch ||
           groupMatch;
     }).toList();
+  }
+
+  void _primeSubjectPreviews(List<CommunityPost> posts) {
+    try {
+      context.read<CommunitySubjectProvider>().primeFromPosts(posts);
+    } catch (_) {}
   }
 
   Widget _buildDiscoverFeed(ThemeProvider themeProvider) {
@@ -2914,8 +2937,12 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           ),
         ),
         onOpenLocation: _openLocationOnMap,
-        onOpenArtwork: _openArtworkDetail,
         onOpenGroup: _openGroupFromPost,
+        onOpenSubject: (preview) => CommunitySubjectNavigation.open(
+          context,
+          subject: preview.ref,
+          titleOverride: preview.title,
+        ),
       );
     }
 
@@ -3528,10 +3555,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ),
       ),
     );
-  }
-
-  void _openArtworkDetail(CommunityArtworkReference artwork) {
-    Navigator.pushNamed(context, '/artwork', arguments: {'artworkId': artwork.id});
   }
 
   void _openGroupFromPost(CommunityGroupReference group) {
@@ -6670,7 +6693,7 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                           const SizedBox(height: 16),
                           _buildGroupAttachmentCard(themeProvider, hub),
                           const SizedBox(height: 12),
-                          _buildArtworkAttachmentCard(themeProvider, hub),
+                          _buildSubjectAttachmentCard(themeProvider, hub),
                           const SizedBox(height: 12),
                           _buildLocationAttachmentCard(themeProvider, hub),
                           // Selected images preview
@@ -7142,31 +7165,89 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Widget _buildArtworkAttachmentCard(
+  Widget _buildSubjectAttachmentCard(
       ThemeProvider themeProvider, CommunityHubProvider hub) {
     final scheme = Theme.of(context).colorScheme;
-    final artwork = hub.draft.artwork;
+    final l10n = AppLocalizations.of(context)!;
+    final subjectProvider = context.read<CommunitySubjectProvider>();
     final animationTheme = context.animationTheme;
+
+    CommunitySubjectPreview? preview;
+    final type = (hub.draft.subjectType ?? '').trim();
+    final id = (hub.draft.subjectId ?? '').trim();
+    if (type.isNotEmpty && id.isNotEmpty) {
+      preview = subjectProvider.previewFor(
+        CommunitySubjectRef(type: type, id: id),
+      );
+    }
+    if (preview == null && hub.draft.artwork != null) {
+      preview = CommunitySubjectPreview(
+        ref: CommunitySubjectRef(type: 'artwork', id: hub.draft.artwork!.id),
+        title: hub.draft.artwork!.title,
+        imageUrl: MediaUrlResolver.resolve(hub.draft.artwork!.imageUrl) ??
+            hub.draft.artwork!.imageUrl,
+      );
+    }
+
+    final previewValue = preview;
+    final bool hasSubject = previewValue != null;
+    final String label;
+    final String title;
+    final IconData subjectIcon;
+    final String? imageUrl;
+    if (previewValue == null) {
+      label = l10n.communitySubjectSelectPrompt;
+      title = l10n.communitySubjectSelectTitle;
+      subjectIcon = Icons.link;
+      imageUrl = null;
+    } else {
+      label = l10n.communitySubjectLinkedLabel(
+        _subjectTypeLabel(l10n, previewValue.ref.normalizedType),
+      );
+      title = previewValue.title;
+      subjectIcon = _subjectTypeIcon(previewValue.ref.normalizedType);
+      imageUrl = previewValue.imageUrl;
+    }
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: () async {
-          final selection = await _showArtworkPicker();
-          if (selection != null) {
-            hub.setDraftArtwork(selection);
+          final selection =
+              await CommunitySubjectPicker.pick(context, initialType: hub.draft.subjectType);
+          if (selection == null) return;
+          if (selection.cleared) {
+            hub.setDraftSubject();
+            hub.setDraftArtwork(null);
+            return;
+          }
+          final selected = selection.preview;
+          if (selected == null) return;
+          subjectProvider.upsertPreview(selected);
+          hub.setDraftSubject(type: selected.ref.normalizedType, id: selected.ref.id);
+          if (selected.ref.normalizedType == 'artwork') {
+            hub.setDraftArtwork(
+              CommunityArtworkReference(
+                id: selected.ref.id,
+                title: selected.title,
+                imageUrl: selected.imageUrl,
+              ),
+            );
+          } else {
+            hub.setDraftArtwork(null);
           }
         },
         child: AnimatedContainer(
           duration: animationTheme.short,
           curve: animationTheme.defaultCurve,
           decoration: BoxDecoration(
-            color: artwork != null
+            color: hasSubject
                 ? scheme.primaryContainer.withValues(alpha: 0.2)
                 : scheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: artwork != null
+              color: hasSubject
                   ? themeProvider.accentColor.withValues(alpha: 0.35)
                   : scheme.outline.withValues(alpha: 0.2),
             ),
@@ -7174,16 +7255,20 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              if (artwork?.imageUrl != null && artwork!.imageUrl!.isNotEmpty)
+              if (previewValue != null &&
+                  imageUrl != null &&
+                  imageUrl.isNotEmpty)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    artwork.imageUrl!,
+                    imageUrl,
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Icon(Icons.image_outlined,
-                        color: themeProvider.accentColor),
+                    errorBuilder: (_, __, ___) => Icon(
+                      subjectIcon,
+                      color: themeProvider.accentColor,
+                    ),
                   ),
                 )
               else
@@ -7194,8 +7279,10 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                     color: themeProvider.accentColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.collections_bookmark_outlined,
-                      color: themeProvider.accentColor),
+                  child: Icon(
+                    subjectIcon,
+                    color: themeProvider.accentColor,
+                  ),
                 ),
               const SizedBox(width: 12),
               Expanded(
@@ -7203,15 +7290,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      artwork?.title ?? 'Link an artwork (optional)',
+                      title,
                       style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      artwork == null
-                          ? 'Attach provenance so collectors discover it faster.'
-                          : 'Attached to ${artwork.title}.',
+                      label,
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: scheme.onSurface.withValues(alpha: 0.6),
@@ -7223,10 +7308,13 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
                 ),
               ),
               const SizedBox(width: 12),
-              if (artwork != null)
+              if (hasSubject)
                 IconButton(
-                  tooltip: 'Remove artwork',
-                  onPressed: () => hub.setDraftArtwork(null),
+                  tooltip: l10n.communitySubjectRemoveTooltip,
+                  onPressed: () {
+                    hub.setDraftSubject();
+                    hub.setDraftArtwork(null);
+                  },
                   icon: const Icon(Icons.close),
                 )
               else
@@ -7239,6 +7327,36 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
         ),
       ),
     );
+  }
+
+  String _subjectTypeLabel(AppLocalizations l10n, String type) {
+    switch (type.toLowerCase()) {
+      case 'artwork':
+        return l10n.commonArtwork;
+      case 'exhibition':
+        return l10n.commonExhibition;
+      case 'collection':
+        return l10n.commonCollection;
+      case 'institution':
+        return l10n.commonInstitution;
+      default:
+        return l10n.commonDetails;
+    }
+  }
+
+  IconData _subjectTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'artwork':
+        return Icons.view_in_ar;
+      case 'exhibition':
+        return Icons.event_outlined;
+      case 'collection':
+        return Icons.collections_bookmark_outlined;
+      case 'institution':
+        return Icons.apartment_outlined;
+      default:
+        return Icons.info_outline;
+    }
   }
 
   Widget _buildLocationAttachmentCard(
@@ -7452,196 +7570,6 @@ class _DesktopCommunityScreenState extends State<DesktopCommunityScreen>
     );
   }
 
-  Future<CommunityArtworkReference?> _showArtworkPicker() async {
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final wallet = walletProvider.currentWalletAddress;
-    if (wallet == null || wallet.isEmpty) {
-      if (!mounted) return null;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Connect your wallet to link an artwork.')),
-      );
-      return null;
-    }
-
-    return showDialog<CommunityArtworkReference>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560, maxHeight: 580),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Link artwork',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        icon: const Icon(Icons.close),
-                      ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: BackendApiService()
-                        .getArtistArtworks(wallet, limit: 60),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState != ConnectionState.done) {
-                        return const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2));
-                      }
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              'Unable to load artworks: ${snapshot.error}',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        );
-                      }
-                      final artworks = snapshot.data ?? const [];
-                      if (artworks.isEmpty) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Text(
-                              'No artworks found. Mint or upload an artwork first.',
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ),
-                        );
-                      }
-                      return ListView.separated(
-                        padding: const EdgeInsets.all(24),
-                        itemCount: artworks.length,
-                        itemBuilder: (context, index) {
-                          final raw = artworks[index];
-                          final reference = CommunityArtworkReference(
-                            id: (raw['id'] ?? raw['artworkId'] ?? raw['uuid'])
-                                .toString(),
-                            title: (raw['title'] ?? raw['name'] ?? 'Untitled')
-                                .toString(),
-                            imageUrl: (raw['imageUrl'] ??
-                                    raw['image_url'] ??
-                                    raw['coverImage'] ??
-                                    raw['cover_image'])
-                                ?.toString(),
-                          );
-                          final artist =
-                              raw['artistName'] ?? raw['artist_name'];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: reference.imageUrl != null
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: Image.network(
-                                      reference.imageUrl!,
-                                      width: 56,
-                                      height: 56,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Icon(
-                                        Icons.image_outlined,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.5),
-                                      ),
-                                    ),
-                                  )
-                                : Container(
-                                    width: 56,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primaryContainer
-                                          .withValues(alpha: 0.5),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Icon(Icons.view_in_ar,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.6)),
-                                  ),
-                            title: Text(
-                              reference.title,
-                              style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            subtitle: artist != null
-                                ? Text(
-                                    'by $artist',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurface
-                                          .withValues(alpha: 0.6),
-                                    ),
-                                  )
-                                : null,
-                            trailing: const Icon(Icons.add_circle_outline),
-                            onTap: () =>
-                                Navigator.of(dialogContext).pop(reference),
-                          );
-                        },
-                        separatorBuilder: (_, __) => Divider(
-                          height: 1,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .outline
-                              .withValues(alpha: 0.1),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-                  child: Row(
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                        child: const Text('Cancel'),
-                      ),
-                      const Spacer(),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildChip(
       String label, ThemeProvider themeProvider, VoidCallback onRemove) {

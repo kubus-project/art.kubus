@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../community/community_interactions.dart';
 import '../models/community_group.dart';
 import '../services/backend_api_service.dart';
+import 'community_subject_provider.dart';
 
 class CommunityPostDraft {
   final String category;
@@ -63,6 +64,7 @@ class CommunityHubProvider extends ChangeNotifier {
       : _apiService = apiService ?? BackendApiService();
 
   final BackendApiService _apiService;
+  CommunitySubjectProvider? _subjectProvider;
 
   // ---------- Group directory state ----------
   static const int _groupsPageSize = 20;
@@ -213,6 +215,7 @@ class CommunityHubProvider extends ChangeNotifier {
         final existing = _groupPosts[groupId] ?? const [];
         _groupPosts[groupId] = [...existing, ...posts];
       }
+      _subjectProvider?.primeFromPosts(_groupPosts[groupId] ?? const []);
       _groupPostsHasMore[groupId] = posts.length >= _groupPostsPageSize;
       _groupPostsPage[groupId] = targetPage + 1;
     } catch (e) {
@@ -258,6 +261,7 @@ class CommunityHubProvider extends ChangeNotifier {
     );
     final existing = _groupPosts[groupId] ?? const [];
     _groupPosts[groupId] = [created, ...existing];
+    _subjectProvider?.primeFromPosts([created]);
     _groupPostsHasMore[groupId] = true;
     final preview = GroupPostPreview(
       id: created.id,
@@ -270,6 +274,15 @@ class CommunityHubProvider extends ChangeNotifier {
     }
     notifyListeners();
     return created;
+  }
+
+  void removeGroupPost(String groupId, String postId) {
+    final existing = _groupPosts[groupId];
+    if (existing == null || existing.isEmpty) return;
+    final updated = existing.where((post) => post.id != postId).toList();
+    if (updated.length == existing.length) return;
+    _groupPosts[groupId] = updated;
+    notifyListeners();
   }
 
   // ---------- Art feed state ----------
@@ -324,6 +337,7 @@ class CommunityHubProvider extends ChangeNotifier {
         }
         _artFeed = merged;
       }
+      _subjectProvider?.primeFromPosts(_artFeed);
 
       _artFeedCenter = CommunityLocation(lat: latitude, lng: longitude);
       _artFeedRadiusKm = radiusKm;
@@ -352,6 +366,11 @@ class CommunityHubProvider extends ChangeNotifier {
   void resetDraft() {
     _draft = const CommunityPostDraft();
     notifyListeners();
+  }
+
+  void bindSubjectProvider(CommunitySubjectProvider? provider) {
+    if (_subjectProvider == provider) return;
+    _subjectProvider = provider;
   }
 
   void setDraftCategory(String category) {

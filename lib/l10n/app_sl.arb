@@ -2827,5 +2827,27 @@
         "type": "int"
       }
     }
-  }
+  },
+  "commonExhibition": "Razstava",
+  "commonCollection": "Zbirka",
+  "commonInstitution": "Institucija",
+  "commonDetails": "Podrobnosti",
+  "communitySubjectLinkedLabel": "Povezano: {subjectType}",
+  "@communitySubjectLinkedLabel": {
+    "placeholders": {
+      "subjectType": {}
+    }
+  },
+  "communitySubjectSelectTitle": "Poveži predmet",
+  "communitySubjectSelectPrompt": "Izberi, na kaj se objava nanaša",
+  "communitySubjectRemoveTooltip": "Odstrani predmet",
+  "communitySubjectNoneLabel": "Brez predmeta",
+  "communitySubjectPickerTitle": "Izberi predmet",
+  "communitySubjectPickerSearchHint": "Išči po imenu",
+  "communitySubjectPickerSearchPrompt": "Začni tipkati za iskanje institucij",
+  "communitySubjectPickerLoadFailed": "Ni mogoče naložiti predmetov.",
+  "communitySubjectPickerEmptyArtwork": "Ni najdenih umetnin.",
+  "communitySubjectPickerEmptyExhibition": "Ni najdenih razstav.",
+  "communitySubjectPickerEmptyCollection": "Ni najdenih zbirk.",
+  "communitySubjectPickerEmptyInstitution": "Ni najdenih institucij."
 }

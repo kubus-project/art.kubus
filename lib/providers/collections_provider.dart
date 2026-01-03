@@ -8,15 +8,59 @@ class CollectionsProvider extends ChangeNotifier {
 
   CollectionsProvider({BackendApiService? api}) : _api = api ?? BackendApiService();
 
+  final List<CollectionRecord> _collections = <CollectionRecord>[];
+  bool _listLoading = false;
+  bool _listInitialized = false;
+  String? _listError;
+
   final Map<String, CollectionRecord> _byId = <String, CollectionRecord>{};
   final Set<String> _loadingIds = <String>{};
   final Map<String, String> _errorsById = <String, String>{};
+
+  List<CollectionRecord> get collections => List.unmodifiable(_collections);
+  bool get listLoading => _listLoading;
+  bool get listInitialized => _listInitialized;
+  String? get listError => _listError;
 
   CollectionRecord? getCollectionById(String id) => _byId[id.trim()];
 
   bool isLoading(String id) => _loadingIds.contains(id.trim());
 
   String? errorFor(String id) => _errorsById[id.trim()];
+
+  Future<void> loadCollections({
+    bool refresh = false,
+    String? walletAddress,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    if (_listLoading) return;
+    if (_listInitialized && !refresh) return;
+    _listLoading = true;
+    _listError = null;
+    notifyListeners();
+
+    try {
+      final raw = await _api.getCollections(
+        walletAddress: walletAddress,
+        page: page,
+        limit: limit,
+      );
+      final records = raw.map(CollectionRecord.fromMap).toList(growable: false);
+      _collections
+        ..clear()
+        ..addAll(records);
+      for (final record in records) {
+        _byId[record.id] = record;
+      }
+      _listInitialized = true;
+    } catch (e) {
+      _listError = e.toString();
+    } finally {
+      _listLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<CollectionRecord?> fetchCollection(String id, {bool force = false}) async {
     final collectionId = id.trim();

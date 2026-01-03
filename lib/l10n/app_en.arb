@@ -3001,5 +3001,27 @@
       }
     }
   },
-  "manageMarkersPickArAssetPlaceholder": "Select an AR asset"
+  "manageMarkersPickArAssetPlaceholder": "Select an AR asset",
+  "commonExhibition": "Exhibition",
+  "commonCollection": "Collection",
+  "commonInstitution": "Institution",
+  "commonDetails": "Details",
+  "communitySubjectLinkedLabel": "Linked {subjectType}",
+  "@communitySubjectLinkedLabel": {
+    "placeholders": {
+      "subjectType": {}
+    }
+  },
+  "communitySubjectSelectTitle": "Link a subject",
+  "communitySubjectSelectPrompt": "Choose what this post references",
+  "communitySubjectRemoveTooltip": "Remove subject",
+  "communitySubjectNoneLabel": "No subject",
+  "communitySubjectPickerTitle": "Select subject",
+  "communitySubjectPickerSearchHint": "Search by name",
+  "communitySubjectPickerSearchPrompt": "Start typing to search institutions",
+  "communitySubjectPickerLoadFailed": "Unable to load subjects.",
+  "communitySubjectPickerEmptyArtwork": "No artworks found.",
+  "communitySubjectPickerEmptyExhibition": "No exhibitions found.",
+  "communitySubjectPickerEmptyCollection": "No collections found.",
+  "communitySubjectPickerEmptyInstitution": "No institutions found."
 }

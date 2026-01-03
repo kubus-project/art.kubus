@@ -1,11 +1,15 @@
 import 'package:art_kubus/models/community_group.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 
 import '../../community/community_interactions.dart';
+import '../../models/community_subject.dart';
+import '../../providers/community_subject_provider.dart';
 import '../../utils/app_animations.dart';
 import '../../utils/kubus_color_roles.dart';
+import '../../utils/media_url_resolver.dart';
 import '../avatar_widget.dart';
 import '../inline_loading.dart';
 import 'community_author_role_badges.dart';
@@ -28,8 +32,8 @@ class CommunityPostCard extends StatelessWidget {
     this.onTagTap,
     this.onMentionTap,
     this.onOpenLocation,
-    this.onOpenArtwork,
     this.onOpenGroup,
+    this.onOpenSubject,
   });
 
   final CommunityPost post;
@@ -52,8 +56,8 @@ class CommunityPostCard extends StatelessWidget {
   final ValueChanged<String>? onTagTap;
   final ValueChanged<String>? onMentionTap;
   final ValueChanged<CommunityLocation>? onOpenLocation;
-  final ValueChanged<CommunityArtworkReference>? onOpenArtwork;
   final ValueChanged<CommunityGroupReference>? onOpenGroup;
+  final ValueChanged<CommunitySubjectPreview>? onOpenSubject;
 
   @override
   Widget build(BuildContext context) {
@@ -287,8 +291,8 @@ class CommunityPostCard extends StatelessWidget {
                         onTagTap: onTagTap,
                         onMentionTap: onMentionTap,
                         onOpenLocation: onOpenLocation,
-                        onOpenArtwork: onOpenArtwork,
                         onOpenGroup: onOpenGroup,
+                        onOpenSubject: onOpenSubject,
                       ),
                     ],
                     const SizedBox(height: 16),
@@ -448,6 +452,50 @@ String _formatCategoryLabel(String category) {
           .split(' ')
           .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : w)
           .join(' ');
+  }
+}
+
+CommunitySubjectRef? _resolveSubjectRef(CommunityPost post) {
+  final type = (post.subjectType ?? '').trim();
+  final id = (post.subjectId ?? '').trim();
+  if (type.isNotEmpty && id.isNotEmpty) {
+    return CommunitySubjectRef(type: type, id: id);
+  }
+  if (post.artwork != null) {
+    return CommunitySubjectRef(type: 'artwork', id: post.artwork!.id);
+  }
+  return null;
+}
+
+String _subjectTypeLabel(BuildContext context, String type, AppLocalizations? l10n) {
+  final localized = l10n ?? AppLocalizations.of(context);
+  if (localized == null) return type;
+  switch (type.toLowerCase()) {
+    case 'artwork':
+      return localized.commonArtwork;
+    case 'exhibition':
+      return localized.commonExhibition;
+    case 'collection':
+      return localized.commonCollection;
+    case 'institution':
+      return localized.commonInstitution;
+    default:
+      return localized.commonDetails;
+  }
+}
+
+IconData _subjectTypeIcon(String type) {
+  switch (type.toLowerCase()) {
+    case 'artwork':
+      return Icons.view_in_ar;
+    case 'exhibition':
+      return Icons.event_outlined;
+    case 'collection':
+      return Icons.collections_bookmark_outlined;
+    case 'institution':
+      return Icons.apartment_outlined;
+    default:
+      return Icons.info_outline;
   }
 }
 
@@ -637,8 +685,8 @@ class _PostMetadataSection extends StatelessWidget {
     this.onTagTap,
     this.onMentionTap,
     this.onOpenLocation,
-    this.onOpenArtwork,
     this.onOpenGroup,
+    this.onOpenSubject,
   });
 
   final CommunityPost post;
@@ -646,17 +694,34 @@ class _PostMetadataSection extends StatelessWidget {
   final ValueChanged<String>? onTagTap;
   final ValueChanged<String>? onMentionTap;
   final ValueChanged<CommunityLocation>? onOpenLocation;
-  final ValueChanged<CommunityArtworkReference>? onOpenArtwork;
   final ValueChanged<CommunityGroupReference>? onOpenGroup;
+  final ValueChanged<CommunitySubjectPreview>? onOpenSubject;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
+    final subjectProvider = context.watch<CommunitySubjectProvider>();
+    final subjectRef = _resolveSubjectRef(post);
+    CommunitySubjectPreview? subjectPreview;
+    if (subjectRef != null) {
+      subjectPreview = subjectProvider.previewFor(subjectRef);
+      if (subjectPreview == null && post.artwork != null) {
+        subjectPreview = CommunitySubjectPreview(
+          ref: subjectRef,
+          title: post.artwork!.title,
+          imageUrl: MediaUrlResolver.resolve(post.artwork!.imageUrl) ?? post.artwork!.imageUrl,
+        );
+      }
+    }
+    final resolvedPreview = subjectPreview;
+    final subjectTypeLabel = resolvedPreview != null
+        ? _subjectTypeLabel(context, resolvedPreview.ref.normalizedType, l10n)
+        : null;
     final hasMetadata = post.tags.isNotEmpty ||
         post.mentions.isNotEmpty ||
         post.location != null ||
-        post.artwork != null ||
+        resolvedPreview != null ||
         post.group != null;
     if (!hasMetadata) return const SizedBox.shrink();
 
@@ -769,61 +834,62 @@ class _PostMetadataSection extends StatelessWidget {
             ),
           ),
         ],
-        if (post.artwork != null) ...[
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: onOpenArtwork == null ? null : () => onOpenArtwork!(post.artwork!),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
+          if (resolvedPreview != null) ...[
+            const SizedBox(height: 12),
+            GestureDetector(
+              onTap:
+                  onOpenSubject == null ? null : () => onOpenSubject!(resolvedPreview),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: scheme.primaryContainer,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: scheme.outline.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: post.artwork!.imageUrl != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(10),
-                            child: Image.network(
-                              post.artwork!.imageUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.view_in_ar,
-                                color: accentColor,
-                                size: 22,
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: resolvedPreview.imageUrl != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(10),
+                              child: Image.network(
+                                resolvedPreview.imageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Icon(
+                                  _subjectTypeIcon(resolvedPreview.ref.normalizedType),
+                                  color: accentColor,
+                                  size: 22,
+                                ),
                               ),
+                            )
+                          : Icon(
+                              _subjectTypeIcon(resolvedPreview.ref.normalizedType),
+                              color: accentColor,
+                              size: 22,
                             ),
-                          )
-                        : Icon(
-                            Icons.view_in_ar,
-                            color: accentColor,
-                            size: 22,
-                          ),
-                  ),
+                    ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          post.artwork!.title,
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
-                          ),
+                        children: [
+                          Text(
+                            resolvedPreview.title,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: scheme.onSurface,
+                            ),
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          l10n?.postDetailLinkedArtworkLabel ?? 'Linked artwork',
+                          l10n?.communitySubjectLinkedLabel(subjectTypeLabel ?? '') ?? 'Linked',
                           style: GoogleFonts.inter(
                             fontSize: 11,
                             color: scheme.onSurface.withValues(alpha: 0.6),

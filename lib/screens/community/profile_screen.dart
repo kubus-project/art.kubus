@@ -1516,11 +1516,13 @@ class _ProfileScreenState extends State<ProfileScreen>
             icon: (() {
               final lower = title.toLowerCase();
               if (lower.contains('artwork')) return Icons.image_outlined;
-              if (lower.contains('collection'))
+              if (lower.contains('collection')) {
                 return Icons.collections_outlined;
+              }
               if (lower.contains('event')) return Icons.event;
-              if (lower.contains('post') || lower.contains('posts'))
+              if (lower.contains('post') || lower.contains('posts')) {
                 return Icons.article;
+              }
               return Icons.info_outline;
             })(),
           )

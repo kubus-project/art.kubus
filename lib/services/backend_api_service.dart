@@ -2815,11 +2815,18 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     required String content,
     required List<String> mediaUrls,
     List<String>? mediaCids,
+    String? subjectType,
+    String? subjectId,
+    String? artworkId,
+    bool includeSubject = false,
   }) async {
     try {
       try {
         await _ensureAuthWithStoredWallet();
       } catch (_) {}
+
+      final shouldIncludeSubject =
+          includeSubject || subjectType != null || subjectId != null || artworkId != null;
 
       final response = await _put(
         Uri.parse('$baseUrl/api/community/posts/$postId'),
@@ -2828,6 +2835,9 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
           'content': content,
           'mediaUrls': mediaUrls,
           if (mediaCids != null) 'mediaCids': mediaCids,
+          if (shouldIncludeSubject) 'subjectType': subjectType?.trim(),
+          if (shouldIncludeSubject) 'subjectId': subjectId?.trim(),
+          if (shouldIncludeSubject) 'artworkId': artworkId?.trim(),
         }),
       );
 
@@ -3191,6 +3201,33 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi {
     } catch (e) {
       AppConfig.debugPrint('BackendApiService.createGroupPost failed: $e');
       rethrow;
+    }
+  }
+
+  /// Resolve community post subject previews in a batch.
+  /// POST /api/community/subjects/resolve
+  Future<List<Map<String, dynamic>>> resolveCommunitySubjects({
+    required List<Map<String, String>> subjects,
+  }) async {
+    if (subjects.isEmpty) return const <Map<String, dynamic>>[];
+    try {
+      final response = await _post(
+        Uri.parse('$baseUrl/api/community/subjects/resolve'),
+        headers: _getHeaders(includeAuth: false),
+        body: jsonEncode({'subjects': subjects}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final list = (data['data'] ?? data['subjects'] ?? []) as List<dynamic>;
+        return list
+            .whereType<Map<String, dynamic>>()
+            .toList(growable: false);
+      }
+      throw Exception('Failed to resolve subjects: ${response.statusCode}');
+    } catch (e) {
+      AppConfig.debugPrint('BackendApiService.resolveCommunitySubjects failed: $e');
+      return const <Map<String, dynamic>>[];
     }
   }
 
@@ -6681,6 +6718,25 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     }
   }
 
+  final rawSubjectType =
+      (json['subjectType'] ?? json['subject_type'])?.toString();
+  final rawSubjectId =
+      (json['subjectId'] ?? json['subject_id'])?.toString();
+  String? resolvedSubjectType = rawSubjectType?.trim();
+  String? resolvedSubjectId = rawSubjectId?.trim();
+  if ((resolvedSubjectType == null || resolvedSubjectType.isEmpty) &&
+      artworkRef != null) {
+    resolvedSubjectType = 'artwork';
+    resolvedSubjectId = artworkRef.id;
+  } else if ((resolvedSubjectType ?? '').toLowerCase().contains('artwork') &&
+      (resolvedSubjectId == null || resolvedSubjectId.isEmpty)) {
+    final fallbackArtworkId =
+        (json['artworkId'] ?? json['artwork_id'])?.toString();
+    resolvedSubjectId = fallbackArtworkId?.trim().isNotEmpty == true
+        ? fallbackArtworkId?.trim()
+        : artworkRef?.id;
+  }
+
   // Parse original post for reposts
   CommunityPost? originalPost;
   final originalPostPayload =
@@ -6725,6 +6781,8 @@ CommunityPost _communityPostFromBackendJson(Map<String, dynamic> json) {
     group: groupRef,
     groupId: (json['groupId'] as String?) ?? (json['group_id'] as String?) ?? groupRef?.id,
     artwork: artworkRef,
+    subjectType: resolvedSubjectType,
+    subjectId: resolvedSubjectId,
     distanceKm: (json['distanceKm'] as num?)?.toDouble() ?? (json['distance_km'] as num?)?.toDouble(),
     postType: postTypeValue,
     originalPostId: originalPostId,

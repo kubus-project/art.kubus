@@ -23,6 +23,16 @@ class InstitutionProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get initialized => _initialized;
 
+  Institution? getInstitutionById(String id) {
+    final target = id.trim();
+    if (target.isEmpty) return null;
+    try {
+      return _institutions.firstWhere((i) => i.id == target);
+    } catch (_) {
+      return null;
+    }
+  }
+
   // Institution methods
   Future<void> initialize({bool seedMockIfEmpty = false}) async {
     if (_initialized) return;
@@ -299,14 +309,6 @@ class InstitutionProvider extends ChangeNotifier {
     }
     await _persist();
     notifyListeners();
-  }
-
-  Institution? getInstitutionById(String id) {
-    try {
-      return _institutions.firstWhere((institution) => institution.id == id);
-    } catch (e) {
-      return null;
-    }
   }
 
   // Analytics methods
