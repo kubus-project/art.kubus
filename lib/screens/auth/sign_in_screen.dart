@@ -163,7 +163,9 @@ class _SignInScreenState extends State<SignInScreen> {
         AppConfig.debugPrint('SignInScreen: web3 import failed: $e');
       }
       try {
-        await BackendApiService().issueTokenForWallet(address);
+        if (AppConfig.enableDebugIssueToken) {
+          await BackendApiService().issueTokenForWallet(address);
+        }
       } catch (e) {
         AppConfig.debugPrint('SignInScreen: issueTokenForWallet failed: $e');
       }

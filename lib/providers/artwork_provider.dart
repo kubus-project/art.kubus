@@ -24,6 +24,7 @@ class ArtworkProvider extends ChangeNotifier {
   SavedItemsProvider? _savedItemsProvider;
   bool _useMockData = false;
   final ArtworkBackendApi _backendApi;
+  final Map<String, Future<Artwork>> _inFlightArtworkFetches = <String, Future<Artwork>>{};
   static const String _viewHistoryPrefsKey = 'artwork_view_history_v1';
   final List<ViewHistoryEntry> _viewHistory = <ViewHistoryEntry>[];
   bool _historyLoaded = false;
@@ -74,15 +75,27 @@ class ArtworkProvider extends ChangeNotifier {
     final existing = getArtworkById(artworkId);
     if (existing != null) return existing;
 
+    final key = artworkId.trim();
+    if (key.isEmpty) return null;
+    final inflight = _inFlightArtworkFetches[key];
+    if (inflight != null) {
+      return inflight;
+    }
+
     try {
-      final fetched = await _backendApi.getArtwork(artworkId);
-      addOrUpdateArtwork(fetched);
-      return fetched;
+      final future = _backendApi.getArtwork(key).then((fetched) {
+        addOrUpdateArtwork(fetched);
+        return fetched;
+      });
+      _inFlightArtworkFetches[key] = future;
+      return await future;
     } catch (e) {
       if (kDebugMode) {
         debugPrint('ArtworkProvider: fetchArtworkIfNeeded error: $e');
       }
       rethrow;
+    } finally {
+      _inFlightArtworkFetches.remove(key);
     }
   }
 
@@ -454,9 +467,18 @@ class ArtworkProvider extends ChangeNotifier {
     _setLoading(operation, true);
     try {
       final fetched = await _backendApi.getArtworkComments(artworkId: artworkId, page: 1, limit: 100);
-      // Ensure newest comments show first (mobile + desktop). Backend ordering is not guaranteed.
-      final sorted = [...fetched]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      _comments[artworkId] = _nestArtworkComments(sorted);
+      // Keep ordering consistent with Community comments: oldest-first so threads read naturally.
+      // Backend provides an ORDER BY, but sort defensively to keep behavior stable.
+      final sorted = [...fetched]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      final nested = _nestArtworkComments(sorted);
+      _comments[artworkId] = nested;
+
+      // Keep the artwork's cached commentsCount consistent with what the UI is showing.
+      final total = _countArtworkComments(nested);
+      final artwork = getArtworkById(artworkId);
+      if (artwork != null && artwork.commentsCount != total) {
+        addOrUpdateArtwork(artwork.copyWith(commentsCount: total));
+      }
       notifyListeners();
     } catch (e) {
       _commentLoadErrors[artworkId] = 'Failed to load comments: $e';
@@ -474,71 +496,30 @@ class ArtworkProvider extends ChangeNotifier {
   String? commentLoadError(String artworkId) => _commentLoadErrors[artworkId];
   String? commentSubmitError(String artworkId) => _commentSubmitErrors[artworkId];
 
-  /// Add comment to artwork
-  Future<ArtworkComment> addComment(String artworkId, String content, String userId, String userName) async {
+  /// Add a comment to an artwork.
+  ///
+  /// Mirrors Community comments semantics: POST, then refresh the thread.
+  Future<void> addComment({
+    required String artworkId,
+    required String content,
+    String? parentCommentId,
+  }) async {
     _setLoading('comment_$artworkId', true);
     _commentSubmitErrors[artworkId] = null;
-    final tempId = 'local_${DateTime.now().millisecondsSinceEpoch}';
     try {
-      final newComment = ArtworkComment(
-        id: tempId,
-        artworkId: artworkId,
-        userId: userId,
-        userName: userName,
-        content: content,
-        createdAt: DateTime.now(),
-      );
-
-      if (_comments[artworkId] == null) {
-        _comments[artworkId] = [];
-      }
-      _comments[artworkId]!.insert(0, newComment);
-
-      // Update artwork comment count
-      final artwork = getArtworkById(artworkId);
-      if (artwork != null) {
-        final updatedArtwork = artwork.copyWith(
-          commentsCount: artwork.commentsCount + 1,
-        );
-        addOrUpdateArtwork(updatedArtwork);
-      }
-
-      notifyListeners();
-      
-      // Sync with backend and replace optimistic comment.
-      final created = await _backendApi.createArtworkComment(
+      await _backendApi.createArtworkComment(
         artworkId: artworkId,
         content: content,
+        parentCommentId: parentCommentId,
       );
 
-      final list = _comments[artworkId];
-      if (list != null) {
-        final idx = list.indexWhere((c) => c.id == tempId);
-        if (idx >= 0) {
-          list[idx] = created;
-        }
-      }
-
-      // Refresh comments from backend to pick up canonical ordering and ensure
-      // any server-side transforms are reflected.
       await loadComments(artworkId, force: true);
-      notifyListeners();
 
-      // Track comment interaction for achievements/tasks
+      // Track comment interaction for achievements/tasks.
       if (_taskProvider != null) {
         _taskProvider!.trackArtworkComment(artworkId);
       }
-
-      return created;
     } catch (e) {
-      // Rollback optimistic comment + counter.
-      _comments[artworkId]?.removeWhere((c) => c.id == tempId);
-      final artwork = getArtworkById(artworkId);
-      if (artwork != null) {
-        addOrUpdateArtwork(
-          artwork.copyWith(commentsCount: (artwork.commentsCount - 1).clamp(0, 1 << 30)),
-        );
-      }
       _commentSubmitErrors[artworkId] = 'Failed to add comment: $e';
       _setError(_commentSubmitErrors[artworkId]!);
       rethrow;
@@ -550,35 +531,42 @@ class ArtworkProvider extends ChangeNotifier {
   /// Like/Unlike comment
   Future<void> toggleCommentLike(String artworkId, String commentId) async {
     try {
-      final comments = _comments[artworkId];
-      if (comments != null) {
-        final commentIndex = comments.indexWhere((c) => c.id == commentId);
-        if (commentIndex >= 0) {
-          final comment = comments[commentIndex];
-          final original = comment;
-          final updatedComment = comment.copyWith(
-            isLikedByCurrentUser: !comment.isLikedByCurrentUser,
-            likesCount: comment.isLikedByCurrentUser 
-                ? comment.likesCount - 1 
-                : comment.likesCount + 1,
-          );
-          comments[commentIndex] = updatedComment;
-          notifyListeners();
+      final roots = _comments[artworkId];
+      if (roots == null || roots.isEmpty) return;
 
-          try {
-            final updatedCount = updatedComment.isLikedByCurrentUser
-                ? await _backendApi.likeComment(commentId)
-                : await _backendApi.unlikeComment(commentId);
-            if (updatedCount != null) {
-              comments[commentIndex] = comments[commentIndex].copyWith(likesCount: updatedCount);
-              notifyListeners();
-            }
-          } catch (e) {
-            comments[commentIndex] = original;
-            notifyListeners();
-            rethrow;
-          }
+      final originalTree = List<ArtworkComment>.from(roots);
+      final target = _findArtworkCommentById(roots, commentId);
+      if (target == null) return;
+
+      final optimistic = target.copyWith(
+        isLikedByCurrentUser: !target.isLikedByCurrentUser,
+        likesCount: target.isLikedByCurrentUser ? target.likesCount - 1 : target.likesCount + 1,
+      );
+
+      _comments[artworkId] = _updateArtworkCommentById(
+        roots,
+        commentId,
+        (c) => optimistic.copyWith(replies: c.replies),
+      );
+      notifyListeners();
+
+      try {
+        final updatedCount = optimistic.isLikedByCurrentUser
+            ? await _backendApi.likeComment(commentId)
+            : await _backendApi.unlikeComment(commentId);
+        if (updatedCount != null) {
+          final afterCount = _comments[artworkId] ?? const <ArtworkComment>[];
+          _comments[artworkId] = _updateArtworkCommentById(
+            afterCount,
+            commentId,
+            (c) => c.copyWith(likesCount: updatedCount),
+          );
+          notifyListeners();
         }
+      } catch (e) {
+        _comments[artworkId] = originalTree;
+        notifyListeners();
+        rethrow;
       }
     } catch (e) {
       _setError('Failed to toggle comment like: $e');
@@ -816,6 +804,48 @@ class ArtworkProvider extends ChangeNotifier {
     }
 
     return roots;
+  }
+
+  int _countArtworkComments(List<ArtworkComment> roots) {
+    int countNode(ArtworkComment c) {
+      var total = 1;
+      for (final r in c.replies) {
+        total += countNode(r);
+      }
+      return total;
+    }
+
+    var total = 0;
+    for (final c in roots) {
+      total += countNode(c);
+    }
+    return total;
+  }
+
+  ArtworkComment? _findArtworkCommentById(List<ArtworkComment> roots, String commentId) {
+    for (final c in roots) {
+      if (c.id == commentId) return c;
+      final hit = _findArtworkCommentById(c.replies, commentId);
+      if (hit != null) return hit;
+    }
+    return null;
+  }
+
+  List<ArtworkComment> _updateArtworkCommentById(
+    List<ArtworkComment> roots,
+    String commentId,
+    ArtworkComment Function(ArtworkComment current) updater,
+  ) {
+    return roots.map((c) {
+      final updatedReplies = c.replies.isEmpty
+          ? c.replies
+          : _updateArtworkCommentById(c.replies, commentId, updater);
+      final withReplies = (updatedReplies == c.replies) ? c : c.copyWith(replies: updatedReplies);
+      if (withReplies.id == commentId) {
+        return updater(withReplies);
+      }
+      return withReplies;
+    }).toList();
   }
 }
 

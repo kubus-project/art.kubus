@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:solana/solana.dart' hide Wallet; // Hide solana Wallet to avoid name clash with app model
+import '../config/config.dart';
 import '../config/api_keys.dart';
 import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
@@ -204,11 +205,13 @@ class Web3Provider extends ChangeNotifier {
       await _syncBackend(publicKey);
 
       try {
-        final issued = await BackendApiService().issueTokenForWallet(publicKey);
-        debugPrint('Web3Provider._initializeWallet: backend token issuance for $publicKey -> $issued');
-        if (issued) {
-          await BackendApiService().loadAuthToken();
-          debugPrint('Web3Provider._initializeWallet: Auth token loaded after issuance');
+        if (AppConfig.enableDebugIssueToken) {
+          final issued = await BackendApiService().issueTokenForWallet(publicKey);
+          debugPrint('Web3Provider._initializeWallet: backend token issuance for $publicKey -> $issued');
+          if (issued) {
+            await BackendApiService().loadAuthToken();
+            debugPrint('Web3Provider._initializeWallet: Auth token loaded after issuance');
+          }
         }
       } catch (e, st) {
         debugPrint('Web3Provider._initializeWallet: token issuance failed: $e\n$st');

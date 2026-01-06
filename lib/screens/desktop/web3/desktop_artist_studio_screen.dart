@@ -49,6 +49,8 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
   bool _hasFetchedReviewForWallet = false;
   String _lastReviewWallet = '';
 
+  String _lastStatsWallet = '';
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +74,31 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
 
     if (wallet.isNotEmpty) {
       _loadArtistReviewStatus(forceRefresh: true);
+    }
+
+    // StatsProvider.ensureSnapshot() notifies listeners; calling it during build
+    // (e.g. from a widget build method) can trigger "setState/markNeedsBuild"
+    // exceptions. Schedule the refresh post-frame when the wallet changes.
+    final statsWalletChanged = wallet != _lastStatsWallet;
+    if (wallet.isEmpty) {
+      _lastStatsWallet = '';
+    } else if (statsWalletChanged) {
+      _lastStatsWallet = wallet;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final statsProvider = context.read<StatsProvider>();
+        unawaited(statsProvider.ensureSnapshot(
+          entityType: 'user',
+          entityId: wallet,
+          metrics: const <String>[
+            'artworks',
+            'viewsReceived',
+            'likesReceived',
+            'achievementTokensTotal',
+          ],
+          scope: 'public',
+        ));
+      });
     }
   }
 
@@ -775,15 +802,6 @@ class _DesktopArtistStudioScreenState extends State<DesktopArtistStudioScreen>
       'likesReceived',
       'achievementTokensTotal',
     ];
-
-    if (wallet.isNotEmpty) {
-      unawaited(statsProvider.ensureSnapshot(
-        entityType: 'user',
-        entityId: wallet,
-        metrics: metrics,
-        scope: 'public',
-      ));
-    }
 
     final snapshot = wallet.isEmpty
         ? null

@@ -1322,9 +1322,9 @@ class _ArtistAnalyticsState extends State<ArtistAnalytics>
           // Latest comment event if available
           final comments = artworkProvider.getComments(a.id);
           if (comments.isNotEmpty) {
-            comments.sort((c1, c2) => c2.createdAt.compareTo(c1.createdAt));
+            final sortedComments = [...comments]..sort((c1, c2) => c2.createdAt.compareTo(c1.createdAt));
             activities.add({
-              'time': comments.first.createdAt,
+              'time': sortedComments.first.createdAt,
               'icon': Icons.comment,
               'action': 'New comment on "${a.title}"',
             });

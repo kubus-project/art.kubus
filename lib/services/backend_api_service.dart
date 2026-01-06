@@ -23,6 +23,7 @@ import '../config/config.dart';
 import 'storage_config.dart';
 import 'user_action_logger.dart';
 import 'auth_session_coordinator.dart';
+import 'http_client_factory.dart';
 
 /// Backend API Service
 /// 
@@ -142,10 +143,18 @@ abstract class MarkerBackendApi {
 class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerBackendApi {
   static final BackendApiService _instance = BackendApiService._internal();
   factory BackendApiService() => _instance;
-  BackendApiService._internal();
+  BackendApiService._internal() {
+    // Ensure a single, consistent HTTP client across the app.
+    // On Flutter Web, this enables credentialed requests (cookies) when needed.
+    _client = createPlatformHttpClient();
+  }
 
   http.Client _client = http.Client();
   AuthSessionCoordinator? _authCoordinator;
+
+  // Used only for diagnostic logging; the actual behavior is determined by the
+  // platform client returned by [createPlatformHttpClient()].
+  bool get _webCredentialsExpected => kIsWeb;
 
   @override
   final String baseUrl = AppConfig.baseApiUrl;
@@ -628,6 +637,25 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
       includeAuth: includeAuth,
     );
 
+    // Minimal, scoped HTTP tracing for debugging auth/403 issues on web.
+    // Guarded by AppConfig.enableNetworkLogging and only logs marker endpoints
+    // to avoid noisy console output.
+    final shouldTrace = AppConfig.enableNetworkLogging &&
+        kDebugMode &&
+        (uri.path.startsWith('/api/art-markers') || uri.path.contains('/api/art-markers/'));
+    if (shouldTrace) {
+      final hasAuthHeader = resolvedHeaders.containsKey('Authorization');
+      final authWallet = _authWalletCanonical ?? _tryExtractWalletFromToken(_authToken) ?? '';
+      final preferredWallet = _preferredWalletCanonical ?? '';
+      AppConfig.networkLog(method.toUpperCase(), uri.toString(), data: {
+        'authHeader': hasAuthHeader,
+        'includeAuth': includeAuth,
+        'webCredentialsExpected': _webCredentialsExpected,
+        'tokenWallet': authWallet,
+        'preferredWallet': preferredWallet,
+      });
+    }
+
     final http.Response response;
     switch (method.toUpperCase()) {
       case 'GET':
@@ -647,6 +675,14 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
         break;
       default:
         throw ArgumentError('Unsupported method: $method');
+    }
+
+    if (shouldTrace) {
+      final snippet = response.body.length <= 240 ? response.body : response.body.substring(0, 240);
+      AppConfig.networkLog('RESP', uri.toString(), data: {
+        'status': response.statusCode,
+        'bodySnippet': snippet,
+      });
     }
 
     final coordinator = _authCoordinator;
@@ -2074,7 +2110,7 @@ class BackendApiService implements ArtworkBackendApi, ProfileBackendApi, MarkerB
 
       throw Exception('Failed to load markers: ${response.statusCode} ${response.body}');
     } catch (e) {
-      AppConfig.debugPrint('BackendApiService.getMyArtMarkers failed: $e');
+      AppConfig.debugPrint('BackendeApiService.getMyArtMarkers failed: $e');
       rethrow;
     }
   }
