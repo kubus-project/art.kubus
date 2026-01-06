@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
+import '../config/config.dart';
 import '../services/backend_api_service.dart';
 import '../services/socket_service.dart';
 import '../models/conversation.dart';
@@ -579,11 +580,13 @@ class ChatProvider extends ChangeNotifier {
           if (!ok) {
             debugPrint('ChatProvider: connectAndSubscribe failed, attempting token issuance and retry');
             try {
-              final issued = await _api.issueTokenForWallet(_currentWallet!);
-              if (issued) {
-                await _api.loadAuthToken();
-                ok = await _socket.connectAndSubscribe(_api.baseUrl, _currentWallet!);
-                debugPrint('ChatProvider: socket connectAndSubscribe retry result: $ok');
+              if (AppConfig.enableDebugIssueToken) {
+                final issued = await _api.issueTokenForWallet(_currentWallet!);
+                if (issued) {
+                  await _api.loadAuthToken();
+                  ok = await _socket.connectAndSubscribe(_api.baseUrl, _currentWallet!);
+                  debugPrint('ChatProvider: socket connectAndSubscribe retry result: $ok');
+                }
               }
             } catch (e2) { debugPrint('ChatProvider: token issuance retry failed: $e2'); }
           }

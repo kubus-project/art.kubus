@@ -15,6 +15,7 @@ import '../../../services/backend_api_service.dart';
 import '../../../services/share/share_service.dart';
 import '../../../services/share/share_types.dart';
 import '../../../utils/artwork_media_resolver.dart';
+import '../../../utils/wallet_utils.dart';
 import '../../../widgets/artwork_creator_byline.dart';
 import '../../../widgets/avatar_widget.dart';
 import '../../../widgets/inline_loading.dart';
@@ -38,7 +39,10 @@ class DesktopArtworkDetailScreen extends StatefulWidget {
 class _DesktopArtworkDetailScreenState
     extends State<DesktopArtworkDetailScreen> {
   late final TextEditingController _commentController;
+  late final FocusNode _commentFocusNode;
   late final ScrollController _commentsScrollController;
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
   bool _artworkLoading = true;
   String? _artworkError;
 
@@ -46,6 +50,7 @@ class _DesktopArtworkDetailScreenState
   void initState() {
     super.initState();
     _commentController = TextEditingController();
+    _commentFocusNode = FocusNode();
     _commentsScrollController = ScrollController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -60,6 +65,7 @@ class _DesktopArtworkDetailScreenState
   @override
   void dispose() {
     _commentController.dispose();
+    _commentFocusNode.dispose();
     _commentsScrollController.dispose();
     super.dispose();
   }
@@ -482,19 +488,21 @@ class _DesktopArtworkDetailScreenState
                             provider.loadComments(artwork.id, force: true))
                     : (comments.isEmpty)
                         ? _buildCommentsEmpty()
-                        : ListView.separated(
+                        : ListView(
                             controller: _commentsScrollController,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: DetailSpacing.lg,
                                 vertical: DetailSpacing.md),
-                            itemCount: comments.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: DetailSpacing.md),
-                            itemBuilder: (context, index) => _buildCommentTile(
-                              artworkId: artwork.id,
-                              comment: comments[index],
-                              provider: provider,
-                            ),
+                            children: [
+                              for (final c in comments) ...[
+                                ..._buildCommentTreeWidgets(
+                                  artwork: artwork,
+                                  comment: c,
+                                  provider: provider,
+                                  depth: 0,
+                                ),
+                              ],
+                            ],
                           ),
           ),
           Divider(
@@ -562,89 +570,315 @@ class _DesktopArtworkDetailScreenState
     );
   }
 
-  Widget _buildCommentTile({
-    required String artworkId,
+  List<Widget> _buildCommentTreeWidgets({
+    required Artwork artwork,
     required ArtworkComment comment,
     required ArtworkProvider provider,
+    required int depth,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
+    final widgets = <Widget>[
+      _buildCommentTile(
+        artwork: artwork,
+        comment: comment,
+        provider: provider,
+        depth: depth,
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AvatarWidget(
-            avatarUrl: comment.userAvatarUrl,
-            wallet: comment.userId,
-            radius: 18,
+      const SizedBox(height: DetailSpacing.md),
+    ];
+
+    for (final r in comment.replies) {
+      widgets.addAll(
+        _buildCommentTreeWidgets(
+          artwork: artwork,
+          comment: r,
+          provider: provider,
+          depth: depth + 1,
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  Widget _buildCommentTile({
+    required Artwork artwork,
+    required ArtworkComment comment,
+    required ArtworkProvider provider,
+    required int depth,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    final scheme = Theme.of(context).colorScheme;
+    final profile = context.read<ProfileProvider>().currentUser;
+    final walletProvider = context.read<WalletProvider>();
+
+    final currentWallet = WalletUtils.canonical(
+      (profile?.walletAddress ?? walletProvider.currentWalletAddress ?? '').toString(),
+    );
+    final currentId = WalletUtils.canonical((profile?.id ?? '').toString());
+    final authorKey = WalletUtils.canonical(comment.userId);
+    final canModify = authorKey.isNotEmpty &&
+        (authorKey == currentWallet || (currentId.isNotEmpty && authorKey == currentId));
+
+    Future<void> showHistory() async {
+      if (!comment.isEdited || comment.originalContent == null) return;
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: Text(l10n.commentHistoryTitle),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(l10n.commentHistoryCurrentLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  SelectableText(comment.content, style: GoogleFonts.inter()),
+                  const SizedBox(height: 16),
+                  Text(l10n.commentHistoryOriginalLabel, style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 8),
+                  SelectableText(comment.originalContent ?? '', style: GoogleFonts.inter()),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: Text(l10n.commonClose),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    Future<void> promptEdit() async {
+      final messenger = ScaffoldMessenger.of(context);
+      final controller = TextEditingController(text: comment.content);
+      bool saving = false;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: !saving,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: Text(l10n.commentEditTitle),
+                content: TextField(
+                  controller: controller,
+                  maxLines: null,
+                  autofocus: true,
+                  decoration: InputDecoration(hintText: l10n.postDetailWriteCommentHint),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: saving ? null : () => Navigator.of(dialogContext).pop(),
+                    child: Text(l10n.commonCancel),
+                  ),
+                  FilledButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            final next = controller.text.trim();
+                            if (next.isEmpty) return;
+                            setDialogState(() => saving = true);
+                            try {
+                              await provider.editArtworkComment(
+                                artworkId: artwork.id,
+                                commentId: comment.id,
+                                content: next,
+                              );
+                              if (!mounted) return;
+                              if (!dialogContext.mounted) return;
+                              Navigator.of(dialogContext).pop();
+                              messenger.showSnackBar(SnackBar(content: Text(l10n.commentUpdatedToast)));
+                            } catch (_) {
+                              if (!mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.commentEditFailedToast),
+                                  backgroundColor: scheme.errorContainer,
+                                ),
+                              );
+                            } finally {
+                              if (dialogContext.mounted) {
+                                setDialogState(() => saving = false);
+                              }
+                            }
+                          },
+                    child: Text(l10n.commonSave),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+      controller.dispose();
+    }
+
+    Future<void> promptDelete() async {
+      final messenger = ScaffoldMessenger.of(context);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: Text(l10n.commentDeleteConfirmTitle),
+            content: Text(l10n.commentDeleteConfirmMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: Text(l10n.commonCancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: scheme.error,
+                  foregroundColor: scheme.onError,
+                ),
+                child: Text(l10n.commonDelete),
+              ),
+            ],
+          );
+        },
+      );
+      if (confirmed != true) return;
+      try {
+        await provider.deleteArtworkComment(artworkId: artwork.id, commentId: comment.id);
+        if (!mounted) return;
+        messenger.showSnackBar(SnackBar(content: Text(l10n.commentDeletedToast)));
+      } catch (_) {
+        if (!mounted) return;
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(l10n.commentDeleteFailedToast),
+            backgroundColor: scheme.errorContainer,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        comment.userName,
-                        style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w700, fontSize: 13),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      comment.timeAgo,
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        color: scheme.onSurface.withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  comment.content,
-                  style: GoogleFonts.inter(fontSize: 13, height: 1.35),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    IconButton(
-                      onPressed: () =>
-                          provider.toggleCommentLike(artworkId, comment.id),
-                      icon: Icon(
-                        comment.isLikedByCurrentUser
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        size: 16,
-                        color: comment.isLikedByCurrentUser
-                            ? scheme.error
-                            : scheme.onSurface.withValues(alpha: 0.8),
-                      ),
-                      tooltip: AppLocalizations.of(context)!.commonLikes,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                    if (comment.likesCount > 0)
-                      Text(
-                        comment.likesCount.toString(),
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: scheme.onSurface.withValues(alpha: 0.7),
+        );
+      }
+    }
+
+    final isReply = depth > 0;
+
+    return Padding(
+      padding: EdgeInsets.only(left: depth * 48.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: scheme.outline.withValues(alpha: 0.12)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AvatarWidget(
+              avatarUrl: comment.userAvatarUrl,
+              wallet: comment.userId,
+              radius: isReply ? 14 : 18,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          comment.userName,
+                          style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 8),
+                      Text(
+                        comment.timeAgo,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: scheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      if (comment.isEdited) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.commonEditedTag,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                        ),
+                      ],
+                      if (canModify)
+                        PopupMenuButton<String>(
+                          tooltip: l10n.commonMore,
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              await promptEdit();
+                            } else if (value == 'delete') {
+                              await promptDelete();
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(value: 'edit', child: Text(l10n.commonEdit)),
+                            PopupMenuItem(value: 'delete', child: Text(l10n.commonDelete)),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: (comment.isEdited && comment.originalContent != null) ? showHistory : null,
+                    child: Text(
+                      comment.content,
+                      style: GoogleFonts.inter(fontSize: 13, height: 1.35),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => provider.toggleCommentLike(artwork.id, comment.id),
+                        icon: Icon(
+                          comment.isLikedByCurrentUser ? Icons.favorite : Icons.favorite_border,
+                          size: 16,
+                          color: comment.isLikedByCurrentUser
+                              ? scheme.error
+                              : scheme.onSurface.withValues(alpha: 0.8),
+                        ),
+                        tooltip: l10n.commonLikes,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      if (comment.likesCount > 0)
+                        Text(
+                          comment.likesCount.toString(),
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: scheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      const SizedBox(width: 12),
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _replyToCommentId = comment.id;
+                            _replyToAuthorName = comment.userName;
+                          });
+                          _commentController.text = '@${comment.userName} ';
+                          _commentController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: _commentController.text.length),
+                          );
+                          FocusScope.of(context).requestFocus(_commentFocusNode);
+                        },
+                        child: Text(l10n.commonReply, style: GoogleFonts.inter(fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -655,39 +889,71 @@ class _DesktopArtworkDetailScreenState
     final scheme = Theme.of(context).colorScheme;
 
     final isSubmitting = provider.isLoading('comment_${artwork.id}');
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: TextField(
-            controller: _commentController,
-            minLines: 1,
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: l10n.artworkCommentAddHint,
-              filled: true,
-              fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        if (_replyToAuthorName != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    l10n.postDetailReplyingToLabel(_replyToAuthorName!),
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: scheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: l10n.commonClose,
+                  onPressed: () {
+                    setState(() {
+                      _replyToAuthorName = null;
+                      _replyToCommentId = null;
+                    });
+                    _commentController.clear();
+                  },
+                  icon: const Icon(Icons.close),
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-        ElevatedButton(
-          onPressed: isSubmitting
-              ? null
-              : () => _submitComment(artwork, provider, isSignedIn),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: isSubmitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
-                )
-              : Icon(Icons.send, size: 18, color: scheme.onPrimary),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _commentController,
+                focusNode: _commentFocusNode,
+                minLines: 1,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: l10n.artworkCommentAddHint,
+                  filled: true,
+                  fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              onPressed: isSubmitting
+                  ? null
+                  : () => _submitComment(artwork, provider, isSignedIn),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: InlineLoading(shape: BoxShape.circle, tileSize: 3.5),
+                    )
+                  : Icon(Icons.send, size: 18, color: scheme.onPrimary),
+            ),
+          ],
         ),
       ],
     );
@@ -724,6 +990,12 @@ class _DesktopArtworkDetailScreenState
       return;
     }
 
+    final parentId = _replyToCommentId;
+    setState(() {
+      _replyToCommentId = null;
+      _replyToAuthorName = null;
+    });
+
     final profileProvider =
         Provider.of<ProfileProvider>(context, listen: false);
     final walletProvider = Provider.of<WalletProvider>(context, listen: false);
@@ -738,16 +1010,24 @@ class _DesktopArtworkDetailScreenState
         walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
 
     try {
-      await provider.addComment(artwork.id, content, optimisticId, displayName);
+      await provider.addComment(
+        artworkId: artwork.id,
+        content: content,
+        parentCommentId: parentId,
+      );
       if (!mounted) return;
       _commentController.clear();
-      if (_commentsScrollController.hasClients) {
-        _commentsScrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
-      }
+      // With oldest-first ordering, new comments appear at the bottom.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (_commentsScrollController.hasClients) {
+          _commentsScrollController.animateTo(
+            _commentsScrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+          );
+        }
+      });
       messenger.showSnackBar(
         SnackBar(
           content:

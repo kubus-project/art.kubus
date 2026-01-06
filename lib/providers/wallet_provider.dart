@@ -15,6 +15,7 @@ import '../services/solana_wallet_service.dart';
 import '../services/backend_api_service.dart';
 import '../services/stats_api_service.dart';
 import '../services/user_service.dart';
+import '../config/config.dart';
 import '../config/api_keys.dart';
 import '../utils/wallet_utils.dart';
 
@@ -845,9 +846,15 @@ class WalletProvider extends ChangeNotifier {
 
       // Try to issue backend token for this wallet to ensure API auth is ready
       try {
-        final issued = await _apiService.issueTokenForWallet(address);
-        debugPrint('WalletProvider._syncBackendData: token issued for $address -> $issued');
-        if (issued) await _apiService.loadAuthToken();
+        // Keep API layer aligned with the active wallet. This prevents stale
+        // tokens from a previous wallet session from causing 403s on
+        // ownership-gated endpoints (marker edit/delete).
+        _apiService.setPreferredWalletAddress(address);
+        if (AppConfig.enableDebugIssueToken) {
+          final issued = await _apiService.issueTokenForWallet(address);
+          debugPrint('WalletProvider._syncBackendData: token issued for $address -> $issued');
+          if (issued) await _apiService.loadAuthToken();
+        }
       } catch (e) {
         debugPrint('WalletProvider._syncBackendData: token issuance failed: $e');
       }

@@ -1,7 +1,3 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
-
 import '../models/art_marker.dart';
 import '../config/config.dart';
 import 'backend_api_service.dart';
@@ -21,38 +17,15 @@ class ArtMarkerService {
     double? radiusKm,
   }) async {
     try {
-      final queryParams = <String, String>{};
-      if (latitude != null) queryParams['lat'] = latitude.toString();
-      if (longitude != null) queryParams['lng'] = longitude.toString();
-      if (radiusKm != null) queryParams['radius'] = radiusKm.toString();
+      // This service is only used with geo queries today; keep behavior safe.
+      if (latitude == null || longitude == null) return const <ArtMarker>[];
 
-      final uri = Uri.parse('${_backendApi.baseUrl}/api/art-markers')
-          .replace(queryParameters: queryParams);
-
-      final response = await http.get(uri).timeout(const Duration(seconds: 15));
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        final List<dynamic> payload;
-        if (body is List) {
-          payload = body;
-        } else if (body is Map<String, dynamic>) {
-          payload = (body['data'] ??
-              body['markers'] ??
-              body['artMarkers'] ??
-              body['results'] ??
-              []) as List<dynamic>;
-        } else {
-          payload = const [];
-        }
-
-        return payload
-            .map((json) => ArtMarker.fromMap(json as Map<String, dynamic>))
-            .toList();
-      }
-
-      AppConfig.debugPrint(
-        'ArtMarkerService: fetchMarkers failed (${response.statusCode})',
+      final markers = await _backendApi.getNearbyArtMarkers(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm ?? 5,
       );
+      return markers;
     } catch (e) {
       AppConfig.debugPrint('ArtMarkerService.fetchMarkers failed: $e');
     }

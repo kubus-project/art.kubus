@@ -83,6 +83,12 @@ class AppConfig {
   static const bool enableDebugPrints = isDevelopment;
   static const bool enableVerboseLogging = isDevelopment;
   static const bool enableNetworkLogging = isDevelopment;
+
+  /// Debug-only endpoint access
+  ///
+  /// NOTE: /api/profiles/issue-token is API-key/admin gated on the backend.
+  /// Production clients should not rely on it.
+  static const bool enableDebugIssueToken = isDevelopment;
   
   /// Development helpers
   static const bool showPerformanceOverlay = false;
@@ -255,6 +261,7 @@ class AppConfig {
       case 'ar': return enableARViewer;
       case 'analytics': return enableAnalytics;
       case 'debug': return enableDebugPrints;
+      case 'debugIssueToken': return enableDebugIssueToken;
       case 'sounds': return enableSoundEffects;
       case 'haptics': return enableHapticFeedback;
       case 'animations': return enableAnimations;
@@ -306,9 +313,9 @@ class AppConfig {
 /// App version and build information
 class AppInfo {
   static const String appName = 'art.kubus';
-  static const String version = '0.2.3';
-  static const int buildNumber = 10;
-  static const String buildDate = '2025-12-23';
+  static const String version = '0.2.4';
+  static const int buildNumber = 11;
+  static const String buildDate = '2026-01-04';
   
   /// Get full version string
   static String get fullVersion => '$version+$buildNumber';

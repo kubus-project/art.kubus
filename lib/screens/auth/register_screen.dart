@@ -156,7 +156,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         debugPrint('RegisterScreen: web3 import failed: $e');
       }
       try {
-        await BackendApiService().issueTokenForWallet(address);
+        if (AppConfig.enableDebugIssueToken) {
+          await BackendApiService().issueTokenForWallet(address);
+        }
       } catch (e) {
         debugPrint('RegisterScreen: issueTokenForWallet failed: $e');
       }

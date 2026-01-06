@@ -158,7 +158,7 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
   });
 
-  test('ArtworkProvider.addComment updates list and count immediately', () async {
+  test('ArtworkProvider.addComment posts then refreshes comments', () async {
     final createCompleter = Completer<ArtworkComment>();
     final api = _FakeArtworkApi(createCompleter: createCompleter);
     final provider = ArtworkProvider(backendApi: api);
@@ -176,12 +176,12 @@ void main() {
       ),
     );
 
-    final future = provider.addComment(artworkId, 'Hello provider', 'wallet_1', 'Tester');
+    final future = provider.addComment(artworkId: artworkId, content: 'Hello provider');
     await Future<void>.delayed(Duration.zero);
 
-    expect(provider.getComments(artworkId), isNotEmpty);
-    expect(provider.getComments(artworkId).first.content, 'Hello provider');
-    expect(provider.getArtworkById(artworkId)!.commentsCount, 1);
+    // Community-aligned behavior: no optimistic insert; comment appears after
+    // the backend round-trip and refresh.
+    expect(provider.getComments(artworkId), isEmpty);
 
     final created = ArtworkComment(
       id: 'server_1',

@@ -22,6 +22,7 @@ import '../../utils/app_animations.dart';
 import '../../utils/artwork_media_resolver.dart';
 import '../../utils/map_navigation.dart';
 import '../../utils/artwork_edit_navigation.dart';
+import '../../utils/wallet_utils.dart';
 import '../../widgets/collaboration_panel.dart';
 import '../../config/config.dart';
 import '../../services/share/share_service.dart';
@@ -45,6 +46,8 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
   late TextEditingController _commentController;
   late ScrollController _scrollController;
   bool _showComments = false;
+  String? _replyToCommentId;
+  String? _replyToAuthorName;
   bool _animationsInitialized = false;
   bool _artworkLoading = true;
   String? _artworkError;
@@ -780,7 +783,14 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
             ),
           )
         else
-          ...comments.map((comment) => _buildCommentItem(comment, provider)),
+          ...comments.expand(
+            (comment) => _buildCommentTree(
+              artwork: artwork,
+              comment: comment,
+              provider: provider,
+              depth: 0,
+            ),
+          ),
         const SizedBox(height: DetailSpacing.md),
         if (!isSignedIn)
           SizedBox(
@@ -805,16 +815,61 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
     );
   }
 
-  Widget _buildCommentItem(ArtworkComment comment, ArtworkProvider provider) {
+  List<Widget> _buildCommentTree({
+    required Artwork artwork,
+    required ArtworkComment comment,
+    required ArtworkProvider provider,
+    required int depth,
+  }) {
+    final widgets = <Widget>[
+      _buildCommentItem(
+        artwork: artwork,
+        comment: comment,
+        provider: provider,
+        depth: depth,
+      ),
+    ];
+
+    for (final r in comment.replies) {
+      widgets.addAll(
+        _buildCommentTree(
+          artwork: artwork,
+          comment: r,
+          provider: provider,
+          depth: depth + 1,
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  Widget _buildCommentItem({
+    required Artwork artwork,
+    required ArtworkComment comment,
+    required ArtworkProvider provider,
+    required int depth,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     final scheme = Theme.of(context).colorScheme;
     final currentUser = context.read<ProfileProvider>().currentUser;
-    final canModify = currentUser != null &&
-        (currentUser.id == comment.userId ||
-            currentUser.walletAddress == comment.userId);
+    final walletProvider = context.read<WalletProvider>();
+    final currentWallet = WalletUtils.canonical(
+      (currentUser?.walletAddress ?? walletProvider.currentWalletAddress ?? '').toString(),
+    );
+    final currentId = WalletUtils.canonical((currentUser?.id ?? '').toString());
+    final authorKey = WalletUtils.canonical(comment.userId);
+
+    final canModify = authorKey.isNotEmpty &&
+        (authorKey == currentWallet || (currentId.isNotEmpty && authorKey == currentId));
+
+    final isReply = depth > 0;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: DetailSpacing.md),
+      padding: EdgeInsets.only(
+        left: depth * 56.0,
+        bottom: DetailSpacing.md,
+      ),
       child: DetailCard(
         padding: const EdgeInsets.all(DetailSpacing.lg),
         child: Column(
@@ -825,7 +880,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                 AvatarWidget(
                   avatarUrl: comment.userAvatarUrl,
                   wallet: comment.userId,
-                  radius: 16,
+                  radius: isReply ? 12 : 16,
                   enableProfileNavigation: true,
                 ),
                 const SizedBox(width: DetailSpacing.md),
@@ -1008,7 +1063,7 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                         ? Icons.favorite
                         : Icons.favorite_border,
                     size: 16,
-                    color: comment.isLikedByCurrentUser ? Colors.red : null,
+                    color: comment.isLikedByCurrentUser ? scheme.error : null,
                   ),
                 ),
                 if (comment.likesCount > 0)
@@ -1068,6 +1123,25 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   : null,
               child:
                   Text(comment.content, style: DetailTypography.body(context)),
+            ),
+            const SizedBox(height: DetailSpacing.sm),
+            Row(
+              children: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _replyToCommentId = comment.id;
+                      _replyToAuthorName = comment.userName;
+                    });
+                    _commentController.text = '@${comment.userName} ';
+                    _commentController.selection = TextSelection.fromPosition(
+                      TextPosition(offset: _commentController.text.length),
+                    );
+                    _showAddCommentDialog(artwork);
+                  },
+                  child: Text(l10n.commonReply, style: DetailTypography.button(context)),
+                ),
+              ],
             ),
           ],
         ),
@@ -1135,6 +1209,33 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
+                if (_replyToAuthorName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.postDetailReplyingToLabel(_replyToAuthorName!),
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            setState(() {
+                              _replyToAuthorName = null;
+                              _replyToCommentId = null;
+                            });
+                            _commentController.clear();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 TextField(
                   controller: _commentController,
                   maxLines: 4,
@@ -1154,6 +1255,10 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                       child: TextButton(
                         onPressed: () {
                           _commentController.clear();
+                          setState(() {
+                            _replyToAuthorName = null;
+                            _replyToCommentId = null;
+                          });
                           Navigator.pop(context);
                         },
                         child: Text(
@@ -1167,22 +1272,22 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
                     Expanded(
                       child: Consumer<ArtworkProvider>(
                         builder: (context, provider, child) {
+                          final scheme = Theme.of(context).colorScheme;
                           return ElevatedButton(
                             onPressed: () => _submitComment(artwork, provider),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
+                              backgroundColor: scheme.primary,
+                              foregroundColor: scheme.onPrimary,
                               padding: const EdgeInsets.symmetric(vertical: 16),
                             ),
                             child: provider.isLoading('comment_${artwork.id}')
-                                ? const SizedBox(
+                              ? SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: InlineLoading(
                                         shape: BoxShape.circle,
                                         tileSize: 4.0,
-                                        color: Colors.white),
+                                  color: scheme.onPrimary),
                                   )
                                 : Text(
                                     l10n.artworkCommentPostButton,
@@ -1235,23 +1340,17 @@ class _ArtDetailScreenState extends State<ArtDetailScreen>
       return;
     }
 
-    final walletProvider = Provider.of<WalletProvider>(context, listen: false);
-    final walletAddress = profileProvider.currentUser?.walletAddress ??
-        walletProvider.currentWalletAddress;
-    final displayName = profileProvider.currentUser?.displayName ??
-        profileProvider.currentUser?.username ??
-        (walletAddress != null && walletAddress.length >= 8
-            ? 'User ${walletAddress.substring(0, 8)}...'
-            : 'User');
-    final optimisticId =
-        walletAddress ?? profileProvider.currentUser?.id ?? 'current_user';
+    final parentId = _replyToCommentId;
+    setState(() {
+      _replyToCommentId = null;
+      _replyToAuthorName = null;
+    });
 
     try {
       await provider.addComment(
-        artwork.id,
-        content,
-        optimisticId,
-        displayName,
+        artworkId: artwork.id,
+        content: content,
+        parentCommentId: parentId,
       );
 
       if (!mounted) return;

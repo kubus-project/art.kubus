@@ -109,7 +109,16 @@ class ArtworkComment {
     return ArtworkComment(
       id: map['id']?.toString() ?? '',
       artworkId: map['artworkId']?.toString() ?? map['artwork_id']?.toString() ?? '',
-      userId: map['userId']?.toString() ?? map['authorId']?.toString() ?? map['author_id']?.toString() ?? '',
+      // Prefer wallet identifiers when available, as the UI expects a wallet-like
+      // key for profile navigation + permission checks.
+      userId: map['userId']?.toString() ??
+          map['authorWallet']?.toString() ??
+          map['author_wallet']?.toString() ??
+          map['walletAddress']?.toString() ??
+          map['wallet_address']?.toString() ??
+          map['authorId']?.toString() ??
+          map['author_id']?.toString() ??
+          '',
       userName: map['userName']?.toString() ?? '',
       userAvatarUrl: map['userAvatarUrl'],
       content: map['content'] ?? '',
@@ -122,7 +131,7 @@ class ArtworkComment {
       likesCount: map['likesCount']?.toInt() ?? 0,
       isLikedByCurrentUser: map['isLikedByCurrentUser'] ?? false,
       isEdited: isEdited,
-      parentCommentId: map['parentCommentId'],
+      parentCommentId: normalizeOptionalString(map['parentCommentId'] ?? map['parent_comment_id']),
       replies: (map['replies'] as List<dynamic>?)
           ?.map((replyMap) => ArtworkComment.fromMap(replyMap))
           .toList() ?? [],
