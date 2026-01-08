@@ -113,6 +113,9 @@ dependencies:
   dio: ^5.9.0
   equatable: ^2.0.5
 
+  # Deep links / App Links (Android), Universal Links (iOS)
+  app_links: ^7.0.0
+
 
 
 # Dependency overrides to fix arkit_plugin compatibility with vector_math 2.1.4

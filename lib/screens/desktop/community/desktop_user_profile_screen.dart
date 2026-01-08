@@ -36,6 +36,7 @@ import '../../../models/dao.dart';
 import '../../../utils/app_animations.dart';
 import '../components/desktop_widgets.dart';
 import '../../art/collection_detail_screen.dart';
+import '../desktop_shell.dart';
 
 /// Desktop user profile screen - viewing another user's profile
 /// Clean card-based layout with follow/message actions
@@ -359,7 +360,16 @@ class _UserProfileScreenState extends State<UserProfileScreen>
     return Row(
       children: [
         IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            // When this screen is shown inside DesktopShellScope (in-shell stack),
+            // we must pop the shell stack instead of the app Navigator.
+            final shellScope = DesktopShellScope.of(context);
+            if (shellScope?.canPop ?? false) {
+              shellScope!.popScreen();
+              return;
+            }
+            Navigator.of(context).maybePop();
+          },
           icon: Icon(
             Icons.arrow_back,
             color: Theme.of(context).colorScheme.onSurface,

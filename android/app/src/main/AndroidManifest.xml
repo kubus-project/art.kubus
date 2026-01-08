@@ -43,6 +43,25 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- Android App Links (canonical share URLs) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/marker/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/artwork/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/post/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/profile/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/user/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/u/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/collection/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/event/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/events/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/exhibition/" />
+                <data android:scheme="https" android:host="app.kubus.site" android:pathPrefix="/exhibitions/" />
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

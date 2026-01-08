@@ -26,6 +26,11 @@ class ShareDeepLinkParser {
         return ShareDeepLinkTarget(type: ShareEntityType.post, id: id);
       case 'artwork':
         return ShareDeepLinkTarget(type: ShareEntityType.artwork, id: id);
+      case 'marker':
+      case 'markers':
+      case 'art-marker':
+      case 'art-markers':
+        return ShareDeepLinkTarget(type: ShareEntityType.marker, id: id);
       case 'collection':
         return ShareDeepLinkTarget(type: ShareEntityType.collection, id: id);
       case 'event':
@@ -38,6 +43,9 @@ class ShareDeepLinkParser {
       case 'user':
       case 'u':
         return ShareDeepLinkTarget(type: ShareEntityType.profile, id: id);
+      case 'nft':
+      case 'nfts':
+        return ShareDeepLinkTarget(type: ShareEntityType.nft, id: id);
       default:
         return null;
     }

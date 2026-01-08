@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:art_kubus/widgets/app_loading.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 import 'package:art_kubus/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
@@ -42,6 +43,7 @@ import 'providers/desktop_dashboard_state_provider.dart';
 import 'providers/marker_management_provider.dart';
 import 'providers/auth_session_provider.dart';
 import 'providers/deep_link_provider.dart';
+import 'providers/platform_deep_link_listener_provider.dart';
 import 'core/app_initializer.dart';
 import 'core/app_navigator.dart';
 import 'core/deep_link_bootstrap_screen.dart';
@@ -97,6 +99,14 @@ void main() {
       try {
         // Initialize Flutter bindings in the guarded zone.
         WidgetsFlutterBinding.ensureInitialized();
+
+        // Canonical share URLs (e.g. https://app.kubus.site/marker/<id>) rely on
+        // path-based routing on Flutter web. Without this, Flutter defaults to a
+        // hash-based strategy and a direct visit to /marker/<id> is treated as
+        // route '/' (Home).
+        if (kIsWeb) {
+          usePathUrlStrategy();
+        }
 
         // Now forward Flutter framework errors to this zone so the runZonedGuarded
         // error handler receives them.
@@ -282,6 +292,14 @@ class _AppLauncherState extends State<AppLauncher> {
               ),
               ChangeNotifierProvider(create: (context) => CommunityCommentsProvider()),
               ChangeNotifierProvider(create: (context) => DeepLinkProvider()),
+              ChangeNotifierProxyProvider<DeepLinkProvider, PlatformDeepLinkListenerProvider>(
+                create: (context) => PlatformDeepLinkListenerProvider(),
+                update: (context, deepLinkProvider, listenerProvider) {
+                  final provider = listenerProvider ?? PlatformDeepLinkListenerProvider();
+                  provider.bindDeepLinkProvider(deepLinkProvider);
+                  return provider;
+                },
+              ),
               ChangeNotifierProvider(create: (context) => EventsProvider()),
               ChangeNotifierProvider(create: (context) => ExhibitionsProvider()),
               ChangeNotifierProxyProvider2<AppRefreshProvider, ProfileProvider, CollabProvider>(

@@ -19,7 +19,7 @@ class FlutterMapZoomButtons extends StatelessWidget {
   const FlutterMapZoomButtons({
     super.key,
     this.minZoom = 1,
-    this.maxZoom = 18,
+    this.maxZoom = 24,
     this.mini = true,
     this.padding = 0.3,
     this.alignment = Alignment.topRight,

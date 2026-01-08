@@ -10,6 +10,7 @@ class MapNavigation {
     required LatLng center,
     double? zoom,
     bool autoFollow = false,
+    String? initialMarkerId,
   }) {
     final width = MediaQuery.sizeOf(context).width;
     final isDesktop = width >= 900;
@@ -22,11 +23,13 @@ class MapNavigation {
                 initialCenter: center,
                 initialZoom: targetZoom,
                 autoFollow: autoFollow,
+                initialMarkerId: initialMarkerId,
               )
             : MapScreen(
                 initialCenter: center,
                 initialZoom: targetZoom,
                 autoFollow: autoFollow,
+                initialMarkerId: initialMarkerId,
               ),
       ),
     );
